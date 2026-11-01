@@ -220,4 +220,205 @@ grep -Fq "Registros técnicos y logs" "$tmp/uninstall-export-success.out"
 archive="$(find "$UNINSTALL_BACKUP_STAGING_DIR" -name pre-uninstall.tar.gz -type f -print -quit)"
 [[ -n "$archive" && -s "$archive" ]]
 
-printf 'OK: creación/verificación de respaldo, allowlist, borrado aislado, cancelación ante fallo y estado de exportación remota exitosa.\n'
+# La desinstalación debe respetar el lock real de administración Xray.
+source "$ROOT/modules/uninstall.sh"
+UNINSTALL_LOCK="$tmp/uninstall-xray-busy.lock"
+UNINSTALL_DATA_LOCK="$tmp/integrity-xray-busy.lock"
+UNINSTALL_XRAY_LOCK="$tmp/xray-admin-busy.lock"
+UNINSTALL_BACKUP_STAGING_DIR="$tmp/staging-xray-busy"
+mkdir -p "$APP_ROOT"
+printf 'preserve while Xray administration is active\n' >"$APP_ROOT/marker.txt"
+uninstall_service_guard() { return 0; }
+ui_clear() { :; }
+ui_title() { :; }
+ui_pause() { :; }
+ui_read_option() { IFS= read -r "$2"; }
+exec {busy_xray_fd}>"$UNINSTALL_XRAY_LOCK"
+flock -x "$busy_xray_fd"
+confirm_count=0
+ui_confirm() {
+    ((confirm_count += 1))
+    [[ "$confirm_count" -eq 2 ]]
+}
+if printf '2\n1\n' | uninstall_menu_action >"$tmp/uninstall-xray-lock-busy.out"; then
+    printf 'ERROR: se desinstaló mientras había una operación de administración Xray activa.\n' >&2
+    exit 1
+fi
+grep -Fq 'Hay una operación de administración de Xray-core en curso' "$tmp/uninstall-xray-lock-busy.out"
+[[ -f "$APP_ROOT/marker.txt" ]]
+flock -u "$busy_xray_fd"
+exec {busy_xray_fd}>&-
+
+# La categoría de certificados debe advertir antes de cualquier borrado y respetar cancelación.
+UNINSTALL_LOCK="$tmp/uninstall-cert-cancel.lock"
+UNINSTALL_DATA_LOCK="$tmp/integrity-cert-cancel.lock"
+UNINSTALL_XRAY_LOCK="$tmp/xray-cert-cancel.lock"
+UNINSTALL_BACKUP_STAGING_DIR="$tmp/staging-cert-cancel"
+mkdir -p "$XRAY_MANAGER_CERTIFICATES_DIR"
+printf 'private-key fixture\n' >"$XRAY_MANAGER_CERTIFICATES_DIR/private.key"
+ui_confirm() { return 1; }
+printf '2\n3\ncertificates\n' | uninstall_menu_action >"$tmp/uninstall-cert-cancel.out"
+grep -Fq 'certificados y claves privadas' "$tmp/uninstall-cert-cancel.out"
+grep -Fq 'Operación cancelada' "$tmp/uninstall-cert-cancel.out"
+[[ -f "$XRAY_MANAGER_CERTIFICATES_DIR/private.key" ]]
+
+# Política "eliminar todos": incluye respaldos preexistentes y elimina el respaldo temporal.
+UNINSTALL_LOCK="$tmp/uninstall-all.lock"
+UNINSTALL_DATA_LOCK="$tmp/integrity-all.lock"
+UNINSTALL_XRAY_LOCK="$tmp/xray-all.lock"
+UNINSTALL_BACKUP_STAGING_DIR="$tmp/staging-all"
+XRAY_MANAGER_BACKUP_DIR="$tmp/manager-data/backups-all"
+mkdir -p "$APP_ROOT" "$XRAY_MANAGER_CONFIG_DIR" "$XRAY_MANAGER_DATA_DIR"     "$XRAY_MANAGER_LOG_DIR" "$XRAY_MANAGER_CACHE_DIR" "$XRAY_MANAGER_BACKUP_DIR" "$XRAY_MANAGER_STATE_DIR"
+printf 'manager fixture\n' >"$APP_ROOT/marker.txt"
+printf 'old backup\n' >"$XRAY_MANAGER_BACKUP_DIR/old.tar.gz"
+confirm_count=0
+ui_confirm() {
+    ((confirm_count += 1))
+    case "$confirm_count" in
+        1|2|4) return 0 ;; # certificados, respaldo previo y confirmación final
+        3) return 1 ;;     # no exportar fuera del servidor
+    esac
+}
+printf '2\n2\n' | uninstall_menu_action >"$tmp/uninstall-all-cleanup.out"
+[[ ! -e "$APP_ROOT" ]]
+[[ ! -e "$XRAY_MANAGER_CONFIG_DIR" ]]
+[[ ! -e "$XRAY_MANAGER_DATA_DIR" ]]
+[[ ! -e "$XRAY_MANAGER_LOG_DIR" ]]
+[[ ! -e "$XRAY_MANAGER_CACHE_DIR" ]]
+[[ ! -e "$XRAY_MANAGER_BACKUP_DIR" ]]
+[[ ! -e "$XRAY_MANAGER_STATE_DIR" ]]
+if find "$UNINSTALL_BACKUP_STAGING_DIR" -name pre-uninstall.tar.gz -type f -print -quit 2>/dev/null | grep -q .; then
+    printf 'ERROR: quedó un respaldo temporal tras eliminar todos los datos.\n' >&2
+    exit 1
+fi
+grep -Fq 'Se eliminarán también los respaldos locales existentes y el respaldo temporal' "$tmp/uninstall-all-cleanup.out"
+grep -Fq 'Respaldo verificado:' "$tmp/uninstall-all-cleanup.out"
+
+printf 'OK: respaldo, allowlist, bloqueos, advertencia/cancelación de certificados y limpieza total de respaldos.\n'
+
+# Cobertura individual del mapeo de categorías: cada caso usa fixtures aislados.
+reset_uninstall_ui() {
+    ui_clear() { :; }
+    ui_title() { :; }
+    ui_pause() { :; }
+    ui_read_option() { IFS= read -r "$2"; }
+    uninstall_service_guard() { return 0; }
+    UNINSTALL_LOCK="$tmp/category-uninstall.lock"
+    UNINSTALL_DATA_LOCK="$tmp/category-integrity.lock"
+    UNINSTALL_XRAY_LOCK="$tmp/category-xray.lock"
+    UNINSTALL_BACKUP_STAGING_DIR="$tmp/category-staging"
+}
+run_selected_category() {
+    local scope_choice="$1" category="$2" target="$3" count=0
+    reset_uninstall_ui
+    mkdir -p "$target"
+    printf 'category fixture: %s\n' "$category" >"$target/marker.txt"
+    if [[ "$category" == logs ]]; then
+        mkdir -p "$XRAY_MANAGER_HISTORY_DIR"
+        printf 'history fixture\n' >"$XRAY_MANAGER_HISTORY_DIR/marker.txt"
+    fi
+    ui_confirm() {
+        ((count += 1))
+        if [[ "$category" == certificates && "$count" -eq 1 ]]; then return 0; fi
+        # Para certificados, primera confirmación: aviso; luego no respaldar y confirmar.
+        if [[ "$category" == certificates ]]; then [[ "$count" -eq 3 ]]; else [[ "$count" -eq 2 ]]; fi
+    }
+    printf '%s\n3\n%s\n' "$scope_choice" "$category" | uninstall_menu_action >"$tmp/category-${scope_choice}-${category}.out"
+    [[ ! -e "$target" ]] || {
+        printf 'ERROR: categoría %s no eliminó su ruta esperada %s.\n' "$category" "$target" >&2
+        exit 1
+    }
+}
+run_selected_category 1 xray-config "$XRAY_CONFIG_DIR"
+run_selected_category 2 profiles "$XRAY_MANAGER_PROFILES_DIR"
+run_selected_category 2 users "$XRAY_MANAGER_USERS_DIR"
+run_selected_category 2 connections "$XRAY_MANAGER_CONNECTIONS_DIR"
+run_selected_category 2 domains "$XRAY_MANAGER_DOMAINS_DIR"
+run_selected_category 2 certificates "$XRAY_MANAGER_CERTIFICATES_DIR"
+run_selected_category 2 backups "$XRAY_MANAGER_BACKUP_DIR"
+run_selected_category 2 preferences "$XRAY_MANAGER_CONFIG_DIR"
+run_selected_category 2 logs "$XRAY_MANAGER_LOG_DIR"
+# logs incluye history además de log; verifica que ambas rutas se mapean.
+[[ ! -e "$XRAY_MANAGER_HISTORY_DIR" ]]
+
+# Política selected también funciona con alcance combinado sin borrar otras categorías.
+reset_uninstall_ui
+mkdir -p "$APP_ROOT" "$XRAY_ADMIN_BIN" "$XRAY_MANAGER_USERS_DIR" "$XRAY_MANAGER_CONNECTIONS_DIR"
+printf 'app preserved\n' >"$APP_ROOT/marker"
+printf 'xray preserved\n' >"$XRAY_ADMIN_BIN/marker"
+printf 'user selected\n' >"$XRAY_MANAGER_USERS_DIR/marker"
+printf 'connections preserved\n' >"$XRAY_MANAGER_CONNECTIONS_DIR/marker"
+count=0
+ui_confirm() { ((count += 1)); [[ "$count" -eq 2 ]]; }
+printf '3\n3\nusers\n' | uninstall_menu_action >"$tmp/category-both-users.out"
+[[ ! -e "$XRAY_MANAGER_USERS_DIR" ]]
+[[ ! -e "$APP_ROOT" && ! -e "$XRAY_ADMIN_BIN" && -e "$XRAY_MANAGER_CONNECTIONS_DIR/marker" ]]
+
+# Política all en los tres alcances: elimina las rutas correspondientes y sus respaldos.
+run_all_scope() {
+    local scope_choice="$1" label="$2" count=0
+    reset_uninstall_ui
+    XRAY_MANAGER_BACKUP_DIR="$tmp/$label-backups"
+    mkdir -p "$APP_ROOT" "$XRAY_ADMIN_BIN" "$XRAY_ADMIN_DATA" "$XRAY_CONFIG_DIR" \
+        "$XRAY_MANAGER_CONFIG_DIR" "$XRAY_MANAGER_DATA_DIR" "$XRAY_MANAGER_LOG_DIR" \
+        "$XRAY_MANAGER_CACHE_DIR" "$XRAY_MANAGER_STATE_DIR" \
+        "$XRAY_MANAGER_BACKUP_DIR/xray-core"
+    printf 'app fixture\n' >"$APP_ROOT/marker"
+    printf 'xray fixture\n' >"$XRAY_ADMIN_BIN/marker"
+    printf 'data fixture\n' >"$XRAY_ADMIN_DATA/marker"
+    printf 'xray config fixture\n' >"$XRAY_CONFIG_DIR/marker"
+    printf 'old manager backup\n' >"$XRAY_MANAGER_BACKUP_DIR/old.tar.gz"
+    printf 'old xray backup\n' >"$XRAY_MANAGER_BACKUP_DIR/xray-core/old.tar.gz"
+    ui_confirm() {
+        ((count += 1))
+        case "$scope_choice:$count" in
+            1:1|1:3|2:1|2:3|3:1|3:2|3:4) return 0 ;;
+            *) return 1 ;;
+        esac
+    }
+    printf '%s\n2\n' "$scope_choice" | uninstall_menu_action >"$tmp/all-${label}.out"
+    case "$scope_choice" in
+        1)
+            [[ ! -e "$XRAY_ADMIN_BIN" && ! -e "$XRAY_ADMIN_DATA" && ! -e "$XRAY_CONFIG_DIR" ]]
+            [[ ! -e "$XRAY_MANAGER_BACKUP_DIR/xray-core" ]]
+            [[ -e "$APP_ROOT" && -e "$XRAY_MANAGER_DATA_DIR" && -e "$XRAY_MANAGER_BACKUP_DIR/old.tar.gz" ]]
+            ;;
+        2)
+            [[ ! -e "$APP_ROOT" && ! -e "$XRAY_MANAGER_CONFIG_DIR" && ! -e "$XRAY_MANAGER_DATA_DIR" ]]
+            [[ ! -e "$XRAY_MANAGER_LOG_DIR" && ! -e "$XRAY_MANAGER_CACHE_DIR" && ! -e "$XRAY_MANAGER_STATE_DIR" ]]
+            [[ ! -e "$XRAY_MANAGER_BACKUP_DIR" ]]
+            [[ -e "$XRAY_ADMIN_BIN" && -e "$XRAY_CONFIG_DIR" ]]
+            ;;
+        3)
+            [[ ! -e "$APP_ROOT" && ! -e "$XRAY_ADMIN_BIN" && ! -e "$XRAY_ADMIN_DATA" ]]
+            [[ ! -e "$XRAY_CONFIG_DIR" && ! -e "$XRAY_MANAGER_CONFIG_DIR" && ! -e "$XRAY_MANAGER_DATA_DIR" ]]
+            [[ ! -e "$XRAY_MANAGER_LOG_DIR" && ! -e "$XRAY_MANAGER_CACHE_DIR" && ! -e "$XRAY_MANAGER_STATE_DIR" ]]
+            [[ ! -e "$XRAY_MANAGER_BACKUP_DIR" ]]
+            ;;
+    esac
+    if find "$UNINSTALL_BACKUP_STAGING_DIR" -name pre-uninstall.tar.gz -type f -print -quit 2>/dev/null | grep -q .; then
+        printf 'ERROR: quedó un respaldo temporal en alcance %s.\n' "$label" >&2
+        exit 1
+    fi
+}
+run_all_scope 1 xray
+run_all_scope 2 manager-repeat
+run_all_scope 3 both
+
+# Política keep en los alcances restantes: retirar binarios/componentes sin borrar datos.
+run_keep_scope() {
+    local scope_choice="$1" label="$2" count=0
+    reset_uninstall_ui
+    mkdir -p "$APP_ROOT" "$XRAY_ADMIN_BIN" "$XRAY_ADMIN_DATA" "$XRAY_CONFIG_DIR" "$XRAY_MANAGER_DATA_DIR" "$XRAY_MANAGER_BACKUP_DIR/xray-core"
+    printf 'keep fixture\n' >"$APP_ROOT/marker"
+    printf 'keep config\n' >"$XRAY_CONFIG_DIR/marker"
+    ui_confirm() { ((count += 1)); [[ "$count" -eq 2 ]]; }
+    printf '%s\n1\n' "$scope_choice" | uninstall_menu_action >"$tmp/keep-${label}.out"
+    [[ ! -e "$XRAY_ADMIN_BIN" && ! -e "$XRAY_ADMIN_DATA" ]]
+    [[ -e "$XRAY_CONFIG_DIR/marker" && -e "$XRAY_MANAGER_DATA_DIR" && -e "$XRAY_MANAGER_BACKUP_DIR/xray-core" ]]
+    if [[ "$scope_choice" == 3 ]]; then [[ ! -e "$APP_ROOT" ]]; else [[ -e "$APP_ROOT/marker" ]]; fi
+}
+run_keep_scope 1 xray
+run_keep_scope 3 both
+
+printf 'OK: cobertura individual de nueve categorías y política all en Xray-core, Manager y ambos.\n'

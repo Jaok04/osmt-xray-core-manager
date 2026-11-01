@@ -98,4 +98,25 @@ grep -q 'Binario Xray' "$tmp/help.out"
 grep -q 'Documentación local' "$tmp/help.out"
 grep -q 'https://xtls.github.io/' "$tmp/help.out"
 
-printf 'OK: navegación y conexión del menú de administración Xray; consulta de release; rutas, inventario y systemd de solo lectura.\n'
+# Al regresar desde un submenú, el encabezado debe consultarse de nuevo.
+HEADER_CALLS="$tmp/header-calls"
+system_show_header() { printf 'header\n' >>"$HEADER_CALLS"; }
+ui_confirm() { return 0; }
+printf '8\n0\n0\n' | menu_main >"$tmp/header-refresh.out"
+[[ "$(wc -l <"$HEADER_CALLS")" -eq 2 ]]
+
+printf 'OK: navegación, recuperación de errores, retorno al menú principal y refresco del encabezado.\n'
+
+# Regresos desde todas las entradas principales y refresco del encabezado.
+TOP_LEVEL_CALLS="$tmp/top-level-calls"
+HEADER_CALLS="$tmp/all-header-calls"
+system_show_header() { printf 'header\n' >>"$HEADER_CALLS"; }
+connections_menu() { echo connections >>"$TOP_LEVEL_CALLS"; return 1; }
+users_menu_dispatch() { echo users >>"$TOP_LEVEL_CALLS"; return 1; }
+menu_placeholder() { echo placeholder >>"$TOP_LEVEL_CALLS"; return 1; }
+menu_system_admin() { echo system-admin >>"$TOP_LEVEL_CALLS"; return 1; }
+menu_information() { echo information >>"$TOP_LEVEL_CALLS"; return 1; }
+ui_confirm() { return 0; }
+printf '1\n2\n3\n4\n5\n6\n7\n8\n9\n0\n' | menu_main >"$tmp/all-main-returns.out"
+[[ "$(wc -l <"$TOP_LEVEL_CALLS")" -eq 9 ]]
+[[ "$(wc -l <"$HEADER_CALLS")" -eq 10 ]]
