@@ -30,6 +30,13 @@ A1="$(users_association_create "$ID1" conn-vless-a Compartido uuid 11111111-1111
 A2="$(users_association_create "$ID1" conn-vless-b Compartido uuid 22222222-2222-4222-8222-222222222222 active custom 3 days 0 0 auto)"
 A3="$(users_association_create "$ID2" conn-vless-a Compartido uuid 33333333-3333-4333-8333-333333333333 suspended unlimited 0 none 0 0 auto)"
 [[ "$A1" != "$A2" && "$A2" != "$A3" ]]
+# Minute granularity: create, pause and reactivate with a fresh minute-based period.
+A4="$(users_association_create "$ID2" conn-vless-b Minutos uuid 44444444-4444-4444-8444-444444444444 active custom 2 minutes 0 0 auto)"
+jq -e --arg id "$A4" 'any(.associations[]; .id==$id and .duration.value==2 and .duration.unit=="minutes" and .expires_at!=null)' "$USERS_V2_DATA_FILE" >/dev/null
+users_association_suspend "$A4"
+jq -e --arg id "$A4" 'any(.associations[]; .id==$id and .state=="suspended" and .remaining_seconds>0 and .remaining_seconds<=120)' "$USERS_V2_DATA_FILE" >/dev/null
+users_association_reactivate "$A4" custom 1 minutes
+jq -e --arg id "$A4" 'any(.associations[]; .id==$id and .state=="active" and .duration.value==1 and .duration.unit=="minutes")' "$USERS_V2_DATA_FILE" >/dev/null
 jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .duration.kind=="custom" and .expires_at!=null and (.expires_at|fromdateiso8601)>(.created_at|fromdateiso8601))' "$USERS_V2_DATA_FILE" >/dev/null
 jq -e --arg i1 "$ID1" --arg i2 "$ID2" '
  .schema_version == 2 and (.identities|length)==2 and (.associations|length)==3 and
@@ -108,6 +115,7 @@ jq -e --arg id "$A3" 'any(.associations[]; .id==$id and .state=="suspended" and 
 users_association_reactivate "$A3" unlimited 0 none
 jq -e --arg id "$A3" 'any(.associations[]; .id==$id and .state=="active" and .duration.kind=="unlimited" and .suspended_at==null and .expires_at==null)' "$USERS_V2_DATA_FILE" >/dev/null
 # Eliminar una asociación conserva la identidad y las otras asociaciones.
+users_association_delete "$A4"
 users_association_delete "$A2"
 jq -e --arg id "$ID1" 'any(.identities[];.id==$id) and ( [.associations[]|select(.identity_id==$id)]|length)==3' "$USERS_V2_DATA_FILE" >/dev/null
 # Eliminar identidad elimina todas sus asociaciones y peers.
