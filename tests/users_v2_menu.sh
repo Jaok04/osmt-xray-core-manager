@@ -393,7 +393,6 @@ jq -e --arg id "$VLESS_ASSOC_ID" --arg secret "$VLESS_SECRET" '
       .runtime.status=="not_applied" and .provisioning_status=="draft")
 ' "$XRAY_MANAGER_USERS_FILE" >/dev/null
 
-
 # Eliminación individual: cancelación sin escritura, ID inválido y confirmación.
 # Eliminar VLESS debe conservar la identidad global y el peer WireGuard hermano.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/association.delete.cancel.before"
@@ -426,6 +425,5 @@ jq -e --arg id "$WG_ASSOC_ID" --arg secret "$WG_SECRET" '
   any(.associations[]; .id==$id and .credential.value==$secret and
       .runtime.status=="not_applied" and .provisioning_status=="draft")
 ' "$XRAY_MANAGER_USERS_FILE" >/dev/null
-
 
 echo 'OK: selector legacy/v2, consultas protegidas, creación, edición, suspensión/reactivación, renovación, modificación de duración, eliminación individual, validaciones y runtime sin cambios.'
