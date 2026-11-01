@@ -30,7 +30,7 @@ Este procedimiento no integra el módulo v2 al menú ni al runtime Xray. Tampoco
 6. Dry-run y aplicación usan el mismo bloqueo exclusivo que el gestor.
 7. La aplicación crea copias de usuarios y conexiones, verifica SHA-256 y registra un manifest.
 8. El reemplazo del archivo de usuarios es atómico y conserva permisos `0600`.
-9. Rollback solo se permite si el registro actual conserva exactamente el hash v2 del cutover y el catálogo de conexiones conserva el hash de la instantánea. Así no sobrescribe cambios posteriores.
+9. Rollback acepta un manifest en estado `prepared` o `applied`, pero solo si el registro actual conserva exactamente el hash v2 del cutover y el catálogo de conexiones conserva el hash de la instantánea. Esto permite recuperarse si el proceso se interrumpe justo después del reemplazo atómico y antes de marcar el manifest como aplicado, sin sobrescribir cambios posteriores.
 10. El rollback verifica el hash del backup antes de restaurar.
 11. No se debe ejecutar sobre datos reales sin revisión y autorización explícita.
 
@@ -78,7 +78,7 @@ Consultar el token de rollback:
 /opt/xray-manager/scripts/users_v2_cutover.py --rollback /var/backups/xray-manager/identity-cutover/<directorio-backup>
 ```
 
-La herramienta muestra un token `ROLLBACK-USERS-V2-<hash12>`. Para confirmar:
+La herramienta muestra un token `ROLLBACK-USERS-V2-<hash12>`. También permite recuperar un cutover interrumpido después del reemplazo, cuando el manifest quedó en estado `prepared`; los hashes actuales deben coincidir igualmente. Para confirmar:
 
 ```bash
 /opt/xray-manager/scripts/users_v2_cutover.py --rollback /var/backups/xray-manager/identity-cutover/<directorio-backup> --confirm 'ROLLBACK-USERS-V2-<hash12>'
