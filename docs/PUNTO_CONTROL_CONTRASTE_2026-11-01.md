@@ -77,6 +77,8 @@ Implementado:
 - Selector legacy/v2 y menú inicial v2.
 - Creación de identidad y asociaciones VLESS/WireGuard desde el menú.
 - Consulta de detalle de asociación desde el menú, sin exponer credenciales ni modificar datos/runtime.
+- Edición de alias y límites de tráfico/conexiones simultáneas desde el menú, por ID de asociación y con commit atómico; no altera credenciales ni runtime.
+- Consulta de detalle de asociación desde el menú, sin exponer credenciales ni modificar datos/runtime.
 - Suite de pruebas de menú y suite general de regresión.
 
 Pendiente:
