@@ -1,7 +1,7 @@
 # Diseño técnico — Identidades globales y asociaciones (Etapas 2 y 3)
 
 **Estado:** decisiones técnicas aprobadas el 01/11/2026; implementación v2 inicial aislada en pruebas. No modifica la especificación funcional aprobada.  
-**Versión:** 1.1  
+**Versión:** 1.2  
 **Fecha:** 2026-11-01  
 **Base funcional:** Etapa 2 v1.2 y Etapa 3 v1.2, aprobadas el 31/10/2026.  
 **Alcance:** modelo de datos, propiedad de entidades, persistencia, migración y contratos para el siguiente incremento.
@@ -280,9 +280,11 @@ El módulo v2 todavía no está conectado al menú ni al adaptador de runtime. N
 1. **Importación de identidades existentes:** sin `identity_id` no se fusiona por alias; se requiere mapeo manual inequívoco.
 2. **Protección de credenciales:** definir cifrado en reposo, gestión de claves y exportación protegida antes de soportar claves privadas y contraseñas.
 3. **WireGuard completo:** definir y validar campos específicos del peer (clave privada, clave pública, IP/AllowedIPs, endpoint y parámetros del túnel) en su adaptador.
-4. **Duración:** implementar pausa/reanudación del tiempo restante, renovación y vencimiento automático antes de exponer estas operaciones en el menú.
+4. **Duración en producción:** conectar suspensión/reactivación/renovación al menú y a la revocación real en runtime; programar el barrido de vencimientos al inicio y periódicamente. La lógica administrativa y sus pruebas aisladas ya existen.
 
 ## 12. Alcance de este documento
+
+**Revisión 1.2:** incorpora el ciclo administrativo de duración, pausa, reactivación, renovación y detección de vencimientos. No altera la especificación funcional aprobada.
 
 El código inicial está en `modules/users_v2.sh` y `tests/users_v2.sh`. La suite v2 valida identidad global, asociaciones múltiples, alias duplicados, unicidad global de UUID VLESS, peers WireGuard, CRUD básico, pausa y reactivación de duración, modificación, renovación, vencimiento idempotente, corrupción y migración aislada. La suite completa existente (concurrency, cross-race, fallos de JSON, colisiones de puertos, smoke, uninstall, users, users_v2, xray_admin y Xray VLESS integration) ha pasado en la VPS con Xray 26.10.31.
 
