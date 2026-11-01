@@ -78,10 +78,11 @@ Implementado:
 - Creación de identidad y asociaciones VLESS/WireGuard desde el menú.
 - Consulta de detalle de asociación desde el menú, sin exponer credenciales ni modificar datos/runtime.
 - Edición de alias y límites de tráfico/conexiones simultáneas desde el menú, por ID de asociación y con commit atómico; no altera credenciales ni runtime.
+- Suspensión/reactivación desde el menú: pausa el tiempo restante de duración limitada al suspender y exige una duración nueva al reactivar; no modifica provisioning ni runtime.
 - Suite de pruebas de menú y suite general de regresión.
 
 Pendiente:
-- Suspensión/reactivación/renovación/modificación de duración desde menú.
+- Renovación y modificación de duración desde menú.
 - Eliminación de asociación individual e identidad con confirmaciones.
 - Importación/exportación completa y resolución manual de identidades/conflictos.
 - Protección de secretos/cifrado en reposo y gestión de claves.
@@ -112,10 +113,9 @@ A la fecha del punto de control:
 
 Continuar Etapa 3 de forma incremental, manteniendo Etapas 1 y 2 visibles en la matriz de cierre:
 
-1. Suspensión y reactivación.
-2. Renovación y modificación de duración.
-3. Eliminación de asociación individual.
-4. Eliminación de identidad y todas sus asociaciones, con confirmación explícita.
+1. Renovación y modificación de duración.
+2. Eliminación de asociación individual.
+3. Eliminación de identidad y todas sus asociaciones, con confirmación explícita.
 
 Cada operación requiere validación de entradas, lock compartido, rechazo sin escritura ante errores, pruebas aisladas y actualización de documentación. El orden puede cambiar solo si existe una dependencia técnica justificada.
 
