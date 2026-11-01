@@ -93,6 +93,7 @@ users_v2_commit_document "$DOC"
 # shellcheck disable=SC2119
 [[ "$(users_v2_expire_due)" == 1 ]]
 # A second sweep is idempotent and leaves suspended associations untouched.
+# shellcheck disable=SC2119
 [[ "$(users_v2_expire_due)" == 0 ]]
 jq -e --arg id "$A2" --arg wg "$A3" 'any(.associations[]; .id==$id and .state=="expired") and any(.associations[]; .id==$wg and .state=="suspended")' "$USERS_V2_DATA_FILE" >/dev/null
 if users_association_reactivate "$A2" custom 999999999999999999999 days >/dev/null 2>&1; then
