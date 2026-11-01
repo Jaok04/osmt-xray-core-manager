@@ -205,3 +205,4 @@ bash "$ROOT/tests/users_v2.sh"
 bash "$ROOT/tests/users_v2_menu.sh"
 
 bash "$ROOT/tests/xray_admin.sh"
+bash "$ROOT/tests/stage1_menu.sh"
