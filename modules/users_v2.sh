@@ -123,7 +123,7 @@ users_association_create() {
 	[[ "$#" -eq 12 ]] || { printf 'Uso: users_association_create <identity_id> <connection_id> <alias> <credential_type> <credential_value> <state> <duration_kind> <duration_value> <duration_unit> <traffic_limit|0> <simultaneous_limit|0> <protocol_override|auto>\n' >&2; return 2; }
 	local identity_id="$1" connection_id="$2" alias="$3" ctype="$4" cvalue="$5" state="$6"
 	local dkind="$7" dvalue="$8" dunit="$9" traffic="${10}" simultaneous="${11}" override="${12}"
-	local fd connection protocol id now expires=null document max_users slots
+	local fd connection protocol id now expires="" document max_users slots
 	[[ "$alias" == "$(printf '%s' "$alias" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')" && -n "$alias" && "${#alias}" -le 64 ]] || return 2
 	[[ "$state" == active || "$state" == suspended || "$state" == expired ]] || return 2
 	[[ "$dkind" == unlimited || "$dkind" == custom ]] || return 2
@@ -149,12 +149,12 @@ users_association_create() {
 	((slots < max_users)) || { users_v2_unlock "$fd"; return 1; }
 	id="$(users_v2_uuid)" || { users_v2_unlock "$fd"; return 1; }
 	now="$(users_v2_now)"
-	document="$(jq --arg id "$id" --arg iid "$identity_id" --arg cid "$connection_id" --arg alias "$alias" --arg protocol "$protocol" --arg ctype "$ctype" --arg cvalue "$cvalue" --arg now "$now" --arg state "$state" --arg dkind "$dkind" --argjson dvalue "$dvalue" --arg dunit "$dunit" --argjson expires "$expires" --argjson traffic "$traffic" --argjson simultaneous "$simultaneous" '
+	document="$(jq --arg id "$id" --arg iid "$identity_id" --arg cid "$connection_id" --arg alias "$alias" --arg protocol "$protocol" --arg ctype "$ctype" --arg cvalue "$cvalue" --arg now "$now" --arg state "$state" --arg dkind "$dkind" --argjson dvalue "$dvalue" --arg dunit "$dunit" --arg expires "$expires" --argjson traffic "$traffic" --argjson simultaneous "$simultaneous" '
 		.associations += [{
 			id:$id,identity_id:$iid,connection_id:$cid,alias:$alias,protocol:$protocol,
 			credential:{type:$ctype,value:$cvalue},created_at:$now,
 			duration:(if $dkind == "unlimited" then {kind:"unlimited"} else {kind:"custom",value:$dvalue,unit:$dunit} end),
-			expires_at:$expires,traffic_limit_bytes:(if $traffic == 0 then null else $traffic end),
+			expires_at:(if $expires == "" then null else $expires end),traffic_limit_bytes:(if $traffic == 0 then null else $traffic end),
 			simultaneous_connection_limit:(if $simultaneous == 0 then null else $simultaneous end),
 			state:$state,provisioning_status:"draft",runtime:{status:"not_applied",last_applied_at:null}
 		}]' "$USERS_V2_DATA_FILE")" || { users_v2_unlock "$fd"; return 1; }
