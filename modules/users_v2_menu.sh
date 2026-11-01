@@ -51,7 +51,7 @@ users_v2_menu() {
 		printf '  [6] Editar alias y límites de asociación\n'
 		printf '  [7] Suspender / reactivar asociación\n'
 		printf '  [8] Renovar asociación\n'
-		printf '  [9] Modificar duración de asociación\n'
+		printf '  [9] Modificar duración de asociación\n'		printf '  [10] Eliminar asociación individual\n'
 		printf '  [0] Volver al menú principal\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
@@ -89,6 +89,10 @@ users_v2_menu() {
 			;;
 		9)
 			users_v2_menu_association_set_duration
+			ui_pause
+			;;
+		10)
+			users_v2_menu_association_delete
 			ui_pause
 			;;
 		0) return 0 ;;
@@ -612,4 +616,57 @@ users_v2_menu_association_renew() {
 
 users_v2_menu_association_set_duration() {
 	users_v2_menu_association_duration set
+}
+
+# Delete one association only. Its global identity and sibling associations remain.
+users_v2_menu_association_delete() {
+	local fd association_id assoc alias identity_id protocol connection_id state provisioning runtime
+	ui_clear
+	ui_title "ELIMINAR ASOCIACIÓN INDIVIDUAL"
+	if ! users_v2_lock fd; then
+		printf '\nNo fue posible validar o bloquear el registro v2.\n'
+		return 1
+	fi
+	if [[ "$(jq '.associations | length' "$USERS_V2_DATA_FILE")" -eq 0 ]]; then
+		users_v2_unlock "$fd"
+		printf '\nNo hay asociaciones para eliminar.\n'
+		return 0
+	fi
+	printf '\nASOCIACIONES DISPONIBLES\n'
+	jq -r '.associations[] | "  " + .id + "  | " + .alias + "  | " + .protocol + "  | " + .state' "$USERS_V2_DATA_FILE"
+	printf '\nID exacto de asociación que deseas eliminar: '
+	IFS= read -r association_id || {
+		users_v2_unlock "$fd"
+		return 0
+	}
+	assoc="$(jq -ce --arg id "$association_id" '.associations[] | select(.id == $id)' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		printf '\nLa asociación indicada no existe. No se modificaron datos.\n'
+		return 1
+	}
+	alias="$(jq -r '.alias' <<<"$assoc")"
+	identity_id="$(jq -r '.identity_id' <<<"$assoc")"
+	protocol="$(jq -r '.protocol' <<<"$assoc")"
+	connection_id="$(jq -r '.connection_id' <<<"$assoc")"
+	state="$(jq -r '.state' <<<"$assoc")"
+	provisioning="$(jq -r '.provisioning_status' <<<"$assoc")"
+	runtime="$(jq -r '.runtime.status' <<<"$assoc")"
+	users_v2_unlock "$fd"
+
+	printf '\nRESUMEN DE ELIMINACIÓN\n'
+	printf 'ID de asociación: %s\nAlias: %s\nIdentidad global: %s\nProtocolo: %s\nConexión: %s\nEstado: %s\nProvisioning: %s\nRuntime: %s\n' \
+		"$association_id" "$alias" "$identity_id" "$protocol" "$connection_id" "$state" "$provisioning" "$runtime"
+	printf '\nSe eliminará únicamente esta asociación del registro administrativo.\n'
+	printf 'La identidad global y sus demás asociaciones se conservarán.\n'
+	printf 'Esta operación no revoca clientes ni peers en el runtime Xray.\n'
+	if ! ui_confirm "¿Confirmas eliminar definitivamente esta asociación?"; then
+		printf '\nOperación cancelada; no se guardaron cambios.\n'
+		return 0
+	fi
+	if ! users_association_delete "$association_id"; then
+		printf '\nNo se pudo eliminar. La asociación pudo haber cambiado o desaparecido; vuelve a consultar el registro.\n'
+		return 1
+	fi
+	printf '\nAsociación eliminada del registro administrativo. La identidad y las demás asociaciones permanecen intactas.\n'
+	printf 'Runtime y provisioning no fueron modificados.\n'
 }
