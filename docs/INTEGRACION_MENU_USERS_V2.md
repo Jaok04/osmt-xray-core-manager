@@ -39,7 +39,7 @@ La edición de asociación se realiza por ID exacto y actualiza alias, límite d
 
 La suspensión de una asociación activa pausa el tiempo restante si su duración es limitada y no altera provisioning ni runtime. La reactivación de una asociación suspendida exige elegir una duración nueva (ilimitada o personalizada); comienza desde el momento de reactivación y no reutiliza automáticamente el tiempo restante pausado. Las asociaciones vencidas no se reactivan desde esta operación; requieren renovación.
 
-## Operaciones aún no expuestas
+## Eliminaciones y operaciones pendientes
 
 La interfaz ya permite renovar asociaciones activas o vencidas y modificar la duración de asociaciones activas o suspendidas. La renovación inicia un periodo nuevo y deja el estado en `active`; no admite asociaciones suspendidas. La modificación en estado `active` recalcula el vencimiento desde el momento del cambio; en estado `suspended` actualiza `remaining_seconds` y mantiene la suspensión. Las dos operaciones se identifican por ID, validan duración y requieren confirmación. No modifican credenciales, límites, provisioning ni runtime.
 
