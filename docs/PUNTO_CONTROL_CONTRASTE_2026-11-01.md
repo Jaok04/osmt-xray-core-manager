@@ -79,10 +79,18 @@ Implementado:
 - Consulta de detalle de asociación desde el menú, sin exponer credenciales ni modificar datos/runtime.
 - Edición de alias y límites de tráfico/conexiones simultáneas desde el menú, por ID de asociación y con commit atómico; no altera credenciales ni runtime.
 - Suspensión/reactivación desde el menú: pausa el tiempo restante de duración limitada al suspender y exige una duración nueva al reactivar; no modifica provisioning ni runtime.
+- Renovación desde el menú para asociaciones activas o vencidas; inicia un periodo nuevo y las deja activas.
+- Modificación de duración desde el menú para asociaciones activas o suspendidas; recalcula vencimiento desde ahora para activas y actualiza el tiempo restante pausado para suspendidas, sin reactivarlas.
 - Suite de pruebas de menú y suite general de regresión.
 
 Pendiente:
-- Renovación y modificación de duración desde menú.
+- Eliminación de asociación individual e identidad con confirmaciones.
+- Importación/exportación completa y resolución manual de identidades/conflictos.
+- Protección de secretos/cifrado en reposo y gestión de claves.
+- Modelo completo de campos específicos WireGuard.
+- Barrido periódico de vencimientos.
+- Aplicación/revocación real en runtime y sincronización de provisioning.
+- Migración real del archivo de usuarios: no ejecutada.
 - Eliminación de asociación individual e identidad con confirmaciones.
 - Importación/exportación completa y resolución manual de identidades/conflictos.
 - Protección de secretos/cifrado en reposo y gestión de claves.
@@ -113,9 +121,8 @@ A la fecha del punto de control:
 
 Continuar Etapa 3 de forma incremental, manteniendo Etapas 1 y 2 visibles en la matriz de cierre:
 
-1. Renovación y modificación de duración.
-2. Eliminación de asociación individual.
-3. Eliminación de identidad y todas sus asociaciones, con confirmación explícita.
+1. Eliminación de asociación individual.
+2. Eliminación de identidad y todas sus asociaciones, con confirmación explícita.
 
 Cada operación requiere validación de entradas, lock compartido, rechazo sin escritura ante errores, pruebas aisladas y actualización de documentación. El orden puede cambiar solo si existe una dependencia técnica justificada.
 
