@@ -2,7 +2,7 @@
 # Interfaz inicial de consulta para el modelo v2. No modifica datos ni runtime.
 
 users_menu_dispatch() {
-	local file="\${USER_DATA_FILE:-\${XRAY_MANAGER_USERS_FILE:-/var/lib/xray-manager/users/users.json}}"
+	local file="${USER_DATA_FILE:-${XRAY_MANAGER_USERS_FILE:-/var/lib/xray-manager/users/users.json}}"
 	local schema
 
 	# Mantiene el comportamiento legacy: si el archivo aún no existe, el
