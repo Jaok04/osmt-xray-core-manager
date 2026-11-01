@@ -197,4 +197,51 @@ grep -q 'Crear identidad global' "$OUT"
 grep -q 'Asociar identidad a conexión' "$OUT"
 grep -q 'Consultar detalle de asociación' "$OUT"
 
+
+# Editar alias y límites desde menú: modifica solo los tres campos solicitados.
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.before"
+printf '6\\n%s\\nCliente editado\\n8192\\n4\\ns\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+grep -q 'EDITAR ALIAS Y LÍMITES' "$OUT"
+grep -q 'Asociación actualizada correctamente' "$OUT"
+jq -e --arg id "$VLESS_ASSOC_ID" --arg secret "$VLESS_SECRET" '
+  any(.associations[]; .id==$id and .alias=="Cliente editado" and
+      .traffic_limit_bytes==8192 and .simultaneous_connection_limit==4 and
+      .credential.value==$secret and .state=="active" and
+      .duration.kind=="unlimited" and .provisioning_status=="draft" and
+      .runtime.status=="not_applied")
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+[[ "$(jq '[.associations[]|select(.id==$id)]|length' --arg id "$VLESS_ASSOC_ID" "$XRAY_MANAGER_USERS_FILE")" -eq 1 ]]
+
+# El cero elimina ambos límites (null) y se permiten alias repetidos.
+users_association_update "$VLESS_ASSOC_ID" "Alias repetible" 0 0
+jq -e --arg id "$VLESS_ASSOC_ID" '
+  any(.associations[]; .id==$id and .alias=="Alias repetible" and
+      .traffic_limit_bytes==null and .simultaneous_connection_limit==null)
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# Entradas inválidas o asociación inexistente se rechazan sin escribir.
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.invalid.before"
+if users_association_update "$VLESS_ASSOC_ID" " alias con espacios " 100 2; then
+  echo 'ERROR: se aceptó un alias con espacios externos.' >&2
+  exit 1
+fi
+if users_association_update "$VLESS_ASSOC_ID" "Alias" -1 2; then
+  echo 'ERROR: se aceptó un límite negativo.' >&2
+  exit 1
+fi
+if users_association_update "$VLESS_ASSOC_ID" "Alias" 100 1.5; then
+  echo 'ERROR: se aceptó un límite no entero.' >&2
+  exit 1
+fi
+if users_association_update "00000000-0000-4000-8000-000000000000" "Alias" 100 2; then
+  echo 'ERROR: se actualizó una asociación inexistente.' >&2
+  exit 1
+fi
+cmp -s "$TMP/edit.invalid.before" "$XRAY_MANAGER_USERS_FILE"
+
+# Cancelación del menú conserva el registro byte a byte.
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.cancel.before"
+printf '6\\n%s\\nNo guardar\\n500\\n3\\nn\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+cmp -s "$TMP/edit.cancel.before" "$XRAY_MANAGER_USERS_FILE"
+
 echo 'OK: selector legacy/v2, consulta protegida, resumen, detalle de asociación sin exposición de credenciales, creación de identidades/asociaciones VLESS y WireGuard, validaciones de identidad/conexión, credenciales únicas, capacidad y runtime sin cambios.'
