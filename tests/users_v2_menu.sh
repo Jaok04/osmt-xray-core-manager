@@ -143,8 +143,7 @@ grep -q 'identidad indicada no existe' "$OUT"
 
 # Conexión inexistente: aborta sin alterar el registro.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/before-invalid-connection"
-printf '%s\nno-existe\n' "$IDENTITY_ID" | users_v2_menu_create_association >"$OUT"
-if [[ $? -eq 0 ]]; then
+if printf '%s\nno-existe\n' "$IDENTITY_ID" | users_v2_menu_create_association >"$OUT"; then
   echo 'ERROR: se aceptó una conexión inexistente.' >&2
   exit 1
 fi
