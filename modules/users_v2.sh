@@ -24,6 +24,12 @@ users_v2_lock() {
 	mkdir -p "$USERS_V2_DATA_DIR" "$(dirname "$USERS_V2_LOCK")"
 	exec {fd_ref}>"$USERS_V2_LOCK"
 	flock -x "$fd_ref"
+	if [[ ! -r "$USERS_V2_CONNECTIONS_FILE" ]]; then
+		flock -u "$fd_ref"
+		exec {fd_ref}>&-
+		printf 'El catálogo de conexiones no está disponible; no se inicializó el registro v2.\\n' >&2
+		return 1
+	fi
 	if [[ ! -e "$USERS_V2_DATA_FILE" ]]; then
 		printf '%s\n' '{"schema_version":2,"identities":[],"associations":[]}' >"$USERS_V2_DATA_FILE"
 		chmod 600 "$USERS_V2_DATA_FILE"
