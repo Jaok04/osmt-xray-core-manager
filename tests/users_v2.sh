@@ -97,7 +97,8 @@ users_v2_commit_document "$DOC"
 [[ "$(users_v2_expire_due)" == 0 ]]
 jq -e --arg id "$A2" --arg wg "$A3" 'any(.associations[]; .id==$id and .state=="expired") and any(.associations[]; .id==$wg and .state=="suspended")' "$USERS_V2_DATA_FILE" >/dev/null
 if users_association_reactivate "$A2" custom 999999999999999999999 days >/dev/null 2>&1; then
- echo "ERROR: duración fuera de rango aceptada" >&2; exit 1
+	echo "ERROR: duración fuera de rango aceptada" >&2
+	exit 1
 fi
 # Renewal of an expired association begins a new period from now.
 users_association_renew "$A2" custom 1 days
