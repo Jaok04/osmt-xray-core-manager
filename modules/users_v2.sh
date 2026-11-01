@@ -477,6 +477,44 @@ users_association_set_alias() {
 	users_v2_unlock "$fd"
 }
 
+
+# Update alias and administrative limits in one locked, atomic document commit.
+# A zero limit means unlimited and is stored as JSON null.
+users_association_update() {
+	[[ "$#" -eq 4 ]] || return 2
+	local id="$1" alias="$2" traffic="$3" simultaneous="$4" fd document
+	[[ -n "$alias" && "${#alias}" -le 64 && "$alias" == "$(printf '%s' "$alias" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')" ]] || return 2
+	[[ "$traffic" == 0 || "$traffic" =~ ^[1-9][0-9]*$ ]] || return 2
+	[[ "$simultaneous" == 0 || "$simultaneous" =~ ^[1-9][0-9]*$ ]] || return 2
+	python3 - "$traffic" "$simultaneous" <<'PY'
+import sys
+maximum = 9007199254740991
+if any(int(value) > maximum for value in sys.argv[1:]):
+    raise SystemExit(2)
+PY
+	[[ "$?" -eq 0 ]] || return 2
+	users_v2_lock fd || return 1
+	jq -e --arg id "$id" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	document="$(jq --arg id "$id" --arg alias "$alias" --argjson traffic "$traffic" --argjson simultaneous "$simultaneous" '
+		(.associations[] | select(.id == $id)) |= (
+			.alias = $alias |
+			.traffic_limit_bytes = (if $traffic == 0 then null else $traffic end) |
+			.simultaneous_connection_limit = (if $simultaneous == 0 then null else $simultaneous end)
+		)
+	' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
+	users_v2_unlock "$fd"
+}
+
 users_association_delete() {
 	[[ "$#" -eq 1 ]] || return 2
 	local fd document
