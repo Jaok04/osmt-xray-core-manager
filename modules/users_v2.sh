@@ -81,7 +81,7 @@ users_v2_validate_document() {
 		([.associations[].id] | length == (unique | length)) and
 		([.associations[] | select(.protocol == "vless") | .credential.value | ascii_downcase] | length == (unique | length)) and
 		(all(.associations[]; . as $a | ($a.protocol == "wireguard" or
-			([.associations[] | select(.identity_id == $a.identity_id and .connection_id == $a.connection_id)] | length == 1))))
+			([$doc.associations[] | select(.identity_id == $a.identity_id and .connection_id == $a.connection_id)] | length == 1))))
 	' <<<"$document" >/dev/null 2>&1
 }
 
