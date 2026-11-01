@@ -151,4 +151,4 @@ if users_v2_migrate_legacy "$TMP/legacy-over-capacity.json" "$USERS_V2_CONNECTIO
 	exit 1
 fi
 [[ ! -e "$TMP/over-capacity.json" ]]
-echo "OK: modelo v2, identidad global, alias duplicados, unicidad UUID, WireGuard peers, CRUD, estados separados, corrupción y migración aislada."
+echo "OK: modelo v2, identidades, asociaciones, unicidad de credenciales, WireGuard peers, pausa/reactivación, modificación/renovación, vencimiento idempotente, corrupción y migración."
