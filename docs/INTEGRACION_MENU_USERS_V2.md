@@ -32,7 +32,7 @@ La edición de asociación se realiza por ID exacto y actualiza alias, límite d
 
 ## Operaciones aún no expuestas
 
-El módulo de dominio contiene funciones para editar alias, suspender, reactivar, renovar, modificar duración, eliminar asociaciones/identidades y calcular vencimientos. Esas operaciones administrativas aún no están conectadas a la interfaz.
+El módulo de dominio también contiene funciones para suspender, reactivar, renovar, modificar duración, eliminar asociaciones/identidades y calcular vencimientos. Esas operaciones restantes aún no están conectadas a la interfaz.
 
 La integración de las operaciones restantes se hará de forma incremental, con validación de entradas, confirmaciones para eliminaciones y pruebas sobre fixtures aislados.
 
