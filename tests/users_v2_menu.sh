@@ -200,7 +200,7 @@ grep -q 'Consultar detalle de asociación' "$OUT"
 
 # Editar alias y límites desde menú: modifica solo los tres campos solicitados.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.before"
-printf '6\\n%s\\nCliente editado\\n8192\\n4\\ns\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+printf '6\n%s\nCliente editado\n8192\n4\ns\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
 grep -q 'EDITAR ALIAS Y LÍMITES' "$OUT"
 grep -q 'Asociación actualizada correctamente' "$OUT"
 jq -e --arg id "$VLESS_ASSOC_ID" --arg secret "$VLESS_SECRET" '
@@ -241,7 +241,7 @@ cmp -s "$TMP/edit.invalid.before" "$XRAY_MANAGER_USERS_FILE"
 
 # Cancelación del menú conserva el registro byte a byte.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.cancel.before"
-printf '6\\n%s\\nNo guardar\\n500\\n3\\nn\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+printf '6\n%s\nNo guardar\n500\n3\nn\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
 cmp -s "$TMP/edit.cancel.before" "$XRAY_MANAGER_USERS_FILE"
 
 echo 'OK: selector legacy/v2, consulta protegida, resumen, detalle de asociación sin exposición de credenciales, creación de identidades/asociaciones VLESS y WireGuard, validaciones de identidad/conexión, credenciales únicas, capacidad y runtime sin cambios.'
