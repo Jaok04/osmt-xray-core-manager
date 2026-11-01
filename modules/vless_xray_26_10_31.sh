@@ -21,8 +21,8 @@ vless_xray_26_10_31_build() {
         (.schema_version == "1") and (.connection_id | type == "string" and length > 0) and
         (.mode_id | type == "string") and (.listen_address | type == "string" and length > 0) and
         (.listen_port | type == "number" and floor == . and . >= 1 and . <= 65535) and
-        (.users | type == "array") and (.transport_options | type == "object") and
-        (.security_options | type == "object")' "$model_file" >/dev/null || {
+        (.users | type == "array") and (.transport_options == {}) and
+        (.security_options == {})' "$model_file" >/dev/null || {
         printf 'El modelo neutral no cumple el esquema esperado.\n' >&2
         return 2
     }
@@ -85,7 +85,9 @@ vless_xray_26_10_31_build() {
                 (.private_key | type == "string" and length > 0) and
                 (.server_names | type == "array" and length > 0 and all(.[]; type == "string" and length > 0)) and
                 (.short_ids | type == "array" and length > 0 and all(.[]; type == "string" and length <= 16 and (test("^[0-9a-fA-F]*$")))) and
-                (.target | type == "string" and length > 0 and test("^.+:[0-9]{1,5}$"))' "$options_file" >/dev/null || {
+                (.target | type == "string" and length > 0 and test("^.+:[0-9]{1,5}$") and
+                    ((capture(":(?<p>[0-9]{1,5})$").p | tonumber) >= 1 and
+                     (capture(":(?<p>[0-9]{1,5})$").p | tonumber) <= 65535))' "$options_file" >/dev/null || {
                 printf 'gRPC+REALITY requiere service_name y los parámetros REALITY explícitos.\n' >&2
                 return 2
             }
@@ -95,7 +97,9 @@ vless_xray_26_10_31_build() {
                 (.private_key | type == "string" and length > 0) and
                 (.server_names | type == "array" and length > 0 and all(.[]; type == "string" and length > 0)) and
                 (.short_ids | type == "array" and length > 0 and all(.[]; type == "string" and length <= 16 and (test("^[0-9a-fA-F]*$")))) and
-                (.target | type == "string" and length > 0 and test("^.+:[0-9]{1,5}$"))' "$options_file" >/dev/null || {
+                (.target | type == "string" and length > 0 and test("^.+:[0-9]{1,5}$") and
+                    ((capture(":(?<p>[0-9]{1,5})$").p | tonumber) >= 1 and
+                     (capture(":(?<p>[0-9]{1,5})$").p | tonumber) <= 65535))' "$options_file" >/dev/null || {
                 printf 'REALITY requiere private_key, server_names, short_ids y target válidos.\n' >&2
                 return 2
             }
