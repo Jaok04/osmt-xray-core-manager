@@ -26,6 +26,7 @@ El menú v2 expone:
 7. Suspensión y reactivación de asociaciones.
 8. Renovación de asociaciones activas o vencidas.
 9. Modificación de duración para asociaciones activas o suspendidas.
+10. Eliminación individual de una asociación por ID, con confirmación.
 
 El listado presenta IDs, alias, conexión, protocolo, estado funcional, estado de implementación y vencimiento. No presenta UUID VLESS ni claves públicas/privadas de WireGuard.
 
@@ -41,7 +42,9 @@ La suspensión de una asociación activa pausa el tiempo restante si su duració
 
 La interfaz ya permite renovar asociaciones activas o vencidas y modificar la duración de asociaciones activas o suspendidas. La renovación inicia un periodo nuevo y deja el estado en `active`; no admite asociaciones suspendidas. La modificación en estado `active` recalcula el vencimiento desde el momento del cambio; en estado `suspended` actualiza `remaining_seconds` y mantiene la suspensión. Las dos operaciones se identifican por ID, validan duración y requieren confirmación. No modifican credenciales, límites, provisioning ni runtime.
 
-Pendiente: eliminación individual de asociaciones, eliminación de identidades con todas sus asociaciones, importación/exportación y otras capacidades enumeradas en el punto de control.
+La eliminación individual solicita confirmación, borra únicamente la asociación seleccionada y conserva la identidad y sus asociaciones hermanas. No revoca el peer/cliente en runtime ni cambia provisioning; la revocación runtime requiere la futura integración transaccional.
+
+Pendiente: eliminación de identidades con todas sus asociaciones, importación/exportación y otras capacidades enumeradas en el punto de control.
 
 La integración de las operaciones restantes se hará de forma incremental, con validación de entradas, confirmaciones para eliminaciones y pruebas sobre fixtures aislados.
 
@@ -55,6 +58,6 @@ La integración de las operaciones restantes se hará de forma incremental, con 
 
 ## Pruebas
 
-`tests/users_v2_menu.sh` cubre el enrutamiento legacy/v2, el listado y detalle sin credenciales, el resumen, la creación de identidades/asociaciones VLESS y WireGuard, la edición de alias/límites, la suspensión/reactivación, el tiempo restante pausado, renovación de asociaciones activas/vencidas, modificación de duración activa/suspendida, cancelaciones sin escritura, las validaciones de identidad/conexión/capacidad/credenciales duplicadas y el bloqueo sin escritura para JSON corrupto y esquemas desconocidos.
+`tests/users_v2_menu.sh` cubre el enrutamiento legacy/v2, el listado y detalle sin credenciales, el resumen, la creación de identidades/asociaciones VLESS y WireGuard, la edición de alias/límites, la suspensión/reactivación, el tiempo restante pausado, renovación de asociaciones activas/vencidas, modificación de duración activa/suspendida, eliminación individual conservando identidad/asociaciones hermanas, cancelaciones sin escritura, las validaciones de identidad/conexión/capacidad/credenciales duplicadas y el bloqueo sin escritura para JSON corrupto y esquemas desconocidos.
 
 La suite se incorpora a `tests/smoke.sh`.
