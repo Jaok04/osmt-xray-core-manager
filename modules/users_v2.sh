@@ -170,7 +170,8 @@ PY
 
 users_v2_duration_args() {
 	[[ "$#" -eq 3 ]] || return 2
-	if [[ "$1" == unlimited ]]; then [[ "$2" == 0 && "$3" == none ]] || return 2
+	if [[ "$1" == unlimited ]]; then
+		[[ "$2" == 0 && "$3" == none ]] || return 2
 	else
 		[[ "$1" == custom && "$2" =~ ^[1-9][0-9]*$ && ("$3" == days || "$3" == hours || "$3" == minutes) ]] || return 2
 		users_v2_duration_seconds "$2" "$3" >/dev/null || return 2
@@ -236,9 +237,15 @@ users_association_create() {
 	now="$(users_v2_now)"
 	if [[ "$state" == suspended ]]; then suspended_at="$now"; fi
 	if [[ "$dkind" == custom ]]; then
-		expires="$(users_v2_expiration_from "$now" "$dvalue" "$dunit")" || { users_v2_unlock "$fd"; return 2; }
+		expires="$(users_v2_expiration_from "$now" "$dvalue" "$dunit")" || {
+			users_v2_unlock "$fd"
+			return 2
+		}
 		if [[ "$state" == suspended ]]; then
-			remaining="$(users_v2_duration_seconds "$dvalue" "$dunit")" || { users_v2_unlock "$fd"; return 2; }
+			remaining="$(users_v2_duration_seconds "$dvalue" "$dunit")" || {
+				users_v2_unlock "$fd"
+				return 2
+			}
 			expires=""
 		fi
 	fi
@@ -267,16 +274,31 @@ users_association_suspend() {
 	[[ "$#" -eq 1 ]] || return 2
 	local fd id="$1" now now_epoch expires expiry_epoch remaining=null document assoc
 	users_v2_lock fd || return 1
-	assoc="$(jq -ce --arg id "$id" '.associations[] | select(.id == $id)' "$USERS_V2_DATA_FILE")" || { users_v2_unlock "$fd"; return 1; }
-	[[ "$(jq -r '.state' <<<"$assoc")" == active ]] || { users_v2_unlock "$fd"; return 1; }
+	assoc="$(jq -ce --arg id "$id" '.associations[] | select(.id == $id)' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	[[ "$(jq -r '.state' <<<"$assoc")" == active ]] || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	now="$(users_v2_now)"
-	now_epoch="$(date -u -d "$now" +%s)" || { users_v2_unlock "$fd"; return 1; }
+	now_epoch="$(date -u -d "$now" +%s)" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	expires="$(jq -r '.expires_at // empty' <<<"$assoc")"
 	if [[ -n "$expires" ]]; then
-		expiry_epoch="$(date -u -d "$expires" +%s)" || { users_v2_unlock "$fd"; return 1; }
+		expiry_epoch="$(date -u -d "$expires" +%s)" || {
+			users_v2_unlock "$fd"
+			return 1
+		}
 		if ((expiry_epoch <= now_epoch)); then
 			document="$(jq --arg id "$id" '(.associations[] | select(.id == $id)).state = "expired"' "$USERS_V2_DATA_FILE")"
-			users_v2_commit_document "$document" || { users_v2_unlock "$fd"; return 1; }
+			users_v2_commit_document "$document" || {
+				users_v2_unlock "$fd"
+				return 1
+			}
 			users_v2_unlock "$fd"
 			return 1
 		fi
@@ -284,8 +306,14 @@ users_association_suspend() {
 	fi
 	document="$(jq --arg id "$id" --arg now "$now" --argjson remaining "$remaining" '
 		(.associations[] | select(.id == $id)) |= (.state = "suspended" | .suspended_at = $now | .remaining_seconds = $remaining | .expires_at = null)
-	' "$USERS_V2_DATA_FILE")" || { users_v2_unlock "$fd"; return 1; }
-	if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+	' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	users_v2_unlock "$fd"
 }
 
@@ -295,10 +323,16 @@ users_association_reactivate() {
 	local id="$1" kind="$2" value="$3" unit="$4" fd now expires="" document
 	users_v2_duration_args "$kind" "$value" "$unit" || return 2
 	users_v2_lock fd || return 1
-	jq -e --arg id "$id" 'any(.associations[]; .id == $id and .state == "suspended")' "$USERS_V2_DATA_FILE" >/dev/null || { users_v2_unlock "$fd"; return 1; }
+	jq -e --arg id "$id" 'any(.associations[]; .id == $id and .state == "suspended")' "$USERS_V2_DATA_FILE" >/dev/null || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	now="$(users_v2_now)"
 	if [[ "$kind" == custom ]]; then
-		expires="$(users_v2_expiration_from "$now" "$value" "$unit")" || { users_v2_unlock "$fd"; return 2; }
+		expires="$(users_v2_expiration_from "$now" "$value" "$unit")" || {
+			users_v2_unlock "$fd"
+			return 2
+		}
 	fi
 	document="$(jq --arg id "$id" --arg kind "$kind" --arg unit "$unit" --arg expires "$expires" --argjson value "$value" '
 		(.associations[] | select(.id == $id)) |= (
@@ -307,8 +341,14 @@ users_association_reactivate() {
 			.expires_at = (if $expires == "" then null else $expires end) |
 			.suspended_at = null | .remaining_seconds = null
 		)
-	' "$USERS_V2_DATA_FILE")" || { users_v2_unlock "$fd"; return 1; }
-	if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+	' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	users_v2_unlock "$fd"
 }
 
@@ -318,10 +358,16 @@ users_association_renew() {
 	local id="$1" kind="$2" value="$3" unit="$4" fd now expires="" document
 	users_v2_duration_args "$kind" "$value" "$unit" || return 2
 	users_v2_lock fd || return 1
-	jq -e --arg id "$id" 'any(.associations[]; .id == $id and (.state == "active" or .state == "expired"))' "$USERS_V2_DATA_FILE" >/dev/null || { users_v2_unlock "$fd"; return 1; }
+	jq -e --arg id "$id" 'any(.associations[]; .id == $id and (.state == "active" or .state == "expired"))' "$USERS_V2_DATA_FILE" >/dev/null || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	now="$(users_v2_now)"
 	if [[ "$kind" == custom ]]; then
-		expires="$(users_v2_expiration_from "$now" "$value" "$unit")" || { users_v2_unlock "$fd"; return 2; }
+		expires="$(users_v2_expiration_from "$now" "$value" "$unit")" || {
+			users_v2_unlock "$fd"
+			return 2
+		}
 	fi
 	document="$(jq --arg id "$id" --arg kind "$kind" --arg unit "$unit" --arg expires "$expires" --argjson value "$value" '
 		(.associations[] | select(.id == $id)) |= (
@@ -330,8 +376,14 @@ users_association_renew() {
 			.expires_at = (if $expires == "" then null else $expires end) |
 			.suspended_at = null | .remaining_seconds = null
 		)
-	' "$USERS_V2_DATA_FILE")" || { users_v2_unlock "$fd"; return 1; }
-	if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+	' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	users_v2_unlock "$fd"
 }
 
@@ -341,15 +393,27 @@ users_association_set_duration() {
 	local id="$1" kind="$2" value="$3" unit="$4" fd now expires="" remaining=null state document assoc
 	users_v2_duration_args "$kind" "$value" "$unit" || return 2
 	users_v2_lock fd || return 1
-	assoc="$(jq -ce --arg id "$id" '.associations[] | select(.id == $id)' "$USERS_V2_DATA_FILE")" || { users_v2_unlock "$fd"; return 1; }
+	assoc="$(jq -ce --arg id "$id" '.associations[] | select(.id == $id)' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	state="$(jq -r '.state' <<<"$assoc")"
-	[[ "$state" == active || "$state" == suspended ]] || { users_v2_unlock "$fd"; return 1; }
+	[[ "$state" == active || "$state" == suspended ]] || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	now="$(users_v2_now)"
 	if [[ "$kind" == custom ]]; then
 		if [[ "$state" == suspended ]]; then
-			remaining="$(users_v2_duration_seconds "$value" "$unit")" || { users_v2_unlock "$fd"; return 2; }
+			remaining="$(users_v2_duration_seconds "$value" "$unit")" || {
+				users_v2_unlock "$fd"
+				return 2
+			}
 		else
-			expires="$(users_v2_expiration_from "$now" "$value" "$unit")" || { users_v2_unlock "$fd"; return 2; }
+			expires="$(users_v2_expiration_from "$now" "$value" "$unit")" || {
+				users_v2_unlock "$fd"
+				return 2
+			}
 		fi
 	fi
 	document="$(jq --arg id "$id" --arg kind "$kind" --arg unit "$unit" --arg expires "$expires" --argjson value "$value" --argjson remaining "$remaining" '
@@ -358,8 +422,14 @@ users_association_set_duration() {
 			.expires_at = (if $expires == "" then null else $expires end) |
 			.remaining_seconds = (if $kind == "unlimited" then null elif .state == "suspended" then $remaining else null end)
 		)
-	' "$USERS_V2_DATA_FILE")" || { users_v2_unlock "$fd"; return 1; }
-	if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+	' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	users_v2_unlock "$fd"
 }
 
@@ -374,11 +444,17 @@ users_v2_expire_due() {
 	before="$(jq '[.associations[] | select(.state == "expired")] | length' "$USERS_V2_DATA_FILE")"
 	document="$(jq --arg now "$now" '
 		.associations |= map(if .state == "active" and .duration.kind == "custom" and .expires_at <= $now then .state = "expired" else . end)
-	' "$USERS_V2_DATA_FILE")" || { users_v2_unlock "$fd"; return 1; }
+	' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	after="$(jq '[.associations[] | select(.state == "expired")] | length' <<<"$document")"
 	count=$((after - before))
 	if [[ "$document" != "$(cat "$USERS_V2_DATA_FILE")" ]]; then
-		if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+		if ! users_v2_commit_document "$document"; then
+			users_v2_unlock "$fd"
+			return 1
+		fi
 	fi
 	users_v2_unlock "$fd"
 	printf '%s\n' "$count"
