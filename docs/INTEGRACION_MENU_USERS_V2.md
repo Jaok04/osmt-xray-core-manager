@@ -1,6 +1,6 @@
 # Integración inicial del menú de identidades v2
 
-**Estado:** integrada en la rama de trabajo; interfaz v2 de consulta y primeras operaciones de creación.
+**Estado:** integrada en la rama de trabajo; interfaz v2 de consulta, creación y edición inicial.
 
 ## Enrutamiento por esquema
 
