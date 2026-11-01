@@ -77,10 +77,13 @@ users_v2_validate_document() {
 			($a.protocol | type == "string" and length > 0) and
 			($a.credential.type | type == "string" and length > 0) and
 			($a.credential.value | type == "string" and length > 0) and
-			(($a.duration.kind == "unlimited" and $a.expires_at == null) or
+			($a | has("suspended_at") and has("remaining_seconds")) and
+			(($a.duration.kind == "unlimited" and $a.expires_at == null and $a.remaining_seconds == null) or
 			 ($a.duration.kind == "custom" and ($a.duration.value | type == "number" and floor == . and . > 0) and
 			  ($a.duration.unit == "days" or $a.duration.unit == "hours" or $a.duration.unit == "minutes") and
-			  ($a.expires_at | type == "string" and length > 0))) and
+			  ((($a.state == "suspended") and $a.expires_at == null and ($a.suspended_at | type == "string" and length > 0) and ($a.remaining_seconds | type == "number" and floor == . and . >= 0)) or
+			   (($a.state != "suspended") and ($a.expires_at | type == "string" and length > 0) and $a.suspended_at == null and $a.remaining_seconds == null)))) and
+			($a.state == "suspended" or $a.suspended_at == null) and
 			($a.protocol != "vless" or ($a.credential.type == "uuid" and ($a.credential.value | test("^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")))) and
 			($a.protocol != "wireguard" or $a.credential.type == "public_key") and
 			($a.traffic_limit_bytes | posnull) and ($a.simultaneous_connection_limit | posnull) and
@@ -132,6 +135,14 @@ users_identity_create() {
 		return 1
 	}
 	now="$(users_v2_now)"
+	if [[ "$dkind" == custom ]]; then
+		expires="$(users_v2_expiration_from "$now" "$dvalue" "$dunit")" || { users_v2_unlock "$fd"; return 2; }
+		if [[ "$state" == suspended ]]; then
+			remaining="$(users_v2_duration_seconds "$dvalue" "$dunit")" || { users_v2_unlock "$fd"; return 2; }
+			suspended_at="$now"
+			expires=""
+		fi
+	fi
 	document="$(jq --arg id "$id" --arg now "$now" '.identities += [{id:$id,created_at:$now}]' "$USERS_V2_DATA_FILE")" || {
 		users_v2_unlock "$fd"
 		return 1
@@ -144,6 +155,26 @@ users_identity_create() {
 	printf '%s\n' "$id"
 }
 
+# Return a UTC expiration timestamp from a captured UTC timestamp.
+users_v2_expiration_from() {
+	[[ "$#" -eq 3 && "$2" =~ ^[1-9][0-9]*$ && ("$3" == days || "$3" == hours || "$3" == minutes) ]] || return 2
+	date -u -d "$1 + $2 $3" '+%Y-%m-%dT%H:%M:%SZ'
+}
+
+users_v2_duration_seconds() {
+	case "$2" in
+		days) printf '%s\n' "$(($1 * 86400))" ;;
+		hours) printf '%s\n' "$(($1 * 3600))" ;;
+		minutes) printf '%s\n' "$(($1 * 60))" ;;
+		*) return 2 ;;
+	esac
+}
+
+users_v2_duration_args() {
+	[[ "$#" -eq 3 ]] || return 2
+	if [[ "$1" == unlimited ]]; then [[ "$2" == 0 && "$3" == none ]] || return 2
+	else [[ "$1" == custom && "$2" =~ ^[1-9][0-9]*$ && ("$3" == days || "$3" == hours || "$3" == minutes) ]] || return 2; fi
+}
 # users_association_create identity_id connection_id alias credential_type credential_value state duration_kind duration_value duration_unit traffic_limit simultaneous_limit
 users_association_create() {
 	[[ "$#" -eq 12 ]] || {
@@ -152,13 +183,13 @@ users_association_create() {
 	}
 	local identity_id="$1" connection_id="$2" alias="$3" ctype="$4" cvalue="$5" state="$6"
 	local dkind="$7" dvalue="$8" dunit="$9" traffic="${10}" simultaneous="${11}" override="${12}"
-	local fd connection protocol id now expires="" document max_users slots
+	local fd connection protocol id now expires="" document max_users slots remaining=0 suspended_at=""
 	[[ "$alias" == "$(printf '%s' "$alias" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')" && -n "$alias" && "${#alias}" -le 64 ]] || return 2
 	[[ "$state" == active || "$state" == suspended || "$state" == expired ]] || return 2
 	[[ "$dkind" == unlimited || "$dkind" == custom ]] || return 2
 	if [[ "$dkind" == custom ]]; then
 		[[ "$dvalue" =~ ^[1-9][0-9]*$ && ("$dunit" == days || "$dunit" == hours || "$dunit" == minutes) ]] || return 2
-		case "$dunit" in days) expires="$(date -u -d "+$dvalue days" '+%Y-%m-%dT%H:%M:%SZ')" ;; hours) expires="$(date -u -d "+$dvalue hours" '+%Y-%m-%dT%H:%M:%SZ')" ;; minutes) expires="$(date -u -d "+$dvalue minutes" '+%Y-%m-%dT%H:%M:%SZ')" ;; esac
+		:
 	else
 		dvalue=0
 		dunit=none
@@ -202,12 +233,12 @@ users_association_create() {
 		return 1
 	}
 	now="$(users_v2_now)"
-	document="$(jq --arg id "$id" --arg iid "$identity_id" --arg cid "$connection_id" --arg alias "$alias" --arg protocol "$protocol" --arg ctype "$ctype" --arg cvalue "$cvalue" --arg now "$now" --arg state "$state" --arg dkind "$dkind" --argjson dvalue "$dvalue" --arg dunit "$dunit" --arg expires "$expires" --argjson traffic "$traffic" --argjson simultaneous "$simultaneous" '
+	document="$(jq --arg id "$id" --arg iid "$identity_id" --arg cid "$connection_id" --arg alias "$alias" --arg protocol "$protocol" --arg ctype "$ctype" --arg cvalue "$cvalue" --arg now "$now" --arg state "$state" --arg dkind "$dkind" --argjson dvalue "$dvalue" --arg dunit "$dunit" --arg expires "$expires" --arg suspended_at "$suspended_at" --argjson remaining "$remaining" --argjson traffic "$traffic" --argjson simultaneous "$simultaneous" '
 		.associations += [{
 			id:$id,identity_id:$iid,connection_id:$cid,alias:$alias,protocol:$protocol,
 			credential:{type:$ctype,value:$cvalue},created_at:$now,
 			duration:(if $dkind == "unlimited" then {kind:"unlimited"} else {kind:"custom",value:$dvalue,unit:$dunit} end),
-			expires_at:(if $expires == "" then null else $expires end),traffic_limit_bytes:(if $traffic == 0 then null else $traffic end),
+			expires_at:(if $expires == "" then null else $expires end),suspended_at:(if $suspended_at == "" then null else $suspended_at end),remaining_seconds:(if $dkind == "unlimited" then null elif $state == "suspended" then $remaining else null end),traffic_limit_bytes:(if $traffic == 0 then null else $traffic end),
 			simultaneous_connection_limit:(if $simultaneous == 0 then null else $simultaneous end),
 			state:$state,provisioning_status:"draft",runtime:{status:"not_applied",last_applied_at:null}
 		}]' "$USERS_V2_DATA_FILE")" || {
