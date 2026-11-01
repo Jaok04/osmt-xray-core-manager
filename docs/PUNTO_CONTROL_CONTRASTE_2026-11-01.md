@@ -76,10 +76,10 @@ Implementado:
 - Lógica de duración, suspensión, reactivación, renovación y vencimiento.
 - Selector legacy/v2 y menú inicial v2.
 - Creación de identidad y asociaciones VLESS/WireGuard desde el menú.
+- Consulta de detalle de asociación desde el menú, sin exponer credenciales ni modificar datos/runtime.
 - Suite de pruebas de menú y suite general de regresión.
 
 Pendiente:
-- Consulta de detalle de asociación.
 - Edición de alias y límites desde menú.
 - Suspensión/reactivación/renovación/modificación de duración desde menú.
 - Eliminación de asociación individual e identidad con confirmaciones.
@@ -112,12 +112,11 @@ A la fecha del punto de control:
 
 Continuar Etapa 3 de forma incremental, manteniendo Etapas 1 y 2 visibles en la matriz de cierre:
 
-1. Consulta de detalle de asociación (sin mostrar credenciales ni secretos).
-2. Edición de alias y límites.
-3. Suspensión y reactivación.
-4. Renovación y modificación de duración.
-5. Eliminación de asociación individual.
-6. Eliminación de identidad y todas sus asociaciones, con confirmación explícita.
+1. Edición de alias y límites.
+2. Suspensión y reactivación.
+3. Renovación y modificación de duración.
+4. Eliminación de asociación individual.
+5. Eliminación de identidad y todas sus asociaciones, con confirmación explícita.
 
 Cada operación requiere validación de entradas, lock compartido, rechazo sin escritura ante errores, pruebas aisladas y actualización de documentación. El orden puede cambiar solo si existe una dependencia técnica justificada.
 
