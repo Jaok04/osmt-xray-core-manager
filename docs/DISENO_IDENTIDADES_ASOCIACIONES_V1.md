@@ -195,31 +195,33 @@ Importante: el esquema antiguo no contiene información suficiente para reconstr
 
 ## 9. Contratos internos v2 — primera implementación
 
-Funciones de modelo/almacenamiento ya implementadas en `modules/users_v2.sh`:
-- `users_v2_validate_document <json>`
-- `users_v2_validate_identity <identity_json>`
-- `users_v2_validate_association <association_json>`
-- `users_v2_find_identity <identity_id>`
-- `users_v2_find_association <association_id>`
-- `users_v2_count_connection_slots <connection_id>` (pendiente como helper público; la capacidad se valida internamente al crear)
-
-Operaciones de servicio implementadas (lock compartido, validación y reemplazo atómico):
+Implementado en `modules/users_v2.sh`:
+- `users_v2_validate_document <json>`: valida el documento, referencias a conexiones, estados, credenciales y unicidad.
+- `users_v2_validate_file <path>`: valida el archivo persistido.
+- `users_v2_commit_document <json>`: valida y realiza reemplazo atómico con permisos 0600.
 - `users_identity_create`
 - `users_association_create`
-- `users_association_update`
-- `users_association_suspend`
-- `users_association_reactivate`
-- `users_association_renew`
+- `users_association_set_alias`
+- `users_association_set_state`
 - `users_association_delete`
 - `users_identity_delete`
+- `users_v2_export_vless_clients <connection_id>`
+- `users_v2_migrate_legacy <legacy_json> <connections_json> <output_json> <confirmed_state>`
 
-Adaptador VLESS:
-- Recibe asociaciones VLESS activas y aplicables de una conexión.
-- Genera `clients[].id` desde credencial UUID.
-- Genera `clients[].email` desde ID de asociación estable.
-- No usa alias como email ni ID de asociación.
-- No incluye suspended/expired en la configuración efectiva.
-- Los registros aún en draft no se presentan como acceso aplicado.
+Reglas del módulo:
+- Usa el bloqueo de integridad compartido.
+- Cuenta todas las asociaciones de una conexión para la capacidad, independientemente del estado.
+- Rechaza UUID VLESS repetidos globalmente.
+- Permite varias asociaciones WireGuard por identidad/conexión, pero rechaza claves públicas duplicadas.
+- No fusiona por alias.
+- La exportación VLESS solo incluye asociaciones activas con provisioning y runtime marcados como aplicados; el alias no se usa como `email`.
+- La migración es de VLESS legacy, exige estado funcional explícito, verifica capacidad, escribe a un destino nuevo y nunca modifica el origen.
+
+Pendiente:
+- búsqueda/consulta pública de entidades, edición de credenciales y límites;
+- pausa/reanudación de duración, renovación y vencimiento automático;
+- modelo completo de datos WireGuard;
+- integración con menú, generador y flujo de activación runtime.
 
 El módulo v2 todavía no está conectado al menú ni al adaptador de runtime. No reemplaza `modules/users.sh` ni convierte automáticamente el almacenamiento existente.
 
@@ -247,11 +249,16 @@ El módulo v2 todavía no está conectado al menú ni al adaptador de runtime. N
 
 ## 11. Decisiones cerradas y pendientes
 
-1. **Importación de identidades existentes:** la especificación permite identidad global compartida, pero los archivos legacy no la identifican; se requiere mapeo manual en importaciones sin ID.
-2. **WireGuard:** precisar si una identidad puede tener múltiples peers en la misma conexión y qué clave identifica de forma única cada peer.
-3. **Credenciales/secretos:** definir política de protección en reposo y exportación protegida antes de soportar contraseñas y claves privadas.
-4. **Estado de borradores históricos:** definir el diálogo de migración para decidir el estado funcional deseado sin inferirlo.
-5. **Unicidad de credenciales:** definir ámbito por protocolo y si un UUID puede repetirse entre conexiones (recomendación: impedir duplicado global en VLESS para simplificar correlación y evitar ambigüedad).
+**Decisiones aprobadas por el administrador el 01/11/2026:**
+1. WireGuard permite múltiples peers por identidad, incluso en la misma conexión.
+2. Los UUID VLESS tienen unicidad global entre todas las conexiones.
+3. El estado funcional se separa del estado de provisioning y del estado runtime.
+
+**Pendientes antes de habilitar importación/producción:**
+1. **Importación de identidades existentes:** sin `identity_id` no se fusiona por alias; se requiere mapeo manual inequívoco.
+2. **Protección de credenciales:** definir cifrado en reposo, gestión de claves y exportación protegida antes de soportar claves privadas y contraseñas.
+3. **WireGuard completo:** definir y validar campos específicos del peer (clave privada, clave pública, IP/AllowedIPs, endpoint y parámetros del túnel) en su adaptador.
+4. **Duración:** implementar pausa/reanudación del tiempo restante, renovación y vencimiento automático antes de exponer estas operaciones en el menú.
 
 ## 12. Alcance de este documento
 
