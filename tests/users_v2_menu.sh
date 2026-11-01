@@ -61,6 +61,30 @@ if grep -q '33333333-3333-4333-8333-333333333333' "$OUT"; then
 	exit 1
 fi
 
+
+# El detalle de asociación muestra los campos administrativos, oculta credenciales
+# y no modifica el documento.
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/detail.before"
+printf '5\\n22222222-2222-4222-8222-222222222222\\n\\n' | users_v2_menu >"$OUT"
+grep -q 'DETALLE DE ASOCIACIÓN' "$OUT"
+grep -q 'ID de identidad: 11111111-1111-4111-8111-111111111111' "$OUT"
+grep -q 'Alias: Cliente demo' "$OUT"
+grep -q 'Runtime: not_applied' "$OUT"
+grep -q 'Credencial: \\[oculta\\]' "$OUT"
+if grep -q '33333333-3333-4333-8333-333333333333' "$OUT"; then
+	echo 'ERROR: el detalle mostró una credencial sensible.' >&2
+	exit 1
+fi
+cmp -s "$TMP/detail.before" "$XRAY_MANAGER_USERS_FILE"
+
+# Un identificador inexistente se rechaza sin escritura.
+if printf '00000000-0000-4000-8000-000000000000\\n' | users_v2_menu_association_detail >"$OUT"; then
+	echo 'ERROR: el detalle aceptó una asociación inexistente.' >&2
+	exit 1
+fi
+cmp -s "$TMP/detail.before" "$XRAY_MANAGER_USERS_FILE"
+grep -q 'asociación indicada no existe' "$OUT"
+
 # Resumen correcto, sin escribir en el documento.
 printf '2\n\n0\n' | users_menu_dispatch >"$OUT"
 grep -q 'Identidades: 1' "$OUT"
@@ -172,5 +196,6 @@ fi
 printf '0\n' | users_v2_menu >"$OUT"
 grep -q 'Crear identidad global' "$OUT"
 grep -q 'Asociar identidad a conexión' "$OUT"
+grep -q 'Consultar detalle de asociación' "$OUT"
 
-echo 'OK: selector legacy/v2, consulta protegida, resumen, creación de identidades/asociaciones VLESS y WireGuard, validaciones de identidad/conexión, credenciales únicas, capacidad y runtime sin cambios.'
+echo 'OK: selector legacy/v2, consulta protegida, resumen, detalle de asociación sin exposición de credenciales, creación de identidades/asociaciones VLESS y WireGuard, validaciones de identidad/conexión, credenciales únicas, capacidad y runtime sin cambios.'
