@@ -1,6 +1,6 @@
 # Diseño del generador VLESS
 
-**Estado:** diseño técnico previo a la implementación del serializador.  
+**Estado:** modelo neutral y adaptador v26.10.31 implementados; integración con usuarios y aplicación en servicio pendientes.  
 **Proyecto:** Xray Core Manager 0.2.0-dev.
 
 ## 1. Objetivo y límites
@@ -122,3 +122,42 @@ El archivo `config/xray-version.conf` centraliza esta fijación. El binario se d
 **Aviso de seguridad del release:** el anuncio oficial identifica esta versión como actualización urgente que desactiva MPTCP por defecto debido a un riesgo de escalada remota asociado a MPTCP en Linux con Go 1.24+. También recomienda actualizar el kernel Linux. La actualización del kernel del VPS no se ha realizado y queda fuera de este cambio.
 
 **Pendiente:** validar fixtures independientes para WebSocket, gRPC, TLS y REALITY; implementar el serializador final solo después de definir los parámetros requeridos de certificados, transporte y REALITY. No se inferirán ni generarán credenciales o secretos de producción.
+
+## 11. Adaptador versionado VLESS -> Xray-core v26.10.31
+
+**Implementado:** `modules/vless_xray_26_10_31.sh` contiene `vless_xray_26_10_31_build <modelo.json> <opciones.json>`. Recibe el modelo neutral y un objeto de opciones explícitas; emite por stdout una configuración completa de Xray. No escribe la configuración, no crea usuarios ni aplica cambios.
+
+### Contrato de opciones
+
+| Modalidad | Opciones obligatorias |
+|---|---|
+| `vless_ws` | `path` (debe comenzar por `/`) |
+| `vless_tcp_tls`, `vless_ws_tls` | `certificate_file`, `key_file` (archivos legibles) |
+| `vless_reality` | `target`, `server_names`, `private_key`, `short_ids` |
+| `vless_grpc_tls` | `service_name`, `certificate_file`, `key_file` |
+| `vless_grpc_reality` | `service_name`, `target`, `server_names`, `private_key`, `short_ids` |
+
+Las claves adicionales se rechazan. No se generan rutas, nombres de servicio, certificados ni claves. Los usuarios se toman del arreglo `users` del modelo; mientras la etapa 3 no los gestione, el modelo puede seguir produciendo una lista vacía para pruebas, pero esa configuración no ofrece acceso autenticado a clientes.
+
+### Estructura de Xray verificada en la etiqueta exacta
+
+- `streamSettings.method`: `raw`, `websocket` o `grpc`.
+- `streamSettings.security`: `none`, `tls` o `reality`.
+- WebSocket: `wsSettings.path`.
+- gRPC: `grpcSettings.serviceName`.
+- TLS: `tlsSettings.certificates[].certificateFile` y `keyFile`.
+- REALITY: `realitySettings.target`, `type`, `serverNames`, `privateKey`, `shortIds`.
+
+La modalidad y la pareja transporte/seguridad deben coincidir exactamente con el catálogo. El serializador no permite combinaciones arbitrarias.
+
+### Prueba de integración
+
+Se añadió `tests/xray_vless_integration.sh`. Utiliza el binario de validación en caché, crea un certificado autofirmado y una clave REALITY efímeros, genera seis configuraciones temporales y ejecuta `xray run -test` en cada una. El directorio temporal y las claves se eliminan al salir.
+
+**Resultado en VPS (2026-11-01):** las seis modalidades devolvieron `Configuration OK.`; la prueba negativa de opciones incompletas también pasó. No se inició Xray como servicio ni se abrió ningún socket.
+
+### Advertencias del propio binario
+
+Xray v26.10.31 emite avisos de que WebSocket y gRPC están obsoletos/no recomendados y sugiere migrar a XHTTP. También advierte que REALITY escuchando en puertos distintos de 443 puede aumentar la probabilidad de bloqueo. Son advertencias del binario, no errores de validación. El catálogo no se ha modificado en esta etapa.
+
+**Límite actual:** el adaptador es específico de v26.10.31. Todavía no se integra con un flujo de usuarios reales, certificados de producción, persistencia de perfiles, escritura transaccional ni activación del servicio. La prueba de configuración no equivale a una prueba de conectividad extremo a extremo.
