@@ -13,7 +13,7 @@ printf '9\n\n0\n' | "$ENTRY" >"$OUT"
 grep -q 'INFORMACIÓN Y AYUDA' "$OUT"
 grep -q '0.2.0-dev' "$OUT"
 
-# El modelo neutral resuelve exactamente las seis modalidades VLESS.
+# El modelo neutral resuelve exactamente las nueve modalidades VLESS.
 source "$ROOT/modules/vless_model.sh"
 while IFS='|' read -r mode expected_transport expected_security; do
     MODEL="$(vless_model_build 'conn-test-01' "$mode" '127.0.0.1' '443')"
@@ -32,6 +32,9 @@ vless_ws_tls|websocket|tls
 vless_reality|raw|reality
 vless_grpc_tls|grpc|tls
 vless_grpc_reality|grpc|reality
+vless_xhttp|xhttp|none
+vless_xhttp_tls|xhttp|tls
+vless_xhttp_reality|xhttp|reality
 MODES
 for invalid_mode in vless_httpupgrade vless_ws_reality vmess_ws ''; do
     if vless_model_build conn-test "$invalid_mode" 127.0.0.1 443 >/dev/null 2>&1; then
@@ -194,7 +197,7 @@ if bash -c '
     exit 1
 fi
 grep -q 'invalid json' "$TMPDIR_TEST/data/connections.json"
-printf '%s\n' "OK: menú, catálogo, alta, edición, protección de estados, cancelación/eliminación, JSON corrupto, permisos y modelo VLESS (seis modalidades y validaciones negativas)."
+printf '%s\n' "OK: menú, catálogo, alta, edición, protección de estados, cancelación/eliminación, JSON corrupto, permisos y modelo VLESS (nueve modalidades y validaciones negativas)."
 
 # Pruebas aisladas del módulo de usuarios VLESS.
 bash "$ROOT/tests/users.sh"
