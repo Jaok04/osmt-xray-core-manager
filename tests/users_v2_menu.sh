@@ -89,14 +89,14 @@ grep -q 'esquema desconocido' "$OUT"
 
 # Creación desde el menú v2: identidad global y asociación VLESS.
 rm -f "$XRAY_MANAGER_USERS_FILE"
-printf 's\n' | users_v2_menu_create_identity >"$OUT"
+printf '3\ns\n\n0\n' | users_v2_menu >"$OUT"
 IDENTITY_ID="$(sed -n 's/^ID: //p' "$OUT" | tail -n1)"
 [[ "$IDENTITY_ID" =~ ^[0-9a-f-]{36}$ ]]
 jq -e --arg id "$IDENTITY_ID" 'any(.identities[]; .id==$id) and (.associations|length)==0' "$XRAY_MANAGER_USERS_FILE" >/dev/null
 
 VLESS_SECRET='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-printf '%s\nconn-vless\nCliente desde menú\n%s\nactive\nunlimited\n0\n0\ns\n' \
-	"$IDENTITY_ID" "$VLESS_SECRET" | users_v2_menu_create_association >"$OUT"
+printf '4\n%s\nconn-vless\nCliente desde menú\n%s\nactive\nunlimited\n0\n0\ns\n\n0\n' \
+	"$IDENTITY_ID" "$VLESS_SECRET" | users_v2_menu >"$OUT"
 VLESS_ASSOC_ID="$(sed -n 's/^ID de asociación: //p' "$OUT" | tail -n1)"
 [[ "$VLESS_ASSOC_ID" =~ ^[0-9a-f-]{36}$ ]]
 jq -e --arg id "$VLESS_ASSOC_ID" --arg iid "$IDENTITY_ID" --arg secret "$VLESS_SECRET" '
@@ -114,8 +114,8 @@ grep -q 'Runtime: sin cambios (not_applied)' "$OUT"
 
 # WireGuard selecciona automáticamente public_key y admite múltiples peers.
 WG_SECRET='wireguard-public-key-fixture'
-printf '%s\nconn-wg\nPeer de prueba\n%s\nsuspended\ncustom\n2\nhours\n4096\n2\ns\n' \
-	"$IDENTITY_ID" "$WG_SECRET" | users_v2_menu_create_association >"$OUT"
+printf '4\n%s\nconn-wg\nPeer de prueba\n%s\nsuspended\ncustom\n2\nhours\n4096\n2\ns\n\n0\n' \
+	"$IDENTITY_ID" "$WG_SECRET" | users_v2_menu >"$OUT"
 WG_ASSOC_ID="$(sed -n 's/^ID de asociación: //p' "$OUT" | tail -n1)"
 [[ "$WG_ASSOC_ID" =~ ^[0-9a-f-]{36}$ ]]
 jq -e --arg id "$WG_ASSOC_ID" --arg secret "$WG_SECRET" '
