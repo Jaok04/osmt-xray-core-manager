@@ -11,6 +11,9 @@ vless_model_resolve_mode() {
         vless_reality) printf '%s|%s\n' 'raw' 'reality' ;;
         vless_grpc_tls) printf '%s|%s\n' 'grpc' 'tls' ;;
         vless_grpc_reality) printf '%s|%s\n' 'grpc' 'reality' ;;
+        vless_xhttp) printf '%s|%s\n' 'xhttp' 'none' ;;
+        vless_xhttp_tls) printf '%s|%s\n' 'xhttp' 'tls' ;;
+        vless_xhttp_reality) printf '%s|%s\n' 'xhttp' 'reality' ;;
         *) return 1 ;;
     esac
 }
