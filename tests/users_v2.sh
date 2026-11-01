@@ -20,7 +20,9 @@ cat >"$USERS_V2_CONNECTIONS_FILE" <<'JSON'
 JSON
 
 # shellcheck disable=SC2119
+# shellcheck disable=SC2119
 ID1="$(users_identity_create)"
+# shellcheck disable=SC2119
 ID2="$(users_identity_create)"
 [[ "$ID1" != "$ID2" ]]
 A1="$(users_association_create "$ID1" conn-vless-a Compartido uuid 11111111-1111-4111-8111-111111111111 active unlimited 0 none 0 0 auto)"
