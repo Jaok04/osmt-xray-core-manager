@@ -80,7 +80,6 @@ Implementado:
 - Suite de pruebas de menú y suite general de regresión.
 
 Pendiente:
-- Edición de alias y límites desde menú.
 - Suspensión/reactivación/renovación/modificación de duración desde menú.
 - Eliminación de asociación individual e identidad con confirmaciones.
 - Importación/exportación completa y resolución manual de identidades/conflictos.
@@ -112,11 +111,10 @@ A la fecha del punto de control:
 
 Continuar Etapa 3 de forma incremental, manteniendo Etapas 1 y 2 visibles en la matriz de cierre:
 
-1. Edición de alias y límites.
-2. Suspensión y reactivación.
-3. Renovación y modificación de duración.
-4. Eliminación de asociación individual.
-5. Eliminación de identidad y todas sus asociaciones, con confirmación explícita.
+1. Suspensión y reactivación.
+2. Renovación y modificación de duración.
+3. Eliminación de asociación individual.
+4. Eliminación de identidad y todas sus asociaciones, con confirmación explícita.
 
 Cada operación requiere validación de entradas, lock compartido, rechazo sin escritura ante errores, pruebas aisladas y actualización de documentación. El orden puede cambiar solo si existe una dependencia técnica justificada.
 
