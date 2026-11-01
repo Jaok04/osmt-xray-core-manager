@@ -51,7 +51,8 @@ users_v2_menu() {
 		printf '  [6] Editar alias y límites de asociación\n'
 		printf '  [7] Suspender / reactivar asociación\n'
 		printf '  [8] Renovar asociación\n'
-		printf '  [9] Modificar duración de asociación\n'		printf '  [10] Eliminar asociación individual\n'
+		printf '  [9] Modificar duración de asociación\n'
+		printf '  [10] Eliminar asociación individual\n'
 		printf '  [0] Volver al menú principal\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
