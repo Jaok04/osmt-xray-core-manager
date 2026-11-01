@@ -66,6 +66,10 @@ users_v2_menu() {
 			users_v2_menu_create_association
 			ui_pause
 			;;
+		5)
+			users_v2_menu_association_detail
+			ui_pause
+			;;
 		0) return 0 ;;
 		*)
 			printf '\nOpción no válida.\n'
@@ -269,4 +273,57 @@ users_v2_menu_create_association() {
 		return 1
 	fi
 	printf '\nAsociación creada correctamente.\nID de asociación: %s\nProvisioning: draft\nRuntime: sin cambios (not_applied).\n' "$association_id"
+}
+
+# Consulta el detalle administrativo de una asociación sin revelar credenciales.
+users_v2_menu_association_detail() {
+	local fd association_id
+	ui_clear
+	ui_title "DETALLE DE ASOCIACIÓN"
+
+	if ! users_v2_lock fd; then
+		printf '\\nNo fue posible validar o bloquear el registro v2.\\n'
+		return 1
+	fi
+	if [[ "$(jq '.associations | length' "$USERS_V2_DATA_FILE")" -eq 0 ]]; then
+		users_v2_unlock "$fd"
+		printf '\\nNo hay asociaciones registradas.\\n'
+		return 0
+	fi
+
+	printf '\\nASOCIACIONES DISPONIBLES\\n'
+	jq -r '.associations[] | "  " + .id + "  | " + .alias + "  | " + .protocol + "  | " + .connection_id' "$USERS_V2_DATA_FILE"
+	printf '\\nID exacto de asociación: '
+	IFS= read -r association_id || {
+		users_v2_unlock "$fd"
+		return 0
+	}
+	if ! jq -e --arg id "$association_id" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null; then
+		users_v2_unlock "$fd"
+		printf '\\nLa asociación indicada no existe. No se modificaron datos.\\n'
+		return 1
+	fi
+
+	jq -r --arg id "$association_id" '
+		.associations[] | select(.id == $id) |
+		"ID de asociación: " + .id,
+		"ID de identidad: " + .identity_id,
+		"Alias: " + .alias,
+		"Protocolo: " + .protocol,
+		"ID de conexión: " + .connection_id,
+		"Credencial: [oculta]",
+		"Creada: " + .created_at,
+		"Duración: " + (if .duration.kind == "unlimited" then "Ilimitada" else ((.duration.value|tostring) + " " + .duration.unit) end),
+		"Vencimiento: " + (.expires_at // "Sin vencimiento activo"),
+		"Estado funcional: " + .state,
+		"Provisioning: " + .provisioning_status,
+		"Runtime: " + .runtime.status,
+		"Última aplicación: " + (.runtime.last_applied_at // "Nunca"),
+		"Límite de tráfico: " + (if .traffic_limit_bytes == null then "Sin límite" else ((.traffic_limit_bytes|tostring) + " bytes") end),
+		"Conexiones simultáneas: " + (if .simultaneous_connection_limit == null then "Sin límite" else (.simultaneous_connection_limit|tostring) end),
+		"Suspensión iniciada: " + (.suspended_at // "No"),
+		"Tiempo restante pausado: " + (if .remaining_seconds == null then "No aplica" else ((.remaining_seconds|tostring) + " segundos") end)
+	' "$USERS_V2_DATA_FILE"
+	users_v2_unlock "$fd"
+	printf '\\nLas credenciales y claves permanecen ocultas. Esta consulta no modifica el registro ni el runtime.\\n'
 }
