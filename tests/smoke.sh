@@ -5,13 +5,56 @@ ENTRY="$ROOT/bin/xray-manager"
 OUT="$(mktemp)"
 TMPDIR_TEST="$(mktemp -d)"
 trap 'rm -f "$OUT"; rm -rf "$TMPDIR_TEST"' EXIT
-bash -n "$ENTRY" "$ROOT/lib/ui.sh" "$ROOT/lib/system.sh" "$ROOT/modules/connections.sh" "$ROOT/modules/main_menu.sh"
+bash -n "$ENTRY" "$ROOT/lib/ui.sh" "$ROOT/lib/system.sh" "$ROOT/modules/connections.sh" "$ROOT/modules/vless_model.sh" "$ROOT/modules/main_menu.sh"
 printf '0\n' | "$ENTRY" >"$OUT"
 grep -q 'MENÚ PRINCIPAL' "$OUT"
 grep -q 'Cerrando Xray Core Manager' "$OUT"
 printf '9\n\n0\n' | "$ENTRY" >"$OUT"
 grep -q 'INFORMACIÓN Y AYUDA' "$OUT"
 grep -q '0.2.0-dev' "$OUT"
+
+# El modelo neutral resuelve exactamente las seis modalidades VLESS.
+source "$ROOT/modules/vless_model.sh"
+while IFS='|' read -r mode expected_transport expected_security; do
+    MODEL="$(vless_model_build 'conn-test-01' "$mode" '127.0.0.1' '443')"
+    jq -e --arg mode "$mode" --arg transport "$expected_transport" --arg security "$expected_security" '
+        .schema_version == "1" and .connection_id == "conn-test-01" and
+        .protocol == "vless" and .mode_id == $mode and
+        .transport == $transport and .security == $security and
+        .listen_address == "127.0.0.1" and .listen_port == 443 and
+        .transport_options == {} and .security_options == {} and .users == [] and
+        (has("flow") | not)
+    ' <<<"$MODEL" >/dev/null
+done <<'MODES'
+vless_ws|websocket|none
+vless_tcp_tls|raw|tls
+vless_ws_tls|websocket|tls
+vless_reality|raw|reality
+vless_grpc_tls|grpc|tls
+vless_grpc_reality|grpc|reality
+MODES
+for invalid_mode in vless_httpupgrade vless_ws_reality vmess_ws ''; do
+    if vless_model_build conn-test "$invalid_mode" 127.0.0.1 443 >/dev/null 2>&1; then
+        echo "ERROR: se aceptó modalidad VLESS inválida: $invalid_mode" >&2
+        exit 1
+    fi
+done
+for invalid_port in 0 65536 abc ''; do
+    if vless_model_build conn-test vless_ws 127.0.0.1 "$invalid_port" >/dev/null 2>&1; then
+        echo "ERROR: se aceptó puerto inválido: $invalid_port" >&2
+        exit 1
+    fi
+done
+for invalid_address in '' '127.0.0.1 0.0.0.0'; do
+    if vless_model_build conn-test vless_ws "$invalid_address" 443 >/dev/null 2>&1; then
+        echo "ERROR: se aceptó dirección de escucha inválida." >&2
+        exit 1
+    fi
+done
+if vless_model_build '' vless_ws 127.0.0.1 443 >/dev/null 2>&1; then
+    echo "ERROR: se aceptó ID de conexión vacío." >&2
+    exit 1
+fi
 printf '1\n1\n\n0\n0\n' | "$ENTRY" >"$OUT"
 grep -q 'GESTIÓN DE PROTOCOLOS Y CONEXIONES' "$OUT"
 grep -q 'CATÁLOGO DE PROTOCOLOS' "$OUT"
@@ -147,4 +190,4 @@ if bash -c '
     exit 1
 fi
 grep -q 'invalid json' "$TMPDIR_TEST/data/connections.json"
-printf '%s\n' "OK: menú, catálogo, alta, edición, protección de estados, cancelación/eliminación, JSON corrupto y permisos."
+printf '%s\n' "OK: menú, catálogo, alta, edición, protección de estados, cancelación/eliminación, JSON corrupto, permisos y modelo VLESS (seis modalidades y validaciones negativas)."
