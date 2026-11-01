@@ -677,7 +677,6 @@ users_v2_menu_association_delete() {
 	printf 'Runtime y provisioning no fueron modificados.\n'
 }
 
-
 # Delete a global identity and every association that belongs to it.
 # The association-ID snapshot prevents a concurrent new peer from being
 # silently included after the administrator reviewed the deletion preview.
