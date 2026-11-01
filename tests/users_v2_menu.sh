@@ -74,7 +74,7 @@ grep -q 'JSON inválido' "$OUT"
 
 printf '{"schema_version":99}\n' >"$XRAY_MANAGER_USERS_FILE"
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/unknown.before"
-if users_menu_dispatch >"$OUT" 2>&1; then
+if printf '\n' | users_menu_dispatch >"$OUT" 2>&1; then
   echo 'ERROR: se aceptó un esquema desconocido.' >&2
   exit 1
 fi
