@@ -50,10 +50,22 @@ users_v2_menu() {
 		printf '  [0] Volver al menú principal\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
-		1) users_v2_menu_list; ui_pause ;;
-		2) users_v2_menu_summary; ui_pause ;;
-		3) users_v2_menu_create_identity; ui_pause ;;
-		4) users_v2_menu_create_association; ui_pause ;;
+		1)
+			users_v2_menu_list
+			ui_pause
+			;;
+		2)
+			users_v2_menu_summary
+			ui_pause
+			;;
+		3)
+			users_v2_menu_create_identity
+			ui_pause
+			;;
+		4)
+			users_v2_menu_create_association
+			ui_pause
+			;;
 		0) return 0 ;;
 		*)
 			printf '\nOpción no válida.\n'
@@ -149,7 +161,10 @@ users_v2_menu_create_association() {
 	printf '\nIDENTIDADES DISPONIBLES\n'
 	jq -r '.identities[] | "  " + .id + "  (creada: " + .created_at + ")"' "$USERS_V2_DATA_FILE"
 	printf '\nID exacto de identidad: '
-	IFS= read -r identity_id || { users_v2_unlock "$fd"; return 0; }
+	IFS= read -r identity_id || {
+		users_v2_unlock "$fd"
+		return 0
+	}
 	if ! jq -e --arg id "$identity_id" 'any(.identities[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null; then
 		users_v2_unlock "$fd"
 		printf '\nLa identidad indicada no existe.\n'
@@ -169,7 +184,10 @@ users_v2_menu_create_association() {
 	printf '\nCONEXIONES DISPONIBLES\n'
 	jq -r '.[] | "  ID: " + .id + "\n  Nombre: " + .name + "\n  Modalidad: " + .protocol_id + "\n  Capacidad: " + (.max_users|tostring) + "\n"' "$USERS_V2_CONNECTIONS_FILE"
 	printf 'ID exacto de conexión: '
-	IFS= read -r connection_id || { users_v2_unlock "$fd"; return 0; }
+	IFS= read -r connection_id || {
+		users_v2_unlock "$fd"
+		return 0
+	}
 	connection_id="$(jq -r --arg id "$connection_id" '.[] | select(.id == $id) | .id' "$USERS_V2_CONNECTIONS_FILE")"
 	if [[ -z "$connection_id" ]]; then
 		users_v2_unlock "$fd"
@@ -196,7 +214,10 @@ users_v2_menu_create_association() {
 	printf '\nAlias de esta asociación (máximo 64 caracteres): '
 	IFS= read -r alias || return 0
 	printf 'Credencial (%s): ' "$credential_type"
-	IFS= read -r -s credential_value || { printf '\n'; return 0; }
+	IFS= read -r -s credential_value || {
+		printf '\n'
+		return 0
+	}
 	printf '\n'
 	if [[ -z "$credential_value" ]]; then
 		printf '\nLa credencial no puede estar vacía.\n'
@@ -212,17 +233,20 @@ users_v2_menu_create_association() {
 	printf 'Duración [unlimited/custom]: '
 	IFS= read -r duration_kind || return 0
 	case "$duration_kind" in
-		unlimited) duration_value=0; duration_unit=none ;;
-		custom)
-			printf 'Cantidad (entero positivo): '
-			IFS= read -r duration_value || return 0
-			printf 'Unidad [days/hours/minutes]: '
-			IFS= read -r duration_unit || return 0
-			;;
-		*)
-			printf '\nTipo de duración no válido.\n'
-			return 1
-			;;
+	unlimited)
+		duration_value=0
+		duration_unit=none
+		;;
+	custom)
+		printf 'Cantidad (entero positivo): '
+		IFS= read -r duration_value || return 0
+		printf 'Unidad [days/hours/minutes]: '
+		IFS= read -r duration_unit || return 0
+		;;
+	*)
+		printf '\nTipo de duración no válido.\n'
+		return 1
+		;;
 	esac
 	printf 'Límite de tráfico en bytes (0 = sin límite): '
 	IFS= read -r traffic || return 0
