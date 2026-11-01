@@ -409,13 +409,14 @@ fi
 cmp -s "$TMP/association.delete.invalid.before" "$XRAY_MANAGER_USERS_FILE"
 grep -q 'asociación indicada no existe' "$OUT"
 
+ASSOCIATION_COUNT_BEFORE_DELETE="$(jq '.associations | length' "$XRAY_MANAGER_USERS_FILE")"
 printf '10\n%s\ns\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
 grep -q 'Asociación eliminada del registro administrativo' "$OUT"
-jq -e --arg iid "$IDENTITY_ID" --arg deleted "$VLESS_ASSOC_ID" --arg sibling "$WG_ASSOC_ID" '
+jq -e --arg iid "$IDENTITY_ID" --arg deleted "$VLESS_ASSOC_ID" --arg sibling "$WG_ASSOC_ID" --argjson count "$ASSOCIATION_COUNT_BEFORE_DELETE" '
   any(.identities[]; .id==$iid) and
   (all(.associations[]; .id!=$deleted)) and
   any(.associations[]; .id==$sibling and .identity_id==$iid and .protocol=="wireguard") and
-  (.associations | length)==1
+  (.associations | length)==($count - 1)
 ' "$XRAY_MANAGER_USERS_FILE" >/dev/null
 
 # La opción está visible; el borrado no toca el provisioning/runtime del peer restante.
