@@ -53,6 +53,7 @@ users_v2_menu() {
 		printf '  [8] Renovar asociación\n'
 		printf '  [9] Modificar duración de asociación\n'
 		printf '  [10] Eliminar asociación individual\n'
+		printf '  [11] Eliminar identidad y todas sus asociaciones\n'
 		printf '  [0] Volver al menú principal\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
@@ -94,6 +95,10 @@ users_v2_menu() {
 			;;
 		10)
 			users_v2_menu_association_delete
+			ui_pause
+			;;
+		11)
+			users_v2_menu_identity_delete
 			ui_pause
 			;;
 		0) return 0 ;;
@@ -670,4 +675,76 @@ users_v2_menu_association_delete() {
 	fi
 	printf '\nAsociación eliminada del registro administrativo. La identidad y las demás asociaciones permanecen intactas.\n'
 	printf 'Runtime y provisioning no fueron modificados.\n'
+}
+
+
+# Delete a global identity and every association that belongs to it.
+# The association-ID snapshot prevents a concurrent new peer from being
+# silently included after the administrator reviewed the deletion preview.
+users_v2_menu_identity_delete() {
+	local fd identity_id identity created_at association_ids association_count confirmation
+	ui_clear
+	ui_title "ELIMINAR IDENTIDAD GLOBAL"
+	if ! users_v2_lock fd; then
+		printf '\nNo fue posible validar o bloquear el registro v2.\n'
+		return 1
+	fi
+	if [[ "$(jq '.identities | length' "$USERS_V2_DATA_FILE")" -eq 0 ]]; then
+		users_v2_unlock "$fd"
+		printf '\nNo hay identidades para eliminar.\n'
+		return 0
+	fi
+	printf '\nIDENTIDADES DISPONIBLES (ID inmutable)\n'
+	jq -r '.identities[] | "  " + .id + "  | creada: " + .created_at' "$USERS_V2_DATA_FILE"
+	printf '\nID exacto de identidad que deseas eliminar: '
+	IFS= read -r identity_id || {
+		users_v2_unlock "$fd"
+		return 0
+	}
+	identity="$(jq -ce --arg id "$identity_id" '.identities[] | select(.id == $id)' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		printf '\nLa identidad indicada no existe. No se modificaron datos.\n'
+		return 1
+	}
+	created_at="$(jq -r '.created_at' <<<"$identity")"
+	association_ids="$(jq -c --arg id "$identity_id" '[.associations[] | select(.identity_id == $id) | .id] | sort' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	association_count="$(jq 'length' <<<"$association_ids")"
+	printf '\nASOCIACIONES QUE SE ELIMINARÁN\n'
+	if [[ "$association_count" -eq 0 ]]; then
+		printf '  Esta identidad no tiene asociaciones.\n'
+	else
+		jq -r --arg id "$identity_id" '.associations[] | select(.identity_id == $id) | "  ID: " + .id + "\n  Alias: " + .alias + "\n  Protocolo: " + .protocol + "\n  Conexión: " + .connection_id + "\n  Estado: " + .state + "\n  Provisioning: " + .provisioning_status + "\n  Runtime: " + .runtime.status + "\n"' "$USERS_V2_DATA_FILE"
+	fi
+	users_v2_unlock "$fd"
+
+	printf '\nRESUMEN DE ELIMINACIÓN DEFINITIVA\n'
+	printf 'ID de identidad: %s\nCreada: %s\nAsociaciones incluidas: %s\n' "$identity_id" "$created_at" "$association_count"
+	printf '\nSe eliminará la identidad global y TODAS las asociaciones/peers vinculados a ella.\n'
+	printf 'Las demás identidades y sus asociaciones no se modificarán.\n'
+	printf 'Esta operación solo afecta el registro administrativo; NO revoca clientes/peers del runtime Xray.\n'
+	if ! ui_confirm "¿Deseas continuar con esta eliminación permanente?"; then
+		printf '\nOperación cancelada; no se guardaron cambios.\n'
+		return 0
+	fi
+	printf 'Para confirmar, escribe exactamente el ID de la identidad: '
+	IFS= read -r confirmation || return 0
+	if [[ "$confirmation" != "$identity_id" ]]; then
+		printf '\nEl ID de confirmación no coincide. No se modificaron datos.\n'
+		return 1
+	fi
+	if users_identity_delete "$identity_id" "$association_ids"; then
+		printf '\nIdentidad y %s asociación(es) eliminadas del registro administrativo.\n' "$association_count"
+		printf 'Las demás identidades permanecen. Runtime y provisioning no fueron modificados.\n'
+	else
+		local rc=$?
+		if ((rc == 3)); then
+			printf '\nEl conjunto de asociaciones cambió después de la vista previa. No se eliminó nada; vuelve a consultar la identidad.\n'
+		else
+			printf '\nNo se pudo eliminar la identidad. No se confirmó el cambio; revisa el registro.\n'
+		fi
+		return 1
+	fi
 }
