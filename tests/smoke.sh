@@ -1,0 +1,150 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+ENTRY="$ROOT/bin/xray-manager"
+OUT="$(mktemp)"
+TMPDIR_TEST="$(mktemp -d)"
+trap 'rm -f "$OUT"; rm -rf "$TMPDIR_TEST"' EXIT
+bash -n "$ENTRY" "$ROOT/lib/ui.sh" "$ROOT/lib/system.sh" "$ROOT/modules/connections.sh" "$ROOT/modules/main_menu.sh"
+printf '0\n' | "$ENTRY" >"$OUT"
+grep -q 'MENÚ PRINCIPAL' "$OUT"
+grep -q 'Cerrando Xray Core Manager' "$OUT"
+printf '9\n\n0\n' | "$ENTRY" >"$OUT"
+grep -q 'INFORMACIÓN Y AYUDA' "$OUT"
+grep -q '0.2.0-dev' "$OUT"
+printf '1\n1\n\n0\n0\n' | "$ENTRY" >"$OUT"
+grep -q 'GESTIÓN DE PROTOCOLOS Y CONEXIONES' "$OUT"
+grep -q 'CATÁLOGO DE PROTOCOLOS' "$OUT"
+grep -q 'vless_ws' "$OUT"
+printf '1\n3\n\n0\n0\n' | "$ENTRY" >"$OUT"
+grep -q 'CONEXIONES REGISTRADAS' "$OUT"
+printf 'opcion-invalida\n\n0\n' | "$ENTRY" >"$OUT"
+grep -q 'Opción no válida' "$OUT"
+
+printf '  Demo de prueba  \nvless_ws\n51001\n25\n\n' | bash -c '
+    set -Eeuo pipefail
+    APP_ROOT="$1"
+    source "$APP_ROOT/config/manager.conf"
+    source "$APP_ROOT/lib/ui.sh"
+    source "$APP_ROOT/modules/connections.sh"
+    CONNECTION_DATA_DIR="$2/data"
+    CONNECTION_DATA_FILE="$CONNECTION_DATA_DIR/connections.json"
+    CONNECTION_LOCK="$2/run/connections.lock"
+    connections_create_draft
+' _ "$ROOT" "$TMPDIR_TEST" >"$OUT"
+DATA="$TMPDIR_TEST/data/connections.json"
+jq -e 'length == 1 and .[0].name == "Demo de prueba" and .[0].protocol_id == "vless_ws" and .[0].port == 51001 and .[0].max_users == 25 and .[0].state == "draft" and .[0].runtime_applied == false' "$DATA" >/dev/null
+[[ "$(stat -c '%a' "$DATA")" == "600" ]]
+ID="$(jq -r '.[0].id' "$DATA")"
+
+printf '%s\nNueva etiqueta\n\n51002\n40\n\n' "$ID" | bash -c '
+    set -Eeuo pipefail
+    APP_ROOT="$1"
+    source "$APP_ROOT/config/manager.conf"
+    source "$APP_ROOT/lib/ui.sh"
+    source "$APP_ROOT/modules/connections.sh"
+    CONNECTION_DATA_DIR="$2/data"
+    CONNECTION_DATA_FILE="$CONNECTION_DATA_DIR/connections.json"
+    CONNECTION_LOCK="$2/run/connections.lock"
+    connections_edit_draft
+' _ "$ROOT" "$TMPDIR_TEST" >"$OUT"
+jq -e --arg id "$ID" 'length == 1 and .[0].id == $id and .[0].name == "Nueva etiqueta" and .[0].port == 51002 and .[0].max_users == 40' "$DATA" >/dev/null
+
+jq '.[0].state = "active"' "$DATA" >"$DATA.tmp"
+chmod 600 "$DATA.tmp"
+mv "$DATA.tmp" "$DATA"
+printf '%s\nNombre no permitido\n\n\n\n' "$ID" | bash -c '
+    set -Eeuo pipefail
+    APP_ROOT="$1"
+    source "$APP_ROOT/config/manager.conf"
+    source "$APP_ROOT/lib/ui.sh"
+    source "$APP_ROOT/modules/connections.sh"
+    CONNECTION_DATA_DIR="$2/data"
+    CONNECTION_DATA_FILE="$CONNECTION_DATA_DIR/connections.json"
+    CONNECTION_LOCK="$2/run/connections.lock"
+    connections_edit_draft
+' _ "$ROOT" "$TMPDIR_TEST" >"$OUT" || true
+grep -q 'estado draft' "$OUT"
+jq -e --arg id "$ID" 'length == 1 and .[0].id == $id and .[0].state == "active" and .[0].name == "Nueva etiqueta"' "$DATA" >/dev/null
+
+printf '%s\nELIMINAR\n\n' "$ID" | bash -c '
+    set -Eeuo pipefail
+    APP_ROOT="$1"
+    source "$APP_ROOT/config/manager.conf"
+    source "$APP_ROOT/lib/ui.sh"
+    source "$APP_ROOT/modules/connections.sh"
+    CONNECTION_DATA_DIR="$2/data"
+    CONNECTION_DATA_FILE="$CONNECTION_DATA_DIR/connections.json"
+    CONNECTION_LOCK="$2/run/connections.lock"
+    connections_delete_draft
+' _ "$ROOT" "$TMPDIR_TEST" >"$OUT" || true
+grep -q 'estado draft' "$OUT"
+jq -e --arg id "$ID" 'length == 1 and .[0].id == $id' "$DATA" >/dev/null
+
+jq '.[0].state = "draft"' "$DATA" >"$DATA.tmp"
+chmod 600 "$DATA.tmp"
+mv "$DATA.tmp" "$DATA"
+printf '%s\nNO\n\n' "$ID" | bash -c '
+    set -Eeuo pipefail
+    APP_ROOT="$1"
+    source "$APP_ROOT/config/manager.conf"
+    source "$APP_ROOT/lib/ui.sh"
+    source "$APP_ROOT/modules/connections.sh"
+    CONNECTION_DATA_DIR="$2/data"
+    CONNECTION_DATA_FILE="$CONNECTION_DATA_DIR/connections.json"
+    CONNECTION_LOCK="$2/run/connections.lock"
+    connections_delete_draft
+' _ "$ROOT" "$TMPDIR_TEST" >"$OUT"
+jq -e 'length == 1' "$DATA" >/dev/null
+
+printf '%s\nELIMINAR\n\n' "$ID" | bash -c '
+    set -Eeuo pipefail
+    APP_ROOT="$1"
+    source "$APP_ROOT/config/manager.conf"
+    source "$APP_ROOT/lib/ui.sh"
+    source "$APP_ROOT/modules/connections.sh"
+    CONNECTION_DATA_DIR="$2/data"
+    CONNECTION_DATA_FILE="$CONNECTION_DATA_DIR/connections.json"
+    CONNECTION_LOCK="$2/run/connections.lock"
+    connections_delete_draft
+' _ "$ROOT" "$TMPDIR_TEST" >"$OUT"
+jq -e 'length == 0' "$DATA" >/dev/null
+# Dos altas concurrentes deben conservar ambos registros gracias a flock.
+create_parallel() {
+    local label="$1" port="$2"
+    printf '%s\nvless_ws\n%s\n5\n\n' "$label" "$port" | bash -c '
+        set -Eeuo pipefail
+        APP_ROOT="$1"
+        source "$APP_ROOT/config/manager.conf"
+        source "$APP_ROOT/lib/ui.sh"
+        source "$APP_ROOT/modules/connections.sh"
+        CONNECTION_DATA_DIR="$2/data"
+        CONNECTION_DATA_FILE="$CONNECTION_DATA_DIR/connections.json"
+        CONNECTION_LOCK="$2/run/connections.lock"
+        connections_create_draft
+    ' _ "$ROOT" "$TMPDIR_TEST" >"$TMPDIR_TEST/$label.log"
+}
+create_parallel Parallel-A 51011 &
+PID_A=$!
+create_parallel Parallel-B 51012 &
+PID_B=$!
+wait "$PID_A"
+wait "$PID_B"
+jq -e 'length == 2 and ([.[].port] | sort) == [51011,51012]' "$DATA" >/dev/null
+
+printf '%s\n' '{invalid json' >"$TMPDIR_TEST/data/connections.json"
+if bash -c '
+    set -Eeuo pipefail
+    APP_ROOT="$1"
+    source "$APP_ROOT/config/manager.conf"
+    source "$APP_ROOT/modules/connections.sh"
+    CONNECTION_DATA_DIR="$2/data"
+    CONNECTION_DATA_FILE="$CONNECTION_DATA_DIR/connections.json"
+    CONNECTION_LOCK="$2/run/connections.lock"
+    connections_lock lock_fd
+' _ "$ROOT" "$TMPDIR_TEST" >/dev/null 2>&1; then
+    echo "ERROR: se aceptó un JSON corrupto." >&2
+    exit 1
+fi
+grep -q 'invalid json' "$TMPDIR_TEST/data/connections.json"
+printf '%s\n' "OK: menú, catálogo, alta, edición, protección de estados, cancelación/eliminación, JSON corrupto y permisos."
