@@ -358,7 +358,7 @@ users_association_set_duration() {
 users_v2_expire_due() {
 	[[ "$#" -le 1 ]] || return 2
 	local fd now_epoch now document before after count
-	now_epoch="\${1:-$(date -u +%s)}"
+	now_epoch="${1:-$(date -u +%s)}"
 	[[ "$now_epoch" =~ ^[0-9]+$ ]] || return 2
 	now="$(date -u -d "@$now_epoch" '+%Y-%m-%dT%H:%M:%SZ')" || return 2
 	users_v2_lock fd || return 1
