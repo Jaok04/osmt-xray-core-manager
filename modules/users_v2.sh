@@ -532,13 +532,26 @@ users_association_delete() {
 }
 
 users_identity_delete() {
-	[[ "$#" -eq 1 ]] || return 2
-	local fd document
+	[[ "$#" -eq 1 || "$#" -eq 2 ]] || return 2
+	local fd document expected_ids="" actual_ids
+	if [[ "$#" -eq 2 ]]; then
+		expected_ids="$(jq -ce 'if type == "array" and all(.[]; type == "string") then sort else error("invalid association ID snapshot") end' <<<"$2")" || return 2
+	fi
 	users_v2_lock fd || return 1
 	jq -e --arg id "$1" 'any(.identities[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || {
 		users_v2_unlock "$fd"
 		return 1
 	}
+	if [[ "$#" -eq 2 ]]; then
+		actual_ids="$(jq -c --arg id "$1" '[.associations[] | select(.identity_id == $id) | .id] | sort' "$USERS_V2_DATA_FILE")" || {
+			users_v2_unlock "$fd"
+			return 1
+		}
+		if [[ "$actual_ids" != "$expected_ids" ]]; then
+			users_v2_unlock "$fd"
+			return 3
+		fi
+	fi
 	document="$(jq --arg id "$1" '{schema_version,identities:(.identities | map(select(.id != $id))),associations:(.associations | map(select(.identity_id != $id)))}' "$USERS_V2_DATA_FILE")"
 	if ! users_v2_commit_document "$document"; then
 		users_v2_unlock "$fd"
