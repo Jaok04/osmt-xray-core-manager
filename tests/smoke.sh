@@ -6,18 +6,18 @@ OUT="$(mktemp)"
 TMPDIR_TEST="$(mktemp -d)"
 trap 'rm -f "$OUT"; rm -rf "$TMPDIR_TEST"' EXIT
 bash -n "$ENTRY" "$ROOT/lib/ui.sh" "$ROOT/lib/system.sh" "$ROOT/modules/connections.sh" "$ROOT/modules/vless_model.sh" "$ROOT/modules/vless_xray_26_10_31.sh" "$ROOT/modules/users.sh" "$ROOT/modules/main_menu.sh" "$ROOT/tests/users.sh"
-printf '0\n' | "$ENTRY" >"$OUT"
+printf '0\ns\n' | "$ENTRY" >"$OUT"
 grep -q 'MENÚ PRINCIPAL' "$OUT"
 grep -q 'Cerrando Xray Core Manager' "$OUT"
-printf '9\n\n0\n' | "$ENTRY" >"$OUT"
+printf '9\n\n0\ns\n' | "$ENTRY" >"$OUT"
 grep -q 'INFORMACIÓN Y AYUDA' "$OUT"
 grep -q '0.2.0-dev' "$OUT"
 
 # El modelo neutral resuelve exactamente las nueve modalidades VLESS.
 source "$ROOT/modules/vless_model.sh"
 while IFS='|' read -r mode expected_transport expected_security; do
-    MODEL="$(vless_model_build 'conn-test-01' "$mode" '127.0.0.1' '443')"
-    jq -e --arg mode "$mode" --arg transport "$expected_transport" --arg security "$expected_security" '
+	MODEL="$(vless_model_build 'conn-test-01' "$mode" '127.0.0.1' '443')"
+	jq -e --arg mode "$mode" --arg transport "$expected_transport" --arg security "$expected_security" '
         .schema_version == "1" and .connection_id == "conn-test-01" and
         .protocol == "vless" and .mode_id == $mode and
         .transport == $transport and .security == $security and
@@ -37,38 +37,38 @@ vless_xhttp_tls|xhttp|tls
 vless_xhttp_reality|xhttp|reality
 MODES
 for invalid_mode in vless_httpupgrade vless_ws_reality vmess_ws ''; do
-    if vless_model_build conn-test "$invalid_mode" 127.0.0.1 443 >/dev/null 2>&1; then
-        echo "ERROR: se aceptó modalidad VLESS inválida: $invalid_mode" >&2
-        exit 1
-    fi
+	if vless_model_build conn-test "$invalid_mode" 127.0.0.1 443 >/dev/null 2>&1; then
+		echo "ERROR: se aceptó modalidad VLESS inválida: $invalid_mode" >&2
+		exit 1
+	fi
 done
 for invalid_port in 0 65536 abc ''; do
-    if vless_model_build conn-test vless_ws 127.0.0.1 "$invalid_port" >/dev/null 2>&1; then
-        echo "ERROR: se aceptó puerto inválido: $invalid_port" >&2
-        exit 1
-    fi
+	if vless_model_build conn-test vless_ws 127.0.0.1 "$invalid_port" >/dev/null 2>&1; then
+		echo "ERROR: se aceptó puerto inválido: $invalid_port" >&2
+		exit 1
+	fi
 done
 for invalid_address in '' '127.0.0.1 0.0.0.0'; do
-    if vless_model_build conn-test vless_ws "$invalid_address" 443 >/dev/null 2>&1; then
-        echo "ERROR: se aceptó dirección de escucha inválida." >&2
-        exit 1
-    fi
+	if vless_model_build conn-test vless_ws "$invalid_address" 443 >/dev/null 2>&1; then
+		echo "ERROR: se aceptó dirección de escucha inválida." >&2
+		exit 1
+	fi
 done
 if vless_model_build '' vless_ws 127.0.0.1 443 >/dev/null 2>&1; then
-    echo "ERROR: se aceptó ID de conexión vacío." >&2
-    exit 1
+	echo "ERROR: se aceptó ID de conexión vacío." >&2
+	exit 1
 fi
 if vless_model_build conn-test vless_ws 127.0.0.1 >/dev/null 2>&1; then
-    echo "ERROR: se aceptó una llamada con argumentos incompletos." >&2
-    exit 1
+	echo "ERROR: se aceptó una llamada con argumentos incompletos." >&2
+	exit 1
 fi
-printf '1\n1\n\n0\n0\n' | "$ENTRY" >"$OUT"
+printf '1\n1\n\n0\n0\ns\n' | "$ENTRY" >"$OUT"
 grep -q 'GESTIÓN DE PROTOCOLOS Y CONEXIONES' "$OUT"
 grep -q 'CATÁLOGO DE PROTOCOLOS' "$OUT"
 grep -q 'vless_ws' "$OUT"
-printf '1\n3\n\n0\n0\n' | "$ENTRY" >"$OUT"
+printf '1\n3\n\n0\n0\ns\n' | "$ENTRY" >"$OUT"
 grep -q 'CONEXIONES REGISTRADAS' "$OUT"
-printf 'opcion-invalida\n\n0\n' | "$ENTRY" >"$OUT"
+printf 'opcion-invalida\n\n0\ns\n' | "$ENTRY" >"$OUT"
 grep -q 'Opción no válida' "$OUT"
 
 printf '  Demo de prueba  \nvless_ws\n51001\n25\n\n' | bash -c '
@@ -161,8 +161,8 @@ printf '%s\nELIMINAR\n\n' "$ID" | bash -c '
 jq -e 'length == 0' "$DATA" >/dev/null
 # Dos altas concurrentes deben conservar ambos registros gracias a flock.
 create_parallel() {
-    local label="$1" port="$2"
-    printf '%s\nvless_ws\n%s\n5\n\n' "$label" "$port" | bash -c '
+	local label="$1" port="$2"
+	printf '%s\nvless_ws\n%s\n5\n\n' "$label" "$port" | bash -c '
         set -Eeuo pipefail
         APP_ROOT="$1"
         source "$APP_ROOT/config/manager.conf"
@@ -193,11 +193,13 @@ if bash -c '
     CONNECTION_LOCK="$2/run/connections.lock"
     connections_lock lock_fd
 ' _ "$ROOT" "$TMPDIR_TEST" >/dev/null 2>&1; then
-    echo "ERROR: se aceptó un JSON corrupto." >&2
-    exit 1
+	echo "ERROR: se aceptó un JSON corrupto." >&2
+	exit 1
 fi
 grep -q 'invalid json' "$TMPDIR_TEST/data/connections.json"
 printf '%s\n' "OK: menú, catálogo, alta, edición, protección de estados, cancelación/eliminación, JSON corrupto, permisos y modelo VLESS (nueve modalidades y validaciones negativas)."
 
 # Pruebas aisladas del módulo de usuarios VLESS.
 bash "$ROOT/tests/users.sh"
+
+bash "$ROOT/tests/xray_admin.sh"

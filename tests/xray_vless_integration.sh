@@ -3,8 +3,8 @@ set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 XRAY="${XRAY_BIN:-/var/cache/xray-manager/validation/v26.10.31/xray}"
 [[ -x "$XRAY" ]] || {
-    printf 'No se encuentra el binario Xray de validación: %s\n' "$XRAY" >&2
-    exit 1
+	printf 'No se encuentra el binario Xray de validación: %s\n' "$XRAY" >&2
+	exit 1
 }
 source "$ROOT/modules/vless_model.sh"
 source "$ROOT/modules/vless_xray_26_10_31.sh"
@@ -14,18 +14,18 @@ openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/tls.key" -out "$TMP/tls.
 KEY_OUTPUT="$("$XRAY" x25519)"
 REALITY_KEY="$(sed -n 's/^PrivateKey: //p' <<<"$KEY_OUTPUT")"
 [[ -n "$REALITY_KEY" ]] || {
-    echo 'No se pudo generar la clave efímera de prueba REALITY.' >&2
-    exit 1
+	echo 'No se pudo generar la clave efímera de prueba REALITY.' >&2
+	exit 1
 }
 
 validate_mode() {
-    local mode="$1" opts="$2" model config
-    model="$TMP/$mode.model.json"
-    config="$TMP/$mode.xray.json"
-    vless_model_build "test-$mode" "$mode" 127.0.0.1 62001 >"$model"
-    vless_xray_26_10_31_build "$model" "$opts" >"$config"
-    "$XRAY" run -test -config "$config"
-    printf 'OK: %s\n' "$mode"
+	local mode="$1" opts="$2" model config
+	model="$TMP/$mode.model.json"
+	config="$TMP/$mode.xray.json"
+	vless_model_build "test-$mode" "$mode" 127.0.0.1 62001 >"$model"
+	vless_xray_26_10_31_build "$model" "$opts" >"$config"
+	"$XRAY" run -test -config "$config"
+	printf 'OK: %s\n' "$mode"
 }
 printf '{"path":"/test-ws"}\n' >"$TMP/ws.json"
 printf '{"certificate_file":"%s","key_file":"%s"}\n' "$TMP/tls.crt" "$TMP/tls.key" >"$TMP/tls.json"
@@ -49,12 +49,12 @@ validate_mode vless_xhttp_reality "$TMP/reality-xhttp.json"
 
 # Validaciones negativas: XHTTP no admite opciones incompletas ni modos desconocidos.
 if vless_xray_26_10_31_build "$TMP/vless_xhttp.model.json" "$TMP/none.json" >/dev/null 2>&1; then
-    echo 'ERROR: se aceptaron opciones XHTTP incompletas.' >&2
-    exit 1
+	echo 'ERROR: se aceptaron opciones XHTTP incompletas.' >&2
+	exit 1
 fi
 printf '{"mode":"unknown","path":"/invalid"}\n' >"$TMP/xhttp-invalid.json"
 if vless_xray_26_10_31_build "$TMP/vless_xhttp.model.json" "$TMP/xhttp-invalid.json" >/dev/null 2>&1; then
-    echo 'ERROR: se aceptó un modo XHTTP desconocido.' >&2
-    exit 1
+	echo 'ERROR: se aceptó un modo XHTTP desconocido.' >&2
+	exit 1
 fi
 echo 'OK: rechazo de opciones XHTTP incompletas y modo desconocido.'
