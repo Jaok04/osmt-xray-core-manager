@@ -301,7 +301,7 @@ cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.expired.before"
 jq --arg id "$VLESS_ASSOC_ID" '(.associations[]|select(.id==$id)).state="expired"' "$XRAY_MANAGER_USERS_FILE" >"$TMP/state.expired"
 mv "$TMP/state.expired" "$XRAY_MANAGER_USERS_FILE"
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.expired.expected"
-if users_v2_menu_association_state >"$OUT"; then
+if printf '%s\n' "$VLESS_ASSOC_ID" | users_v2_menu_association_state >"$OUT"; then
   echo 'ERROR: se intentó reactivar una asociación vencida desde el flujo de suspensión.' >&2
   exit 1
 fi
