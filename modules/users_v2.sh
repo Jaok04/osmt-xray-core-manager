@@ -135,14 +135,6 @@ users_identity_create() {
 		return 1
 	}
 	now="$(users_v2_now)"
-	if [[ "$dkind" == custom ]]; then
-		expires="$(users_v2_expiration_from "$now" "$dvalue" "$dunit")" || { users_v2_unlock "$fd"; return 2; }
-		if [[ "$state" == suspended ]]; then
-			remaining="$(users_v2_duration_seconds "$dvalue" "$dunit")" || { users_v2_unlock "$fd"; return 2; }
-			suspended_at="$now"
-			expires=""
-		fi
-	fi
 	document="$(jq --arg id "$id" --arg now "$now" '.identities += [{id:$id,created_at:$now}]' "$USERS_V2_DATA_FILE")" || {
 		users_v2_unlock "$fd"
 		return 1
@@ -233,6 +225,14 @@ users_association_create() {
 		return 1
 	}
 	now="$(users_v2_now)"
+	if [[ "$dkind" == custom ]]; then
+		expires="$(users_v2_expiration_from "$now" "$dvalue" "$dunit")" || { users_v2_unlock "$fd"; return 2; }
+		if [[ "$state" == suspended ]]; then
+			remaining="$(users_v2_duration_seconds "$dvalue" "$dunit")" || { users_v2_unlock "$fd"; return 2; }
+			suspended_at="$now"
+			expires=""
+		fi
+	fi
 	document="$(jq --arg id "$id" --arg iid "$identity_id" --arg cid "$connection_id" --arg alias "$alias" --arg protocol "$protocol" --arg ctype "$ctype" --arg cvalue "$cvalue" --arg now "$now" --arg state "$state" --arg dkind "$dkind" --argjson dvalue "$dvalue" --arg dunit "$dunit" --arg expires "$expires" --arg suspended_at "$suspended_at" --argjson remaining "$remaining" --argjson traffic "$traffic" --argjson simultaneous "$simultaneous" '
 		.associations += [{
 			id:$id,identity_id:$iid,connection_id:$cid,alias:$alias,protocol:$protocol,
