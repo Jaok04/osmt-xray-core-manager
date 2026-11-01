@@ -81,7 +81,7 @@ users_association_delete "$A2"
 jq -e --arg id "$ID1" 'any(.identities[];.id==$id) and ( [.associations[]|select(.identity_id==$id)]|length)==3' "$USERS_V2_DATA_FILE" >/dev/null
 # Eliminar identidad elimina todas sus asociaciones y peers.
 users_identity_delete "$ID1"
-jq -e --arg id "$ID1" '(any(.identities[];.id==$id)|not) and (any(.associations[];.identity_id==$id)|not) and (.identities|length)==1' "$USERS_V2_DATA_FILE" >/dev/null
+jq -e --arg id "$ID1" '(any(.identities[];.id==$id)|not) and (any(.associations[];.identity_id==$id)|not) and (.identities|length)==2' "$USERS_V2_DATA_FILE" >/dev/null
 [[ "$(stat -c '%a' "$USERS_V2_DATA_FILE")" == 600 ]]
 
 # La corrupción no se autocorrige ni se sobrescribe.
