@@ -22,16 +22,19 @@ El menú v2 expone:
 3. Creación de identidad global.
 4. Creación de asociación VLESS o WireGuard compatible con el modelo actual.
 5. Consulta de detalle de asociación.
+6. Edición del alias y límites administrativos de una asociación.
 
 El listado presenta IDs, alias, conexión, protocolo, estado funcional, estado de implementación y vencimiento. No presenta UUID VLESS ni claves públicas/privadas de WireGuard.
 
 Las consultas adquieren el bloqueo compartido y validan el documento v2 y sus referencias contra el catálogo de conexiones antes de mostrar información. La vista de detalle presenta identidad, alias, protocolo, conexión, duración, vencimiento, estado funcional, provisioning, runtime y límites; las credenciales se sustituyen por el texto «[oculta]».
 
+La edición de asociación se realiza por ID exacto y actualiza alias, límite de tráfico y límite de conexiones simultáneas en un único commit atómico. El valor `0` se almacena como `null` (sin límite). No modifica credenciales, duración, estado funcional, provisioning ni runtime.
+
 ## Operaciones aún no expuestas
 
 El módulo de dominio contiene funciones para editar alias, suspender, reactivar, renovar, modificar duración, eliminar asociaciones/identidades y calcular vencimientos. Esas operaciones administrativas aún no están conectadas a la interfaz.
 
-La integración de esas operaciones se hará de forma incremental, con validación de entradas, confirmaciones para eliminaciones y pruebas sobre fixtures aislados.
+La integración de las operaciones restantes se hará de forma incremental, con validación de entradas, confirmaciones para eliminaciones y pruebas sobre fixtures aislados.
 
 ## Límites operativos
 
@@ -43,6 +46,6 @@ La integración de esas operaciones se hará de forma incremental, con validaci�
 
 ## Pruebas
 
-`tests/users_v2_menu.sh` cubre el enrutamiento legacy/v2, el listado y detalle sin credenciales, el resumen, la creación de identidades/asociaciones VLESS y WireGuard, las validaciones de identidad/conexión/capacidad/credenciales duplicadas y el bloqueo sin escritura para JSON corrupto y esquemas desconocidos.
+`tests/users_v2_menu.sh` cubre el enrutamiento legacy/v2, el listado y detalle sin credenciales, el resumen, la creación de identidades/asociaciones VLESS y WireGuard, la edición de alias/límites, la cancelación sin escritura, las validaciones de identidad/conexión/capacidad/credenciales duplicadas y el bloqueo sin escritura para JSON corrupto y esquemas desconocidos.
 
 La suite se incorpora a `tests/smoke.sh`.
