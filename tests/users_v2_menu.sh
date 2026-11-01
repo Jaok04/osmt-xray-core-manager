@@ -218,6 +218,8 @@ jq -e --arg id "$VLESS_ASSOC_ID" '
   any(.associations[]; .id==$id and .alias=="Alias repetible" and
       .traffic_limit_bytes==null and .simultaneous_connection_limit==null)
 ' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+users_association_update "$WG_ASSOC_ID" "Alias repetible" 0 0
+[[ "$(jq '[.associations[]|select(.alias=="Alias repetible")]|length' "$XRAY_MANAGER_USERS_FILE")" -eq 2 ]]
 
 # Entradas inválidas o asociación inexistente se rechazan sin escribir.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.invalid.before"
@@ -231,6 +233,10 @@ if users_association_update "$VLESS_ASSOC_ID" "Alias" -1 2; then
 fi
 if users_association_update "$VLESS_ASSOC_ID" "Alias" 100 1.5; then
   echo 'ERROR: se aceptó un límite no entero.' >&2
+  exit 1
+fi
+if users_association_update "$VLESS_ASSOC_ID" "Alias" 9007199254740992 2; then
+  echo 'ERROR: se aceptó un límite fuera del rango entero seguro.' >&2
   exit 1
 fi
 if users_association_update "00000000-0000-4000-8000-000000000000" "Alias" 100 2; then
