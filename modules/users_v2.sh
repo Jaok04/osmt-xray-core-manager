@@ -525,7 +525,7 @@ users_v2_migrate_legacy() {
 	local legacy="$1" connections="$2" output="$3" state="$4"
 	[[ -r "$legacy" && -r "$connections" && ! -e "$output" ]] || return 1
 	python3 - "$legacy" "$connections" "$output" "$state" <<'PY'
-import json, os, sys, uuid, tempfile
+import json, os, sys, uuid, tempfile, datetime
 legacy_path, connections_path, output_path, state = sys.argv[1:]
 with open(legacy_path, encoding="utf-8") as f:
     legacy = json.load(f)
@@ -542,14 +542,21 @@ for old in legacy:
     for key in ("uuid", "connection_id", "label", "created_at"):
         if not isinstance(old.get(key), str) or not old[key]:
             raise SystemExit("campo legacy faltante o inválido: " + key)
-    if len(old["label"]) > 64:
-        raise SystemExit("alias legacy supera 64 caracteres")
+    if len(old["label"]) > 64 or not old["label"].strip():
+        raise SystemExit("alias legacy vacío o supera 64 caracteres")
+    try:
+        datetime.datetime.strptime(old["created_at"], "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError:
+        raise SystemExit("fecha legacy inválida: created_at")
     conn = by_id.get(old["connection_id"])
     if not conn:
         raise SystemExit("conexión inexistente: " + old["connection_id"])
     mode = conn.get("protocol_id", "")
-    if not mode.startswith("vless_"):
+    if not isinstance(mode, str) or not mode.startswith("vless_"):
         raise SystemExit("solo se migra el esquema legacy VLESS; protocolo no compatible")
+    capacity = conn.get("max_users")
+    if not isinstance(capacity, int) or isinstance(capacity, bool) or capacity < 1:
+        raise SystemExit("capacidad de conexión inválida: " + old["connection_id"])
     try:
         cred = str(uuid.UUID(old["uuid"]))
     except (ValueError, AttributeError):
@@ -572,6 +579,14 @@ for old in legacy:
         "state": state, "provisioning_status": "draft",
         "runtime": {"status": "not_applied", "last_applied_at": None}
     })
+counts = {}
+for assoc in associations:
+    connection_id = assoc["connection_id"]
+    counts[connection_id] = counts.get(connection_id, 0) + 1
+for connection_id, count in counts.items():
+    capacity = by_id[connection_id]["max_users"]
+    if count > capacity:
+        raise SystemExit("capacidad insuficiente para migrar: " + connection_id)
 result = {"schema_version": 2, "identities": identities, "associations": associations}
 directory = os.path.dirname(os.path.abspath(output_path))
 fd, tmp = tempfile.mkstemp(prefix=".users-v2-migration-", dir=directory)
