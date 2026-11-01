@@ -29,7 +29,8 @@ users_v2_lock() {
 		chmod 600 "$USERS_V2_DATA_FILE"
 	fi
 	if ! users_v2_validate_file "$USERS_V2_DATA_FILE"; then
-		flock -u "$fd_ref"; exec {fd_ref}>&-
+		flock -u "$fd_ref"
+		exec {fd_ref}>&-
 		printf 'El documento v2 es inválido; no se modificó.\n' >&2
 		return 1
 	fi
@@ -99,7 +100,10 @@ users_v2_commit_document() {
 		return 1
 	}
 	tmp="$(mktemp "$USERS_V2_DATA_DIR/.users-v2.XXXXXX")" || return 1
-	if ! printf '%s\n' "$document" | jq '.' >"$tmp"; then rm -f "$tmp"; return 1; fi
+	if ! printf '%s\n' "$document" | jq '.' >"$tmp"; then
+		rm -f "$tmp"
+		return 1
+	fi
 	if json_store_commit "$tmp" "$USERS_V2_DATA_FILE" 600; then
 		return 0
 	else
@@ -108,7 +112,8 @@ users_v2_commit_document() {
 			printf 'ADVERTENCIA: documento reemplazado; fsync del directorio falló.\n' >&2
 			return 3
 		fi
-		rm -f "$tmp"; return 1
+		rm -f "$tmp"
+		return 1
 	fi
 }
 
@@ -116,17 +121,29 @@ users_identity_create() {
 	[[ "$#" -eq 0 ]] || return 2
 	local fd id now document
 	users_v2_lock fd || return 1
-	id="$(users_v2_uuid)" || { users_v2_unlock "$fd"; return 1; }
+	id="$(users_v2_uuid)" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	now="$(users_v2_now)"
-	document="$(jq --arg id "$id" --arg now "$now" '.identities += [{id:$id,created_at:$now}]' "$USERS_V2_DATA_FILE")" || { users_v2_unlock "$fd"; return 1; }
-	if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+	document="$(jq --arg id "$id" --arg now "$now" '.identities += [{id:$id,created_at:$now}]' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	users_v2_unlock "$fd"
 	printf '%s\n' "$id"
 }
 
 # users_association_create identity_id connection_id alias credential_type credential_value state duration_kind duration_value duration_unit traffic_limit simultaneous_limit
 users_association_create() {
-	[[ "$#" -eq 12 ]] || { printf 'Uso: users_association_create <identity_id> <connection_id> <alias> <credential_type> <credential_value> <state> <duration_kind> <duration_value> <duration_unit> <traffic_limit|0> <simultaneous_limit|0> <protocol_override|auto>\n' >&2; return 2; }
+	[[ "$#" -eq 12 ]] || {
+		printf 'Uso: users_association_create <identity_id> <connection_id> <alias> <credential_type> <credential_value> <state> <duration_kind> <duration_value> <duration_unit> <traffic_limit|0> <simultaneous_limit|0> <protocol_override|auto>\n' >&2
+		return 2
+	}
 	local identity_id="$1" connection_id="$2" alias="$3" ctype="$4" cvalue="$5" state="$6"
 	local dkind="$7" dvalue="$8" dunit="$9" traffic="${10}" simultaneous="${11}" override="${12}"
 	local fd connection protocol id now expires="" document max_users slots
@@ -134,26 +151,50 @@ users_association_create() {
 	[[ "$state" == active || "$state" == suspended || "$state" == expired ]] || return 2
 	[[ "$dkind" == unlimited || "$dkind" == custom ]] || return 2
 	if [[ "$dkind" == custom ]]; then
-		[[ "$dvalue" =~ ^[1-9][0-9]*$ && ( "$dunit" == days || "$dunit" == hours || "$dunit" == minutes ) ]] || return 2
+		[[ "$dvalue" =~ ^[1-9][0-9]*$ && ("$dunit" == days || "$dunit" == hours || "$dunit" == minutes) ]] || return 2
 		case "$dunit" in days) expires="$(date -u -d "+$dvalue days" '+%Y-%m-%dT%H:%M:%SZ')" ;; hours) expires="$(date -u -d "+$dvalue hours" '+%Y-%m-%dT%H:%M:%SZ')" ;; minutes) expires="$(date -u -d "+$dvalue minutes" '+%Y-%m-%dT%H:%M:%SZ')" ;; esac
-	else dvalue=0; dunit=none; fi
+	else
+		dvalue=0
+		dunit=none
+	fi
 	[[ "$traffic" == 0 || "$traffic" =~ ^[1-9][0-9]*$ ]] || return 2
 	[[ "$simultaneous" == 0 || "$simultaneous" =~ ^[1-9][0-9]*$ ]] || return 2
 	users_v2_lock fd || return 1
-	connection="$(jq -ce --arg id "$connection_id" '.[] | select(.id == $id)' "$USERS_V2_CONNECTIONS_FILE")" || { users_v2_unlock "$fd"; return 1; }
+	connection="$(jq -ce --arg id "$connection_id" '.[] | select(.id == $id)' "$USERS_V2_CONNECTIONS_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	protocol="$(jq -r '.protocol_id' <<<"$connection")"
 	if [[ "$protocol" == vless_* ]]; then protocol=vless; elif [[ "$protocol" == wireguard* ]]; then protocol=wireguard; fi
 	[[ "$override" == auto ]] || protocol="$override"
-	jq -e --arg id "$identity_id" 'any(.identities[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || { users_v2_unlock "$fd"; return 1; }
+	jq -e --arg id "$identity_id" 'any(.identities[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	if [[ "$protocol" == vless ]]; then
-		[[ "$ctype" == uuid && "$cvalue" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$ ]] || { users_v2_unlock "$fd"; return 2; }
-		if jq -e --arg value "$cvalue" 'any(.associations[]; .protocol == "vless" and (.credential.value | ascii_downcase) == ($value | ascii_downcase))' "$USERS_V2_DATA_FILE" >/dev/null; then users_v2_unlock "$fd"; return 1; fi
+		[[ "$ctype" == uuid && "$cvalue" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$ ]] || {
+			users_v2_unlock "$fd"
+			return 2
+		}
+		if jq -e --arg value "$cvalue" 'any(.associations[]; .protocol == "vless" and (.credential.value | ascii_downcase) == ($value | ascii_downcase))' "$USERS_V2_DATA_FILE" >/dev/null; then
+			users_v2_unlock "$fd"
+			return 1
+		fi
 	fi
-	if [[ "$protocol" != wireguard ]] && jq -e --arg iid "$identity_id" --arg cid "$connection_id" 'any(.associations[]; .identity_id == $iid and .connection_id == $cid)' "$USERS_V2_DATA_FILE" >/dev/null; then users_v2_unlock "$fd"; return 1; fi
+	if [[ "$protocol" != wireguard ]] && jq -e --arg iid "$identity_id" --arg cid "$connection_id" 'any(.associations[]; .identity_id == $iid and .connection_id == $cid)' "$USERS_V2_DATA_FILE" >/dev/null; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	max_users="$(jq -r '.max_users' <<<"$connection")"
 	slots="$(jq --arg cid "$connection_id" '[.associations[] | select(.connection_id == $cid)] | length' "$USERS_V2_DATA_FILE")"
-	((slots < max_users)) || { users_v2_unlock "$fd"; return 1; }
-	id="$(users_v2_uuid)" || { users_v2_unlock "$fd"; return 1; }
+	((slots < max_users)) || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	id="$(users_v2_uuid)" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	now="$(users_v2_now)"
 	document="$(jq --arg id "$id" --arg iid "$identity_id" --arg cid "$connection_id" --arg alias "$alias" --arg protocol "$protocol" --arg ctype "$ctype" --arg cvalue "$cvalue" --arg now "$now" --arg state "$state" --arg dkind "$dkind" --argjson dvalue "$dvalue" --arg dunit "$dunit" --arg expires "$expires" --argjson traffic "$traffic" --argjson simultaneous "$simultaneous" '
 		.associations += [{
@@ -163,19 +204,31 @@ users_association_create() {
 			expires_at:(if $expires == "" then null else $expires end),traffic_limit_bytes:(if $traffic == 0 then null else $traffic end),
 			simultaneous_connection_limit:(if $simultaneous == 0 then null else $simultaneous end),
 			state:$state,provisioning_status:"draft",runtime:{status:"not_applied",last_applied_at:null}
-		}]' "$USERS_V2_DATA_FILE")" || { users_v2_unlock "$fd"; return 1; }
-	if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+		}]' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		return 1
+	}
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	users_v2_unlock "$fd"
 	printf '%s\n' "$id"
 }
 
 users_association_set_state() {
-	[[ "$#" -eq 2 && ( "$2" == active || "$2" == suspended || "$2" == expired ) ]] || return 2
+	[[ "$#" -eq 2 && ("$2" == active || "$2" == suspended || "$2" == expired) ]] || return 2
 	local fd document
 	users_v2_lock fd || return 1
-	jq -e --arg id "$1" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || { users_v2_unlock "$fd"; return 1; }
+	jq -e --arg id "$1" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	document="$(jq --arg id "$1" --arg state "$2" '(.associations[] | select(.id == $id)).state = $state' "$USERS_V2_DATA_FILE")"
-	if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	users_v2_unlock "$fd"
 }
 
@@ -183,9 +236,15 @@ users_association_set_alias() {
 	[[ "$#" -eq 2 && -n "$2" && "${#2}" -le 64 ]] || return 2
 	local fd document
 	users_v2_lock fd || return 1
-	jq -e --arg id "$1" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || { users_v2_unlock "$fd"; return 1; }
+	jq -e --arg id "$1" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	document="$(jq --arg id "$1" --arg alias "$2" '(.associations[] | select(.id == $id)).alias = $alias' "$USERS_V2_DATA_FILE")"
-	if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	users_v2_unlock "$fd"
 }
 
@@ -193,9 +252,15 @@ users_association_delete() {
 	[[ "$#" -eq 1 ]] || return 2
 	local fd document
 	users_v2_lock fd || return 1
-	jq -e --arg id "$1" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || { users_v2_unlock "$fd"; return 1; }
+	jq -e --arg id "$1" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	document="$(jq --arg id "$1" '.associations |= map(select(.id != $id))' "$USERS_V2_DATA_FILE")"
-	if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	users_v2_unlock "$fd"
 }
 
@@ -203,9 +268,15 @@ users_identity_delete() {
 	[[ "$#" -eq 1 ]] || return 2
 	local fd document
 	users_v2_lock fd || return 1
-	jq -e --arg id "$1" 'any(.identities[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || { users_v2_unlock "$fd"; return 1; }
+	jq -e --arg id "$1" 'any(.identities[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || {
+		users_v2_unlock "$fd"
+		return 1
+	}
 	document="$(jq --arg id "$1" '{schema_version,identities:(.identities | map(select(.id != $id))),associations:(.associations | map(select(.identity_id != $id)))}' "$USERS_V2_DATA_FILE")"
-	if ! users_v2_commit_document "$document"; then users_v2_unlock "$fd"; return 1; fi
+	if ! users_v2_commit_document "$document"; then
+		users_v2_unlock "$fd"
+		return 1
+	fi
 	users_v2_unlock "$fd"
 }
 
@@ -221,7 +292,7 @@ users_v2_export_vless_clients() {
 # Migración pura sobre rutas explícitas; exige estado funcional elegido por el administrador.
 # users_v2_migrate_legacy <legacy_json> <connections_json> <output_json> <confirmed_functional_state>
 users_v2_migrate_legacy() {
-	[[ "$#" -eq 4 && ( "$4" == active || "$4" == suspended || "$4" == expired ) ]] || return 2
+	[[ "$#" -eq 4 && ("$4" == active || "$4" == suspended || "$4" == expired) ]] || return 2
 	local legacy="$1" connections="$2" output="$3" state="$4"
 	[[ -r "$legacy" && -r "$connections" && ! -e "$output" ]] || return 1
 	python3 - "$legacy" "$connections" "$output" "$state" <<'PY'
