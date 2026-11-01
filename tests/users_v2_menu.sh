@@ -251,7 +251,6 @@ cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.cancel.before"
 printf '6\n%s\nNo guardar\n500\n3\nn\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
 cmp -s "$TMP/edit.cancel.before" "$XRAY_MANAGER_USERS_FILE"
 
-
 # Suspender una asociación activa conserva estado funcional separado del runtime.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.before-suspend"
 printf '7\n%s\ns\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
@@ -287,23 +286,23 @@ cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.cancel.before"
 printf '7\n%s\nunlimited\nn\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
 cmp -s "$TMP/state.cancel.before" "$XRAY_MANAGER_USERS_FILE"
 if printf '%s\nbogus\n' "$WG_ASSOC_ID" | users_v2_menu_association_state >"$OUT"; then
-  echo 'ERROR: se aceptó una duración inválida al reactivar.' >&2
-  exit 1
+	echo 'ERROR: se aceptó una duración inválida al reactivar.' >&2
+	exit 1
 fi
 cmp -s "$TMP/state.cancel.before" "$XRAY_MANAGER_USERS_FILE"
 
 # Asociación inexistente y estado vencido no se reactivan por este flujo.
 if printf '00000000-0000-4000-8000-000000000000\n' | users_v2_menu_association_state >"$OUT"; then
-  echo 'ERROR: se aceptó una asociación inexistente para cambio de estado.' >&2
-  exit 1
+	echo 'ERROR: se aceptó una asociación inexistente para cambio de estado.' >&2
+	exit 1
 fi
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.expired.before"
 jq --arg id "$VLESS_ASSOC_ID" '(.associations[]|select(.id==$id)) |= (.state="expired" | .suspended_at=null | .remaining_seconds=null)' "$XRAY_MANAGER_USERS_FILE" >"$TMP/state.expired"
 mv "$TMP/state.expired" "$XRAY_MANAGER_USERS_FILE"
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.expired.expected"
 if printf '%s\n' "$VLESS_ASSOC_ID" | users_v2_menu_association_state >"$OUT"; then
-  echo 'ERROR: se intentó reactivar una asociación vencida desde el flujo de suspensión.' >&2
-  exit 1
+	echo 'ERROR: se intentó reactivar una asociación vencida desde el flujo de suspensión.' >&2
+	exit 1
 fi
 cmp -s "$TMP/state.expired.expected" "$XRAY_MANAGER_USERS_FILE"
 
