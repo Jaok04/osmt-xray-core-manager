@@ -486,13 +486,15 @@ users_association_update() {
 	[[ -n "$alias" && "${#alias}" -le 64 && "$alias" == "$(printf '%s' "$alias" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')" ]] || return 2
 	[[ "$traffic" == 0 || "$traffic" =~ ^[1-9][0-9]*$ ]] || return 2
 	[[ "$simultaneous" == 0 || "$simultaneous" =~ ^[1-9][0-9]*$ ]] || return 2
-	python3 - "$traffic" "$simultaneous" <<'PY'
+	if ! python3 - "$traffic" "$simultaneous" <<'PY'
 import sys
 maximum = 9007199254740991
 if any(int(value) > maximum for value in sys.argv[1:]):
     raise SystemExit(2)
 PY
-	[[ "$?" -eq 0 ]] || return 2
+	then
+		return 2
+	fi
 	users_v2_lock fd || return 1
 	jq -e --arg id "$id" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || {
 		users_v2_unlock "$fd"
