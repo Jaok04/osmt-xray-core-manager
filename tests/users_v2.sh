@@ -39,10 +39,10 @@ users_association_reactivate "$A4" custom 1 minutes
 jq -e --arg id "$A4" 'any(.associations[]; .id==$id and .state=="active" and .duration.value==1 and .duration.unit=="minutes")' "$USERS_V2_DATA_FILE" >/dev/null
 jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .duration.kind=="custom" and .expires_at!=null and (.expires_at|fromdateiso8601)>(.created_at|fromdateiso8601))' "$USERS_V2_DATA_FILE" >/dev/null
 jq -e --arg i1 "$ID1" --arg i2 "$ID2" '
- .schema_version == 2 and (.identities|length)==2 and (.associations|length)==3 and
+ .schema_version == 2 and (.identities|length)==2 and (.associations|length)==4 and
  ([.associations[].alias] | unique | length)==1 and
  ( [.associations[]|select(.identity_id==$i1)]|length)==2 and
- ( [.associations[]|select(.identity_id==$i2)]|length)==1
+ ( [.associations[]|select(.identity_id==$i2)]|length)==2
 ' "$USERS_V2_DATA_FILE" >/dev/null
 
 if users_association_create "$ID1" conn-vless-a Duplicado uuid 11111111-1111-4111-8111-111111111111 active unlimited 0 none 0 0 auto >/dev/null 2>&1; then
