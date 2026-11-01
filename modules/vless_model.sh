@@ -2,6 +2,7 @@
 # Modelo neutral VLESS: validación pura, sin serializar configuración Xray.
 
 vless_model_resolve_mode() {
+    [[ "$#" -eq 1 ]] || return 1
     local mode_id="$1"
     case "$mode_id" in
         vless_ws) printf '%s|%s\n' 'websocket' 'none' ;;
@@ -17,6 +18,10 @@ vless_model_resolve_mode() {
 # Uso: vless_model_build <connection_id> <mode_id> <listen_address> <listen_port>
 # Emite el modelo neutral JSON por stdout. No crea archivos ni modifica el sistema.
 vless_model_build() {
+    if [[ "$#" -ne 4 ]]; then
+        printf 'Uso: vless_model_build <connection_id> <mode_id> <listen_address> <listen_port>\n' >&2
+        return 2
+    fi
     local connection_id="$1" mode_id="$2" listen_address="$3" listen_port="$4"
     local resolved transport security
 
