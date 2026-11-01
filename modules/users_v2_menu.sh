@@ -49,6 +49,7 @@ users_v2_menu() {
 		printf '  [4] Asociar identidad a conexión\n'
 		printf '  [5] Consultar detalle de asociación\n'
 		printf '  [6] Editar alias y límites de asociación\n'
+		printf '  [7] Suspender / reactivar asociación\n'
 		printf '  [0] Volver al menú principal\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
@@ -74,6 +75,10 @@ users_v2_menu() {
 			;;
 		6)
 			users_v2_menu_association_edit
+			ui_pause
+			;;
+		7)
+			users_v2_menu_association_state
 			ui_pause
 			;;
 		0) return 0 ;;
@@ -394,4 +399,94 @@ users_v2_menu_association_edit() {
 		return 1
 	fi
 	printf '\nAsociación actualizada correctamente.\nCredencial, duración, estado funcional y runtime: sin cambios.\n'
+}
+
+# Toggle only the functional state; reactivation explicitly starts a new duration.
+users_v2_menu_association_state() {
+	local fd association_id state alias duration_kind duration_value duration_unit
+	ui_clear
+	ui_title "SUSPENDER / REACTIVAR ASOCIACIÓN"
+	if ! users_v2_lock fd; then
+		printf '\nNo fue posible validar o bloquear el registro v2.\n'
+		return 1
+	fi
+	if [[ "$(jq '.associations | length' "$USERS_V2_DATA_FILE")" -eq 0 ]]; then
+		users_v2_unlock "$fd"
+		printf '\nNo hay asociaciones registradas.\n'
+		return 0
+	fi
+	printf '\nASOCIACIONES DISPONIBLES\n'
+	jq -r '.associations[] | "  " + .id + "  | " + .alias + "  | " + .state + "  | " + .protocol' "$USERS_V2_DATA_FILE"
+	printf '\nID exacto de asociación: '
+	IFS= read -r association_id || {
+		users_v2_unlock "$fd"
+		return 0
+	}
+	if ! jq -e --arg id "$association_id" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null; then
+		users_v2_unlock "$fd"
+		printf '\nLa asociación indicada no existe. No se modificaron datos.\n'
+		return 1
+	fi
+	state="$(jq -r --arg id "$association_id" '.associations[] | select(.id == $id) | .state' "$USERS_V2_DATA_FILE")"
+	alias="$(jq -r --arg id "$association_id" '.associations[] | select(.id == $id) | .alias' "$USERS_V2_DATA_FILE")"
+	users_v2_unlock "$fd"
+
+	case "$state" in
+	active)
+		printf '\nAsociación: %s\nEstado actual: activa\n' "$alias"
+		if ! ui_confirm "¿Suspender esta asociación?"; then
+			printf '\nOperación cancelada; no se guardaron cambios.\n'
+			return 0
+		fi
+		if ! users_association_suspend "$association_id"; then
+			printf '\nNo se pudo suspender. La asociación pudo haber vencido o cambiado de estado; vuelve a consultar su detalle.\n'
+			return 1
+		fi
+		printf '\nAsociación suspendida. Su tiempo restante quedó pausado cuando tenía duración limitada.\n'
+		;;
+	suspended)
+		printf '\nAsociación: %s\nEstado actual: suspendida\n' "$alias"
+		printf 'La reactivación inicia una duración nueva; no recupera automáticamente el tiempo restante anterior.\n'
+		printf 'Duración nueva [unlimited/custom]: '
+		IFS= read -r duration_kind || return 0
+		case "$duration_kind" in
+		unlimited)
+			duration_value=0
+			duration_unit=none
+			;;
+		custom)
+			printf 'Cantidad (entero positivo): '
+			IFS= read -r duration_value || return 0
+			printf 'Unidad [days/hours/minutes]: '
+			IFS= read -r duration_unit || return 0
+			;;
+		*)
+			printf '\nTipo de duración no válido. No se modificaron datos.\n'
+			return 2
+			;;
+		esac
+		if ! users_v2_duration_args "$duration_kind" "$duration_value" "$duration_unit"; then
+			printf '\nDuración no válida. No se modificaron datos.\n'
+			return 2
+		fi
+		printf '\nNueva duración: %s %s\n' "$duration_value" "$duration_unit"
+		if ! ui_confirm "¿Reactivar esta asociación con la duración indicada?"; then
+			printf '\nOperación cancelada; no se guardaron cambios.\n'
+			return 0
+		fi
+		if ! users_association_reactivate "$association_id" "$duration_kind" "$duration_value" "$duration_unit"; then
+			printf '\nNo se pudo reactivar. La asociación pudo haber cambiado de estado; vuelve a consultar su detalle.\n'
+			return 1
+		fi
+		printf '\nAsociación reactivada correctamente. La duración comienza desde ahora.\n'
+		;;
+	expired)
+		printf '\nLa asociación está vencida. Esta operación no la reactiva; utiliza la renovación cuando esté disponible.\n'
+		return 1
+		;;
+	*)
+		printf '\nEstado desconocido. No se modificaron datos.\n'
+		return 1
+		;;
+	esac
 }
