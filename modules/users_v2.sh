@@ -60,7 +60,7 @@ users_v2_validate_document() {
 		.schema_version == 2 and
 		(.identities | type == "array") and (.associations | type == "array") and
 		all(.identities[]; (.id | uuid) and (.created_at | type == "string" and length > 0)) and
-		all(.associations[] as $a;
+		all(.associations[]; . as $a | (
 			($a.id | uuid) and ($a.identity_id | uuid) and
 			any($doc.identities[]; .id == $a.identity_id) and
 			($a.connection_id | type == "string" and length > 0) and
@@ -76,12 +76,12 @@ users_v2_validate_document() {
 			($a.provisioning_status == "draft" or $a.provisioning_status == "pending" or $a.provisioning_status == "applied" or $a.provisioning_status == "failed") and
 			($a.runtime.status == "not_applied" or $a.runtime.status == "applied" or $a.runtime.status == "unknown" or $a.runtime.status == "pending" or $a.runtime.status == "failed") and
 			($a.runtime.last_applied_at == null or ($a.runtime.last_applied_at | type == "string"))
-		) and
+		)) and
 		([.identities[].id] | length == (unique | length)) and
 		([.associations[].id] | length == (unique | length)) and
 		([.associations[] | select(.protocol == "vless") | .credential.value | ascii_downcase] | length == (unique | length)) and
-		(all(.associations[] as $a; $a.protocol == "wireguard" or
-			([.associations[] | select(.identity_id == $a.identity_id and .connection_id == $a.connection_id)] | length == 1)))
+		(all(.associations[]; . as $a | ($a.protocol == "wireguard" or
+			([.associations[] | select(.identity_id == $a.identity_id and .connection_id == $a.connection_id)] | length == 1))))
 	' <<<"$document" >/dev/null 2>&1
 }
 
