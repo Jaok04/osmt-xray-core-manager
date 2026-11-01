@@ -481,7 +481,8 @@ for old in legacy:
         "credential": {"type": "uuid" if protocol == "vless" else "legacy", "value": cred},
         "created_at": old["created_at"],
         "duration": {"kind": "unlimited"}, "expires_at": None,
-        "traffic_limit_bytes": None, "simultaneous_connection_limit": None,
+        "suspended_at": old["created_at"] if state == "suspended" else None,
+        "remaining_seconds": None, "traffic_limit_bytes": None, "simultaneous_connection_limit": None,
         "state": state, "provisioning_status": "draft",
         "runtime": {"status": "not_applied", "last_applied_at": None}
     })
