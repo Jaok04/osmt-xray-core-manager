@@ -12,7 +12,7 @@ USERS_V2_CONNECTIONS_FILE="${XRAY_MANAGER_CONNECTIONS_FILE:-/var/lib/xray-manage
 USERS_V2_LOCK="${XRAY_MANAGER_INTEGRITY_LOCK:-/run/xray-manager/integrity.lock}"
 
 users_v2_require_tools() {
-	command -v jq >/dev/null 2>&1 && command -v flock >/dev/null 2>&1 && command -v uuidgen >/dev/null 2>&1
+	command -v jq >/dev/null 2>&1 && command -v flock >/dev/null 2>&1 && command -v uuidgen >/dev/null 2>&1 && command -v python3 >/dev/null 2>&1
 }
 
 users_v2_uuid() { uuidgen | tr '[:upper:]' '[:lower:]'; }
