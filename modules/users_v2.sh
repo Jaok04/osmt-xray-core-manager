@@ -154,18 +154,27 @@ users_v2_expiration_from() {
 }
 
 users_v2_duration_seconds() {
-	case "$2" in
-		days) printf '%s\n' "$(($1 * 86400))" ;;
-		hours) printf '%s\n' "$(($1 * 3600))" ;;
-		minutes) printf '%s\n' "$(($1 * 60))" ;;
-		*) return 2 ;;
-	esac
+	[[ "$#" -eq 2 && "$1" =~ ^[1-9][0-9]*$ ]] || return 2
+	python3 - "$1" "$2" <<'PY'
+import sys
+value = int(sys.argv[1])
+units = {"days": 86400, "hours": 3600, "minutes": 60}
+if sys.argv[2] not in units:
+    raise SystemExit(2)
+seconds = value * units[sys.argv[2]]
+if seconds > 253402300799:
+    raise SystemExit(2)
+print(seconds)
+PY
 }
 
 users_v2_duration_args() {
 	[[ "$#" -eq 3 ]] || return 2
 	if [[ "$1" == unlimited ]]; then [[ "$2" == 0 && "$3" == none ]] || return 2
-	else [[ "$1" == custom && "$2" =~ ^[1-9][0-9]*$ && ("$3" == days || "$3" == hours || "$3" == minutes) ]] || return 2; fi
+	else
+		[[ "$1" == custom && "$2" =~ ^[1-9][0-9]*$ && ("$3" == days || "$3" == hours || "$3" == minutes) ]] || return 2
+		users_v2_duration_seconds "$2" "$3" >/dev/null || return 2
+	fi
 }
 # users_association_create identity_id connection_id alias credential_type credential_value state duration_kind duration_value duration_unit traffic_limit simultaneous_limit
 users_association_create() {
@@ -225,11 +234,11 @@ users_association_create() {
 		return 1
 	}
 	now="$(users_v2_now)"
+	if [[ "$state" == suspended ]]; then suspended_at="$now"; fi
 	if [[ "$dkind" == custom ]]; then
 		expires="$(users_v2_expiration_from "$now" "$dvalue" "$dunit")" || { users_v2_unlock "$fd"; return 2; }
 		if [[ "$state" == suspended ]]; then
 			remaining="$(users_v2_duration_seconds "$dvalue" "$dunit")" || { users_v2_unlock "$fd"; return 2; }
-			suspended_at="$now"
 			expires=""
 		fi
 	fi
