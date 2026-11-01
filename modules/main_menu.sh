@@ -23,7 +23,7 @@ menu_main() {
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
 		1) connections_menu ;;
-		2) users_menu ;;
+		2) users_menu_dispatch ;;
 		3) menu_placeholder "Certificados SSL/TLS y dominios" ;;
 		4) menu_placeholder "Configuraciones, perfiles y respaldos" ;;
 		5) menu_placeholder "Gestión del servicio Xray-core" ;;
