@@ -357,7 +357,7 @@ jq -e --arg id "$WG_ASSOC_ID" '
 
 # Rechazar renovar suspendida, modificar vencida, IDs inexistentes y duración inválida.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/duration.reject.before"
-if printf '%s\n%s\ncustom\n1\ndays\n' "$WG_ASSOC_ID" | users_v2_menu_association_renew >"$OUT"; then
+if printf '%s\ncustom\n1\ndays\n' "$WG_ASSOC_ID" | users_v2_menu_association_renew >"$OUT"; then
   echo 'ERROR: se renovó una asociación suspendida.' >&2; exit 1
 fi
 cmp -s "$TMP/duration.reject.before" "$XRAY_MANAGER_USERS_FILE"
