@@ -91,13 +91,6 @@ Pendiente:
 - Barrido periódico de vencimientos.
 - Aplicación/revocación real en runtime y sincronización de provisioning.
 - Migración real del archivo de usuarios: no ejecutada.
-- Eliminación de asociación individual e identidad con confirmaciones.
-- Importación/exportación completa y resolución manual de identidades/conflictos.
-- Protección de secretos/cifrado en reposo y gestión de claves.
-- Modelo completo de campos específicos WireGuard.
-- Barrido periódico de vencimientos.
-- Aplicación/revocación real en runtime y sincronización de provisioning.
-- Migración real del archivo de usuarios: no ejecutada.
 
 **Límite operativo actual:** el registro real de usuarios sigue en formato legacy vacío; el dry-run de transición se ejecutó con cero filas. No se ha aplicado migración real. El servicio Xray permanece inactivo.
 
