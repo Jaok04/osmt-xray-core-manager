@@ -151,6 +151,7 @@ jq -e '
  ([.associations[].alias]|unique|length)==1 and
  ([.associations[].credential.value]|unique|length)==2
 ' "$TMP/migrated.json" >/dev/null
+users_v2_validate_file "$TMP/migrated.json"
 [[ "$(jq -r '.associations[0].credential.value' "$TMP/migrated.json")" == "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" ]]
 # Migración debe abortar si la cantidad legacy excede la capacidad de la conexión.
 jq '. + [
