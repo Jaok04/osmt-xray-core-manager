@@ -264,7 +264,7 @@ fd, tmp = tempfile.mkstemp(prefix=".users-v2-migration-", dir=directory)
 try:
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
-        f.write("\\n")
+        f.write("\n")
         f.flush()
         os.fsync(f.fileno())
     os.chmod(tmp, 0o600)
