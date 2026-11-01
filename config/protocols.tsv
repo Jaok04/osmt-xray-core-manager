@@ -1,0 +1,36 @@
+# id|Nombre|Transporte y seguridad
+vless_ws|VLESS - WebSocket sin TLS|WebSocket; sin TLS
+vless_tcp_tls|VLESS - TCP con TLS|TCP; TLS
+vless_ws_tls|VLESS - WebSocket con TLS|WebSocket; TLS
+vless_reality|VLESS - TCP con REALITY|TCP; REALITY
+vless_grpc_tls|VLESS - gRPC con TLS|gRPC; TLS
+vless_grpc_reality|VLESS - gRPC con REALITY|gRPC; REALITY
+vmess_ws|VMess - WebSocket sin TLS|WebSocket; sin TLS
+vmess_tcp_tls|VMess - TCP con TLS|TCP; TLS
+vmess_ws_tls|VMess - WebSocket con TLS|WebSocket; TLS
+vmess_reality|VMess - TCP con REALITY|TCP; REALITY
+vmess_grpc|VMess - gRPC sin TLS|gRPC; sin TLS
+vmess_grpc_tls|VMess - gRPC con TLS|gRPC; TLS
+vmess_grpc_reality|VMess - gRPC con REALITY|gRPC; REALITY
+vmess_httpupgrade|VMess - HTTPUpgrade sin TLS|HTTPUpgrade; sin TLS
+vmess_httpupgrade_tls|VMess - HTTPUpgrade con TLS|HTTPUpgrade; TLS
+vmess_xhttp|VMess - XHTTP sin TLS|XHTTP; sin TLS
+vmess_xhttp_tls|VMess - XHTTP con TLS|XHTTP; TLS
+vmess_xhttp_reality|VMess - XHTTP con REALITY|XHTTP; REALITY
+vmess_mkcp|VMess - mKCP sin TLS|mKCP; sin TLS
+vmess_mkcp_tls|VMess - mKCP con TLS|mKCP; TLS
+trojan_tcp_tls|Trojan - TCP con TLS|TCP; TLS
+trojan_ws_tls|Trojan - WebSocket con TLS|WebSocket; TLS
+trojan_grpc_tls|Trojan - gRPC con TLS|gRPC; TLS
+trojan_xhttp_tls|Trojan - XHTTP con TLS|XHTTP; TLS
+trojan_httpupgrade_tls|Trojan - HTTPUpgrade con TLS|HTTPUpgrade; TLS
+shadowsocks_tcp|Shadowsocks - TCP|TCP; AEAD
+shadowsocks_udp|Shadowsocks - UDP|UDP; AEAD
+shadowsocks_tcp_udp|Shadowsocks - TCP + UDP|TCP y UDP; AEAD
+shadowsocks_obfs_http|Shadowsocks - OBFS HTTP externo|Plugin externo; OBFS HTTP
+shadowsocks_obfs_tls|Shadowsocks - OBFS TLS externo|Plugin externo; OBFS TLS
+shadowsocks_v2ray_plugin|Shadowsocks - V2Ray Plugin|Plugin externo; V2Ray-Plugin
+hysteria2_quic_tls|Hysteria 2 - QUIC con TLS|QUIC/UDP; TLS; protocolo Xray hysteria versión 2
+socks_tcp|SOCKS - TCP|TCP; proxy auxiliar opcional
+http_tcp|HTTP Proxy - TCP|TCP; proxy auxiliar opcional
+wireguard_udp|WireGuard - UDP|UDP; peer WireGuard
