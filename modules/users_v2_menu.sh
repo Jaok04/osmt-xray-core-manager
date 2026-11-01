@@ -48,6 +48,7 @@ users_v2_menu() {
 		printf '  [3] Crear identidad global\n'
 		printf '  [4] Asociar identidad a conexión\n'
 		printf '  [5] Consultar detalle de asociación\n'
+		printf '  [6] Editar alias y límites de asociación\n'
 		printf '  [0] Volver al menú principal\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
