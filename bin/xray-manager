@@ -24,6 +24,8 @@ source "$APP_ROOT/modules/connections.sh"
 # shellcheck disable=SC1091
 source "$APP_ROOT/modules/vless_model.sh"
 # shellcheck disable=SC1091
+source "$APP_ROOT/modules/vless_xray_26_10_31.sh"
+# shellcheck disable=SC1091
 source "$APP_ROOT/modules/main_menu.sh"
 
 main() {
