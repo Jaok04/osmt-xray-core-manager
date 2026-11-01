@@ -153,10 +153,15 @@ jq -e '
 ' "$TMP/migrated.json" >/dev/null
 [[ "$(jq -r '.associations[0].credential.value' "$TMP/migrated.json")" == "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" ]]
 # Migración debe abortar si la cantidad legacy excede la capacidad de la conexión.
-jq '. + [.[0], .[0], .[0]]' "$TMP/legacy.json" >"$TMP/legacy-over-capacity.json"
-if users_v2_migrate_legacy "$TMP/legacy-over-capacity.json" "$USERS_V2_CONNECTIONS_FILE" "$TMP/over-capacity.json" active >/dev/null 2>&1; then
+jq '. + [
+ {uuid:"cccccccc-cccc-4ccc-8ccc-cccccccccccc",connection_id:"conn-vless-a",label:"Extra-1",state:"draft",runtime_applied:false,created_at:"2026-10-03T00:00:00Z"},
+ {uuid:"dddddddd-dddd-4ddd-8ddd-dddddddddddd",connection_id:"conn-vless-a",label:"Extra-2",state:"draft",runtime_applied:false,created_at:"2026-10-04T00:00:00Z"},
+ {uuid:"eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",connection_id:"conn-vless-a",label:"Extra-3",state:"draft",runtime_applied:false,created_at:"2026-10-05T00:00:00Z"}
+]' "$TMP/legacy.json" >"$TMP/legacy-over-capacity.json"
+if users_v2_migrate_legacy "$TMP/legacy-over-capacity.json" "$USERS_V2_CONNECTIONS_FILE" "$TMP/over-capacity.json" active >"$TMP/migration-error.log" 2>&1; then
 	echo "ERROR: migración superó max_users" >&2
 	exit 1
 fi
+grep -q 'capacidad insuficiente' "$TMP/migration-error.log"
 [[ ! -e "$TMP/over-capacity.json" ]]
 echo "OK: modelo v2, identidades, asociaciones, unicidad de credenciales, WireGuard peers, pausa/reactivación, modificación/renovación, vencimiento idempotente, corrupción y migración."
