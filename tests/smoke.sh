@@ -201,5 +201,6 @@ printf '%s\n' "OK: menú, catálogo, alta, edición, protección de estados, can
 
 # Pruebas aisladas del módulo de usuarios VLESS.
 bash "$ROOT/tests/users.sh"
+bash "$ROOT/tests/users_v2.sh"
 
 bash "$ROOT/tests/xray_admin.sh"
