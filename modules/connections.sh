@@ -275,7 +275,8 @@ connections_edit_draft() {
     ui_pause
 }
 connections_delete_draft() {
-    local id confirmation fd state
+    local id confirmation fd state users_file
+    users_file="${USER_DATA_FILE:-/var/lib/xray-manager/users.json}"
     ui_clear
     ui_title "ELIMINAR CONEXIÓN - BORRADOR"
     printf '\nID exacto: '
@@ -291,6 +292,20 @@ connections_delete_draft() {
         printf '\nNo existe o no está en estado draft; no se elimina.\n'
         ui_pause
         return 1
+    fi
+    if [[ -e "$users_file" ]]; then
+        if ! jq -e 'type == "array"' "$users_file" >/dev/null 2>&1; then
+            connections_unlock "$fd"
+            printf '\nEl registro de usuarios no es válido; se bloqueó la eliminación para evitar perder asociaciones.\n'
+            ui_pause
+            return 1
+        fi
+        if jq -e --arg id "$id" 'any(.[]; .connection_id == $id)' "$users_file" >/dev/null; then
+            connections_unlock "$fd"
+            printf '\nNo se puede eliminar: la conexión tiene usuarios asociados. Elimina primero esos usuarios.\n'
+            ui_pause
+            return 1
+        fi
     fi
     printf 'Para confirmar, escribe ELIMINAR: '
     IFS= read -r confirmation || {
