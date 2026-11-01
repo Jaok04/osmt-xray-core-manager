@@ -29,6 +29,7 @@ A1="$(users_association_create "$ID1" conn-vless-a Compartido uuid 11111111-1111
 A2="$(users_association_create "$ID1" conn-vless-b Compartido uuid 22222222-2222-4222-8222-222222222222 active custom 3 days 0 0 auto)"
 A3="$(users_association_create "$ID2" conn-vless-a Compartido uuid 33333333-3333-4333-8333-333333333333 suspended unlimited 0 none 0 0 auto)"
 [[ "$A1" != "$A2" && "$A2" != "$A3" ]]
+jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .duration.kind=="custom" and .expires_at!=null and (.expires_at|fromdateiso8601)>(.created_at|fromdateiso8601))' "$USERS_V2_DATA_FILE" >/dev/null
 jq -e --arg i1 "$ID1" --arg i2 "$ID2" '
  .schema_version == 2 and (.identities|length)==2 and (.associations|length)==3 and
  ([.associations[].alias] | unique | length)==1 and
