@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Interfaz inicial de consulta para el modelo v2. No modifica datos ni runtime.
+# Interfaz administrativa del modelo v2. No aplica cambios al runtime Xray.
 
 users_menu_dispatch() {
 	local file="${USER_DATA_FILE:-${XRAY_MANAGER_USERS_FILE:-/var/lib/xray-manager/users/users.json}}"
