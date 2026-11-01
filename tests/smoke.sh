@@ -55,6 +55,10 @@ if vless_model_build '' vless_ws 127.0.0.1 443 >/dev/null 2>&1; then
     echo "ERROR: se aceptó ID de conexión vacío." >&2
     exit 1
 fi
+if vless_model_build conn-test vless_ws 127.0.0.1 >/dev/null 2>&1; then
+    echo "ERROR: se aceptó una llamada con argumentos incompletos." >&2
+    exit 1
+fi
 printf '1\n1\n\n0\n0\n' | "$ENTRY" >"$OUT"
 grep -q 'GESTIÓN DE PROTOCOLOS Y CONEXIONES' "$OUT"
 grep -q 'CATÁLOGO DE PROTOCOLOS' "$OUT"
