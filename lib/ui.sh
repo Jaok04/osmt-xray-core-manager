@@ -8,8 +8,27 @@ ui_clear() {
 	fi
 }
 
+ui_color_start() {
+	[[ -t 1 && -z "${NO_COLOR:-}" ]] || return 0
+	case "${APP_THEME:-cyan}" in
+	cyan) printf '\033[36m' ;;
+	green) printf '\033[32m' ;;
+	blue) printf '\033[34m' ;;
+	magenta) printf '\033[35m' ;;
+	esac
+}
+
+ui_color_end() {
+	if [[ -t 1 && -z "${NO_COLOR:-}" ]]; then
+		printf '\033[0m'
+	fi
+	return 0
+}
+
 ui_line() {
+	ui_color_start
 	printf '%s\n' '══════════════════════════════════════════════════════════════════════'
+	ui_color_end
 }
 
 ui_pause() {
@@ -46,6 +65,8 @@ ui_confirm() {
 ui_title() {
 	local title="$1"
 	ui_line
+	ui_color_start
 	printf '  %s\n' "$title"
+	ui_color_end
 	ui_line
 }

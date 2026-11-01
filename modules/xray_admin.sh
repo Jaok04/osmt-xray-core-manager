@@ -4,8 +4,8 @@
 
 XRAY_ADMIN_RELEASE_API="https://api.github.com/repos/XTLS/Xray-core/releases/tags"
 XRAY_ADMIN_RELEASE_BASE="https://github.com/XTLS/Xray-core/releases/download"
-XRAY_ADMIN_BIN="/usr/local/bin/xray"
-XRAY_ADMIN_DATA="/usr/local/share/xray"
+: "${XRAY_ADMIN_BIN:=${XRAY_BIN_PATH:-/usr/local/bin/xray}}"
+: "${XRAY_ADMIN_DATA:=${XRAY_DATA_DIR:-/usr/local/share/xray}}"
 XRAY_ADMIN_CACHE="${XRAY_MANAGER_CACHE_DIR:-/var/cache/xray-manager}/releases"
 XRAY_ADMIN_BACKUPS="${XRAY_MANAGER_BACKUP_DIR:-/var/backups/xray-manager}/xray-core"
 XRAY_ADMIN_LOCK="/run/lock/xray-manager-xray-admin.lock"
@@ -55,12 +55,32 @@ xray_admin_release_asset_name() {
 }
 
 xray_admin_lock() {
-	install -d -m 700 /run/lock
-	exec {XRAY_ADMIN_LOCK_FD}>"$XRAY_ADMIN_LOCK"
-	flock -n "$XRAY_ADMIN_LOCK_FD" || {
-		printf 'Ya hay otra operación de administración de Xray-core en curso.\n' >&2
+	install -d -m 700 /run/lock || return 1
+	if [[ -L "$XRAY_ADMIN_LOCK" || -d "$XRAY_ADMIN_LOCK" || -L "$(dirname "$XRAY_ADMIN_LOCK")" ]]; then
+		printf 'La ruta del bloqueo de Xray-core no es segura.
+' >&2
 		return 1
-	}
+	fi
+	if ! exec {XRAY_ADMIN_LOCK_FD}>>"$XRAY_ADMIN_LOCK"; then
+		printf 'No se pudo abrir el bloqueo de Xray-core.
+' >&2
+		return 1
+	fi
+	if ! flock -n "$XRAY_ADMIN_LOCK_FD"; then
+		printf 'Ya hay otra operación de administración de Xray-core en curso.
+' >&2
+		exec {XRAY_ADMIN_LOCK_FD}>&-
+		unset XRAY_ADMIN_LOCK_FD
+		return 1
+	fi
+}
+
+xray_admin_unlock() {
+	if [[ "${XRAY_ADMIN_LOCK_FD:-}" =~ ^[0-9]+$ ]]; then
+		flock -u "$XRAY_ADMIN_LOCK_FD" 2>/dev/null || true
+		exec {XRAY_ADMIN_LOCK_FD}>&-
+		unset XRAY_ADMIN_LOCK_FD
+	fi
 }
 
 xray_admin_latest_release() {
@@ -140,143 +160,237 @@ xray_admin_fetch_verified_release() {
 xray_admin_extract_stage() {
 	local version="$1" workdir="$2" stage="$3" archive
 	archive="$workdir/$(xray_admin_release_asset_name)" || return 1
-	install -d -m 700 "$stage"
-	python3 - "$archive" "$stage" <<'PY'
+	install -d -m 700 "$stage" || return 1
+	python3 - "$archive" "$stage" <<'PY' || return 1
 import os, sys, zipfile
 archive, destination = sys.argv[1:3]
-allowed = {"xray", "geoip.dat", "geosite.dat", "LICENSE", "README.md"}
-with zipfile.ZipFile(archive) as zf:
-    names = set(zf.namelist())
-    if not {"xray", "geoip.dat", "geosite.dat"}.issubset(names):
-        raise SystemExit("El paquete no contiene xray, geoip.dat y geosite.dat.")
-    for info in zf.infolist():
-        name = info.filename
-        if name not in allowed or "/" in name or "\\" in name or info.is_dir():
-            continue
-        if (info.external_attr >> 16) & 0o170000 == 0o120000:
-            raise SystemExit("El paquete contiene un enlace simbólico no permitido.")
-        target = os.path.join(destination, name)
-        with zf.open(info) as src, open(target, "wb") as dst:
-            while True:
-                block = src.read(1024 * 1024)
-                if not block:
-                    break
-                dst.write(block)
-        os.chmod(target, 0o700 if name == "xray" else 0o644)
+required = {"xray", "geoip.dat", "geosite.dat"}
+allowed = required | {"LICENSE", "README.md"}
+max_uncompressed = 100 * 1024 * 1024
+try:
+    with zipfile.ZipFile(archive) as zf:
+        infos = zf.infolist()
+        names = [info.filename for info in infos]
+        if len(names) != len(set(names)):
+            raise ValueError("El ZIP contiene nombres de archivo duplicados.")
+        if not required.issubset(set(names)):
+            raise ValueError("El paquete no contiene xray, geoip.dat y geosite.dat.")
+        if sum(info.file_size for info in infos) > max_uncompressed:
+            raise ValueError("El contenido descomprimido supera el límite permitido.")
+        for info in infos:
+            name = info.filename
+            if name not in allowed or "/" in name or '\\' in name or info.is_dir():
+                raise ValueError(f"Entrada ZIP no permitida: {name!r}")
+            mode = (info.external_attr >> 16) & 0o170000
+            if mode not in (0, 0o100000):
+                raise ValueError(f"Tipo de archivo ZIP no permitido: {name!r}")
+        bad = zf.testzip()
+        if bad is not None:
+            raise ValueError(f"CRC inválido en la entrada: {bad!r}")
+        for info in infos:
+            target = os.path.join(destination, info.filename)
+            with zf.open(info) as src, open(target, "xb") as dst:
+                while True:
+                    block = src.read(1024 * 1024)
+                    if not block:
+                        break
+                    dst.write(block)
+            os.chmod(target, 0o700 if info.filename == "xray" else 0o644)
+except (OSError, zipfile.BadZipFile, RuntimeError, ValueError) as exc:
+    print(f"Extracción segura fallida: {exc}", file=sys.stderr)
+    raise SystemExit(1)
 PY
 	"$stage/xray" version | grep -F "Xray $version " >/dev/null || {
-		printf 'El binario descargado no declara la versión solicitada.\n' >&2
+		printf 'El binario descargado no declara la versión solicitada.
+' >&2
 		return 1
 	}
 	"$stage/xray" version | head -n 1
 }
 
 xray_admin_backup_existing() {
-	local backup_dir="$1" found=0
-	install -d -m 700 "$backup_dir"
+	local backup_dir="$1" found=0 file
+	install -d -m 700 "$backup_dir" || return 1
+	if [[ -L "$XRAY_ADMIN_BIN" || -L "$XRAY_ADMIN_DATA" || -L "$(dirname "$XRAY_ADMIN_BIN")" || -L "$XRAY_ADMIN_DATA/geoip.dat" || -L "$XRAY_ADMIN_DATA/geosite.dat" ]]; then
+		printf 'Se detectó un enlace simbólico en el binario/geodata existente; se cancela por seguridad.
+' >&2
+		return 1
+	fi
 	if [[ -e "$XRAY_ADMIN_BIN" ]]; then
-		cp -a "$XRAY_ADMIN_BIN" "$backup_dir/xray"
+		cp -a -- "$XRAY_ADMIN_BIN" "$backup_dir/xray" || return 1
 		found=1
 	fi
 	for file in geoip.dat geosite.dat; do
 		if [[ -e "$XRAY_ADMIN_DATA/$file" ]]; then
-			cp -a "$XRAY_ADMIN_DATA/$file" "$backup_dir/$file"
+			cp -a -- "$XRAY_ADMIN_DATA/$file" "$backup_dir/$file" || return 1
 			found=1
 		fi
 	done
 	if ((found)); then
-		printf 'Respaldo de binario/geodata: %s\n' "$backup_dir"
+		printf 'Respaldo de binario/geodata: %s
+' "$backup_dir"
 	else
-		rmdir "$backup_dir"
-		printf '%s\n' 'No había binario ni geodata previos que respaldar.'
+		rmdir -- "$backup_dir" || return 1
+		printf '%s
+' 'No había binario ni geodata previos que respaldar.'
 	fi
 }
 
 xray_admin_install_version() {
-	local version="$1" mode="$2" workdir stage backup_dir backup_created=0
-	xray_admin_require_root && xray_admin_require_tools && xray_admin_lock || return 1
-	case " $(xray_admin_compatible_versions | tr '\n' ' ') " in
+	local version="$1" mode="$2" workdir stage backup_parent backup_dir
+	local backup_created=0 commit_started=0 committed=0 rollback_failed=0 file
+	xray_admin_require_root || return 1
+	xray_admin_require_tools || return 1
+	case " $(xray_admin_compatible_versions | tr '
+' ' ') " in
 	*" $version "*) ;;
 	*)
-		printf 'La versión %s no está habilitada: falta adaptador compatible validado.\n' "$version" >&2
+		printf 'La versión %s no está habilitada: falta adaptador compatible validado.
+' "$version" >&2
 		return 1
 		;;
 	esac
 	case "$mode" in install | update | reinstall | repair) ;; *) return 2 ;; esac
+	xray_admin_lock || return 1
 
-	if [[ -x "$XRAY_ADMIN_BIN" ]]; then
+	if [[ -e "$XRAY_ADMIN_BIN" || -L "$XRAY_ADMIN_BIN" ]]; then
+		if [[ -L "$XRAY_ADMIN_BIN" ]]; then
+			printf 'El destino del binario Xray es un enlace simbólico; se cancela.
+' >&2
+			xray_admin_unlock
+			return 1
+		fi
 		case "$mode" in
 		install)
-			printf 'Xray-core ya existe. Usa actualizar o reinstalar.\n' >&2
+			printf 'Xray-core ya existe. Usa actualizar o reinstalar.
+' >&2
+			xray_admin_unlock
 			return 1
 			;;
 		update)
 			local installed
 			installed="$("$XRAY_ADMIN_BIN" version 2>/dev/null | head -n 1 || true)"
 			if [[ "$installed" == *"Xray $version "* ]]; then
-				printf 'La versión %s ya está instalada.\n' "$version"
+				printf 'La versión %s ya está instalada.
+' "$version"
+				xray_admin_unlock
 				return 0
 			fi
 			;;
 		reinstall | repair) ;;
 		esac
 	elif [[ "$mode" == update || "$mode" == reinstall ]]; then
-		printf 'No hay una instalación que actualizar o reinstalar.\n' >&2
+		printf 'No hay una instalación que actualizar o reinstalar.
+' >&2
+		xray_admin_unlock
 		return 1
 	fi
 
-	workdir="$(mktemp -d "$XRAY_ADMIN_CACHE.XXXXXX")" || return 1
+	if [[ -L "$XRAY_ADMIN_CACHE" || -L "$(dirname "$XRAY_ADMIN_CACHE")" ||
+	-L "$XRAY_ADMIN_BACKUPS" || -L "$(dirname "$XRAY_ADMIN_BACKUPS")" ]]; then
+		printf 'La caché o la ruta de respaldos de Xray contiene un enlace simbólico.\n' >&2
+		xray_admin_unlock
+		return 1
+	fi
+	if ! install -d -m 700 "$XRAY_ADMIN_CACHE"; then
+		xray_admin_unlock
+		return 1
+	fi
+	workdir="$(mktemp -d "$XRAY_ADMIN_CACHE/operation.XXXXXX")" || {
+		xray_admin_unlock
+		return 1
+	}
 	stage="$workdir/stage"
-	backup_dir="$XRAY_ADMIN_BACKUPS/$(date -u +%Y%m%dT%H%M%SZ)"
-	local committed=0
+	backup_parent="$XRAY_ADMIN_BACKUPS"
+	if ! install -d -m 700 "$backup_parent"; then
+		rm -rf -- "$workdir"
+		xray_admin_unlock
+		return 1
+	fi
+	backup_dir="$(mktemp -d "$backup_parent/$(date -u +%Y%m%dT%H%M%SZ).XXXXXX")" || {
+		rm -rf -- "$workdir"
+		xray_admin_unlock
+		return 1
+	}
+
 	# shellcheck disable=SC2317
 	xray_admin_cleanup() {
-		if ((committed == 0)); then
-			if [[ -x "$backup_dir/xray" ]]; then
-				install -m 755 "$backup_dir/xray" "$XRAY_ADMIN_BIN.rollback"
-				mv -f "$XRAY_ADMIN_BIN.rollback" "$XRAY_ADMIN_BIN"
-			else
-				rm -f -- "$XRAY_ADMIN_BIN.new" "$XRAY_ADMIN_BIN"
+		if ((commit_started && committed == 0)); then
+			if [[ -e "$backup_dir/xray" ]]; then
+				if ! cp -a -- "$backup_dir/xray" "$XRAY_ADMIN_BIN.rollback" ||
+					! mv -f -- "$XRAY_ADMIN_BIN.rollback" "$XRAY_ADMIN_BIN"; then
+					rollback_failed=1
+				fi
+			elif ! rm -f -- "$XRAY_ADMIN_BIN.new" "$XRAY_ADMIN_BIN"; then
+				rollback_failed=1
 			fi
 			for file in geoip.dat geosite.dat; do
-				if [[ -f "$backup_dir/$file" ]]; then
-					install -d -m 755 "$XRAY_ADMIN_DATA"
-					install -m 644 "$backup_dir/$file" "$XRAY_ADMIN_DATA/$file.rollback"
-					mv -f "$XRAY_ADMIN_DATA/$file.rollback" "$XRAY_ADMIN_DATA/$file"
-				else
-					rm -f -- "$XRAY_ADMIN_DATA/$file.new" "$XRAY_ADMIN_DATA/$file"
+				if [[ -e "$backup_dir/$file" ]]; then
+					if ! install -d -m 755 "$XRAY_ADMIN_DATA" ||
+						! cp -a -- "$backup_dir/$file" "$XRAY_ADMIN_DATA/$file.rollback" ||
+						! mv -f -- "$XRAY_ADMIN_DATA/$file.rollback" "$XRAY_ADMIN_DATA/$file"; then
+						rollback_failed=1
+					fi
+				elif ! rm -f -- "$XRAY_ADMIN_DATA/$file.new" "$XRAY_ADMIN_DATA/$file"; then
+					rollback_failed=1
 				fi
 			done
+			if ((rollback_failed)); then
+				printf 'ERROR: la restauración automática no pudo completarse. Usa el respaldo: %s
+' "$backup_dir" >&2
+			else
+				printf 'Rollback de binario/geodata completado.
+' >&2
+			fi
+		fi
+		if ((backup_created)); then
+			printf 'Respaldo previo conservado en: %s
+' "$backup_dir" >&2
+		else
+			rm -rf -- "$backup_dir"
 		fi
 		rm -rf -- "$workdir"
+		xray_admin_unlock
+		return 0
 	}
 	trap xray_admin_cleanup RETURN
 
-	printf 'Consultando release oficial y verificando SHA-256 de Xray-core %s...\n' "$version"
+	printf 'Consultando release oficial y verificando SHA-256 de Xray-core %s...
+' "$version"
 	xray_admin_fetch_verified_release "$version" "$workdir" || return 1
 	xray_admin_extract_stage "$version" "$workdir" "$stage" || return 1
 
-	install -d -m 755 "$(dirname "$XRAY_ADMIN_BIN")" "$XRAY_ADMIN_DATA" "$XRAY_ADMIN_BACKUPS"
+	if [[ -L "$(dirname "$XRAY_ADMIN_BIN")" || -L "$XRAY_ADMIN_DATA" ]]; then
+		printf 'Un directorio de destino de Xray es un enlace simbólico; se cancela.\n' >&2
+		return 1
+	fi
+	install -d -m 755 "$(dirname "$XRAY_ADMIN_BIN")" "$XRAY_ADMIN_DATA" || return 1
 	xray_admin_backup_existing "$backup_dir" || return 1
 	[[ -d "$backup_dir" ]] && backup_created=1
 
-	install -m 755 "$stage/xray" "$XRAY_ADMIN_BIN.new"
-	install -m 644 "$stage/geoip.dat" "$XRAY_ADMIN_DATA/geoip.dat.new"
-	install -m 644 "$stage/geosite.dat" "$XRAY_ADMIN_DATA/geosite.dat.new"
+	commit_started=1
+	install -m 755 "$stage/xray" "$XRAY_ADMIN_BIN.new" || return 1
+	install -m 644 "$stage/geoip.dat" "$XRAY_ADMIN_DATA/geoip.dat.new" || return 1
+	install -m 644 "$stage/geosite.dat" "$XRAY_ADMIN_DATA/geosite.dat.new" || return 1
 	"$XRAY_ADMIN_BIN.new" version | grep -F "Xray $version " >/dev/null || return 1
-	mv -f "$XRAY_ADMIN_BIN.new" "$XRAY_ADMIN_BIN"
-	mv -f "$XRAY_ADMIN_DATA/geoip.dat.new" "$XRAY_ADMIN_DATA/geoip.dat"
-	mv -f "$XRAY_ADMIN_DATA/geosite.dat.new" "$XRAY_ADMIN_DATA/geosite.dat"
-	chown root:root "$XRAY_ADMIN_BIN" "$XRAY_ADMIN_DATA/geoip.dat" "$XRAY_ADMIN_DATA/geosite.dat"
-	chmod 755 "$XRAY_ADMIN_BIN"
-	chmod 644 "$XRAY_ADMIN_DATA/geoip.dat" "$XRAY_ADMIN_DATA/geosite.dat"
+	mv -f -- "$XRAY_ADMIN_BIN.new" "$XRAY_ADMIN_BIN" || return 1
+	mv -f -- "$XRAY_ADMIN_DATA/geoip.dat.new" "$XRAY_ADMIN_DATA/geoip.dat" || return 1
+	mv -f -- "$XRAY_ADMIN_DATA/geosite.dat.new" "$XRAY_ADMIN_DATA/geosite.dat" || return 1
+	chown root:root "$XRAY_ADMIN_BIN" "$XRAY_ADMIN_DATA/geoip.dat" "$XRAY_ADMIN_DATA/geosite.dat" || return 1
+	chmod 755 "$XRAY_ADMIN_BIN" || return 1
+	chmod 644 "$XRAY_ADMIN_DATA/geoip.dat" "$XRAY_ADMIN_DATA/geosite.dat" || return 1
 	"$XRAY_ADMIN_BIN" version | grep -F "Xray $version " >/dev/null || return 1
 	committed=1
-	printf '\nXray-core %s quedó instalado y verificado.\n' "$version"
-	printf 'No se creó ni reinició ningún servicio systemd.\n'
-	((backup_created)) && printf 'Respaldo previo conservado en: %s\n' "$backup_dir"
+	printf '
+Xray-core %s quedó instalado y verificado.
+' "$version"
+	printf 'No se creó ni reinició ningún servicio systemd.
+'
+	((backup_created)) && printf 'Respaldo previo conservado en: %s
+' "$backup_dir"
 	trap - RETURN
 	rm -rf -- "$workdir"
+	xray_admin_unlock
 }
 
 xray_admin_install_menu_action() {

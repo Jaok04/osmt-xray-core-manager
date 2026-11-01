@@ -18,19 +18,20 @@ menu_main() {
 		printf '  [6] Diagnóstico y registros\n'
 		printf '  [7] Seguridad, red y mantenimiento\n'
 		printf '  [8] Configuración del sistema y administrador\n'
+		printf '\n  INFORMACIÓN\n'
 		printf '  [9] Información y ayuda\n'
 		printf '  [0] Salir\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
-		1) connections_menu ;;
-		2) users_menu_dispatch ;;
-		3) menu_placeholder "Certificados SSL/TLS y dominios" ;;
-		4) menu_placeholder "Configuraciones, perfiles y respaldos" ;;
-		5) menu_placeholder "Gestión del servicio Xray-core" ;;
-		6) menu_placeholder "Diagnóstico y registros" ;;
-		7) menu_placeholder "Seguridad, red y mantenimiento" ;;
-		8) menu_system_admin ;;
-		9) menu_information ;;
+		1) connections_menu || true ;;
+		2) users_menu_dispatch || true ;;
+		3) menu_placeholder "Certificados SSL/TLS y dominios" || true ;;
+		4) menu_placeholder "Configuraciones, perfiles y respaldos" || true ;;
+		5) menu_placeholder "Gestión del servicio Xray-core" || true ;;
+		6) menu_placeholder "Diagnóstico y registros" || true ;;
+		7) menu_placeholder "Seguridad, red y mantenimiento" || true ;;
+		8) menu_system_admin || true ;;
+		9) menu_information || true ;;
 		0)
 			if ui_confirm "¿Deseas salir de ${APP_NAME}?"; then
 				printf '\nCerrando %s...\n' "$APP_NAME"
@@ -58,11 +59,11 @@ menu_system_admin() {
 		printf '  [0] Volver\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
-		1) menu_xray_admin ;;
-		2) menu_pending_spec "Dependencias del sistema" ;;
-		3) menu_pending_spec "Configuración del administrador" ;;
-		4) menu_installation_information ;;
-		5) uninstall_menu_action ;;
+		1) menu_xray_admin || true ;;
+		2) manager_dependencies_menu || true ;;
+		3) manager_settings_menu || true ;;
+		4) menu_installation_information || true ;;
+		5) uninstall_menu_action || true ;;
 		0) return 0 ;;
 		*)
 			printf '\nOpción no válida.\n'
@@ -77,44 +78,29 @@ menu_xray_admin() {
 	while true; do
 		ui_clear
 		ui_title "ADMINISTRACIÓN DE XRAY-CORE"
-		printf '
-  [1] Instalar Xray-core
-'
-		printf '  [2] Actualizar Xray-core
-'
-		printf '  [3] Consultar versión instalada
-'
-		printf '  [4] Consultar última versión disponible
-'
-		printf '  [5] Reinstalar Xray-core
-'
-		printf '  [6] Reparar instalación
-'
-		printf '  [7] Desinstalar Xray-core
-'
-		printf '  [0] Volver
-
-'
+		printf '\n  [1] Instalar Xray-core\n'
+		printf '  [2] Actualizar Xray-core\n'
+		printf '  [3] Consultar versión instalada\n'
+		printf '  [4] Consultar última versión disponible\n'
+		printf '  [5] Reinstalar Xray-core\n'
+		printf '  [6] Reparar instalación\n'
+		printf '  [0] Volver\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
-		1) xray_admin_install_menu_action install ;;
-		2) xray_admin_install_menu_action update ;;
+		1) xray_admin_install_menu_action install || true ;;
+		2) xray_admin_install_menu_action update || true ;;
 		3)
 			ui_clear
 			ui_title "VERSIÓN INSTALADA DE XRAY-CORE"
-			printf '  %s
-' "$(system_xray_version)"
+			printf '  %s\n' "$(system_xray_version)"
 			ui_pause
 			;;
-		4) menu_xray_latest_release ;;
-		5) xray_admin_install_menu_action reinstall ;;
-		6) xray_admin_install_menu_action repair ;;
-		7) uninstall_menu_action xray ;;
+		4) menu_xray_latest_release || true ;;
+		5) xray_admin_install_menu_action reinstall || true ;;
+		6) xray_admin_install_menu_action repair || true ;;
 		0) return 0 ;;
 		*)
-			printf '
-Opción no válida.
-'
+			printf '\nOpción no válida.\n'
 			ui_pause
 			;;
 		esac
@@ -126,38 +112,26 @@ menu_xray_latest_release() {
 	ui_clear
 	ui_title "ÚLTIMA VERSIÓN DISPONIBLE DE XRAY-CORE"
 	if ! latest="$(xray_admin_latest_release)"; then
-		printf '
-No fue posible consultar el último release estable oficial.
-'
-		printf 'Comprueba la conectividad y las dependencias curl/jq.
-'
+		printf '\nNo fue posible consultar el último release estable oficial.\n'
+		printf 'Comprueba la conectividad y las dependencias curl/jq.\n'
 		ui_pause
 		return 1
 	fi
-	printf '
-Última versión estable publicada: %s
-' "$latest"
+	printf '\nÚltima versión estable publicada: %s\n' "$latest"
 	compatible="$(xray_admin_compatible_versions || true)"
 	if grep -Fxq "$latest" <<<"$compatible"; then
-		printf 'Compatibilidad local: disponible (adaptador y pruebas presentes).
-'
+		printf 'Compatibilidad local: disponible (adaptador y pruebas presentes).\n'
 	else
-		printf 'Compatibilidad local: todavía no habilitada.
-'
-		printf 'No se permitirá instalarla hasta incorporar y validar su adaptador.
-'
+		printf 'Compatibilidad local: todavía no habilitada.\n'
+		printf 'No se permitirá instalarla hasta incorporar y validar su adaptador.\n'
 	fi
-	printf '
-Versiones habilitadas para instalación:
-'
+	printf '\nVersiones habilitadas para instalación:\n'
 	if [[ -n "$compatible" ]]; then
 		while IFS= read -r version; do
-			[[ -n "$version" ]] && printf '  - %s
-' "$version"
+			[[ -n "$version" ]] && printf '  - %s\n' "$version"
 		done <<<"$compatible"
 	else
-		printf '  Ninguna
-'
+		printf '  Ninguna\n'
 	fi
 	ui_pause
 }
@@ -179,9 +153,9 @@ menu_installation_information() {
 '
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
-		1) menu_installation_paths ;;
-		2) menu_installation_files ;;
-		3) menu_installation_systemd ;;
+		1) menu_installation_paths || true ;;
+		2) menu_installation_files || true ;;
+		3) menu_installation_systemd || true ;;
 		0) return 0 ;;
 		*)
 			printf '
@@ -316,8 +290,10 @@ No fue posible consultar xray.service.
 	printf '
 Unidad: xray.service
 '
-	systemctl show xray.service --no-pager \
-		--property=LoadState,ActiveState,SubState,UnitFileState,FragmentPath,DropInPaths,User,Group,MainPID
+	if ! systemctl show xray.service --no-pager \
+		--property=LoadState,ActiveState,SubState,UnitFileState,FragmentPath,DropInPaths,User,Group,MainPID; then
+		printf 'No se pudieron obtener todos los metadatos de la unidad.\n'
+	fi
 	printf '
 Estado de habilitación: '
 	systemctl is-enabled xray.service 2>/dev/null || true
@@ -343,11 +319,23 @@ menu_placeholder() {
 menu_information() {
 	ui_clear
 	ui_title "INFORMACIÓN Y AYUDA"
-	printf '  Aplicación:   %s\n' "$APP_NAME"
-	printf '  Versión:      %s\n' "$APP_VERSION"
-	printf '  Sistema:      %s\n' "$(system_os_name)"
-	printf '  Arquitectura: %s\n' "$(uname -m)"
-	printf '\n  Las conexiones y usuarios VLESS existentes permanecen como borradores.\n'
-	printf '  No se aplican cambios al runtime de Xray-core desde esos módulos.\n'
+	printf '  Aplicación:          %s\n' "$APP_NAME"
+	printf '  Versión del gestor:  %s\n' "$APP_VERSION"
+	printf '  Sistema operativo:   %s\n' "$(system_os_name)"
+	printf '  Arquitectura:        %s\n' "$(uname -m)"
+	printf '  Xray-core:           %s\n' "$(system_xray_version)"
+	printf '  Estado del servicio: %s\n' "$(system_xray_service_state)"
+	printf '  Inicio automático:   %s\n' "$(system_xray_autostart)"
+	printf '\nRutas principales:\n'
+	printf '  Administrador:       %s\n' "$APP_ROOT"
+	printf '  Binario Xray:        %s\n' "$XRAY_ADMIN_BIN"
+	printf '  Configuración Xray:  %s\n' "$XRAY_CONFIG_FILE"
+	printf '\nDocumentación local:\n'
+	printf '  %s/README.md\n' "$APP_ROOT"
+	printf '  %s/docs/ETAPA_1_ADMIN_XRAY_IMPLEMENTACION.md\n' "$APP_ROOT"
+	printf '  %s/docs/ARQUITECTURA_RUTAS_Y_ALMACENAMIENTO.md\n' "$APP_ROOT"
+	printf '\nDocumentación oficial de Xray-core: https://xtls.github.io/\n'
+	printf '\nLas conexiones y usuarios VLESS existentes permanecen como borradores.\n'
+	printf 'No se aplican cambios al runtime de Xray-core desde esos módulos.\n'
 	ui_pause
 }

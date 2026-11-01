@@ -1,6 +1,6 @@
 # Etapa 1 — Administración de Xray-core: implementación inicial
 
-Estado: módulo de instalación controlada implementado; operaciones reales aún pendientes de validación operativa en VPS.
+Estado: menú, administración Xray, dependencias, preferencias y desinstalación cuentan con implementación y pruebas aisladas; Etapa 1 continúa PARCIAL y no está certificada ni validada mediante operaciones reales en VPS.
 
 ## Alcance actual
 
@@ -32,28 +32,35 @@ Estado: módulo de instalación controlada implementado; operaciones reales aún
 
 ## Pendientes de Etapa 1
 
-- Especificación de Dependencias del sistema y Configuración del administrador.
-- Política y flujo completo de desinstalación, conforme a Etapa 1 rev. 1.2.
-- Más pruebas de fallo/interrupción/rollback para la operación de instalación.
-
+- Completar la matriz de trazabilidad requisito por requisito contra la especificación aprobada Etapa 1 revisión 1.2.
+- Validar instalación/actualización/reinstalación/reparación en un VPS desechable, incluyendo fallos e interrupciones controladas.
+- Validar la instalación de dependencias y la persistencia de preferencias en un entorno aislado con las rutas reales de configuración.
+- Ejecutar la desinstalación completa en un entorno desechable para cada alcance y política, incluyendo advertencia de certificados, categorías, interrupción, borrado parcial y recuperación.
+- Revisar exhaustivamente navegación, retorno, actualización del encabezado, errores recuperables y confirmaciones destructivas antes de certificar la etapa.
+- Los apartados 3–7 del menú principal son entradas de sus respectivas etapas; su presencia no significa que esas etapas estén implementadas.
 
 ## Incremento: desinstalación segura (2026-11-01)
 
-Se incorpora `modules/uninstall.sh` como único punto de entrada para la opción `[8] > [5] Desinstalar componentes`. El flujo ofrece alcance (Xray-core, Xray Manager o ambos), política de datos (conservar, eliminar todos o seleccionar categorías), respaldo previo, exportación opcional a un directorio externo y confirmación final irreversible.
+modules/uninstall.sh implementa el único punto de entrada para [8] > [5] Desinstalar componentes. Ofrece los alcances Xray-core, Xray Manager o ambos; las políticas conservar todos, eliminar todos o seleccionar categorías; respaldo previo; exportación opcional por SSH/SCP a otro servidor; vista previa y confirmación final irreversible.
 
-### Límites deliberados
+### Controles implementados
 
-- La implementación solo elimina rutas inventariadas explícitamente: `/usr/local/bin/xray`, `/usr/local/share/xray`, `/usr/local/etc/xray`, `/opt/xray-manager`, archivos de usuarios/conexiones bajo `/var/lib/xray-manager`, y rutas propias identificadas de caché, logs y respaldos.
-- Categorías de perfiles, dominios, certificados/llaves y preferencias sin ruta administrada verificada se informan y no se borran por aproximación.
-- Si se detecta una unidad systemd de Xray, el flujo se bloquea; no modifica ni elimina unidades, no detiene procesos y no toca firewall ni SSH.
-- El respaldo local se crea fuera de `/var/backups/xray-manager` para evitar incluirse a sí mismo en el archivo. Se comprueba con `tar -tzf` y `gzip -t`; la exportación se vuelve a verificar mediante SHA-256 en el destino.
-- Con política «eliminar todos», se eliminan respaldos locales existentes y el respaldo temporal local; una exportación externa verificada será la única copia superviviente.
-- No se ejecutó ninguna desinstalación real en el VPS.
+- Inventario explícito de binario y datos Xray, configuración Xray, aplicación Manager, configuración/preferencias, datos de usuarios y conexiones, perfiles, dominios, certificados/llaves, historiales/logs, caché y respaldos.
+- Allowlist exacta y rechazo de rutas con componentes simbólicos o segmentos no válidos, antes del respaldo y de nuevo antes del borrado.
+- Advertencia y confirmación específica cuando la selección incluye certificados y claves privadas.
+- Respaldo temporal fuera del árbol de respaldos que se va a eliminar, modo 600, validación tar -tzf y gzip -t.
+- Exportación a otro host mediante SSH/SCP, BatchMode, StrictHostKeyChecking y comparación SHA-256 del archivo remoto con el local.
+- Si falla el respaldo o su exportación solicitada, se cancela el borrado.
+- Locks no bloqueantes para la operación de desinstalación, integridad de usuarios/conexiones y administración Xray. El directorio runtime que aloja el lock de integridad no se incluye en el borrado.
+- Si existe una unidad systemd Xray o un proceso Xray activo, el flujo se bloquea; no elimina ni modifica unidades, no detiene procesos y no toca firewall ni SSH.
+- Con política «eliminar todos», se eliminan los respaldos locales del alcance y el respaldo temporal del proceso; una copia externa verificada será la única copia superviviente.
+- El resumen advierte expresamente que los respaldos de Etapa 5 no recuperan historial de versiones/modificaciones de perfiles, historial de validaciones, informes de restauración ni registros técnicos/logs.
 
-### Pruebas
+### Pruebas y límites
 
-`tests/uninstall.sh` valida la creación/verificación del archivo y el rechazo de rutas inexistentes. La batería general se ejecuta después de integrar el módulo. La eliminación real permanece pendiente de pruebas controladas en un entorno desechable, especialmente interrupción durante borrado, exportación fallida y restauración del archivo.
+tests/uninstall.sh cubre allowlist, padre simbólico, respaldo, exportación SSH/SCP simulada con SHA-256 correcto e incorrecto, estado de exportación en el resumen, contención del lock de integridad, cancelación ante fallo del respaldo y borrado exclusivamente sobre fixtures temporales.
 
+No se ejecutó ninguna desinstalación real en el VPS. La prueba de exportación usa ejecutables SSH/SCP simulados; no se conectó a un servidor externo real. La eliminación real, interrupciones durante el borrado y restauración completa siguen pendientes de un entorno desechable.
 
 ## Incremento: centralización inicial de rutas (2026-11-01)
 
@@ -94,3 +101,25 @@ Se incorpora `modules/uninstall.sh` como único punto de entrada para la opción
 - Falta probar colisiones concurrentes de puertos/sockets, pérdida real de alimentación/kernel, corrupción física del sistema de archivos y recuperación tras reinicio. Los fallos de `fsync` e interrupciones controladas a nivel de proceso están cubiertos por `tests/json_store_faults.sh`, pero no sustituyen esas pruebas de sistema.
 - El archivo heredado `/var/lib/xray-manager/connections.json` permanece intacto.
 - No se modificó la configuración runtime, el servicio Xray, systemd, firewall ni SSH.
+
+
+## Revisión de avance de Etapa 1 (2026-11-01)
+
+### Módulos incorporados en la copia local
+
+- modules/system_admin.sh: catálogo y comprobación de dependencias, instalación de paquetes faltantes y actualización limitada a paquetes requeridos instalados. No ejecuta apt upgrade ni full-upgrade; excluye apt y dpkg de la lista de paquetes actualizables desde Etapa 1, respetando el límite de mantenimiento general de Etapa 6.
+- config/preferences.sh y modules/admin_settings.sh: validación y persistencia atómica de preferencias; rutas Xray, editor, tema, idioma, zona horaria, fecha/hora y preferencias de respaldos. Directorio de preferencias 700 y archivo 600.
+- modules/main_menu.sh: submenú de opción 8 con sus cinco entradas aprobadas; la desinstalación no aparece dentro del submenú Xray.
+- modules/uninstall.sh: controles de rutas simbólicas, locks compartidos, respaldo y exportación SSH/SCP verificada.
+
+### Validación ejecutada
+
+- tests/stage1_menu.sh, tests/stage1_dependencies.sh, tests/stage1_settings.sh, tests/uninstall.sh y tests/xray_admin.sh: pasaron.
+- Suite completa: 15/15 scripts pasaron en la última ejecución. Una ejecución anterior tuvo un fallo intermitente en tests/port_collisions.sh; la prueba pasó aislada y volvió a pasar en la repetición completa.
+- bash -n sobre lanzador, configuración, librerías, módulos y pruebas: pasó.
+- ShellCheck sobre los archivos de Etapa 1 y sus dependencias directas: pasó.
+- shfmt -d sobre los scripts del proyecto: sin diferencias.
+
+### Límites operativos
+
+No se ejecutaron apt-get, instalación real de Xray, desinstalación real, cambios de systemd, firewall o SSH. Las pruebas de instalación, desinstalación y exportación usan fixtures temporales y mocks. Etapa 1 permanece PARCIAL hasta completar la matriz de trazabilidad y la validación operativa aislada.

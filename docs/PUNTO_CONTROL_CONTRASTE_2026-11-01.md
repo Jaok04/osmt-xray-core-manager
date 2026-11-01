@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-01  
 **Referencia funcional principal:** `Xray_Manager_Documentacion_Final_2026-10-31`  
-**Rama de trabajo:** `design/user-identity-association-v1`  
+**Rama remota de referencia:** `design/user-identity-association-v1` (HEAD `3aeeb03c`); la copia VPS `/opt/xray-manager` no contiene metadatos `.git`, por lo que no se confirma rama local ni estado de commits.  
 **Propósito:** mantener cada incremento contrastado con el diseño aprobado y registrar explícitamente las ampliaciones posteriores.
 
 ## 1. Regla de autoridad documental
@@ -26,12 +26,14 @@ Implementado:
 - Acceso a gestión de conexiones y usuarios.
 - Administración básica de Xray-core y consulta de información.
 - Punto de entrada centralizado al flujo de desinstalación segura.
+- Módulo de dependencias específicas del administrador: comprobación, instalación de faltantes y actualización limitada a paquetes requeridos.
+- Configuración del administrador: preferencias de rutas, editor, tema, idioma, zona horaria, fecha/hora y respaldos.
 
 Parcial o pendiente:
 - Instalación/actualización/reinstalación/reparación: existe módulo controlado, catálogo compatible limitado a Xray 26.10.31 y validaciones de paquete; falta validación operativa real y ampliar pruebas de interrupción/rollback.
-- Desinstalación: flujo implementado con alcance, política de datos, respaldo y exportación; falta validación destructiva en entorno desechable y hay categorías deliberadamente no eliminables hasta tener rutas administradas verificadas.
-- Dependencias del sistema: pendiente.
-- Configuración del administrador: pendiente.
+- Desinstalación: flujo local reforzado con allowlist, rechazo de symlinks, locks de integridad/Xray, respaldo y exportación SSH/SCP verificada; pruebas aisladas pasan. Falta validación destructiva en entorno desechable.
+- Dependencias del sistema: módulo local implementado y probado con mocks; falta validar instalación/actualización real de paquetes en entorno desechable.
+- Configuración del administrador: módulo local implementado y probado con preferencias temporales; falta validación operativa con las rutas reales de configuración.
 - Certificados SSL/TLS y dominios: pendiente.
 - Configuraciones, perfiles y respaldos: pendiente.
 - Gestión del servicio Xray-core: parcial; no incluye ciclo completo de servicio/runtime.
@@ -102,7 +104,7 @@ Certificados/dominios, configuraciones/perfiles/respaldos, servicio/diagnóstico
 ## 3. Estado operativo protegido
 
 A la fecha del punto de control:
-- Rama de trabajo: `design/user-identity-association-v1`.
+- Rama remota de referencia: design/user-identity-association-v1 (HEAD 3aeeb03c); /opt/xray-manager no contiene metadatos .git y no permite confirmar una rama local.
 - No hacer merge a `main` sin aprobación.
 - No ejecutar migración real sin autorización explícita.
 - No activar Xray ni aplicar configuraciones al runtime sin autorización explícita.
@@ -113,11 +115,8 @@ A la fecha del punto de control:
 
 ## 4. Próxima secuencia de implementación acordada
 
-Continuar Etapa 3 de forma incremental, manteniendo Etapas 1 y 2 visibles en la matriz de cierre:
+Cerrar primero Etapa 1 contra la especificación aprobada revisión 1.2. No avanzar con nuevas implementaciones de Etapas 2–6 hasta completar su matriz de trazabilidad, corregir hallazgos y validar operaciones en un entorno desechable. Después se retomará la secuencia pendiente de Etapa 3: importación/exportación completa y resolución manual de conflictos.
 
-1. Importación/exportación completa y resolución manual de conflictos.
-
-Cada operación requiere validación de entradas, lock compartido, rechazo sin escritura ante errores, pruebas aisladas y actualización de documentación. El orden puede cambiar solo si existe una dependencia técnica justificada.
 
 ## 5. Plantilla obligatoria para ampliaciones
 
@@ -141,4 +140,29 @@ En cada cierre de incremento se informará:
 - Qué queda pendiente.
 - Si el estado de una etapa cambia o permanece igual.
 
-**Conclusión inicial:** el proyecto está trabajando principalmente en Etapa 3, con una base administrativa avanzada de Etapa 2 y Etapa 1 parcialmente implementada. Etapa 1 NO está completa. Este es el punto de control de contraste vigente hasta que se apruebe una revisión posterior.
+**Conclusión vigente:** Etapa 1 sigue PARCIAL y no certificada. La copia local ya incorpora dependencias, preferencias y un desinstalador más robusto que el HEAD remoto; aún faltan trazabilidad completa y validaciones operativas aisladas. No se debe avanzar de etapa ni declarar cierre por el solo hecho de que los menús y pruebas aisladas existan.
+
+
+## 7. Actualización de contraste y pruebas — 2026-11-01
+
+### 7.1 GitHub
+
+- Repositorio: Jaok04/xray-core-manager.
+- Rama remota: design/user-identity-association-v1.
+- HEAD: 3aeeb03cbb9f2bd5022b3f2312fd395acbc562e3 (Include Stage 1 menu integration in smoke suite).
+- La rama está 167 commits por delante y 0 por detrás de main.
+- Árbol remoto: 45 archivos. Árbol VPS: 51 archivos; todas las 45 rutas remotas existen localmente.
+- Archivos locales ausentes del árbol remoto: config/preferences.sh, modules/admin_settings.sh, modules/system_admin.sh, tests/stage1_dependencies.sh, tests/stage1_settings.sh y un artefacto __pycache__.
+- El HEAD remoto conserva la entrada duplicada de desinstalación dentro del menú Xray; el menú local ya la eliminó conforme a Etapa 1 rev. 1.2.
+- Los hashes de contenido de los archivos principales revisados no coinciden. Como /opt/xray-manager no tiene .git, no puede determinarse ascendencia ni estado staged/committed.
+- No se hizo pull, checkout, merge, commit ni push. main y la rama remota no fueron modificadas.
+
+Informe detallado: docs/CONTRASTE_GITHUB_DESIGN_USER_IDENTITY_ASSOCIATION_V1_2026-11-01.md.
+
+### 7.2 Pruebas
+
+- Suite completa: 15/15 scripts aprobados en la última ejecución.
+- bash -n: aprobado.
+- ShellCheck en los archivos de Etapa 1 y dependencias directas: aprobado.
+- shfmt -d: sin diferencias.
+- Las pruebas usaron fixtures temporales y mocks; no se ejecutaron operaciones reales de instalación/desinstalación ni se modificaron servicios, firewall, SSH o datos persistentes.

@@ -5,9 +5,14 @@
 : "${APP_ROOT:=/opt/xray-manager}"
 
 readonly XRAY_MANAGER_APP_DIR="$APP_ROOT"
+: "${XRAY_BIN_PATH:=/usr/local/bin/xray}"
+: "${XRAY_DATA_DIR:=/usr/local/share/xray}"
+XRAY_ADMIN_BIN="$XRAY_BIN_PATH"
+XRAY_ADMIN_DATA="$XRAY_DATA_DIR"
 readonly XRAY_MANAGER_CONFIG_DIR="/etc/xray-manager"
-readonly XRAY_CONFIG_DIR="/etc/xray"
-readonly XRAY_CONFIG_FILE="/etc/xray/config.json"
+: "${XRAY_CONFIG_DIR:=/etc/xray}"
+: "${XRAY_CONFIG_FILE:=$XRAY_CONFIG_DIR/config.json}"
+
 readonly XRAY_MANAGER_DATA_DIR="/var/lib/xray-manager"
 readonly XRAY_MANAGER_USERS_DIR="/var/lib/xray-manager/users"
 readonly XRAY_MANAGER_USERS_FILE="/var/lib/xray-manager/users/users.json"
@@ -20,7 +25,8 @@ readonly XRAY_MANAGER_HISTORY_DIR="/var/lib/xray-manager/history"
 readonly XRAY_MANAGER_STATE_DIR="/var/lib/xray-manager/state"
 readonly XRAY_MANAGER_LOG_DIR="/var/log/xray-manager"
 readonly XRAY_MANAGER_CACHE_DIR="/var/cache/xray-manager"
-readonly XRAY_MANAGER_BACKUP_DIR="/var/backups/xray-manager"
+: "${XRAY_MANAGER_BACKUP_DIR:=/var/backups/xray-manager}"
+
 readonly XRAY_MANAGER_RUNTIME_DIR="/run/xray-manager"
 readonly XRAY_MANAGER_INTEGRITY_LOCK="/run/xray-manager/integrity.lock"
 # Alias de compatibilidad: ambos registros comparten el mismo bloqueo.

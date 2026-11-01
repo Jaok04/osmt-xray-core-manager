@@ -16,6 +16,8 @@ fi
 # shellcheck disable=SC1091
 source "$APP_ROOT/config/manager.conf"
 # shellcheck disable=SC1091
+source "$APP_ROOT/config/preferences.sh"
+# shellcheck disable=SC1091
 source "$APP_ROOT/config/paths.sh"
 # shellcheck disable=SC1091
 source "$APP_ROOT/config/xray-version.conf"
@@ -38,6 +40,9 @@ source "$APP_ROOT/modules/vless_xray_26_10_31.sh"
 # shellcheck disable=SC1091
 source "$APP_ROOT/modules/xray_admin.sh"
 # shellcheck disable=SC1091
+source "$APP_ROOT/modules/system_admin.sh"
+# shellcheck disable=SC1091
+source "$APP_ROOT/modules/admin_settings.sh"
 source "$APP_ROOT/modules/uninstall.sh"
 # shellcheck disable=SC1091
 source "$APP_ROOT/modules/main_menu.sh"

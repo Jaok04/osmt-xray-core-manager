@@ -28,10 +28,9 @@ system_xray_version() {
 	local xray_bin=""
 	if command -v xray >/dev/null 2>&1; then
 		xray_bin="$(command -v xray)"
-	elif [[ -x /usr/local/bin/xray ]]; then
-		xray_bin="/usr/local/bin/xray"
+	elif [[ -x "${XRAY_ADMIN_BIN:-/usr/local/bin/xray}" ]]; then
+		xray_bin="${XRAY_ADMIN_BIN:-/usr/local/bin/xray}"
 	fi
-
 	if [[ -n "$xray_bin" ]]; then
 		"$xray_bin" version 2>/dev/null | head -n 1 || printf '%s' "instalado (versión no detectada)"
 	else
@@ -40,7 +39,7 @@ system_xray_version() {
 }
 
 system_xray_service_state() {
-	if [[ ! -x /usr/local/bin/xray ]] && ! command -v xray >/dev/null 2>&1; then
+	if [[ ! -x "${XRAY_ADMIN_BIN:-/usr/local/bin/xray}" ]] && ! command -v xray >/dev/null 2>&1; then
 		printf '%s' "No instalado"
 	elif ! command -v systemctl >/dev/null 2>&1; then
 		printf '%s' "systemd no disponible"
@@ -79,17 +78,26 @@ system_active_profile() {
 }
 
 system_show_header() {
-	local public_ip xray_version service_state autostart profile now
+	local public_ip xray_version service_state autostart profile date_part time_part
 	public_ip="$(system_public_ip)"
 	xray_version="$(system_xray_version)"
 	service_state="$(system_xray_service_state)"
 	autostart="$(system_xray_autostart)"
 	profile="$(system_active_profile)"
-	now="$(TZ="${APP_TIMEZONE:-UTC}" date '+%Y-%m-%d %H:%M:%S %Z')"
+	case "${APP_DATE_FORMAT:-dmy}" in
+	dmy) date_part="$(TZ="${APP_TIMEZONE:-UTC}" date '+%d/%m/%Y')" ;;
+	ymd) date_part="$(TZ="${APP_TIMEZONE:-UTC}" date '+%Y-%m-%d')" ;;
+	*) date_part="$(TZ="${APP_TIMEZONE:-UTC}" date '+%d/%m/%Y')" ;;
+	esac
+	case "${APP_TIME_FORMAT:-24h}" in
+	12h) time_part="$(TZ="${APP_TIMEZONE:-UTC}" date '+%I:%M:%S %p %Z')" ;;
+	*) time_part="$(TZ="${APP_TIMEZONE:-UTC}" date '+%H:%M:%S %Z')" ;;
+	esac
 	printf '  IP pública:        %s\n' "$public_ip"
 	printf '  Xray-core:         %s\n' "$xray_version"
-	printf '  Servicio:          %s\n' "$service_state"
-	printf '  Inicio automático: %s\n' "$autostart"
+	printf '  Estado:            %s\n' "$service_state"
+	printf '  Servicio:          %s\n' "$autostart"
 	printf '  Perfil activo:     %s\n' "$profile"
-	printf '  Fecha/hora VPS:    %s\n' "$now"
+	printf '  Fecha:             %s\n' "$date_part"
+	printf '  Hora:              %s\n' "$time_part"
 }
