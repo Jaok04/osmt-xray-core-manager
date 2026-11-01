@@ -11,12 +11,12 @@ export USERS_V2_CUTOVER_BACKUP_ROOT="$TMP/backups"
 mkdir -p "$TMP/users" "$TMP/connections" "$TMP/run" "$TMP/backups"
 
 write_fixture() {
-  cat >"$USERS_V2_CUTOVER_USERS_FILE" <<'JSON'
+	cat >"$USERS_V2_CUTOVER_USERS_FILE" <<'JSON'
 [
   {"uuid":"11111111-1111-4111-8111-111111111111","connection_id":"conn-vless-test","label":"Fixture user","state":"draft","runtime_applied":false,"created_at":"2026-11-01T00:00:00Z"}
 ]
 JSON
-  cat >"$USERS_V2_CUTOVER_CONNECTIONS_FILE" <<'JSON'
+	cat >"$USERS_V2_CUTOVER_CONNECTIONS_FILE" <<'JSON'
 [
   {"id":"conn-vless-test","protocol_id":"vless_ws","max_users":2}
 ]
@@ -44,8 +44,8 @@ ROLLBACK_INFO="$("$CUTOVER" --rollback "$BACKUP")"
 ROLLBACK_TOKEN="$(sed -n 's/.*Token requerido: //p' <<<"$ROLLBACK_INFO")"
 printf '\n' >>"$USERS_V2_CUTOVER_USERS_FILE"
 if "$CUTOVER" --rollback "$BACKUP" --confirm "$ROLLBACK_TOKEN" >/dev/null 2>&1; then
-  echo "ERROR: rollback sobrescribió cambios posteriores" >&2
-  exit 1
+	echo "ERROR: rollback sobrescribió cambios posteriores" >&2
+	exit 1
 fi
 
 # Capacity violations fail during dry-run and leave legacy input untouched.
@@ -58,8 +58,8 @@ JSON
 sed -i 's/"max_users":2/"max_users":1/' "$USERS_V2_CUTOVER_CONNECTIONS_FILE"
 BEFORE="$(sha256sum "$USERS_V2_CUTOVER_USERS_FILE" | awk '{print $1}')"
 if "$CUTOVER" --dry-run --state active >/dev/null 2>&1; then
-  echo "ERROR: migración sobre capacidad fue aceptada" >&2
-  exit 1
+	echo "ERROR: migración sobre capacidad fue aceptada" >&2
+	exit 1
 fi
 [[ "$(sha256sum "$USERS_V2_CUTOVER_USERS_FILE" | awk '{print $1}')" == "$BEFORE" ]]
 echo "OK: cutover dry-run, apply, rollback, protección ante cambios posteriores y límite de capacidad."
