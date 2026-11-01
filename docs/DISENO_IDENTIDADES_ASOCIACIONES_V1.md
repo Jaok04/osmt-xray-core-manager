@@ -1,7 +1,7 @@
 # Diseño técnico — Identidades globales y asociaciones (Etapas 2 y 3)
 
-**Estado:** propuesta técnica para revisión; no modifica la especificación funcional aprobada.  
-**Versión:** 1.0  
+**Estado:** decisiones técnicas aprobadas el 01/11/2026; implementación v2 inicial aislada en pruebas. No modifica la especificación funcional aprobada.  
+**Versión:** 1.1  
 **Fecha:** 2026-11-01  
 **Base funcional:** Etapa 2 v1.2 y Etapa 3 v1.2, aprobadas el 31/10/2026.  
 **Alcance:** modelo de datos, propiedad de entidades, persistencia, migración y contratos para el siguiente incremento.
@@ -138,7 +138,7 @@ Antes de cada commit, validar el documento completo:
 1. `schema_version` es una versión soportada.
 2. Todos los IDs globales y de asociación son strings no vacíos y únicos en sus respectivos conjuntos.
 3. Toda asociación referencia una identidad existente y una conexión existente.
-4. Ninguna asociación duplica la pareja `identity_id + connection_id`, salvo que una revisión funcional futura permita varios peers/accesos en la misma conexión; WireGuard puede requerir una regla específica por peer.
+4. Ninguna asociación duplica la pareja `identity_id + connection_id` para protocolos distintos de WireGuard. Para WireGuard se permiten varios peers de una misma identidad en la misma conexión; cada asociación/peer debe tener su propia clave pública y esta debe ser única.
 5. Toda credencial obligatoria existe y cumple el tipo esperado por protocolo.
 6. Las credenciales duplicadas se rechazan en el ámbito definido por el adaptador.
 7. Estados funcionales válidos: active, suspended, expired. Los borradores históricos se migran con un estado de preparación separado y no se convierten automáticamente en active.
@@ -150,20 +150,20 @@ Antes de cada commit, validar el documento completo:
 
 ### WireGuard
 
-Un peer se modela como una asociación individual con su propio conjunto de claves/IP/parámetros. Una identidad puede tener varios peers incluso en la misma conexión WireGuard si la especificación de peers lo permite. Por ello, la unicidad general de `identity_id + connection_id` NO se aplicará a WireGuard; la clave de unicidad debe incluir el identificador de peer o la credencial pública. El contrato final debe definirlo antes de implementar WireGuard.
+Un peer se modela como una asociación individual con su propio conjunto de claves/IP/parámetros. **Decisión aprobada:** una identidad puede tener varios peers incluso en la misma conexión WireGuard. Cada peer es una asociación independiente, con claves y parámetros propios. La unicidad de `identity_id + connection_id` no se aplica a WireGuard; la clave pública del peer identifica de forma única la credencial.
 
-## 6. Estados: decisión necesaria de separación
+## 6. Estados: separación aprobada
 
 La especificación funcional define los estados de asociación active/suspended/expired. El código actual usa `draft` como estado de registro porque aún no aplica configuraciones.
 
-No se debe mezclar el ciclo de vida administrativo con el estado de acceso. Propuesta:
+No se debe mezclar el ciclo de vida administrativo con el estado de acceso. **Decisión aprobada:**
 - `state`: estado funcional de acceso (active/suspended/expired).
 - `provisioning_status`: estado de configuración/aplicación (draft/pending/applied/failed).
 - `runtime.status`: último estado observado (not_applied/applied/unknown/failed).
 
 Así, un usuario recién creado puede tener estado deseado `active`, `provisioning_status=draft` y `runtime.status=not_applied`; la interfaz debe decir claramente que aún no tiene acceso efectivo. La expiración y suspensión cambian el estado funcional; la aplicación real se controla transaccionalmente.
 
-Esta separación es una decisión técnica propuesta que conserva los estados funcionales aprobados y evita ampliar esa enumeración con `draft`.
+Esta separación conserva los estados funcionales aprobados y evita ampliar esa enumeración con `draft`. Una asociación puede tener `state=active`, `provisioning_status=draft` y `runtime.status=not_applied`; eso expresa el estado funcional deseado, pero no significa que el acceso esté habilitado.
 
 ## 7. Capacidad y concurrencia
 
@@ -177,7 +177,7 @@ Esta separación es una decisión técnica propuesta que conserva los estados fu
 
 ## 8. Migración desde el esquema plano actual
 
-Migración no destructiva y explícita, sin ejecutar durante esta fase:
+Migración no destructiva y explícita. El helper implementado trabaja sobre rutas de entrada/salida explícitas, exige un estado funcional confirmado (`active`, `suspended` o `expired`), nunca modifica el origen y rechaza un destino ya existente. La ejecución sobre los datos reales sigue pendiente:
 1. Crear respaldo verificable de `users.json` y registrar hash, tamaño, fecha y permisos.
 2. Validar el esquema antiguo completo; abortar si hay campos inesperados o registros inválidos.
 3. Cada fila antigua se convierte inicialmente en una identidad nueva y una asociación nueva. No agrupar filas por `label`, porque alias duplicados están permitidos y no prueban identidad común.
@@ -185,7 +185,7 @@ Migración no destructiva y explícita, sin ejecutar durante esta fase:
 5. Conservar `connection_id`, `label` como `alias` y `created_at`.
 6. Generar nuevos `identity.id` y `association.id`.
 7. Traducir `state=draft` a `provisioning_status=draft`; no declararla activa ni aplicada.
-8. El estado funcional inicial queda pendiente de confirmación explícita durante migración o se conserva como dato no inferido; no inventar estado activo.
+8. El administrador debe seleccionar explícitamente el estado funcional para el lote; la herramienta no lo infiere ni convierte automáticamente un borrador en acceso activo.
 9. Validar capacidad por conexión y unicidad de UUID.
 10. Escribir v2 en temporal del mismo directorio, validar, fsync, reemplazo atómico y fsync del directorio.
 11. Verificar lectura posterior, conteos, referencias, UUIDs y hash del respaldo.
@@ -193,17 +193,17 @@ Migración no destructiva y explícita, sin ejecutar durante esta fase:
 
 Importante: el esquema antiguo no contiene información suficiente para reconstruir identidades compartidas entre conexiones. La migración conservadora crea una identidad independiente por fila. La vinculación de varias asociaciones a una misma identidad requiere una correspondencia manual inequívoca; nunca se deduce por alias.
 
-## 9. Contratos internos propuestos
+## 9. Contratos internos v2 — primera implementación
 
-Funciones puras de modelo:
+Funciones de modelo/almacenamiento ya implementadas en `modules/users_v2.sh`:
 - `users_v2_validate_document <json>`
 - `users_v2_validate_identity <identity_json>`
 - `users_v2_validate_association <association_json>`
 - `users_v2_find_identity <identity_id>`
 - `users_v2_find_association <association_id>`
-- `users_v2_count_connection_slots <connection_id>`
+- `users_v2_count_connection_slots <connection_id>` (pendiente como helper público; la capacidad se valida internamente al crear)
 
-Operaciones de servicio (todas bajo lock y con validación completa):
+Operaciones de servicio implementadas (lock compartido, validación y reemplazo atómico):
 - `users_identity_create`
 - `users_association_create`
 - `users_association_update`
@@ -221,7 +221,7 @@ Adaptador VLESS:
 - No incluye suspended/expired en la configuración efectiva.
 - Los registros aún en draft no se presentan como acceso aplicado.
 
-Los nombres son contratos propuestos; no deben incorporarse parcialmente hasta completar pruebas y diseño de errores.
+El módulo v2 todavía no está conectado al menú ni al adaptador de runtime. No reemplaza `modules/users.sh` ni convierte automáticamente el almacenamiento existente.
 
 ## 10. Matriz de pruebas mínima para este incremento
 
@@ -243,9 +243,9 @@ Los nombres son contratos propuestos; no deben incorporarse parcialmente hasta c
 | Error de fsync de directorio | Resultado parcial explícito y recuperable |
 | Migración de draft | Conserva credencial y datos; no marca acceso activo |
 | Alias coincidente en dos filas legacy | No fusiona identidades automáticamente |
-| WireGuard múltiples peers | Cada peer conserva claves y parámetros propios |
+| WireGuard múltiples peers | Cada peer conserva claves y parámetros propios |\n| UUID VLESS duplicado entre conexiones | Rechazo global |\n| Clave pública WireGuard duplicada | Rechazo |\n| Migración por encima de max_users | Abortada antes de crear salida |
 
-## 11. Bloqueos que requieren resolución antes de cerrar el contrato
+## 11. Decisiones cerradas y pendientes
 
 1. **Importación de identidades existentes:** la especificación permite identidad global compartida, pero los archivos legacy no la identifican; se requiere mapeo manual en importaciones sin ID.
 2. **WireGuard:** precisar si una identidad puede tener múltiples peers en la misma conexión y qué clave identifica de forma única cada peer.
@@ -255,4 +255,4 @@ Los nombres son contratos propuestos; no deben incorporarse parcialmente hasta c
 
 ## 12. Alcance de este documento
 
-Este documento es diseño técnico propuesto. No modifica código, datos, configuración de Xray, servicio, firewall ni SSH. No declara Etapa 3 implementada. El siguiente paso, tras aprobar los puntos bloqueantes, será implementar validadores v2 y pruebas unitarias; después, preparar y probar la migración en copia aislada antes de tocar los datos de la VPS.
+El código inicial está en `modules/users_v2.sh` y `tests/users_v2.sh`. La suite v2 valida identidad global, asociaciones múltiples, alias duplicados, unicidad global de UUID VLESS, peers WireGuard, CRUD básico, separación de estados, corrupción y migración aislada. La suite completa existente (concurrency, cross-race, fallos de JSON, colisiones de puertos, smoke, uninstall, users, users_v2, xray_admin y Xray VLESS integration) ha pasado en la VPS con Xray 26.10.31.\n\n**Límites de esta entrega:** el módulo no está integrado al menú ni a la activación de runtime; no se ha migrado el archivo real, no se ha reemplazado `modules/users.sh`, y no se ha tocado el servicio Xray, firewall o SSH. La Etapa 3 no se declara terminada. Antes de producción faltan el ciclo completo de duración, los campos específicos de WireGuard, la protección de secretos y la importación/exportación con resolución manual de identidades.
