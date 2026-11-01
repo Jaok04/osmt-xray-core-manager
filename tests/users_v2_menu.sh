@@ -298,7 +298,7 @@ if printf '00000000-0000-4000-8000-000000000000\n' | users_v2_menu_association_s
   exit 1
 fi
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.expired.before"
-jq --arg id "$VLESS_ASSOC_ID" '(.associations[]|select(.id==$id)).state="expired"' "$XRAY_MANAGER_USERS_FILE" >"$TMP/state.expired"
+jq --arg id "$VLESS_ASSOC_ID" '(.associations[]|select(.id==$id)) |= (.state="expired" | .suspended_at=null | .remaining_seconds=null)' "$XRAY_MANAGER_USERS_FILE" >"$TMP/state.expired"
 mv "$TMP/state.expired" "$XRAY_MANAGER_USERS_FILE"
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.expired.expected"
 if printf '%s\n' "$VLESS_ASSOC_ID" | users_v2_menu_association_state >"$OUT"; then
