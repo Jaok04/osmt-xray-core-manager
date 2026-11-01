@@ -197,6 +197,7 @@ grep -q 'Crear identidad global' "$OUT"
 grep -q 'Asociar identidad a conexión' "$OUT"
 grep -q 'Consultar detalle de asociación' "$OUT"
 grep -q 'Editar alias y límites de asociación' "$OUT"
+grep -q 'Suspender / reactivar asociación' "$OUT"
 
 # Editar alias y límites desde menú: modifica solo los tres campos solicitados.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.before"
