@@ -40,7 +40,7 @@ jq -e --arg id "$A4" 'any(.associations[]; .id==$id and .state=="active" and .du
 jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .duration.kind=="custom" and .expires_at!=null and (.expires_at|fromdateiso8601)>(.created_at|fromdateiso8601))' "$USERS_V2_DATA_FILE" >/dev/null
 jq -e --arg i1 "$ID1" --arg i2 "$ID2" '
  .schema_version == 2 and (.identities|length)==2 and (.associations|length)==4 and
- ([.associations[].alias] | unique | length)==1 and
+ ([.associations[].alias] | unique | length)==2 and ([.associations[] | select(.alias=="Compartido")] | length)==3 and
  ( [.associations[]|select(.identity_id==$i1)]|length)==2 and
  ( [.associations[]|select(.identity_id==$i2)]|length)==2
 ' "$USERS_V2_DATA_FILE" >/dev/null
