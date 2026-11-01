@@ -23,7 +23,7 @@ menu_main() {
         ui_read_option "Selecciona una opción: " option
         case "$option" in
             1) connections_menu ;;
-            2) menu_placeholder "Gestión de usuarios" ;;
+            2) users_menu ;;
             3) menu_placeholder "Certificados SSL/TLS y dominios" ;;
             4) menu_placeholder "Configuraciones, perfiles y respaldos" ;;
             5) menu_placeholder "Gestión del servicio Xray-core" ;;
@@ -59,7 +59,7 @@ menu_information() {
     printf '  Versión:      %s\n' "$APP_VERSION"
     printf '  Sistema:      %s\n' "$(system_os_name)"
     printf '  Arquitectura: %s\n' "$(uname -m)"
-    printf '\n  Estado: etapa 2 en implementación (catálogo y borradores de conexiones).\n'
+    printf '\n  Estado: etapa 3 en implementación (conexiones y usuarios VLESS en borrador).\n'
     printf '  Las conexiones registradas todavía no se aplican al runtime.\n'
     ui_pause
 }
