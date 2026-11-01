@@ -504,7 +504,7 @@ users_v2_menu_association_state() {
 # Renewal and duration editing are separate domain operations with distinct
 # state rules. Both identify records by immutable association ID.
 users_v2_menu_association_duration() {
-	[[ "$#" -eq 1 && ( "$1" == renew || "$1" == set ) ]] || return 2
+	[[ "$#" -eq 1 && ("$1" == renew || "$1" == set) ]] || return 2
 	local operation="$1" fd association_id state alias duration_kind duration_value duration_unit
 	local action_label
 	ui_clear
