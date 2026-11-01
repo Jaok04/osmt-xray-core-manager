@@ -70,8 +70,12 @@ users_v2_validate_document() {
 			($a.protocol | type == "string" and length > 0) and
 			($a.credential.type | type == "string" and length > 0) and
 			($a.credential.value | type == "string" and length > 0) and
-			($a.duration.kind == "unlimited" or ($a.duration.kind == "custom" and $a.duration.value > 0 and ($a.duration.unit == "days" or $a.duration.unit == "hours" or $a.duration.unit == "minutes"))) and
-			($a.expires_at == null or ($a.expires_at | type == "string" and length > 0)) and
+			(($a.duration.kind == "unlimited" and $a.expires_at == null) or
+			 ($a.duration.kind == "custom" and ($a.duration.value | type == "number" and floor == . and . > 0) and
+			  ($a.duration.unit == "days" or $a.duration.unit == "hours" or $a.duration.unit == "minutes") and
+			  ($a.expires_at | type == "string" and length > 0))) and
+			($a.protocol != "vless" or ($a.credential.type == "uuid" and ($a.credential.value | test("^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")))) and
+			($a.protocol != "wireguard" or $a.credential.type == "public_key") and
 			($a.traffic_limit_bytes | posnull) and ($a.simultaneous_connection_limit | posnull) and
 			($a.state == "active" or $a.state == "suspended" or $a.state == "expired") and
 			($a.provisioning_status == "draft" or $a.provisioning_status == "pending" or $a.provisioning_status == "applied" or $a.provisioning_status == "failed") and
@@ -233,11 +237,13 @@ by_id = {c.get("id"): c for c in connections if isinstance(c, dict)}
 seen = set()
 identities, associations = [], []
 for old in legacy:
-    if not isinstance(old, dict) or old.get("state") != "draft" or old.get("runtime_applied") is not False:
-        raise SystemExit("registro legacy no compatible; migración cancelada")
+    if not isinstance(old, dict) or set(old) != {"uuid", "connection_id", "label", "state", "runtime_applied", "created_at"} or old.get("state") != "draft" or old.get("runtime_applied") is not False:
+        raise SystemExit("registro legacy no compatible o con campos inesperados; migración cancelada")
     for key in ("uuid", "connection_id", "label", "created_at"):
         if not isinstance(old.get(key), str) or not old[key]:
             raise SystemExit("campo legacy faltante o inválido: " + key)
+    if len(old["label"]) > 64:
+        raise SystemExit("alias legacy supera 64 caracteres")
     conn = by_id.get(old["connection_id"])
     if not conn:
         raise SystemExit("conexión inexistente: " + old["connection_id"])
