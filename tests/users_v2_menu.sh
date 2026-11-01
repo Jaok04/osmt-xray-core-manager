@@ -250,4 +250,60 @@ cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.cancel.before"
 printf '6\n%s\nNo guardar\n500\n3\nn\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
 cmp -s "$TMP/edit.cancel.before" "$XRAY_MANAGER_USERS_FILE"
 
+
+# Suspender una asociación activa conserva estado funcional separado del runtime.
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.before-suspend"
+printf '7\\n%s\\ns\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+grep -q 'Asociación suspendida' "$OUT"
+jq -e --arg id "$VLESS_ASSOC_ID" --arg secret "$VLESS_SECRET" '
+  any(.associations[]; .id==$id and .state=="suspended" and
+      .suspended_at!=null and .remaining_seconds==null and .expires_at==null and
+      .credential.value==$secret and .runtime.status=="not_applied" and
+      .provisioning_status=="draft")
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# Reactivar una asociación suspendida requiere nueva duración y la calcula desde ahora.
+printf '7\\n%s\\ncustom\\n3\\ndays\\ns\\n\\n0\\n' "$WG_ASSOC_ID" | users_v2_menu >"$OUT"
+grep -q 'Asociación reactivada correctamente' "$OUT"
+jq -e --arg id "$WG_ASSOC_ID" --arg secret "$WG_SECRET" '
+  any(.associations[]; .id==$id and .state=="active" and
+      .duration.kind=="custom" and .duration.value==3 and .duration.unit=="days" and
+      .expires_at!=null and .suspended_at==null and .remaining_seconds==null and
+      .credential.value==$secret and .runtime.status=="not_applied")
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# Al suspender una duración limitada se pausa el tiempo restante y se borra expires_at.
+printf '7\\n%s\\ns\\n\\n0\\n' "$WG_ASSOC_ID" | users_v2_menu >"$OUT"
+grep -q 'tiempo restante quedó pausado' "$OUT"
+jq -e --arg id "$WG_ASSOC_ID" '
+  any(.associations[]; .id==$id and .state=="suspended" and
+      .duration.kind=="custom" and .remaining_seconds>0 and
+      .expires_at==null and .suspended_at!=null)
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# Cancelar suspensión/reactivación o introducir duración inválida no escribe.
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.cancel.before"
+printf '7\\n%s\\nn\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+cmp -s "$TMP/state.cancel.before" "$XRAY_MANAGER_USERS_FILE"
+if printf '7\\n%s\\ncustom\\n0\\ndays\\n' "$WG_ASSOC_ID" | users_v2_menu_association_state >"$OUT"; then
+  echo 'ERROR: se aceptó una duración inválida al reactivar.' >&2
+  exit 1
+fi
+cmp -s "$TMP/state.cancel.before" "$XRAY_MANAGER_USERS_FILE"
+
+# Asociación inexistente y estado vencido no se reactivan por este flujo.
+if printf '00000000-0000-4000-8000-000000000000\\n' | users_v2_menu_association_state >"$OUT"; then
+  echo 'ERROR: se aceptó una asociación inexistente para cambio de estado.' >&2
+  exit 1
+fi
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.expired.before"
+jq --arg id "$VLESS_ASSOC_ID" '(.associations[]|select(.id==$id)).state="expired"' "$XRAY_MANAGER_USERS_FILE" >"$TMP/state.expired"
+mv "$TMP/state.expired" "$XRAY_MANAGER_USERS_FILE"
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.expired.expected"
+if users_v2_menu_association_state >"$OUT"; then
+  echo 'ERROR: se intentó reactivar una asociación vencida desde el flujo de suspensión.' >&2
+  exit 1
+fi
+cmp -s "$TMP/state.expired.expected" "$XRAY_MANAGER_USERS_FILE"
+
 echo 'OK: selector legacy/v2, consulta protegida, resumen, detalle de asociación sin exposición de credenciales, creación de identidades/asociaciones VLESS y WireGuard, validaciones de identidad/conexión, credenciales únicas, capacidad y runtime sin cambios.'
