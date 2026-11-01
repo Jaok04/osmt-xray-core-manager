@@ -582,7 +582,7 @@ users_v2_menu_association_duration() {
 		return 2
 	fi
 	printf '\nRESUMEN DE %s\nAsociación: %s\nNueva duración: %s %s\n' "$action_label" "$alias" "$duration_value" "$duration_unit"
-	if ! ui_confirm "¿Confirmas la %s de esta asociación?" "$action_label"; then
+	if ! ui_confirm "¿Confirmas la $action_label de esta asociación?"; then
 		printf '\nOperación cancelada; no se guardaron cambios.\n'
 		return 0
 	fi
