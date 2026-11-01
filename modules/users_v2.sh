@@ -53,7 +53,7 @@ users_v2_validate_document() {
 	[[ "$#" -eq 1 ]] || return 2
 	local document="$1"
 	[[ -r "$USERS_V2_CONNECTIONS_FILE" ]] || return 1
-	jq -e --argfile connections "$USERS_V2_CONNECTIONS_FILE" '
+	jq -e --slurpfile connections "$USERS_V2_CONNECTIONS_FILE" '
 		def uuid: type == "string" and test("^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
 		def posnull: . == null or (type == "number" and floor == . and . > 0);
 		. as $doc |
@@ -64,7 +64,7 @@ users_v2_validate_document() {
 			($a.id | uuid) and ($a.identity_id | uuid) and
 			any($doc.identities[]; .id == $a.identity_id) and
 			($a.connection_id | type == "string" and length > 0) and
-			any($connections[]; .id == $a.connection_id) and
+			any($connections[0][]; .id == $a.connection_id) and
 			($a.alias | type == "string" and length > 0 and length <= 64) and
 			($a.protocol | type == "string" and length > 0) and
 			($a.credential.type | type == "string" and length > 0) and
