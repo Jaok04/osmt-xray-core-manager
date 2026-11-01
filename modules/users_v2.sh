@@ -43,63 +43,44 @@ users_v2_unlock() {
 
 users_v2_validate_file() {
 	[[ "$#" -eq 1 && -r "$1" ]] || return 1
-	jq -e --slurpfile connections "$USERS_V2_CONNECTIONS_FILE" '
-		def uuid: type == "string" and test("^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
-		def positive_or_null: . == null or (type == "number" and floor == . and . > 0);
-		(schema_version == 2) and
-		(identities | type == "array") and (associations | type == "array") and
-		all(.identities[]; type == "object" and (.id | uuid) and (.created_at | type == "string" and length > 0)) and
-		all(.associations[];
-			type == "object" and
-			(.id | uuid) and (.identity_id | uuid) and
-			(.connection_id | type == "string" and length > 0) and
-			(.alias | type == "string" and length > 0 and length <= 64) and
-			(.protocol | type == "string" and length > 0) and
-			(.credential | type == "object" and (.type | type == "string" and length > 0) and (.value | type == "string" and length > 0)) and
-			(.created_at | type == "string" and length > 0) and
-			(.duration | type == "object" and (.kind == "unlimited" or (.kind == "custom" and (.value | type == "number" and floor == . and . > 0) and (.unit == "days" or .unit == "hours" or .unit == "minutes")))) and
-			(.expires_at == null or (.expires_at | type == "string" and length > 0)) and
-			(.traffic_limit_bytes | positive_or_null) and
-			(.simultaneous_connection_limit | positive_or_null) and
-			(.state == "active" or .state == "suspended" or .state == "expired") and
-			(.provisioning_status == "draft" or .provisioning_status == "pending" or .provisioning_status == "applied" or .provisioning_status == "failed") and
-			(.runtime | type == "object" and (.status == "not_applied" or .status == "applied" or .status == "unknown" or .status == "pending" or .status == "failed") and (.last_applied_at == null or (.last_applied_at | type == "string")))
-		) and
-		([.identities[].id] | length == (unique | length)) and
-		([.associations[].id] | length == (unique | length)) and
-		all(.associations[]; .identity_id as $iid | any($document.identities[]?; .id == $iid))
-	' "$1" >/dev/null 2>&1
+	local document
+	document="$(jq -ce '.' "$1")" || return 1
+	users_v2_validate_document "$document"
 }
 
 # Validador completo con referencias e invariantes cruzadas.
 users_v2_validate_document() {
 	[[ "$#" -eq 1 ]] || return 2
 	local document="$1"
+	[[ -r "$USERS_V2_CONNECTIONS_FILE" ]] || return 1
 	jq -e --argfile connections "$USERS_V2_CONNECTIONS_FILE" '
 		def uuid: type == "string" and test("^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$");
 		def posnull: . == null or (type == "number" and floor == . and . > 0);
+		. as $doc |
 		.schema_version == 2 and
 		(.identities | type == "array") and (.associations | type == "array") and
 		all(.identities[]; (.id | uuid) and (.created_at | type == "string" and length > 0)) and
-		all(.associations[];
-			(.id | uuid) and (.identity_id | uuid) and
-			any($document.identities[]; .id == .identity_id) and
-			(.connection_id | type == "string" and length > 0) and
-			any($connections[]; .id == .connection_id) and
-			(.alias | type == "string" and length > 0 and length <= 64) and
-			(.protocol | type == "string" and length > 0) and
-			(.credential.type | type == "string" and length > 0) and
-			(.credential.value | type == "string" and length > 0) and
-			(.duration.kind == "unlimited" or (.duration.kind == "custom" and .duration.value > 0 and (.duration.unit == "days" or .duration.unit == "hours" or .duration.unit == "minutes"))) and
-			(.traffic_limit_bytes | posnull) and (.simultaneous_connection_limit | posnull) and
-			(.state == "active" or .state == "suspended" or .state == "expired") and
-			(.provisioning_status == "draft" or .provisioning_status == "pending" or .provisioning_status == "applied" or .provisioning_status == "failed") and
-			(.runtime.status == "not_applied" or .runtime.status == "applied" or .runtime.status == "unknown" or .runtime.status == "pending" or .runtime.status == "failed")
+		all(.associations[] as $a;
+			($a.id | uuid) and ($a.identity_id | uuid) and
+			any($doc.identities[]; .id == $a.identity_id) and
+			($a.connection_id | type == "string" and length > 0) and
+			any($connections[]; .id == $a.connection_id) and
+			($a.alias | type == "string" and length > 0 and length <= 64) and
+			($a.protocol | type == "string" and length > 0) and
+			($a.credential.type | type == "string" and length > 0) and
+			($a.credential.value | type == "string" and length > 0) and
+			($a.duration.kind == "unlimited" or ($a.duration.kind == "custom" and $a.duration.value > 0 and ($a.duration.unit == "days" or $a.duration.unit == "hours" or $a.duration.unit == "minutes"))) and
+			($a.expires_at == null or ($a.expires_at | type == "string" and length > 0)) and
+			($a.traffic_limit_bytes | posnull) and ($a.simultaneous_connection_limit | posnull) and
+			($a.state == "active" or $a.state == "suspended" or $a.state == "expired") and
+			($a.provisioning_status == "draft" or $a.provisioning_status == "pending" or $a.provisioning_status == "applied" or $a.provisioning_status == "failed") and
+			($a.runtime.status == "not_applied" or $a.runtime.status == "applied" or $a.runtime.status == "unknown" or $a.runtime.status == "pending" or $a.runtime.status == "failed") and
+			($a.runtime.last_applied_at == null or ($a.runtime.last_applied_at | type == "string"))
 		) and
 		([.identities[].id] | length == (unique | length)) and
 		([.associations[].id] | length == (unique | length)) and
-		([.associations[] | select(.protocol == "vless") | .credential.value] | length == (unique | length)) and
-		(all(.associations[] as $a; ($a.protocol == "wireguard") or
+		([.associations[] | select(.protocol == "vless") | .credential.value | ascii_downcase] | length == (unique | length)) and
+		(all(.associations[] as $a; $a.protocol == "wireguard" or
 			([.associations[] | select(.identity_id == $a.identity_id and .connection_id == $a.connection_id)] | length == 1)))
 	' <<<"$document" >/dev/null 2>&1
 }
@@ -155,6 +136,7 @@ users_association_create() {
 	users_v2_lock fd || return 1
 	connection="$(jq -ce --arg id "$connection_id" '.[] | select(.id == $id)' "$USERS_V2_CONNECTIONS_FILE")" || { users_v2_unlock "$fd"; return 1; }
 	protocol="$(jq -r '.protocol_id' <<<"$connection")"
+	if [[ "$protocol" == vless_* ]]; then protocol=vless; elif [[ "$protocol" == wireguard* ]]; then protocol=wireguard; fi
 	[[ "$override" == auto ]] || protocol="$override"
 	jq -e --arg id "$identity_id" 'any(.identities[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null || { users_v2_unlock "$fd"; return 1; }
 	if [[ "$protocol" == vless ]]; then
@@ -230,30 +212,69 @@ users_v2_export_vless_clients() {
 	users_v2_unlock "$fd"
 }
 
-# Migración pura sobre rutas explícitas; nunca cambia el archivo legacy ni el destino por sí sola.
+# Migración pura sobre rutas explícitas; exige estado funcional elegido por el administrador.
 # users_v2_migrate_legacy <legacy_json> <connections_json> <output_json> <confirmed_functional_state>
 users_v2_migrate_legacy() {
 	[[ "$#" -eq 4 && ( "$4" == active || "$4" == suspended || "$4" == expired ) ]] || return 2
-	local legacy="$1" connections="$2" output="$3" state="$4" now
+	local legacy="$1" connections="$2" output="$3" state="$4"
 	[[ -r "$legacy" && -r "$connections" && ! -e "$output" ]] || return 1
-	jq -e --slurpfile c "$connections" 'type == "array" and all(.[]; type == "object" and (.uuid|type=="string" and length>0) and (.connection_id|type=="string" and length>0) and (.label|type=="string" and length>0) and .state=="draft" and .runtime_applied==false and (.created_at|type=="string") and any($c[]; .id == .connection_id)) and ([.[].uuid|ascii_downcase] | length == (unique|length))' "$legacy" >/dev/null || return 1
-	now="$(users_v2_now)"
-	jq --arg state "$state" --arg now "$now" '
-		{schema_version:2,identities:[],associations:[]} |
-		. as $empty |
-		$empty
-	' </dev/null >/dev/null 2>&1 || :
-	jq --slurpfile conns "$connections" --arg state "$state" '
-		{schema_version:2,identities:[],associations:[]} as $base |
-		reduce .[] as $old ($base;
-			(old.uuid | ascii_downcase) as $cred |
-			(old.connection_id) as $cid |
-			($conns[0][] | select(.id == $cid) | .protocol_id) as $mode |
-			($mode | if startswith("vless_") then "vless" elif startswith("wireguard") then "wireguard" else . end) as $protocol |
-			(old.created_at) as $created |
-			(uuidgen_placeholder) as $unused |
-			.
-		)
-	' "$legacy" >/dev/null 2>&1
-	return 1
+	python3 - "$legacy" "$connections" "$output" "$state" <<'PY'
+import json, os, sys, uuid, tempfile
+legacy_path, connections_path, output_path, state = sys.argv[1:]
+with open(legacy_path, encoding="utf-8") as f:
+    legacy = json.load(f)
+with open(connections_path, encoding="utf-8") as f:
+    connections = json.load(f)
+if not isinstance(legacy, list) or not isinstance(connections, list):
+    raise SystemExit("legacy/connections debe ser un arreglo JSON")
+by_id = {c.get("id"): c for c in connections if isinstance(c, dict)}
+seen = set()
+identities, associations = [], []
+for old in legacy:
+    if not isinstance(old, dict) or old.get("state") != "draft" or old.get("runtime_applied") is not False:
+        raise SystemExit("registro legacy no compatible; migración cancelada")
+    for key in ("uuid", "connection_id", "label", "created_at"):
+        if not isinstance(old.get(key), str) or not old[key]:
+            raise SystemExit("campo legacy faltante o inválido: " + key)
+    conn = by_id.get(old["connection_id"])
+    if not conn:
+        raise SystemExit("conexión inexistente: " + old["connection_id"])
+    cred = old["uuid"].lower()
+    if cred in seen:
+        raise SystemExit("UUID VLESS duplicado en legacy")
+    seen.add(cred)
+    mode = conn.get("protocol_id", "")
+    protocol = "vless" if mode.startswith("vless_") else ("wireguard" if mode.startswith("wireguard") else mode)
+    identity_id, association_id = str(uuid.uuid4()), str(uuid.uuid4())
+    identities.append({"id": identity_id, "created_at": old["created_at"]})
+    associations.append({
+        "id": association_id, "identity_id": identity_id,
+        "connection_id": old["connection_id"], "alias": old["label"],
+        "protocol": protocol,
+        "credential": {"type": "uuid" if protocol == "vless" else "legacy", "value": cred},
+        "created_at": old["created_at"],
+        "duration": {"kind": "unlimited"}, "expires_at": None,
+        "traffic_limit_bytes": None, "simultaneous_connection_limit": None,
+        "state": state, "provisioning_status": "draft",
+        "runtime": {"status": "not_applied", "last_applied_at": None}
+    })
+result = {"schema_version": 2, "identities": identities, "associations": associations}
+directory = os.path.dirname(os.path.abspath(output_path))
+fd, tmp = tempfile.mkstemp(prefix=".users-v2-migration-", dir=directory)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(result, f, ensure_ascii=False, indent=2)
+        f.write("\\n")
+        f.flush()
+        os.fsync(f.fileno())
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, output_path)
+    dfd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try: os.fsync(dfd)
+    finally: os.close(dfd)
+except Exception:
+    try: os.unlink(tmp)
+    except FileNotFoundError: pass
+    raise
+PY
 }
