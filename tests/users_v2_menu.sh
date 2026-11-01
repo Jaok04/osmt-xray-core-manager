@@ -284,9 +284,9 @@ jq -e --arg id "$WG_ASSOC_ID" '
 
 # Cancelar suspensión/reactivación o introducir duración inválida no escribe.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/state.cancel.before"
-printf '7\n%s\nn\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+printf '7\n%s\nunlimited\nn\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
 cmp -s "$TMP/state.cancel.before" "$XRAY_MANAGER_USERS_FILE"
-if printf '%s\ncustom\n0\ndays\n' "$WG_ASSOC_ID" | users_v2_menu_association_state >"$OUT"; then
+if printf '%s\nbogus\n' "$WG_ASSOC_ID" | users_v2_menu_association_state >"$OUT"; then
   echo 'ERROR: se aceptó una duración inválida al reactivar.' >&2
   exit 1
 fi
