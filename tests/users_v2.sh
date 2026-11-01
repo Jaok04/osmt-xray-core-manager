@@ -15,7 +15,8 @@ cat >"$USERS_V2_CONNECTIONS_FILE" <<'JSON'
 [
  {"id":"conn-vless-a","protocol_id":"vless_ws","max_users":3},
  {"id":"conn-vless-b","protocol_id":"vless_tcp_tls","max_users":2},
- {"id":"conn-wg","protocol_id":"wireguard","max_users":4}
+ {"id":"conn-wg","protocol_id":"wireguard","max_users":4},
+ {"id":"conn-cap","protocol_id":"vless_ws","max_users":1}
 ]
 JSON
 
@@ -55,6 +56,21 @@ if users_association_create "$ID1" conn-wg Peer-Dup public_key wg-public-key-1 a
 	exit 1
 fi
 jq -e --arg id "$ID1" '[.associations[]|select(.identity_id==$id and .protocol=="wireguard" and .connection_id=="conn-wg")]|length==2' "$USERS_V2_DATA_FILE" >/dev/null
+
+# Dos altas concurrentes no pueden consumir el mismo último slot.
+CAP_ID="$(users_identity_create)"
+create_cap_race() {
+	users_association_create "$CAP_ID" conn-cap "$1" uuid "$2" active unlimited 0 none 0 0 auto >/dev/null
+}
+create_cap_race Cap-A aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa &
+P1=$!
+create_cap_race Cap-B bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb &
+P2=$!
+SUCCESS=0
+if wait "$P1"; then SUCCESS=$((SUCCESS + 1)); fi
+if wait "$P2"; then SUCCESS=$((SUCCESS + 1)); fi
+[[ "$SUCCESS" -eq 1 ]]
+jq -e '[.associations[]|select(.connection_id=="conn-cap")]|length==1' "$USERS_V2_DATA_FILE" >/dev/null
 
 users_association_set_alias "$A1" Renombrado
 jq -e --arg id "$A1" 'any(.associations[]; .id==$id and .alias=="Renombrado" and .credential.value=="11111111-1111-4111-8111-111111111111")' "$USERS_V2_DATA_FILE" >/dev/null
