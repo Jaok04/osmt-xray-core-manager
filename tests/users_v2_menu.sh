@@ -87,7 +87,6 @@ fi
 cmp -s "$TMP/unknown.before" "$XRAY_MANAGER_USERS_FILE"
 grep -q 'esquema desconocido' "$OUT"
 
-
 # Creación desde el menú v2: identidad global y asociación VLESS.
 rm -f "$XRAY_MANAGER_USERS_FILE"
 printf 's\n' | users_v2_menu_create_identity >"$OUT"
@@ -97,7 +96,7 @@ jq -e --arg id "$IDENTITY_ID" 'any(.identities[]; .id==$id) and (.associations|l
 
 VLESS_SECRET='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 printf '%s\nconn-vless\nCliente desde menú\n%s\nactive\nunlimited\n0\n0\ns\n' \
-  "$IDENTITY_ID" "$VLESS_SECRET" | users_v2_menu_create_association >"$OUT"
+	"$IDENTITY_ID" "$VLESS_SECRET" | users_v2_menu_create_association >"$OUT"
 VLESS_ASSOC_ID="$(sed -n 's/^ID de asociación: //p' "$OUT" | tail -n1)"
 [[ "$VLESS_ASSOC_ID" =~ ^[0-9a-f-]{36}$ ]]
 jq -e --arg id "$VLESS_ASSOC_ID" --arg iid "$IDENTITY_ID" --arg secret "$VLESS_SECRET" '
@@ -108,15 +107,15 @@ jq -e --arg id "$VLESS_ASSOC_ID" --arg iid "$IDENTITY_ID" --arg secret "$VLESS_S
       .runtime.status=="not_applied" and .duration.kind=="unlimited")
 ' "$XRAY_MANAGER_USERS_FILE" >/dev/null
 if grep -Fq "$VLESS_SECRET" "$OUT"; then
-  echo 'ERROR: el menú imprimió la credencial VLESS.' >&2
-  exit 1
+	echo 'ERROR: el menú imprimió la credencial VLESS.' >&2
+	exit 1
 fi
 grep -q 'Runtime: sin cambios (not_applied)' "$OUT"
 
 # WireGuard selecciona automáticamente public_key y admite múltiples peers.
 WG_SECRET='wireguard-public-key-fixture'
 printf '%s\nconn-wg\nPeer de prueba\n%s\nsuspended\ncustom\n2\nhours\n4096\n2\ns\n' \
-  "$IDENTITY_ID" "$WG_SECRET" | users_v2_menu_create_association >"$OUT"
+	"$IDENTITY_ID" "$WG_SECRET" | users_v2_menu_create_association >"$OUT"
 WG_ASSOC_ID="$(sed -n 's/^ID de asociación: //p' "$OUT" | tail -n1)"
 [[ "$WG_ASSOC_ID" =~ ^[0-9a-f-]{36}$ ]]
 jq -e --arg id "$WG_ASSOC_ID" --arg secret "$WG_SECRET" '
@@ -128,15 +127,15 @@ jq -e --arg id "$WG_ASSOC_ID" --arg secret "$WG_SECRET" '
       .simultaneous_connection_limit==2 and .runtime.status=="not_applied")
 ' "$XRAY_MANAGER_USERS_FILE" >/dev/null
 if grep -Fq "$WG_SECRET" "$OUT"; then
-  echo 'ERROR: el menú imprimió la clave pública WireGuard.' >&2
-  exit 1
+	echo 'ERROR: el menú imprimió la clave pública WireGuard.' >&2
+	exit 1
 fi
 
 # Identidad inexistente: aborta antes de solicitar credenciales o modificar datos.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/before-invalid-identity"
 if printf '00000000-0000-4000-8000-000000000000\n' | users_v2_menu_create_association >"$OUT"; then
-  echo 'ERROR: se aceptó una identidad inexistente.' >&2
-  exit 1
+	echo 'ERROR: se aceptó una identidad inexistente.' >&2
+	exit 1
 fi
 cmp -s "$TMP/before-invalid-identity" "$XRAY_MANAGER_USERS_FILE"
 grep -q 'identidad indicada no existe' "$OUT"
@@ -144,28 +143,28 @@ grep -q 'identidad indicada no existe' "$OUT"
 # Conexión inexistente: aborta sin alterar el registro.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/before-invalid-connection"
 if printf '%s\nno-existe\n' "$IDENTITY_ID" | users_v2_menu_create_association >"$OUT"; then
-  echo 'ERROR: se aceptó una conexión inexistente.' >&2
-  exit 1
+	echo 'ERROR: se aceptó una conexión inexistente.' >&2
+	exit 1
 fi
 cmp -s "$TMP/before-invalid-connection" "$XRAY_MANAGER_USERS_FILE"
 grep -q 'conexión indicada no existe' "$OUT"
 
 # La validación del dominio sigue rechazando UUID VLESS duplicados.
 if printf '%s\nconn-vless\nUUID duplicado\n%s\nactive\nunlimited\n0\n0\ns\n' \
-  "$IDENTITY_ID" "$VLESS_SECRET" | users_v2_menu_create_association >"$OUT"; then
-  echo 'ERROR: el menú aceptó un UUID VLESS duplicado.' >&2
-  exit 1
+	"$IDENTITY_ID" "$VLESS_SECRET" | users_v2_menu_create_association >"$OUT"; then
+	echo 'ERROR: el menú aceptó un UUID VLESS duplicado.' >&2
+	exit 1
 fi
 [[ "$(jq '[.associations[]]|length' "$XRAY_MANAGER_USERS_FILE")" -eq 2 ]]
 
 # La capacidad de la conexión se respeta en el alta desde el menú.
 CAP_ID="$(users_identity_create)"
 printf '%s\nconn-cap\nPrimer slot\ncccccccc-cccc-4ccc-8ccc-cccccccccccc\nactive\nunlimited\n0\n0\ns\n' \
-  "$CAP_ID" | users_v2_menu_create_association >"$OUT"
+	"$CAP_ID" | users_v2_menu_create_association >"$OUT"
 if printf '%s\nconn-cap\nSlot excedido\ndddddddd-dddd-4ddd-8ddd-dddddddddddd\nactive\nunlimited\n0\n0\ns\n' \
-  "$CAP_ID" | users_v2_menu_create_association >"$OUT"; then
-  echo 'ERROR: el menú permitió superar max_users.' >&2
-  exit 1
+	"$CAP_ID" | users_v2_menu_create_association >"$OUT"; then
+	echo 'ERROR: el menú permitió superar max_users.' >&2
+	exit 1
 fi
 [[ "$(jq '[.associations[]|select(.connection_id=="conn-cap")]|length' "$XRAY_MANAGER_USERS_FILE")" -eq 1 ]]
 
