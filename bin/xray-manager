@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Xray Core Manager - interfaz principal.
+
+set -Eeuo pipefail
+IFS=$'\n\t'
+umask 077
+
+readonly APP_ROOT="/opt/xray-manager"
+
+if [[ ! -d "$APP_ROOT" ]]; then
+    printf 'ERROR: no existe el directorio del proyecto: %s\n' "$APP_ROOT" >&2
+    exit 1
+fi
+
+# Las rutas se resuelven desde APP_ROOT en tiempo de ejecución.
+# shellcheck disable=SC1091
+source "$APP_ROOT/config/manager.conf"
+# shellcheck disable=SC1091
+source "$APP_ROOT/lib/ui.sh"
+# shellcheck disable=SC1091
+source "$APP_ROOT/lib/system.sh"
+# shellcheck disable=SC1091
+source "$APP_ROOT/modules/connections.sh"
+# shellcheck disable=SC1091
+source "$APP_ROOT/modules/main_menu.sh"
+
+main() {
+    menu_main
+}
+
+main "$@"
