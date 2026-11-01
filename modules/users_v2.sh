@@ -64,7 +64,8 @@ users_v2_validate_document() {
 			($a.id | uuid) and ($a.identity_id | uuid) and
 			any($doc.identities[]; .id == $a.identity_id) and
 			($a.connection_id | type == "string" and length > 0) and
-			any($connections[0][]; .id == $a.connection_id) and
+			any($connections[0][]; .id == $a.connection_id and
+				(if (.protocol_id | startswith("vless_")) then "vless" elif (.protocol_id | startswith("wireguard")) then "wireguard" else .protocol_id end) == $a.protocol) and
 			($a.alias | type == "string" and length > 0 and length <= 64) and
 			($a.protocol | type == "string" and length > 0) and
 			($a.credential.type | type == "string" and length > 0) and
@@ -80,6 +81,7 @@ users_v2_validate_document() {
 		([.identities[].id] | length == (unique | length)) and
 		([.associations[].id] | length == (unique | length)) and
 		([.associations[] | select(.protocol == "vless") | .credential.value | ascii_downcase] | length == (unique | length)) and
+		([.associations[] | select(.protocol == "wireguard") | .credential.value] | length == (unique | length)) and
 		(all(.associations[]; . as $a | ($a.protocol == "wireguard" or
 			([$doc.associations[] | select(.identity_id == $a.identity_id and .connection_id == $a.connection_id)] | length == 1))))
 	' <<<"$document" >/dev/null 2>&1
@@ -239,7 +241,12 @@ for old in legacy:
     conn = by_id.get(old["connection_id"])
     if not conn:
         raise SystemExit("conexión inexistente: " + old["connection_id"])
-    cred = old["uuid"].lower()
+    if not mode.startswith("vless_"):
+        raise SystemExit("solo se migra el esquema legacy VLESS; protocolo no compatible")
+    try:
+        cred = str(uuid.UUID(old["uuid"]))
+    except (ValueError, AttributeError):
+        raise SystemExit("UUID VLESS legacy inválido")
     if cred in seen:
         raise SystemExit("UUID VLESS duplicado en legacy")
     seen.add(cred)
