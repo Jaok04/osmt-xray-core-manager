@@ -104,3 +104,21 @@ El generador no debe marcar una conexión como activa ni runtime-applied por el 
 **Pruebas:** `tests/smoke.sh` comprueba las seis correspondencias, los campos del modelo y rechazos de modalidades, puertos, direcciones e ID inválidos. La entrada principal carga el módulo.
 
 **Límite:** esto todavía no es un generador de configuración Xray. No valida sintaxis IP/DNS de la dirección, no verifica la existencia de la conexión en el registro, no añade usuarios y no crea parámetros WS, gRPC, TLS o REALITY. El JSON emitido no debe instalarse ni aplicarse a Xray.
+
+## 10. Versión objetivo fijada y validación oficial
+
+**Versión seleccionada:** Xray-core `v26.10.31`, release estable marcado como Latest en el repositorio oficial al 1 de noviembre de 2026. Release: <https://github.com/XTLS/Xray-core/releases/tag/v26.10.31>.
+
+- Commit de release: `a4a3dff`.
+- Publicación: `2026-10-31`.
+- Activo de validación del VPS: `Xray-linux-64.zip`.
+- SHA-256 oficial del activo: `e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214`.
+- Versión comprobada del binario: `Xray 26.10.31 (go1.27.3 linux/amd64)`.
+
+El archivo `config/xray-version.conf` centraliza esta fijación. El binario se descargó únicamente al caché de validación `/var/cache/xray-manager/validation/v26.10.31/`; no se instaló en `/usr/local/bin`, no se creó ni modificó un servicio y no se abrió ningún puerto.
+
+**Validación real realizada:** `xray run -test` aceptó un fixture temporal de inbound VLESS RAW sin TLS, con `decryption: none`, escuchando en loopback. Resultado: `Configuration OK.` El fixture está aislado en el caché de validación y no se aplicó al servicio.
+
+**Aviso de seguridad del release:** el anuncio oficial identifica esta versión como actualización urgente que desactiva MPTCP por defecto debido a un riesgo de escalada remota asociado a MPTCP en Linux con Go 1.24+. También recomienda actualizar el kernel Linux. La actualización del kernel del VPS no se ha realizado y queda fuera de este cambio.
+
+**Pendiente:** validar fixtures independientes para WebSocket, gRPC, TLS y REALITY; implementar el serializador final solo después de definir los parámetros requeridos de certificados, transporte y REALITY. No se inferirán ni generarán credenciales o secretos de producción.
