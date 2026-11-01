@@ -92,7 +92,12 @@ DOC="$(jq --arg id "$A2" '(.associations[] | select(.id==$id)).expires_at = "200
 users_v2_commit_document "$DOC"
 # shellcheck disable=SC2119
 [[ "$(users_v2_expire_due)" == 1 ]]
-jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="expired")' "$USERS_V2_DATA_FILE" >/dev/null
+# A second sweep is idempotent and leaves suspended associations untouched.
+[[ "$(users_v2_expire_due)" == 0 ]]
+jq -e --arg id "$A2" --arg wg "$A3" 'any(.associations[]; .id==$id and .state=="expired") and any(.associations[]; .id==$wg and .state=="suspended")' "$USERS_V2_DATA_FILE" >/dev/null
+if users_association_reactivate "$A2" custom 999999999999999999999 days >/dev/null 2>&1; then
+ echo "ERROR: duración fuera de rango aceptada" >&2; exit 1
+fi
 # Renewal of an expired association begins a new period from now.
 users_association_renew "$A2" custom 1 days
 jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="active" and .duration.value==1 and .duration.unit=="days")' "$USERS_V2_DATA_FILE" >/dev/null
@@ -132,7 +137,7 @@ users_v2_migrate_legacy "$TMP/legacy.json" "$USERS_V2_CONNECTIONS_FILE" "$TMP/mi
 jq -e '
  .schema_version==2 and (.identities|length)==2 and (.associations|length)==2 and
  ([.identities[].id]|unique|length)==2 and
- all(.associations[];.state=="suspended" and .provisioning_status=="draft" and .runtime.status=="not_applied") and
+ all(.associations[];.state=="suspended" and .suspended_at!=null and .remaining_seconds==null and .provisioning_status=="draft" and .runtime.status=="not_applied") and
  ([.associations[].alias]|unique|length)==1 and
  ([.associations[].credential.value]|unique|length)==2
 ' "$TMP/migrated.json" >/dev/null
