@@ -241,6 +241,7 @@ for old in legacy:
     conn = by_id.get(old["connection_id"])
     if not conn:
         raise SystemExit("conexión inexistente: " + old["connection_id"])
+    mode = conn.get("protocol_id", "")
     if not mode.startswith("vless_"):
         raise SystemExit("solo se migra el esquema legacy VLESS; protocolo no compatible")
     try:
@@ -250,8 +251,7 @@ for old in legacy:
     if cred in seen:
         raise SystemExit("UUID VLESS duplicado en legacy")
     seen.add(cred)
-    mode = conn.get("protocol_id", "")
-    protocol = "vless" if mode.startswith("vless_") else ("wireguard" if mode.startswith("wireguard") else mode)
+    protocol = "vless"
     identity_id, association_id = str(uuid.uuid4()), str(uuid.uuid4())
     identities.append({"id": identity_id, "created_at": old["created_at"]})
     associations.append({
