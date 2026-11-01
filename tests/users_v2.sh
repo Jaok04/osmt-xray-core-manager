@@ -19,6 +19,7 @@ cat >"$USERS_V2_CONNECTIONS_FILE" <<'JSON'
 ]
 JSON
 
+# shellcheck disable=SC2119
 ID1="$(users_identity_create)"
 ID2="$(users_identity_create)"
 [[ "$ID1" != "$ID2" ]]
