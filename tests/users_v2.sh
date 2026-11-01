@@ -90,6 +90,7 @@ jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="active" and .du
 # Force a past expiration through the validated store and exercise the periodic/startup hook.
 DOC="$(jq --arg id "$A2" '(.associations[] | select(.id==$id)).expires_at = "2000-01-01T00:00:00Z"' "$USERS_V2_DATA_FILE")"
 users_v2_commit_document "$DOC"
+# shellcheck disable=SC2119
 [[ "$(users_v2_expire_due)" == 1 ]]
 jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="expired")' "$USERS_V2_DATA_FILE" >/dev/null
 # Renewal of an expired association begins a new period from now.
