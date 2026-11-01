@@ -58,6 +58,7 @@ fi
 jq -e --arg id "$ID1" '[.associations[]|select(.identity_id==$id and .protocol=="wireguard" and .connection_id=="conn-wg")]|length==2' "$USERS_V2_DATA_FILE" >/dev/null
 
 # Dos altas concurrentes no pueden consumir el mismo último slot.
+# shellcheck disable=SC2119
 CAP_ID="$(users_identity_create)"
 create_cap_race() {
 	users_association_create "$CAP_ID" conn-cap "$1" uuid "$2" active unlimited 0 none 0 0 auto >/dev/null
