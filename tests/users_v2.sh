@@ -75,8 +75,24 @@ jq -e '[.associations[]|select(.connection_id=="conn-cap")]|length==1' "$USERS_V
 
 users_association_set_alias "$A1" Renombrado
 jq -e --arg id "$A1" 'any(.associations[]; .id==$id and .alias=="Renombrado" and .credential.value=="11111111-1111-4111-8111-111111111111")' "$USERS_V2_DATA_FILE" >/dev/null
-users_association_set_state "$A3" expired
-jq -e --arg id "$A3" 'any(.associations[]; .id==$id and .state=="expired")' "$USERS_V2_DATA_FILE" >/dev/null
+# Suspension stores remaining time and removes the running expiry.
+users_association_suspend "$A2"
+jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="suspended" and .expires_at==null and .suspended_at!=null and .remaining_seconds>0)' "$USERS_V2_DATA_FILE" >/dev/null
+# Reactivation discards the paused remainder and starts a fresh period.
+users_association_reactivate "$A2" custom 2 hours
+jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="active" and .duration.value==2 and .duration.unit=="hours" and .remaining_seconds==null and .suspended_at==null and .expires_at!=null)' "$USERS_V2_DATA_FILE" >/dev/null
+# Duration modification and renewal both start from the operation time.
+users_association_set_duration "$A2" custom 4 hours
+users_association_renew "$A2" custom 5 hours
+jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="active" and .duration.value==5 and .duration.unit=="hours")' "$USERS_V2_DATA_FILE" >/dev/null
+# Force a past expiration through the validated store and exercise the periodic/startup hook.
+DOC="$(jq --arg id "$A2" '(.associations[] | select(.id==$id)).expires_at = "2000-01-01T00:00:00Z"' "$USERS_V2_DATA_FILE")"
+users_v2_commit_document "$DOC"
+[[ "$(users_v2_expire_due)" == 1 ]]
+jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="expired")' "$USERS_V2_DATA_FILE" >/dev/null
+# Renewal of an expired association begins a new period from now.
+users_association_renew "$A2" custom 1 days
+jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="active" and .duration.value==1 and .duration.unit=="days")' "$USERS_V2_DATA_FILE" >/dev/null
 # Eliminar una asociación conserva la identidad y las otras asociaciones.
 users_association_delete "$A2"
 jq -e --arg id "$ID1" 'any(.identities[];.id==$id) and ( [.associations[]|select(.identity_id==$id)]|length)==3' "$USERS_V2_DATA_FILE" >/dev/null
