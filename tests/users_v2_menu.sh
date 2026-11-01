@@ -65,12 +65,12 @@ fi
 # El detalle de asociación muestra los campos administrativos, oculta credenciales
 # y no modifica el documento.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/detail.before"
-printf '5\\n22222222-2222-4222-8222-222222222222\\n\\n' | users_v2_menu >"$OUT"
+printf '5\n22222222-2222-4222-8222-222222222222\n\n0\n' | users_v2_menu >"$OUT"
 grep -q 'DETALLE DE ASOCIACIÓN' "$OUT"
 grep -q 'ID de identidad: 11111111-1111-4111-8111-111111111111' "$OUT"
 grep -q 'Alias: Cliente demo' "$OUT"
 grep -q 'Runtime: not_applied' "$OUT"
-grep -q 'Credencial: \\[oculta\\]' "$OUT"
+grep -Fq 'Credencial: [oculta]' "$OUT"
 if grep -q '33333333-3333-4333-8333-333333333333' "$OUT"; then
 	echo 'ERROR: el detalle mostró una credencial sensible.' >&2
 	exit 1
@@ -78,7 +78,7 @@ fi
 cmp -s "$TMP/detail.before" "$XRAY_MANAGER_USERS_FILE"
 
 # Un identificador inexistente se rechaza sin escritura.
-if printf '00000000-0000-4000-8000-000000000000\\n' | users_v2_menu_association_detail >"$OUT"; then
+if printf '00000000-0000-4000-8000-000000000000\n' | users_v2_menu_association_detail >"$OUT"; then
 	echo 'ERROR: el detalle aceptó una asociación inexistente.' >&2
 	exit 1
 fi
