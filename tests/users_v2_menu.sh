@@ -10,15 +10,15 @@ export XRAY_MANAGER_USERS_FILE="$TMP/data/users.json"
 export XRAY_MANAGER_CONNECTIONS_FILE="$TMP/data/connections.json"
 export XRAY_MANAGER_INTEGRITY_LOCK="$TMP/run/integrity.lock"
 mkdir -p "$TMP/data" "$TMP/run"
-printf '[{"id":"conn-vless","protocol_id":"vless_ws","max_users":3}]\\n' >"$XRAY_MANAGER_CONNECTIONS_FILE"
+printf '[{"id":"conn-vless","protocol_id":"vless_ws","max_users":3}]\n' >"$XRAY_MANAGER_CONNECTIONS_FILE"
 source "$ROOT/lib/ui.sh"
 source "$ROOT/modules/users.sh"
 source "$ROOT/modules/users_v2.sh"
 source "$ROOT/modules/users_v2_menu.sh"
 
 # El arreglo legacy sigue entrando al menú antiguo.
-printf '[]\\n' >"$XRAY_MANAGER_USERS_FILE"
-printf '0\\n' | users_menu_dispatch >"$OUT"
+printf '[]\n' >"$XRAY_MANAGER_USERS_FILE"
+printf '0\n' | users_menu_dispatch >"$OUT"
 grep -q 'GESTIÓN DE USUARIOS VLESS' "$OUT"
 
 # El documento v2 abre su menú y la vista no expone la credencial.
@@ -46,7 +46,7 @@ cat >"$XRAY_MANAGER_USERS_FILE" <<'JSON'
   }]
 }
 JSON
-printf '1\\n\\n0\\n' | users_menu_dispatch >"$OUT"
+printf '1\n\n0\n' | users_menu_dispatch >"$OUT"
 grep -q 'GESTIÓN DE IDENTIDADES Y ASOCIACIONES (V2)' "$OUT"
 grep -q 'Cliente demo' "$OUT"
 grep -q 'Identidad: 11111111-1111-4111-8111-111111111111' "$OUT"
@@ -56,14 +56,14 @@ if grep -q '33333333-3333-4333-8333-333333333333' "$OUT"; then
 fi
 
 # Resumen correcto, sin escribir en el documento.
-printf '2\\n\\n0\\n' | users_menu_dispatch >"$OUT"
+printf '2\n\n0\n' | users_menu_dispatch >"$OUT"
 grep -q 'Identidades: 1' "$OUT"
 grep -q 'Asociaciones: 1' "$OUT"
 grep -q 'Activas: 1' "$OUT"
 grep -q 'VLESS: 1' "$OUT"
 
 # JSON corrupto y esquema desconocido se bloquean sin alteración.
-printf '{invalid json\\n' >"$XRAY_MANAGER_USERS_FILE"
+printf '{invalid json\n' >"$XRAY_MANAGER_USERS_FILE"
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/corrupt.before"
 if users_menu_dispatch >"$OUT" 2>&1; then
   echo 'ERROR: se aceptó un registro corrupto.' >&2
@@ -72,7 +72,7 @@ fi
 cmp -s "$TMP/corrupt.before" "$XRAY_MANAGER_USERS_FILE"
 grep -q 'JSON inválido' "$OUT"
 
-printf '{"schema_version":99}\\n' >"$XRAY_MANAGER_USERS_FILE"
+printf '{"schema_version":99}\n' >"$XRAY_MANAGER_USERS_FILE"
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/unknown.before"
 if users_menu_dispatch >"$OUT" 2>&1; then
   echo 'ERROR: se aceptó un esquema desconocido.' >&2
