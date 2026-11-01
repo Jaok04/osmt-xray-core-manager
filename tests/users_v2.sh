@@ -78,6 +78,8 @@ jq -e --arg id "$A1" 'any(.associations[]; .id==$id and .alias=="Renombrado" and
 # Suspension stores remaining time and removes the running expiry.
 users_association_suspend "$A2"
 jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="suspended" and .expires_at==null and .suspended_at!=null and .remaining_seconds>0)' "$USERS_V2_DATA_FILE" >/dev/null
+users_association_set_duration "$A2" custom 7 hours
+jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="suspended" and .duration.value==7 and .remaining_seconds==25200 and .expires_at==null)' "$USERS_V2_DATA_FILE" >/dev/null
 # Reactivation discards the paused remainder and starts a fresh period.
 users_association_reactivate "$A2" custom 2 hours
 jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="active" and .duration.value==2 and .duration.unit=="hours" and .remaining_seconds==null and .suspended_at==null and .expires_at!=null)' "$USERS_V2_DATA_FILE" >/dev/null
@@ -93,6 +95,10 @@ jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="expired")' "$US
 # Renewal of an expired association begins a new period from now.
 users_association_renew "$A2" custom 1 days
 jq -e --arg id "$A2" 'any(.associations[]; .id==$id and .state=="active" and .duration.value==1 and .duration.unit=="days")' "$USERS_V2_DATA_FILE" >/dev/null
+# A3 se creó suspendida y sin vencimiento: registra inicio y reactiva sin expiración.
+jq -e --arg id "$A3" 'any(.associations[]; .id==$id and .state=="suspended" and .duration.kind=="unlimited" and .suspended_at!=null and .remaining_seconds==null)' "$USERS_V2_DATA_FILE" >/dev/null
+users_association_reactivate "$A3" unlimited 0 none
+jq -e --arg id "$A3" 'any(.associations[]; .id==$id and .state=="active" and .duration.kind=="unlimited" and .suspended_at==null and .expires_at==null)' "$USERS_V2_DATA_FILE" >/dev/null
 # Eliminar una asociación conserva la identidad y las otras asociaciones.
 users_association_delete "$A2"
 jq -e --arg id "$ID1" 'any(.identities[];.id==$id) and ( [.associations[]|select(.identity_id==$id)]|length)==3' "$USERS_V2_DATA_FILE" >/dev/null
