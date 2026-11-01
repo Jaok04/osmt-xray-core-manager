@@ -65,7 +65,7 @@ grep -q 'VLESS: 1' "$OUT"
 # JSON corrupto y esquema desconocido se bloquean sin alteración.
 printf '{invalid json\n' >"$XRAY_MANAGER_USERS_FILE"
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/corrupt.before"
-if users_menu_dispatch >"$OUT" 2>&1; then
+if printf "\\n" | users_menu_dispatch >"$OUT" 2>&1; then
   echo 'ERROR: se aceptó un registro corrupto.' >&2
   exit 1
 fi
