@@ -306,4 +306,89 @@ if printf '%s\n' "$VLESS_ASSOC_ID" | users_v2_menu_association_state >"$OUT"; th
 fi
 cmp -s "$TMP/state.expired.expected" "$XRAY_MANAGER_USERS_FILE"
 
-echo 'OK: selector legacy/v2, consultas protegidas, creación, edición, suspensión/reactivación, duración pausada, validaciones y runtime sin cambios.'
+
+# Renovación desde menú: activa y vencida; siempre inicia desde ahora.
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/renew.before"
+printf '8\\n%s\\ncustom\\n5\\nhours\\ns\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+grep -q 'Asociación renovada correctamente' "$OUT"
+jq -e --arg id "$VLESS_ASSOC_ID" --arg secret "$VLESS_SECRET" '
+  any(.associations[]; .id==$id and .state=="active" and
+      .duration.kind=="custom" and .duration.value==5 and .duration.unit=="hours" and
+      .expires_at!=null and .suspended_at==null and .remaining_seconds==null and
+      .credential.value==$secret and .runtime.status=="not_applied" and
+      .provisioning_status=="draft")
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# Forzar vencimiento en fixture y comprobar que renovar lo reactiva.
+jq --arg id "$VLESS_ASSOC_ID" '(.associations[]|select(.id==$id)).state="expired"' "$XRAY_MANAGER_USERS_FILE" >"$TMP/expired"
+mv "$TMP/expired" "$XRAY_MANAGER_USERS_FILE"
+printf '8\\n%s\\nunlimited\\ns\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+grep -q 'Asociación renovada correctamente' "$OUT"
+jq -e --arg id "$VLESS_ASSOC_ID" '
+  any(.associations[]; .id==$id and .state=="active" and
+      .duration.kind=="unlimited" and .expires_at==null and
+      .suspended_at==null and .remaining_seconds==null)
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# Modificar duración de una asociación activa calcula vencimiento desde ahora.
+printf '9\\n%s\\ncustom\\n2\\ndays\\ns\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+grep -q 'Duración modificada correctamente' "$OUT"
+jq -e --arg id "$VLESS_ASSOC_ID" '
+  any(.associations[]; .id==$id and .state=="active" and
+      .duration.kind=="custom" and .duration.value==2 and .duration.unit=="days" and
+      .expires_at!=null and .remaining_seconds==null)
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# Modificar duración suspendida actualiza remaining_seconds sin reactivar.
+printf '9\\n%s\\ncustom\\n90\\nminutes\\ns\\n\\n0\\n' "$WG_ASSOC_ID" | users_v2_menu >"$OUT"
+grep -q 'continúa suspendida' "$OUT"
+jq -e --arg id "$WG_ASSOC_ID" '
+  any(.associations[]; .id==$id and .state=="suspended" and
+      .duration.kind=="custom" and .duration.value==90 and .duration.unit=="minutes" and
+      .expires_at==null and .suspended_at!=null and .remaining_seconds==5400)
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# Unlimited suspended association clears the paused counter but remains suspended.
+printf '9\\n%s\\nunlimited\\ns\\n\\n0\\n' "$WG_ASSOC_ID" | users_v2_menu >"$OUT"
+jq -e --arg id "$WG_ASSOC_ID" '
+  any(.associations[]; .id==$id and .state=="suspended" and
+      .duration.kind=="unlimited" and .expires_at==null and .remaining_seconds==null and .suspended_at!=null)
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# Rechazar renovar suspendida, modificar vencida, IDs inexistentes y duración inválida.
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/duration.reject.before"
+if printf '%s\\n%s\\ncustom\\n1\\ndays\\n' "$WG_ASSOC_ID" | users_v2_menu_association_renew >"$OUT"; then
+  echo 'ERROR: se renovó una asociación suspendida.' >&2; exit 1
+fi
+cmp -s "$TMP/duration.reject.before" "$XRAY_MANAGER_USERS_FILE"
+jq --arg id "$VLESS_ASSOC_ID" '(.associations[]|select(.id==$id)).state="expired"' "$XRAY_MANAGER_USERS_FILE" >"$TMP/expired"
+mv "$TMP/expired" "$XRAY_MANAGER_USERS_FILE"
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/duration.expired.before"
+if printf '%s\\nunlimited\\n' "$VLESS_ASSOC_ID" | users_v2_menu_association_set_duration >"$OUT"; then
+  echo 'ERROR: se modificó la duración de una asociación vencida.' >&2; exit 1
+fi
+cmp -s "$TMP/duration.expired.before" "$XRAY_MANAGER_USERS_FILE"
+if printf '%s\\nunlimited\\n' '00000000-0000-4000-8000-000000000000' | users_v2_menu_association_renew >"$OUT"; then
+  echo 'ERROR: se renovó una asociación inexistente.' >&2; exit 1
+fi
+if printf '%s\\nbogus\\n' "$VLESS_ASSOC_ID" | users_v2_menu_association_renew >"$OUT"; then
+  echo 'ERROR: se aceptó una duración inválida.' >&2; exit 1
+fi
+cmp -s "$TMP/duration.expired.before" "$XRAY_MANAGER_USERS_FILE"
+
+# Cancelar operaciones desde menú no escribe; la credencial/runtime siguen intactos.
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/duration.cancel.before"
+printf '8\\n%s\\ncustom\\n3\\ndays\\nn\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+cmp -s "$TMP/duration.cancel.before" "$XRAY_MANAGER_USERS_FILE"
+
+# El menú publica ambas opciones y las funciones no alteran credenciales/runtime.
+printf '0\\n' | users_v2_menu >"$OUT"
+grep -q 'Renovar asociación' "$OUT"
+grep -q 'Modificar duración de asociación' "$OUT"
+jq -e --arg id "$VLESS_ASSOC_ID" --arg secret "$VLESS_SECRET" '
+  any(.associations[]; .id==$id and .credential.value==$secret and
+      .runtime.status=="not_applied" and .provisioning_status=="draft")
+' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+
+echo 'OK: selector legacy/v2, consultas protegidas, creación, edición, suspensión/reactivación, renovación, modificación de duración, validaciones y runtime sin cambios.'
