@@ -71,6 +71,10 @@ users_v2_menu() {
 			users_v2_menu_association_detail
 			ui_pause
 			;;
+		6)
+			users_v2_menu_association_edit
+			ui_pause
+			;;
 		0) return 0 ;;
 		*)
 			printf '\nOpción no válida.\n'
@@ -327,4 +331,66 @@ users_v2_menu_association_detail() {
 	' "$USERS_V2_DATA_FILE"
 	users_v2_unlock "$fd"
 	printf '\nLas credenciales y claves permanecen ocultas. Esta consulta no modifica el registro ni el runtime.\n'
+}
+
+# Edit alias and limits for one association; credentials and runtime stay untouched.
+users_v2_menu_association_edit() {
+	local fd association_id current_alias current_traffic current_simultaneous
+	local alias traffic simultaneous
+	ui_clear
+	ui_title "EDITAR ALIAS Y LÍMITES"
+	if ! users_v2_lock fd; then
+		printf '\\nNo fue posible validar o bloquear el registro v2.\\n'
+		return 1
+	fi
+	if [[ "$(jq '.associations | length' "$USERS_V2_DATA_FILE")" -eq 0 ]]; then
+		users_v2_unlock "$fd"
+		printf '\\nNo hay asociaciones registradas.\\n'
+		return 0
+	fi
+	printf '\\nASOCIACIONES DISPONIBLES\\n'
+	jq -r '.associations[] | "  " + .id + "  | " + .alias + "  | " + .protocol + "  | " + .connection_id' "$USERS_V2_DATA_FILE"
+	printf '\\nID exacto de asociación: '
+	IFS= read -r association_id || {
+		users_v2_unlock "$fd"
+		return 0
+	}
+	if ! jq -e --arg id "$association_id" 'any(.associations[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null; then
+		users_v2_unlock "$fd"
+		printf '\\nLa asociación indicada no existe. No se modificaron datos.\\n'
+		return 1
+	fi
+	current_alias="$(jq -r --arg id "$association_id" '.associations[] | select(.id == $id) | .alias' "$USERS_V2_DATA_FILE")"
+	current_traffic="$(jq -r --arg id "$association_id" '.associations[] | select(.id == $id) | .traffic_limit_bytes // 0' "$USERS_V2_DATA_FILE")"
+	current_simultaneous="$(jq -r --arg id "$association_id" '.associations[] | select(.id == $id) | .simultaneous_connection_limit // 0' "$USERS_V2_DATA_FILE")"
+	users_v2_unlock "$fd"
+
+	printf '\\nAlias actual: %s\\n' "$current_alias"
+	printf 'Nuevo alias (1-64 caracteres, sin espacios externos): '
+	IFS= read -r alias || return 0
+	printf 'Límite de tráfico actual: %s bytes (0 = sin límite)\\n' "$current_traffic"
+	printf 'Nuevo límite de tráfico en bytes (0 = sin límite): '
+	IFS= read -r traffic || return 0
+	printf 'Límite simultáneo actual: %s (0 = sin límite)\\n' "$current_simultaneous"
+	printf 'Nuevo límite de conexiones simultáneas (0 = sin límite): '
+	IFS= read -r simultaneous || return 0
+
+	if [[ -z "$alias" || "${#alias}" -gt 64 || "$alias" != "$(printf '%s' "$alias" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')" ]]; then
+		printf '\\nEl alias debe tener entre 1 y 64 caracteres y no llevar espacios externos.\\n'
+		return 2
+	fi
+	if [[ ! "$traffic" =~ ^(0|[1-9][0-9]*)$ || ! "$simultaneous" =~ ^(0|[1-9][0-9]*)$ ]]; then
+		printf '\\nLos límites deben ser enteros no negativos; usa 0 para quitar el límite.\\n'
+		return 2
+	fi
+	printf '\\nRESUMEN DE CAMBIOS\\nAlias: %s\\nLímite de tráfico: %s bytes\\nConexiones simultáneas: %s\\n' "$alias" "$traffic" "$simultaneous"
+	if ! ui_confirm "¿Confirmas los cambios de esta asociación?"; then
+		printf '\\nOperación cancelada; no se guardaron cambios.\\n'
+		return 0
+	fi
+	if ! users_association_update "$association_id" "$alias" "$traffic" "$simultaneous"; then
+		printf '\\nNo se pudo actualizar la asociación. Revisa el ID, los límites y el registro.\\n'
+		return 1
+	fi
+	printf '\\nAsociación actualizada correctamente.\\nCredencial, duración, estado funcional y runtime: sin cambios.\\n'
 }
