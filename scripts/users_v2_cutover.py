@@ -88,8 +88,8 @@ def load_manifest(folder):
     manifest_path = folder / "manifest.json"
     regular_file(manifest_path)
     data = json.loads(manifest_path.read_text(encoding="utf-8"))
-    if data.get("status") != "applied":
-        fail("el backup no corresponde a un cutover aplicado")
+    if data.get("status") not in ("prepared", "applied"):
+        fail("el backup no corresponde a un cutover preparado o aplicado")
     return data
 
 
@@ -123,6 +123,8 @@ def main():
     parser.add_argument("--state", choices=("active", "suspended", "expired"))
     parser.add_argument("--confirm")
     args = parser.parse_args()
+    if args.dry_run and args.confirm:
+        fail("--confirm no se utiliza con --dry-run")
 
     regular_file(USERS)
     regular_file(CONNECTIONS)
