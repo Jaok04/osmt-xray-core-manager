@@ -61,7 +61,6 @@ if grep -q '33333333-3333-4333-8333-333333333333' "$OUT"; then
 	exit 1
 fi
 
-
 # El detalle de asociación muestra los campos administrativos, oculta credenciales
 # y no modifica el documento.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/detail.before"
