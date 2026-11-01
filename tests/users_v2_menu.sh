@@ -426,4 +426,68 @@ jq -e --arg id "$WG_ASSOC_ID" --arg secret "$WG_SECRET" '
       .runtime.status=="not_applied" and .provisioning_status=="draft")
 ' "$XRAY_MANAGER_USERS_FILE" >/dev/null
 
-echo 'OK: selector legacy/v2, consultas protegidas, creación, edición, suspensión/reactivación, renovación, modificación de duración, eliminación individual, validaciones y runtime sin cambios.'
+# Eliminación de identidad global: dos peers se eliminan juntos y no se toca
+# la identidad independiente CAP_ID ni su asociación.
+users_association_create "$IDENTITY_ID" conn-wg "Segundo peer" public_key "wireguard-peer-two" active unlimited 0 none 0 0 auto >/dev/null
+[[ "$(jq --arg id "$IDENTITY_ID" '[.associations[]|select(.identity_id==$id)]|length' "$XRAY_MANAGER_USERS_FILE")" -eq 2 ]]
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/identity.delete.cancel.before"
+printf '11\n%s\nn\n\n0\n' "$IDENTITY_ID" | users_v2_menu >"$OUT"
+cmp -s "$TMP/identity.delete.cancel.before" "$XRAY_MANAGER_USERS_FILE"
+grep -q 'Operación cancelada' "$OUT"
+
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/identity.delete.wrong.before"
+if printf '%s\ns\nID-INCORRECTO\n' "$IDENTITY_ID" | users_v2_menu_identity_delete >"$OUT"; then
+	echo 'ERROR: se aceptó una confirmación de identidad incorrecta.' >&2
+	exit 1
+fi
+cmp -s "$TMP/identity.delete.wrong.before" "$XRAY_MANAGER_USERS_FILE"
+grep -q 'ID de confirmación no coincide' "$OUT"
+
+cp "$XRAY_MANAGER_USERS_FILE" "$TMP/identity.delete.invalid.before"
+if printf '%s\n' 'not-a-uuid' | users_v2_menu_identity_delete >"$OUT"; then
+	echo 'ERROR: se aceptó un ID malformado/inexistente para eliminar identidad.' >&2
+	exit 1
+fi
+cmp -s "$TMP/identity.delete.invalid.before" "$XRAY_MANAGER_USERS_FILE"
+if printf '%s\n' '00000000-0000-4000-8000-000000000000' | users_v2_menu_identity_delete >"$OUT"; then
+	echo 'ERROR: se aceptó una identidad inexistente para eliminar.' >&2
+	exit 1
+fi
+cmp -s "$TMP/identity.delete.invalid.before" "$XRAY_MANAGER_USERS_FILE"
+
+jq -c --arg id "$IDENTITY_ID" '[.associations[]|select(.identity_id==$id)|.id]|sort' "$XRAY_MANAGER_USERS_FILE" >"$TMP/identity.associations.expected"
+jq -c --arg id "$IDENTITY_ID" '[.identities[]|select(.id!=$id)]|sort_by(.id)' "$XRAY_MANAGER_USERS_FILE" >"$TMP/other.identities.before"
+jq -c --arg id "$IDENTITY_ID" '[.associations[]|select(.identity_id!=$id)]|sort_by(.id)' "$XRAY_MANAGER_USERS_FILE" >"$TMP/other.associations.before"
+printf '11\n%s\ns\n%s\n\n0\n' "$IDENTITY_ID" "$IDENTITY_ID" | users_v2_menu >"$OUT"
+grep -q 'Identidad y 2 asociación(es) eliminadas' "$OUT"
+jq -c '[.identities[]]|sort_by(.id)' "$XRAY_MANAGER_USERS_FILE" >"$TMP/other.identities.after"
+jq -c '[.associations[]]|sort_by(.id)' "$XRAY_MANAGER_USERS_FILE" >"$TMP/other.associations.after"
+cmp -s "$TMP/other.identities.before" "$TMP/other.identities.after"
+cmp -s "$TMP/other.associations.before" "$TMP/other.associations.after"
+jq -e --arg id "$IDENTITY_ID" '(all(.identities[];.id!=$id)) and (all(.associations[];.identity_id!=$id))' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+jq -e --arg id "$CAP_ID" 'any(.identities[];.id==$id) and any(.associations[];.identity_id==$id and .connection_id=="conn-cap" and .credential.value=="cccccccc-cccc-4ccc-8ccc-cccccccccccc")' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# La eliminación de una identidad sin asociaciones también es válida.
+EMPTY_ID="$(users_identity_create)"
+printf '11\n%s\ns\n%s\n\n0\n' "$EMPTY_ID" "$EMPTY_ID" | users_v2_menu >"$OUT"
+grep -q 'Identidad y 0 asociación(es) eliminadas' "$OUT"
+jq -e --arg id "$EMPTY_ID" 'all(.identities[];.id!=$id)' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+
+# El snapshot de asociaciones evita borrar peers añadidos después de la vista previa.
+RACE_ID="$(users_identity_create)"
+users_association_create "$RACE_ID" conn-wg "Peer concurrente" public_key "wireguard-race-peer" active unlimited 0 none 0 0 auto >/dev/null
+if users_identity_delete "$RACE_ID" '[]'; then
+	echo 'ERROR: se aceptó eliminar identidad con snapshot de asociaciones obsoleto.' >&2
+	exit 1
+else
+	[[ "$?" -eq 3 ]]
+fi
+jq -e --arg id "$RACE_ID" 'any(.identities[];.id==$id) and any(.associations[];.identity_id==$id)' "$XRAY_MANAGER_USERS_FILE" >/dev/null
+RACE_ASSOC_ID="$(jq -r --arg id "$RACE_ID" '.associations[]|select(.identity_id==$id)|.id' "$XRAY_MANAGER_USERS_FILE")"
+users_association_delete "$RACE_ASSOC_ID"
+users_identity_delete "$RACE_ID"
+
+printf '0\n' | users_v2_menu >"$OUT"
+grep -q 'Eliminar identidad y todas sus asociaciones' "$OUT"
+
+echo 'OK: selector legacy/v2, consultas protegidas, creación, edición, suspensión/reactivación, renovación, duración, eliminación individual y global, confirmaciones, carreras de snapshot, validaciones y runtime sin cambios.'
