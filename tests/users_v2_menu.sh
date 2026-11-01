@@ -306,4 +306,4 @@ if printf '%s\n' "$VLESS_ASSOC_ID" | users_v2_menu_association_state >"$OUT"; th
 fi
 cmp -s "$TMP/state.expired.expected" "$XRAY_MANAGER_USERS_FILE"
 
-echo 'OK: selector legacy/v2, consulta protegida, resumen, detalle de asociación sin exposición de credenciales, creación de identidades/asociaciones VLESS y WireGuard, validaciones de identidad/conexión, credenciales únicas, capacidad y runtime sin cambios.'
+echo 'OK: selector legacy/v2, consultas protegidas, creación, edición, suspensión/reactivación, duración pausada, validaciones y runtime sin cambios.'
