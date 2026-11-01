@@ -1,0 +1,110 @@
+# Procedimiento seguro de transición del registro de usuarios a v2
+
+**Estado:** implementado y probado en fixtures temporales; no ejecutado sobre datos reales.  
+**Fecha:** 2026-11-01
+
+## 1. Objetivo
+
+Migrar `/var/lib/xray-manager/users/users.json` desde el arreglo legacy al documento v2 de identidades y asociaciones, con validación, respaldo verificable, bloqueo compartido, sustitución atómica y rollback condicionado.
+
+Este procedimiento no integra el módulo v2 al menú ni al runtime Xray. Tampoco activa, suspende ni revoca conexiones en el runtime.
+
+## 2. Archivos implicados
+
+- Herramienta: `/opt/xray-manager/scripts/users_v2_cutover.py`
+- Pruebas aisladas: `/opt/xray-manager/tests/users_v2_cutover.sh`
+- Modelo/validador: `/opt/xray-manager/modules/users_v2.sh`
+- Sustitución JSON atómica: `/opt/xray-manager/lib/json_store.sh`
+- Usuarios: `/var/lib/xray-manager/users/users.json`
+- Conexiones: `/var/lib/xray-manager/connections/connections.json`
+- Bloqueo compartido: `/run/xray-manager/integrity.lock`
+- Backups: `/var/backups/xray-manager/identity-cutover/`
+
+## 3. Reglas de seguridad
+
+1. La herramienta exige que ambos archivos JSON sean archivos regulares, no enlaces simbólicos.
+2. Exige que el registro de usuarios siga siendo un arreglo legacy y que conexiones sea un arreglo JSON válido.
+3. No infiere el estado funcional. El operador debe elegir explícitamente `active`, `suspended` o `expired`.
+4. La migración conserva el carácter no provisionado de los registros legacy: cada asociación queda con `provisioning_status=draft` y `runtime.status=not_applied`. Elegir estado funcional `active` no instala ni habilita un cliente en Xray.
+5. El candidato se valida con `users_v2_validate_file`, incluidas las referencias a conexiones, unicidad de credenciales y límites de capacidad.
+6. Dry-run y aplicación usan el mismo bloqueo exclusivo que el gestor.
+7. La aplicación crea copias de usuarios y conexiones, verifica SHA-256 y registra un manifest.
+8. El reemplazo del archivo de usuarios es atómico y conserva permisos `0600`.
+9. Rollback solo se permite si el registro actual conserva exactamente el hash v2 del cutover y el catálogo de conexiones conserva el hash de la instantánea. Así no sobrescribe cambios posteriores.
+10. El rollback verifica el hash del backup antes de restaurar.
+11. No se debe ejecutar sobre datos reales sin revisión y autorización explícita.
+
+## 4. Dry-run
+
+Ejecutar como root:
+
+```bash
+/opt/xray-manager/scripts/users_v2_cutover.py --dry-run --state active
+```
+
+Elegir `active`, `suspended` o `expired` según la decisión administrativa. No seleccionar automáticamente un estado por el hecho de que los registros legacy estén en `draft`.
+
+El dry-run:
+- crea un candidato temporal en el directorio de usuarios;
+- ejecuta la migración y el validador v2;
+- muestra hashes, conteos y el token para aplicar;
+- elimina el candidato al terminar;
+- no reemplaza `users.json` ni crea backup permanente.
+
+Los UUID de identidad y asociación se generan aleatoriamente; por eso el hash del candidato puede variar entre dry-run y aplicación. El token de aplicación se basa en el hash del archivo legacy, no en el hash del candidato.
+
+## 5. Aplicación — requiere autorización explícita
+
+Solo después de revisar el resultado del dry-run y confirmar el estado funcional elegido:
+
+```bash
+/opt/xray-manager/scripts/users_v2_cutover.py --apply --state active --confirm 'APPLY-USERS-V2-<hash12>'
+```
+
+Sustituir `<hash12>` por el token exacto entregado por el dry-run. El token queda vinculado al SHA-256 del archivo legacy. Si cualquiera de los dos archivos de entrada cambia, hay que repetir el dry-run.
+
+La herramienta guarda:
+- `users.legacy.json`
+- `connections.snapshot.json`
+- `manifest.json` con hashes, conteos, estado funcional y estado de aplicación.
+
+El directorio de backup tiene permisos restrictivos y está dentro de `/var/backups/xray-manager/identity-cutover/`.
+
+## 6. Consultar y ejecutar rollback
+
+Consultar el token de rollback:
+
+```bash
+/opt/xray-manager/scripts/users_v2_cutover.py --rollback /var/backups/xray-manager/identity-cutover/<directorio-backup>
+```
+
+La herramienta muestra un token `ROLLBACK-USERS-V2-<hash12>`. Para confirmar:
+
+```bash
+/opt/xray-manager/scripts/users_v2_cutover.py --rollback /var/backups/xray-manager/identity-cutover/<directorio-backup> --confirm 'ROLLBACK-USERS-V2-<hash12>'
+```
+
+Si `users.json` o `connections.json` cambiaron desde el cutover, el rollback se detiene para evitar pérdida de datos. En ese caso se requiere análisis manual; no se debe forzar el reemplazo.
+
+## 7. Pruebas realizadas
+
+`tests/users_v2_cutover.sh` ejecuta el flujo en un directorio temporal separado:
+- dry-run sin modificación del archivo legacy;
+- aplicación y validación del documento v2;
+- rollback y verificación del hash legacy restaurado;
+- rechazo de rollback si el archivo actual cambió;
+- rechazo de migración que excede la capacidad configurada.
+
+La prueba crea sus propios archivos de usuarios, conexiones, bloqueo y backups mediante variables de entorno de test. No usa los datos reales de `/var/lib/xray-manager`.
+
+## 8. Estado y limitaciones actuales
+
+- Herramienta implementada en la VPS.
+- Pruebas de fixtures aprobadas.
+- No se ejecutó dry-run ni apply contra los archivos reales como parte de esta implementación.
+- No se ha migrado el archivo real.
+- No se ha integrado `users_v2.sh` al ejecutable principal.
+- No se ha conectado el modelo v2 con el runtime ni se ha programado el barrido de vencimientos.
+- Servicio Xray permanece inactivo según la última verificación.
+
+**Próximo paso:** revisar este procedimiento y el diff en la rama de desarrollo; después, si se autoriza, ejecutar un dry-run de solo lectura contra los archivos reales. La aplicación real requiere una aprobación separada y explícita.
