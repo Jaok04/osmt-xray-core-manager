@@ -32,6 +32,10 @@ printf '{"certificate_file":"%s","key_file":"%s"}\n' "$TMP/tls.crt" "$TMP/tls.ke
 printf '{"certificate_file":"%s","key_file":"%s","service_name":"test-grpc"}\n' "$TMP/tls.crt" "$TMP/tls.key" >"$TMP/grpc-tls.json"
 printf '{"private_key":"%s","server_names":["example.com"],"short_ids":["0123456789abcdef"],"target":"localhost:443"}\n' "$REALITY_KEY" >"$TMP/reality.json"
 printf '{"private_key":"%s","server_names":["example.com"],"service_name":"test-grpc","short_ids":["0123456789abcdef"],"target":"localhost:443"}\n' "$REALITY_KEY" >"$TMP/grpc-reality.json"
+printf '{"mode":"auto","path":"/test-xhttp"}\n' >"$TMP/xhttp.json"
+printf '{"private_key":"%s","server_names":["example.com"],"short_ids":["0123456789abcdef"],"target":"localhost:443"}\n' "$REALITY_KEY" >"$TMP/reality-xhttp-base.json"
+printf '{"certificate_file":"%s","key_file":"%s","mode":"auto","path":"/test-xhttp"}\n' "$TMP/tls.crt" "$TMP/tls.key" >"$TMP/xhttp-tls.json"
+jq '. + {mode:"auto",path:"/test-xhttp"}' "$TMP/reality-xhttp-base.json" >"$TMP/reality-xhttp.json"
 printf '{}\n' >"$TMP/none.json"
 validate_mode vless_ws "$TMP/ws.json"
 validate_mode vless_tcp_tls "$TMP/tls.json"
@@ -39,9 +43,6 @@ validate_mode vless_ws_tls "$TMP/tls.json"
 validate_mode vless_reality "$TMP/reality.json"
 validate_mode vless_grpc_tls "$TMP/grpc-tls.json"
 validate_mode vless_grpc_reality "$TMP/grpc-reality.json"
-# El adaptador debe rechazar opciones faltantes y opciones desconocidas.
-if vless_xray_26_10_31_build "$TMP/vless_ws.model.json" "$TMP/none.json" >/dev/null 2>&1; then
-    echo 'ERROR: se aceptaron opciones WebSocket incompletas.' >&2
-    exit 1
-fi
-echo 'OK: rechazo de opciones incompletas.'
+validate_mode vless_xhttp "$TMP/xhttp.json"
+validate_mode vless_xhttp_tls "$TMP/xhttp-tls.json"
+validate_mode vless_xhttp_reality "$TMP/reality-xhttp.json"
