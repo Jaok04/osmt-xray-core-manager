@@ -46,3 +46,15 @@ validate_mode vless_grpc_reality "$TMP/grpc-reality.json"
 validate_mode vless_xhttp "$TMP/xhttp.json"
 validate_mode vless_xhttp_tls "$TMP/xhttp-tls.json"
 validate_mode vless_xhttp_reality "$TMP/reality-xhttp.json"
+
+# Validaciones negativas: XHTTP no admite opciones incompletas ni modos desconocidos.
+if vless_xray_26_10_31_build "$TMP/vless_xhttp.model.json" "$TMP/none.json" >/dev/null 2>&1; then
+    echo 'ERROR: se aceptaron opciones XHTTP incompletas.' >&2
+    exit 1
+fi
+printf '{"mode":"unknown","path":"/invalid"}\n' >"$TMP/xhttp-invalid.json"
+if vless_xray_26_10_31_build "$TMP/vless_xhttp.model.json" "$TMP/xhttp-invalid.json" >/dev/null 2>&1; then
+    echo 'ERROR: se aceptó un modo XHTTP desconocido.' >&2
+    exit 1
+fi
+echo 'OK: rechazo de opciones XHTTP incompletas y modo desconocido.'
