@@ -3,7 +3,6 @@
 
 users_menu_dispatch() {
 	local file="${USER_DATA_FILE:-${XRAY_MANAGER_USERS_FILE:-/var/lib/xray-manager/users/users.json}}"
-	local schema
 
 	# Mantiene el comportamiento legacy: si el archivo aún no existe, el
 	# menú antiguo conserva la responsabilidad de inicializar su arreglo.
@@ -50,19 +49,19 @@ users_v2_menu() {
 		printf '\n  Esta primera integración es de consulta; no modifica credenciales ni runtime.\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
-			1)
-				users_v2_menu_list
-				ui_pause
-				;;
-			2)
-				users_v2_menu_summary
-				ui_pause
-				;;
-			0) return 0 ;;
-			*)
-				printf '\nOpción no válida.\n'
-				ui_pause
-				;;
+		1)
+			users_v2_menu_list
+			ui_pause
+			;;
+		2)
+			users_v2_menu_summary
+			ui_pause
+			;;
+		0) return 0 ;;
+		*)
+			printf '\nOpción no válida.\n'
+			ui_pause
+			;;
 		esac
 	done
 }
