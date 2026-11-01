@@ -50,6 +50,8 @@ users_v2_menu() {
 		printf '  [5] Consultar detalle de asociación\n'
 		printf '  [6] Editar alias y límites de asociación\n'
 		printf '  [7] Suspender / reactivar asociación\n'
+		printf '  [8] Renovar asociación\n'
+		printf '  [9] Modificar duración de asociación\n'
 		printf '  [0] Volver al menú principal\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
@@ -79,6 +81,14 @@ users_v2_menu() {
 			;;
 		7)
 			users_v2_menu_association_state
+			ui_pause
+			;;
+		8)
+			users_v2_menu_association_renew
+			ui_pause
+			;;
+		9)
+			users_v2_menu_association_set_duration
 			ui_pause
 			;;
 		0) return 0 ;;
@@ -489,4 +499,117 @@ users_v2_menu_association_state() {
 		return 1
 		;;
 	esac
+}
+
+# Renewal and duration editing are separate domain operations with distinct
+# state rules. Both identify records by immutable association ID.
+users_v2_menu_association_duration() {
+	[[ "$#" -eq 1 && ( "$1" == renew || "$1" == set ) ]] || return 2
+	local operation="$1" fd association_id state alias duration_kind duration_value duration_unit
+	local action_label
+	ui_clear
+	if [[ "$operation" == renew ]]; then
+		ui_title "RENOVAR ASOCIACIÓN"
+		action_label="renovación"
+	else
+		ui_title "MODIFICAR DURACIÓN DE ASOCIACIÓN"
+		action_label="modificación de duración"
+	fi
+	if ! users_v2_lock fd; then
+		printf '\nNo fue posible validar o bloquear el registro v2.\n'
+		return 1
+	fi
+	if [[ "$(jq '.associations | length' "$USERS_V2_DATA_FILE")" -eq 0 ]]; then
+		users_v2_unlock "$fd"
+		printf '\nNo hay asociaciones registradas.\n'
+		return 0
+	fi
+	printf '\nASOCIACIONES DISPONIBLES\n'
+	jq -r '.associations[] | "  " + .id + "  | " + .alias + "  | " + .state + "  | " + .protocol' "$USERS_V2_DATA_FILE"
+	printf '\nID exacto de asociación: '
+	IFS= read -r association_id || {
+		users_v2_unlock "$fd"
+		return 0
+	}
+	local assoc
+	assoc="$(jq -ce --arg id "$association_id" '.associations[] | select(.id == $id)' "$USERS_V2_DATA_FILE")" || {
+		users_v2_unlock "$fd"
+		printf '\nLa asociación indicada no existe. No se modificaron datos.\n'
+		return 1
+	}
+	state="$(jq -r '.state' <<<"$assoc")"
+	alias="$(jq -r '.alias' <<<"$assoc")"
+	users_v2_unlock "$fd"
+
+	if [[ "$operation" == renew ]]; then
+		if [[ "$state" != active && "$state" != expired ]]; then
+			printf '\nNo se puede renovar una asociación %s. La renovación admite estados active o expired.\n' "$state"
+			return 1
+		fi
+		printf '\nLa renovación inicia el nuevo periodo desde ahora y reemplaza el vencimiento anterior.\n'
+	else
+		if [[ "$state" != active && "$state" != suspended ]]; then
+			printf '\nNo se puede modificar la duración de una asociación %s. Usa renovación para una asociación vencida.\n' "$state"
+			return 1
+		fi
+		if [[ "$state" == suspended ]]; then
+			printf '\nLa asociación está suspendida: la duración nueva actualizará el tiempo restante pausado, sin reactivarla.\n'
+		else
+			printf '\nLa duración nueva se calculará desde ahora.\n'
+		fi
+	fi
+	printf '\nAsociación: %s\nEstado actual: %s\n' "$alias" "$state"
+	printf 'Duración nueva [unlimited/custom]: '
+	IFS= read -r duration_kind || return 0
+	case "$duration_kind" in
+	unlimited)
+		duration_value=0
+		duration_unit=none
+		;;
+	custom)
+		printf 'Cantidad (entero positivo): '
+		IFS= read -r duration_value || return 0
+		printf 'Unidad [days/hours/minutes]: '
+		IFS= read -r duration_unit || return 0
+		;;
+	*)
+		printf '\nTipo de duración no válido. No se modificaron datos.\n'
+		return 2
+		;;
+	esac
+	if ! users_v2_duration_args "$duration_kind" "$duration_value" "$duration_unit"; then
+		printf '\nDuración no válida. No se modificaron datos.\n'
+		return 2
+	fi
+	printf '\nRESUMEN DE %s\nAsociación: %s\nNueva duración: %s %s\n' "$action_label" "$alias" "$duration_value" "$duration_unit"
+	if ! ui_confirm "¿Confirmas la %s de esta asociación?" "$action_label"; then
+		printf '\nOperación cancelada; no se guardaron cambios.\n'
+		return 0
+	fi
+	if [[ "$operation" == renew ]]; then
+		if ! users_association_renew "$association_id" "$duration_kind" "$duration_value" "$duration_unit"; then
+			printf '\nNo se pudo renovar. La asociación pudo haber cambiado de estado; vuelve a consultar su detalle.\n'
+			return 1
+		fi
+		printf '\nAsociación renovada correctamente. El nuevo periodo comienza desde ahora; el estado funcional queda active.\n'
+	else
+		if ! users_association_set_duration "$association_id" "$duration_kind" "$duration_value" "$duration_unit"; then
+			printf '\nNo se pudo modificar la duración. La asociación pudo haber cambiado de estado; vuelve a consultar su detalle.\n'
+			return 1
+		fi
+		if [[ "$state" == suspended ]]; then
+			printf '\nDuración modificada. La asociación continúa suspendida y el nuevo tiempo permanece pausado.\n'
+		else
+			printf '\nDuración modificada correctamente. El nuevo periodo comienza desde ahora.\n'
+		fi
+	fi
+	printf 'Credenciales, límites, provisioning y runtime: sin cambios.\n'
+}
+
+users_v2_menu_association_renew() {
+	users_v2_menu_association_duration renew
+}
+
+users_v2_menu_association_set_duration() {
+	users_v2_menu_association_duration set
 }
