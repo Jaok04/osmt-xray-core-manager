@@ -94,6 +94,8 @@ Estructura conceptual:
     "unit": "days"
   },
   "expires_at": "2026-12-01T12:00:00Z",
+  "suspended_at": null,
+  "remaining_seconds": null,
   "traffic_limit_bytes": null,
   "simultaneous_connection_limit": null,
   "state": "active",
@@ -111,7 +113,9 @@ Reglas:
 - `credential` es específica de la asociación; no se comparte automáticamente entre conexiones.
 - `alias` es presentación y nunca identificador técnico.
 - `duration.kind`: `custom` o `unlimited`. Para custom, unidad: `days`, `hours`, `minutes`.
-- `expires_at=null` para duración ilimitada.
+- `expires_at=null` para duración ilimitada o mientras una asociación limitada está suspendida.
+- `suspended_at` registra cuándo comenzó la suspensión; `remaining_seconds` conserva el tiempo pausado de una duración limitada. Ambos vuelven a `null` al reactivar.
+- Reactivar una asociación limitada exige elegir una duración nueva; el tiempo restante pausado no se acumula ni se transfiere al nuevo periodo, según Etapa 3 v1.2.
 - Los límites ausentes se representan como `null`, nunca como cero.
 - `state` funcional admite exclusivamente `active`, `suspended`, `expired`.
 - `runtime.status` es independiente del estado funcional: `not_applied`, `applied`, `unknown`, `pending`, `failed`. No se declarará aplicado sin verificación.
@@ -202,7 +206,11 @@ Implementado en `modules/users_v2.sh`:
 - `users_identity_create`
 - `users_association_create`
 - `users_association_set_alias`
-- `users_association_set_state`
+- `users_association_suspend`
+- `users_association_reactivate`
+- `users_association_renew`
+- `users_association_set_duration`
+- `users_v2_expire_due`
 - `users_association_delete`
 - `users_identity_delete`
 - `users_v2_export_vless_clients <connection_id>`
@@ -217,9 +225,17 @@ Reglas del módulo:
 - La exportación VLESS solo incluye asociaciones activas con provisioning y runtime marcados como aplicados; el alias no se usa como `email`.
 - La migración es de VLESS legacy, exige estado funcional explícito, verifica capacidad, escribe a un destino nuevo y nunca modifica el origen.
 
+Implementado en este incremento:
+- Suspensión de una asociación activa: conserva los segundos restantes de duración limitada, borra el vencimiento activo y registra `suspended_at`. Las asociaciones ilimitadas también registran la suspensión.
+- Modificación de duración: recalcula desde el momento de modificación; si está suspendida, conserva la duración nueva en pausa.
+- Reactivación: exige una duración explícita (`custom` o `unlimited`), inicia el periodo desde la reactivación y descarta el tiempo restante previo.
+- Renovación: disponible para asociaciones activas o vencidas; inicia el periodo desde la renovación, reemplaza el vencimiento anterior y deja la asociación en `active`. No permite renovar una asociación suspendida; debe reactivarse siguiendo su flujo.
+- `users_v2_expire_due`: marca como `expired` cada asociación activa cuyo vencimiento haya llegado; admite un epoch opcional para pruebas deterministas. Puede invocarse como hook periódico y al iniciar el administrador/servicio.
+
 Pendiente:
+- bloquear/revocar el acceso en runtime al suspender o vencer; el módulo actual solo actualiza el estado administrativo y no aplica cambios Xray;
+- programar el hook periódico y llamarlo desde los flujos reales de inicio;
 - búsqueda/consulta pública de entidades, edición de credenciales y límites;
-- pausa/reanudación de duración, renovación y vencimiento automático;
 - modelo completo de datos WireGuard;
 - integración con menú, generador y flujo de activación runtime.
 
@@ -237,6 +253,12 @@ El módulo v2 todavía no está conectado al menú ni al adaptador de runtime. N
 | Eliminar identidad | Elimina todas sus asociaciones y peers |
 | Límite de conexión alcanzado | Rechaza nueva asociación |
 | Estado suspended/expired | Consume slot |
+| Suspender duración limitada | Guarda segundos restantes y pausa el vencimiento |
+| Modificar duración suspendida | Actualiza duración pausada sin activar |
+| Reactivar limitada | Exige nueva duración; no acumula el resto anterior |
+| Reactivar ilimitada | Permite seguir ilimitada o elegir duración nueva |
+| Renovar activa/vencida | Periodo nuevo desde la renovación |
+| Barrido de vencimientos | Marca vencidas solo asociaciones activas; es idempotente |
 | Asociación con conexión inexistente | Rechazo sin escritura |
 | UUID duplicado | Rechazo sin escritura |
 | Email Xray | ID de asociación estable, no alias |
@@ -262,6 +284,6 @@ El módulo v2 todavía no está conectado al menú ni al adaptador de runtime. N
 
 ## 12. Alcance de este documento
 
-El código inicial está en `modules/users_v2.sh` y `tests/users_v2.sh`. La suite v2 valida identidad global, asociaciones múltiples, alias duplicados, unicidad global de UUID VLESS, peers WireGuard, CRUD básico, separación de estados, corrupción y migración aislada. La suite completa existente (concurrency, cross-race, fallos de JSON, colisiones de puertos, smoke, uninstall, users, users_v2, xray_admin y Xray VLESS integration) ha pasado en la VPS con Xray 26.10.31.
+El código inicial está en `modules/users_v2.sh` y `tests/users_v2.sh`. La suite v2 valida identidad global, asociaciones múltiples, alias duplicados, unicidad global de UUID VLESS, peers WireGuard, CRUD básico, pausa y reactivación de duración, modificación, renovación, vencimiento idempotente, corrupción y migración aislada. La suite completa existente (concurrency, cross-race, fallos de JSON, colisiones de puertos, smoke, uninstall, users, users_v2, xray_admin y Xray VLESS integration) ha pasado en la VPS con Xray 26.10.31.
 
-**Límites de esta entrega:** el módulo no está integrado al menú ni a la activación de runtime; no se ha migrado el archivo real, no se ha reemplazado `modules/users.sh`, y no se ha tocado el servicio Xray, firewall o SSH. La Etapa 3 no se declara terminada. Antes de producción faltan el ciclo completo de duración, los campos específicos de WireGuard, la protección de secretos y la importación/exportación con resolución manual de identidades.
+**Límites de esta entrega:** el módulo no está integrado al menú ni a la activación de runtime; no se ha migrado el archivo real, no se ha reemplazado `modules/users.sh`, y no se ha tocado el servicio Xray, firewall o SSH. La Etapa 3 no se declara terminada. Antes de producción faltan la revocación real en runtime y la programación de los barridos al iniciar y periódicamente, los campos específicos de WireGuard, la protección de secretos y la importación/exportación con resolución manual de identidades.
