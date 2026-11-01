@@ -197,7 +197,6 @@ grep -q 'Crear identidad global' "$OUT"
 grep -q 'Asociar identidad a conexión' "$OUT"
 grep -q 'Consultar detalle de asociación' "$OUT"
 
-
 # Editar alias y límites desde menú: modifica solo los tres campos solicitados.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.before"
 printf '6\n%s\nCliente editado\n8192\n4\ns\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
@@ -224,24 +223,24 @@ users_association_update "$WG_ASSOC_ID" "Alias repetible" 0 0
 # Entradas inválidas o asociación inexistente se rechazan sin escribir.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/edit.invalid.before"
 if users_association_update "$VLESS_ASSOC_ID" " alias con espacios " 100 2; then
-  echo 'ERROR: se aceptó un alias con espacios externos.' >&2
-  exit 1
+	echo 'ERROR: se aceptó un alias con espacios externos.' >&2
+	exit 1
 fi
 if users_association_update "$VLESS_ASSOC_ID" "Alias" -1 2; then
-  echo 'ERROR: se aceptó un límite negativo.' >&2
-  exit 1
+	echo 'ERROR: se aceptó un límite negativo.' >&2
+	exit 1
 fi
 if users_association_update "$VLESS_ASSOC_ID" "Alias" 100 1.5; then
-  echo 'ERROR: se aceptó un límite no entero.' >&2
-  exit 1
+	echo 'ERROR: se aceptó un límite no entero.' >&2
+	exit 1
 fi
 if users_association_update "$VLESS_ASSOC_ID" "Alias" 9007199254740992 2; then
-  echo 'ERROR: se aceptó un límite fuera del rango entero seguro.' >&2
-  exit 1
+	echo 'ERROR: se aceptó un límite fuera del rango entero seguro.' >&2
+	exit 1
 fi
 if users_association_update "00000000-0000-4000-8000-000000000000" "Alias" 100 2; then
-  echo 'ERROR: se actualizó una asociación inexistente.' >&2
-  exit 1
+	echo 'ERROR: se actualizó una asociación inexistente.' >&2
+	exit 1
 fi
 cmp -s "$TMP/edit.invalid.before" "$XRAY_MANAGER_USERS_FILE"
 
