@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# shellcheck disable=SC2119
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -43,6 +44,9 @@ fi
 WG1="$(users_association_create "$ID1" conn-wg Peer-1 public_key wg-public-key-1 active unlimited 0 none 0 0 auto)"
 WG2="$(users_association_create "$ID1" conn-wg Peer-2 public_key wg-public-key-2 active unlimited 0 none 0 0 auto)"
 [[ "$WG1" != "$WG2" ]]
+if users_association_create "$ID1" conn-wg Peer-Dup public_key wg-public-key-1 active unlimited 0 none 0 0 auto >/dev/null 2>&1; then
+ echo "ERROR: clave pública WireGuard duplicada aceptada" >&2; exit 1
+fi
 jq -e --arg id "$ID1" '[.associations[]|select(.identity_id==$id and .protocol=="wireguard" and .connection_id=="conn-wg")]|length==2' "$USERS_V2_DATA_FILE" >/dev/null
 
 users_association_set_alias "$A1" Renombrado
@@ -84,4 +88,10 @@ jq -e '
  ([.associations[].credential.value]|unique|length)==2
 ' "$TMP/migrated.json" >/dev/null
 [[ "$(jq -r '.associations[0].credential.value' "$TMP/migrated.json")" == "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" ]]
+# Migración debe abortar si la cantidad legacy excede la capacidad de la conexión.
+jq '. + [.[0], .[0], .[0]]' "$TMP/legacy.json" >"$TMP/legacy-over-capacity.json"
+if users_v2_migrate_legacy "$TMP/legacy-over-capacity.json" "$USERS_V2_CONNECTIONS_FILE" "$TMP/over-capacity.json" active >/dev/null 2>&1; then
+ echo "ERROR: migración superó max_users" >&2; exit 1
+fi
+[[ ! -e "$TMP/over-capacity.json" ]]
 echo "OK: modelo v2, identidad global, alias duplicados, unicidad UUID, WireGuard peers, CRUD, estados separados, corrupción y migración aislada."
