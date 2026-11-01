@@ -196,6 +196,7 @@ users_association_create() {
 		dvalue=0
 		dunit=none
 	fi
+	users_v2_duration_args "$dkind" "$dvalue" "$dunit" || return 2
 	[[ "$traffic" == 0 || "$traffic" =~ ^[1-9][0-9]*$ ]] || return 2
 	[[ "$simultaneous" == 0 || "$simultaneous" =~ ^[1-9][0-9]*$ ]] || return 2
 	users_v2_lock fd || return 1
