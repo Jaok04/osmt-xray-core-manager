@@ -397,19 +397,19 @@ jq -e --arg id "$VLESS_ASSOC_ID" --arg secret "$VLESS_SECRET" '
 # Eliminación individual: cancelación sin escritura, ID inválido y confirmación.
 # Eliminar VLESS debe conservar la identidad global y el peer WireGuard hermano.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/association.delete.cancel.before"
-printf '10\\n%s\\nn\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+printf '10\n%s\nn\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
 cmp -s "$TMP/association.delete.cancel.before" "$XRAY_MANAGER_USERS_FILE"
 grep -q 'Operación cancelada' "$OUT"
 
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/association.delete.invalid.before"
-if printf '%s\\n' '00000000-0000-4000-8000-000000000000' | users_v2_menu_association_delete >"$OUT"; then
+if printf '%s\n' '00000000-0000-4000-8000-000000000000' | users_v2_menu_association_delete >"$OUT"; then
 	echo 'ERROR: se aceptó una asociación inexistente para eliminación.' >&2
 	exit 1
 fi
 cmp -s "$TMP/association.delete.invalid.before" "$XRAY_MANAGER_USERS_FILE"
 grep -q 'asociación indicada no existe' "$OUT"
 
-printf '10\\n%s\\ns\\n\\n0\\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
+printf '10\n%s\ns\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
 grep -q 'Asociación eliminada del registro administrativo' "$OUT"
 jq -e --arg iid "$IDENTITY_ID" --arg deleted "$VLESS_ASSOC_ID" --arg sibling "$WG_ASSOC_ID" '
   any(.identities[]; .id==$iid) and
@@ -419,7 +419,7 @@ jq -e --arg iid "$IDENTITY_ID" --arg deleted "$VLESS_ASSOC_ID" --arg sibling "$W
 ' "$XRAY_MANAGER_USERS_FILE" >/dev/null
 
 # La opción está visible; el borrado no toca el provisioning/runtime del peer restante.
-printf '0\\n' | users_v2_menu >"$OUT"
+printf '0\n' | users_v2_menu >"$OUT"
 grep -q 'Eliminar asociación individual' "$OUT"
 jq -e --arg id "$WG_ASSOC_ID" --arg secret "$WG_SECRET" '
   any(.associations[]; .id==$id and .credential.value==$secret and
