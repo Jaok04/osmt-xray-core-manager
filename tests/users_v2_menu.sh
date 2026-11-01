@@ -306,7 +306,6 @@ if printf '%s\n' "$VLESS_ASSOC_ID" | users_v2_menu_association_state >"$OUT"; th
 fi
 cmp -s "$TMP/state.expired.expected" "$XRAY_MANAGER_USERS_FILE"
 
-
 # Renovación desde menú: activa y vencida; siempre inicia desde ahora.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/renew.before"
 printf '8\n%s\ncustom\n5\nhours\ns\n\n0\n' "$VLESS_ASSOC_ID" | users_v2_menu >"$OUT"
@@ -358,21 +357,25 @@ jq -e --arg id "$WG_ASSOC_ID" '
 # Rechazar renovar suspendida, modificar vencida, IDs inexistentes y duración inválida.
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/duration.reject.before"
 if printf '%s\ncustom\n1\ndays\n' "$WG_ASSOC_ID" | users_v2_menu_association_renew >"$OUT"; then
-  echo 'ERROR: se renovó una asociación suspendida.' >&2; exit 1
+	echo 'ERROR: se renovó una asociación suspendida.' >&2
+	exit 1
 fi
 cmp -s "$TMP/duration.reject.before" "$XRAY_MANAGER_USERS_FILE"
 jq --arg id "$VLESS_ASSOC_ID" '(.associations[]|select(.id==$id)).state="expired"' "$XRAY_MANAGER_USERS_FILE" >"$TMP/expired"
 mv "$TMP/expired" "$XRAY_MANAGER_USERS_FILE"
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/duration.expired.before"
 if printf '%s\nunlimited\n' "$VLESS_ASSOC_ID" | users_v2_menu_association_set_duration >"$OUT"; then
-  echo 'ERROR: se modificó la duración de una asociación vencida.' >&2; exit 1
+	echo 'ERROR: se modificó la duración de una asociación vencida.' >&2
+	exit 1
 fi
 cmp -s "$TMP/duration.expired.before" "$XRAY_MANAGER_USERS_FILE"
 if printf '%s\nunlimited\n' '00000000-0000-4000-8000-000000000000' | users_v2_menu_association_renew >"$OUT"; then
-  echo 'ERROR: se renovó una asociación inexistente.' >&2; exit 1
+	echo 'ERROR: se renovó una asociación inexistente.' >&2
+	exit 1
 fi
 if printf '%s\nbogus\n' "$VLESS_ASSOC_ID" | users_v2_menu_association_renew >"$OUT"; then
-  echo 'ERROR: se aceptó una duración inválida.' >&2; exit 1
+	echo 'ERROR: se aceptó una duración inválida.' >&2
+	exit 1
 fi
 cmp -s "$TMP/duration.expired.before" "$XRAY_MANAGER_USERS_FILE"
 
@@ -389,6 +392,5 @@ jq -e --arg id "$VLESS_ASSOC_ID" --arg secret "$VLESS_SECRET" '
   any(.associations[]; .id==$id and .credential.value==$secret and
       .runtime.status=="not_applied" and .provisioning_status=="draft")
 ' "$XRAY_MANAGER_USERS_FILE" >/dev/null
-
 
 echo 'OK: selector legacy/v2, consultas protegidas, creación, edición, suspensión/reactivación, renovación, modificación de duración, validaciones y runtime sin cambios.'
