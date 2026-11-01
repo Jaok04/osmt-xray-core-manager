@@ -1,0 +1,16 @@
+# Secretos y datos locales
+*.key
+*.pem
+*.crt
+.env
+.env.*
+secrets/
+state/
+backups/
+logs/
+*.log
+
+# Temporales
+*.tmp
+*.swp
+.DS_Store
