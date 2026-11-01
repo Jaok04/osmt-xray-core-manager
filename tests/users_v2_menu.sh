@@ -51,8 +51,8 @@ grep -q 'GESTIÓN DE IDENTIDADES Y ASOCIACIONES (V2)' "$OUT"
 grep -q 'Cliente demo' "$OUT"
 grep -q 'Identidad: 11111111-1111-4111-8111-111111111111' "$OUT"
 if grep -q '33333333-3333-4333-8333-333333333333' "$OUT"; then
-  echo 'ERROR: la vista mostró una credencial sensible.' >&2
-  exit 1
+	echo 'ERROR: la vista mostró una credencial sensible.' >&2
+	exit 1
 fi
 
 # Resumen correcto, sin escribir en el documento.
@@ -66,8 +66,8 @@ grep -q 'VLESS: 1' "$OUT"
 printf '{invalid json\n' >"$XRAY_MANAGER_USERS_FILE"
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/corrupt.before"
 if printf '\n' | users_menu_dispatch >"$OUT" 2>&1; then
-  echo 'ERROR: se aceptó un registro corrupto.' >&2
-  exit 1
+	echo 'ERROR: se aceptó un registro corrupto.' >&2
+	exit 1
 fi
 cmp -s "$TMP/corrupt.before" "$XRAY_MANAGER_USERS_FILE"
 grep -q 'JSON inválido' "$OUT"
@@ -75,8 +75,8 @@ grep -q 'JSON inválido' "$OUT"
 printf '{"schema_version":99}\n' >"$XRAY_MANAGER_USERS_FILE"
 cp "$XRAY_MANAGER_USERS_FILE" "$TMP/unknown.before"
 if printf '\n' | users_menu_dispatch >"$OUT" 2>&1; then
-  echo 'ERROR: se aceptó un esquema desconocido.' >&2
-  exit 1
+	echo 'ERROR: se aceptó un esquema desconocido.' >&2
+	exit 1
 fi
 cmp -s "$TMP/unknown.before" "$XRAY_MANAGER_USERS_FILE"
 grep -q 'esquema desconocido' "$OUT"
