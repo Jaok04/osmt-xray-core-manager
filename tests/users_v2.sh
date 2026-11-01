@@ -38,18 +38,21 @@ jq -e --arg i1 "$ID1" --arg i2 "$ID2" '
 ' "$USERS_V2_DATA_FILE" >/dev/null
 
 if users_association_create "$ID1" conn-vless-a Duplicado uuid 11111111-1111-4111-8111-111111111111 active unlimited 0 none 0 0 auto >/dev/null 2>&1; then
- echo "ERROR: UUID VLESS duplicado aceptado" >&2; exit 1
+	echo "ERROR: UUID VLESS duplicado aceptado" >&2
+	exit 1
 fi
 # Un mismo usuario no puede tener dos asociaciones genéricas en la misma conexión.
 if users_association_create "$ID1" conn-vless-a Otro uuid 44444444-4444-4444-8444-444444444444 active unlimited 0 none 0 0 auto >/dev/null 2>&1; then
- echo "ERROR: duplicación identity+connection VLESS aceptada" >&2; exit 1
+	echo "ERROR: duplicación identity+connection VLESS aceptada" >&2
+	exit 1
 fi
 
 WG1="$(users_association_create "$ID1" conn-wg Peer-1 public_key wg-public-key-1 active unlimited 0 none 0 0 auto)"
 WG2="$(users_association_create "$ID1" conn-wg Peer-2 public_key wg-public-key-2 active unlimited 0 none 0 0 auto)"
 [[ "$WG1" != "$WG2" ]]
 if users_association_create "$ID1" conn-wg Peer-Dup public_key wg-public-key-1 active unlimited 0 none 0 0 auto >/dev/null 2>&1; then
- echo "ERROR: clave pública WireGuard duplicada aceptada" >&2; exit 1
+	echo "ERROR: clave pública WireGuard duplicada aceptada" >&2
+	exit 1
 fi
 jq -e --arg id "$ID1" '[.associations[]|select(.identity_id==$id and .protocol=="wireguard" and .connection_id=="conn-wg")]|length==2' "$USERS_V2_DATA_FILE" >/dev/null
 
@@ -69,7 +72,8 @@ jq -e --arg id "$ID1" '(any(.identities[];.id==$id)|not) and (any(.associations[
 cp "$USERS_V2_DATA_FILE" "$TMP/before"
 printf '{corrupto\n' >"$USERS_V2_DATA_FILE"
 if users_v2_lock lockfd >/dev/null 2>&1; then
- echo "ERROR: JSON corrupto aceptado" >&2; exit 1
+	echo "ERROR: JSON corrupto aceptado" >&2
+	exit 1
 fi
 grep -q 'corrupto' "$USERS_V2_DATA_FILE"
 
@@ -81,7 +85,8 @@ cat >"$TMP/legacy.json" <<'JSON'
 ]
 JSON
 if users_v2_migrate_legacy "$TMP/legacy.json" "$USERS_V2_CONNECTIONS_FILE" "$TMP/no-state.json" invalid >/dev/null 2>&1; then
- echo "ERROR: migración sin estado confirmado aceptada" >&2; exit 1
+	echo "ERROR: migración sin estado confirmado aceptada" >&2
+	exit 1
 fi
 users_v2_migrate_legacy "$TMP/legacy.json" "$USERS_V2_CONNECTIONS_FILE" "$TMP/migrated.json" suspended
 jq -e '
@@ -95,7 +100,8 @@ jq -e '
 # Migración debe abortar si la cantidad legacy excede la capacidad de la conexión.
 jq '. + [.[0], .[0], .[0]]' "$TMP/legacy.json" >"$TMP/legacy-over-capacity.json"
 if users_v2_migrate_legacy "$TMP/legacy-over-capacity.json" "$USERS_V2_CONNECTIONS_FILE" "$TMP/over-capacity.json" active >/dev/null 2>&1; then
- echo "ERROR: migración superó max_users" >&2; exit 1
+	echo "ERROR: migración superó max_users" >&2
+	exit 1
 fi
 [[ ! -e "$TMP/over-capacity.json" ]]
 echo "OK: modelo v2, identidad global, alias duplicados, unicidad UUID, WireGuard peers, CRUD, estados separados, corrupción y migración aislada."
