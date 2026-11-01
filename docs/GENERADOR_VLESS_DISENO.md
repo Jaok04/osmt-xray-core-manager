@@ -96,3 +96,11 @@ El generador no debe marcar una conexión como activa ni runtime-applied por el 
 - Integración con identidades de la etapa 3.
 
 **Criterio de aceptación de esta etapa:** ningún dato de configuración de producción se genera a partir de supuestos; las incompatibilidades se rechazan con un mensaje claro y las opciones ausentes permanecen pendientes.
+
+## 9. Estado de implementación del modelo neutral
+
+**Implementado:** `modules/vless_model.sh` resuelve las seis modalidades anteriores y valida ID de conexión, modalidad, dirección de escucha explícita y puerto. `vless_model_build` emite un objeto JSON neutral con `schema_version=1`, transporte y seguridad derivados exclusivamente de `mode_id`, opciones vacías y lista de usuarios vacía. No incorpora `flow` si no se ha definido.
+
+**Pruebas:** `tests/smoke.sh` comprueba las seis correspondencias, los campos del modelo y rechazos de modalidades, puertos, direcciones e ID inválidos. La entrada principal carga el módulo.
+
+**Límite:** esto todavía no es un generador de configuración Xray. No valida sintaxis IP/DNS de la dirección, no verifica la existencia de la conexión en el registro, no añade usuarios y no crea parámetros WS, gRPC, TLS o REALITY. El JSON emitido no debe instalarse ni aplicarse a Xray.
