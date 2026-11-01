@@ -1,7 +1,7 @@
 # Procedimiento seguro de transición del registro de usuarios a v2
 
-**Estado:** implementado y probado en fixtures temporales; no ejecutado sobre datos reales.  
-**Fecha:** 2026-11-01
+**Estado:** herramienta implementada; pruebas aisladas aprobadas; dry-run real ejecutado sin aplicar cambios.  
+**Fecha de última verificación:** 2026-11-01
 
 ## 1. Objetivo
 
@@ -97,14 +97,17 @@ Si `users.json` o `connections.json` cambiaron desde el cutover, el rollback se 
 
 La prueba crea sus propios archivos de usuarios, conexiones, bloqueo y backups mediante variables de entorno de test. No usa los datos reales de `/var/lib/xray-manager`.
 
-## 8. Estado y limitaciones actuales
+## 8. Estado verificado
 
 - Herramienta implementada en la VPS.
 - Pruebas de fixtures aprobadas.
-- No se ejecutó dry-run ni apply contra los archivos reales como parte de esta implementación.
-- No se ha migrado el archivo real.
+- Dry-run contra los archivos reales ejecutado el 2026-11-01 con `--state active`: 0 registros legacy, 0 identidades y 0 asociaciones propuestas.
+- Hash de `users.json` antes y después: `37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570`.
+- Hash de `connections.json`: `37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570`.
+- Los dos archivos reales permanecen como arreglos vacíos `[]`; no se reemplazaron ni migraron.
+- No se creó backup permanente porque no hubo aplicación.
 - No se ha integrado `users_v2.sh` al ejecutable principal.
 - No se ha conectado el modelo v2 con el runtime ni se ha programado el barrido de vencimientos.
-- Servicio Xray permanece inactivo según la última verificación.
+- Servicio Xray permanece inactivo.
 
-**Próximo paso:** revisar este procedimiento y el diff en la rama de desarrollo; después, si se autoriza, ejecutar un dry-run de solo lectura contra los archivos reales. La aplicación real requiere una aprobación separada y explícita.
+**Próximo paso:** revisar el procedimiento y la implementación en la rama de desarrollo. La aplicación real sigue requiriendo aprobación separada y explícita.
