@@ -82,10 +82,10 @@ Implementado:
 - Renovación desde el menú para asociaciones activas o vencidas; inicia un periodo nuevo y las deja activas.
 - Modificación de duración desde el menú para asociaciones activas o suspendidas; recalcula vencimiento desde ahora para activas y actualiza el tiempo restante pausado para suspendidas, sin reactivarlas.
 - Eliminación individual desde el menú por ID y confirmación: elimina solo la asociación elegida y conserva la identidad y asociaciones hermanas; no aplica revocación runtime ni modifica provisioning.
+- Eliminación de identidad global desde el menú por ID: vista previa de todas sus asociaciones, confirmación sí/no y reescritura exacta del ID; elimina identidad y asociaciones en un commit atómico. Un snapshot de IDs evita que se incluyan asociaciones añadidas concurrentemente después de la vista previa. También admite identidades sin asociaciones; no revoca runtime ni modifica provisioning.
 - Suite de pruebas de menú y suite general de regresión.
 
 Pendiente:
-- Eliminación de identidad y todas sus asociaciones con confirmación explícita.
 - Importación/exportación completa y resolución manual de identidades/conflictos.
 - Protección de secretos/cifrado en reposo y gestión de claves.
 - Modelo completo de campos específicos WireGuard.
@@ -115,7 +115,7 @@ A la fecha del punto de control:
 
 Continuar Etapa 3 de forma incremental, manteniendo Etapas 1 y 2 visibles en la matriz de cierre:
 
-1. Eliminación de identidad y todas sus asociaciones, con confirmación explícita.
+1. Importación/exportación completa y resolución manual de conflictos.
 
 Cada operación requiere validación de entradas, lock compartido, rechazo sin escritura ante errores, pruebas aisladas y actualización de documentación. El orden puede cambiar solo si existe una dependencia técnica justificada.
 
