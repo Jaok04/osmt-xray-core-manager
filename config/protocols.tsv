@@ -5,6 +5,9 @@ vless_ws_tls|VLESS - WebSocket con TLS|WebSocket; TLS
 vless_reality|VLESS - TCP con REALITY|TCP; REALITY
 vless_grpc_tls|VLESS - gRPC con TLS|gRPC; TLS
 vless_grpc_reality|VLESS - gRPC con REALITY|gRPC; REALITY
+vless_xhttp|VLESS - XHTTP sin TLS|XHTTP; sin TLS
+vless_xhttp_tls|VLESS - XHTTP con TLS|XHTTP; TLS
+vless_xhttp_reality|VLESS - XHTTP con REALITY|XHTTP; REALITY
 vmess_ws|VMess - WebSocket sin TLS|WebSocket; sin TLS
 vmess_tcp_tls|VMess - TCP con TLS|TCP; TLS
 vmess_ws_tls|VMess - WebSocket con TLS|WebSocket; TLS
