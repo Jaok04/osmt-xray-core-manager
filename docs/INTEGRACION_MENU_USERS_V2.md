@@ -27,6 +27,7 @@ El menú v2 expone:
 8. Renovación de asociaciones activas o vencidas.
 9. Modificación de duración para asociaciones activas o suspendidas.
 10. Eliminación individual de una asociación por ID, con confirmación.
+11. Eliminación de una identidad global por ID, incluyendo todas sus asociaciones.
 
 El listado presenta IDs, alias, conexión, protocolo, estado funcional, estado de implementación y vencimiento. No presenta UUID VLESS ni claves públicas/privadas de WireGuard.
 
@@ -44,7 +45,9 @@ La interfaz ya permite renovar asociaciones activas o vencidas y modificar la du
 
 La eliminación individual solicita confirmación, borra únicamente la asociación seleccionada y conserva la identidad y sus asociaciones hermanas. No revoca el peer/cliente en runtime ni cambia provisioning; la revocación runtime requiere la futura integración transaccional.
 
-Pendiente: eliminación de identidades con todas sus asociaciones, importación/exportación y otras capacidades enumeradas en el punto de control.
+La eliminación de identidad solicita el ID global exacto, muestra fecha de creación y el detalle administrativo (sin credenciales) de todas las asociaciones/peers vinculados, informa cuántas asociaciones serán eliminadas, requiere confirmación sí/no y una segunda confirmación escribiendo exactamente el ID. El dominio vuelve a adquirir el lock compartido y valida el documento antes de eliminar identidad y asociaciones en un único commit atómico. El menú pasa además un snapshot ordenado de IDs de asociaciones: si el conjunto cambió después de la vista previa, la operación se rechaza sin escritura y exige repetir la consulta. Una identidad sin asociaciones también puede eliminarse. Las identidades y asociaciones no relacionadas permanecen intactas. Esta operación no revoca peers/clientes en runtime ni altera provisioning.
+
+Pendiente: importación/exportación y resolución manual de conflictos, protección de secretos, campos específicos WireGuard, barrido periódico de vencimientos y aplicación/revocación runtime, además de las otras capacidades enumeradas en el punto de control.
 
 La integración de las operaciones restantes se hará de forma incremental, con validación de entradas, confirmaciones para eliminaciones y pruebas sobre fixtures aislados.
 
@@ -58,6 +61,6 @@ La integración de las operaciones restantes se hará de forma incremental, con 
 
 ## Pruebas
 
-`tests/users_v2_menu.sh` cubre el enrutamiento legacy/v2, el listado y detalle sin credenciales, el resumen, la creación de identidades/asociaciones VLESS y WireGuard, la edición de alias/límites, la suspensión/reactivación, el tiempo restante pausado, renovación de asociaciones activas/vencidas, modificación de duración activa/suspendida, eliminación individual conservando identidad/asociaciones hermanas, cancelaciones sin escritura, las validaciones de identidad/conexión/capacidad/credenciales duplicadas y el bloqueo sin escritura para JSON corrupto y esquemas desconocidos.
+`tests/users_v2_menu.sh` cubre el enrutamiento legacy/v2, el listado y detalle sin credenciales, el resumen, la creación de identidades/asociaciones VLESS y WireGuard, la edición de alias/límites, la suspensión/reactivación, el tiempo restante pausado, renovación de asociaciones activas/vencidas, modificación de duración activa/suspendida, eliminación individual conservando identidad/asociaciones hermanas, eliminación global con dos confirmaciones, ID inexistente/malformado, identidad vacía, conservación de registros no relacionados y rechazo de snapshot obsoleto, cancelaciones sin escritura, las validaciones de identidad/conexión/capacidad/credenciales duplicadas y el bloqueo sin escritura para JSON corrupto y esquemas desconocidos.
 
 La suite se incorpora a `tests/smoke.sh`.
