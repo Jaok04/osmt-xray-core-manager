@@ -31,9 +31,11 @@ Las consultas adquieren el bloqueo compartido y validan el documento v2 y sus re
 
 La edición de asociación se realiza por ID exacto y actualiza alias, límite de tráfico y límite de conexiones simultáneas en un único commit atómico. El valor `0` se almacena como `null` (sin límite). No modifica credenciales, duración, estado funcional, provisioning ni runtime.
 
-## Operaciones aún no expuestas
+## Reglas de suspensión y reactivación
 
 La suspensión de una asociación activa pausa el tiempo restante si su duración es limitada y no altera provisioning ni runtime. La reactivación de una asociación suspendida exige elegir una duración nueva (ilimitada o personalizada); comienza desde el momento de reactivación y no reutiliza automáticamente el tiempo restante pausado. Las asociaciones vencidas no se reactivan desde esta operación; requieren renovación.
+
+## Operaciones aún no expuestas
 
 El módulo de dominio también contiene funciones para renovar, modificar duración, eliminar asociaciones/identidades y calcular vencimientos. Esas operaciones restantes aún no están conectadas a la interfaz.
 
