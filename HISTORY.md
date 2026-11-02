@@ -176,3 +176,10 @@ Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM 
 ## 2026-11-02 — autenticación SSH y reconciliación de referencias
 
 Se creó una clave SSH Ed25519 dedicada a este repositorio y se registró en GitHub como Deploy Key de solo lectura (sin permiso de escritura). La VPS autentica correctamente mediante el alias `github.com-xray-core-manager`; la URL `origin` de este checkout usa ese alias y los demás repositorios/configuraciones SSH no se modificaron. `git fetch` se completó correctamente. Se verificó que el árbol local anterior y el árbol remoto eran idénticos (`b6ed32ae1ff32dc4c8c6953a2d1eec48159b1d08`), por lo que se movió únicamente la referencia local de la rama con comprobación del SHA anterior, sin resetear ni sobrescribir archivos. Estado final: `design/user-identity-association-v1` y `origin/design/user-identity-association-v1` apuntan a `5ade7feda328ff4a4f6796fd7ab263237b40dbfa`; working tree limpio y sin divergencia. Las notas anteriores sobre falta de autenticación y refs obsoletas quedan superadas por esta verificación. La clave SSH anterior se conservó intacta. La Deploy Key nueva es de solo lectura; las publicaciones futuras deberán seguir usando el mecanismo autorizado de GitHub API u otro acceso de escritura expresamente configurado.
+
+
+## 2026-11-02 — Límites agregados y cierre de TOCTOU en P4
+
+Se añadió límite total de 512 MiB descomprimidos, aplicado durante recolección, creación, verificación y extracción. El lector común valida autónomamente rutas, tipos, enlaces, duplicados, cantidad, límites por miembro/agregados y hashes del manifiesto. La restauración realiza la verificación, lectura de clave y extracción bajo `lifecycle.lock` + `integrity.lock`; elimina el uso de contenido extraído antes de adquirir locks y vuelve a comprobar el hash de los bytes usados.
+
+Nueva prueba `tests/vless_backup_limits.sh`: PASS. Suite completa posterior: 32/32 PASS. P4 sigue abierta hasta revisión final y aceptación formal. No se generó backup operativo ni se leyó la clave maestra real.

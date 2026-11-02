@@ -2,7 +2,7 @@
 
 **Fecha del corte:** 2026-11-02
 **Tarea actual:** Etapa 2 — P4, backup y recuperación segura VLESS.
-**Estado actual:** corrección del journal implementada y verificada; suite completa 31/31 PASS; P4 abierta por auditoría de límites/permisos y aceptación formal.
+**Estado actual:** journal, límite agregado y validación bajo locks implementados; suite completa posterior 32/32 PASS; P4 abierta hasta revisión y aceptación formal.
 
 ## 1. Entorno
 
@@ -130,3 +130,13 @@ Se creó una clave SSH Ed25519 dedicada a este repositorio y se registró en Git
 - No se creó backup operativo ni se accedió a la clave maestra real. No se modificaron runtime, firewall ni certificados.
 - Publicado en GitHub, rama `design/user-identity-association-v1`, commit `90766d4cb8000ed1f94fb808b80f18483d5778cb`, árbol `cfdb26fd7716f622127ba5d7784884df58799b4c`; fetch y sincronización local/remota confirmados.
 - **Pendiente:** auditar límites agregados de extracción/descompresión, memoria, rutas y permisos de staging/publicación; repetir suite final; obtener aceptación formal. P4 NO está aceptada ni completada.
+
+
+## Punto de control actualizado — límites agregados y TOCTOU P4 (2026-11-02)
+
+- Se aplicó límite agregado de 512 MiB sin comprimir en recolección, creación, verificación y extracción; se mantienen 64 MiB por miembro, 20.000 miembros y 512 MiB comprimidos.
+- El lector de payload valida por sí mismo rutas relativas/traversal, tipo regular, symlinks/hardlinks, duplicados, cantidad, límites y hashes del manifiesto.
+- La restauración adquiere `lifecycle.lock` e `integrity.lock` antes de verificar/leer el backup y la clave y antes de extraer. No usa un diccionario extraído previamente al lock. Recomprueba el hash sobre los bytes que procesa.
+- Nueva prueba `tests/vless_backup_limits.sh`: PASS. Suite completa posterior: 32/32 PASS.
+- No se creó backup operativo, no se leyó la clave maestra real, y no se modificó runtime, firewall ni certificados.
+- **Pendiente:** revisión final del diff y aceptación formal. P4 no se declara completada.

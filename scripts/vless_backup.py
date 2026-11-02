@@ -24,6 +24,7 @@ RECOVERY_P = 1
 MAX_ARCHIVE = 512 * 1024 * 1024
 MAX_FILES = 20000
 MAX_MEMBER = 64 * 1024 * 1024
+MAX_TOTAL_UNCOMPRESSED = 512 * 1024 * 1024
 ID_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$')
 
 class BackupError(Exception):
@@ -103,6 +104,7 @@ def sha(data: bytes): return hashlib.sha256(data).hexdigest()
 
 def collect_files(base: Path, secrets_dir: Path):
     items=[]
+    total_size=0
     for root, prefix in ((base,'connections'),(secrets_dir,'secrets')):
         if not root.exists(): continue
         safe_dir(root)
@@ -115,6 +117,8 @@ def collect_files(base: Path, secrets_dir: Path):
             if not stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode) or st.st_nlink!=1:
                 raise BackupError(f'entrada no regular rechazada: {p}')
             safe_regular(p)
+            total_size += st.st_size
+            if total_size > MAX_TOTAL_UNCOMPRESSED: raise BackupError('el almacén excede el límite agregado sin comprimir')
             items.append((p, f'{prefix}/{rel}'))
             if len(items)>MAX_FILES: raise BackupError('demasiados archivos en almacén')
     return items
@@ -162,10 +166,13 @@ def read_version():
     return 'unknown'
 
 def make_archive(files):
+    total_size=0
     buf=io.BytesIO()
     with tarfile.open(fileobj=buf,mode='w:gz',format=tarfile.PAX_FORMAT) as tar:
         for path, rel in files:
             data=path.read_bytes()
+            total_size += len(data)
+            if total_size > MAX_TOTAL_UNCOMPRESSED: raise BackupError('el almacén excede el límite agregado sin comprimir')
             info=tarfile.TarInfo(rel); info.size=len(data); info.mode=0o600; info.uid=0; info.gid=0; info.uname='root'; info.gname='root'; info.mtime=0
             tar.addfile(info,io.BytesIO(data))
     return buf.getvalue()
@@ -175,6 +182,64 @@ def sha_sums(directory: Path, names):
     for name in names:
         data=(directory/name).read_bytes(); lines.append(f'{sha(data)}  {name}')
     return ('\n'.join(lines)+'\n').encode()
+
+def _safe_member_name(name: str):
+    if not isinstance(name,str) or not name or '\\' in name or '\x00' in name:
+        raise BackupError('nombre de miembro no válido')
+    raw_parts=name.split('/')
+    p=PurePosixPath(name)
+    if p.is_absolute() or not p.parts or any(part in ('','.', '..') for part in raw_parts) or p.parts[0] not in ('connections','secrets'):
+        raise BackupError('ruta no segura en archivo')
+    if len(p.parts)<2:
+        raise BackupError('ruta de miembro incompleta')
+    return p
+
+def _read_archive_members(archive: bytes, manifest: dict, retain=True):
+    if not isinstance(archive,bytes) or len(archive)>MAX_ARCHIVE:
+        raise BackupError('archivo comprimido excede el límite o no es válido')
+    extracted={}; seen=set(); total=0; metadata={}
+    files=manifest.get('files')
+    if not isinstance(files,list) or len(files)>MAX_FILES:
+        raise BackupError('lista de archivos del manifiesto no válida')
+    for item in files:
+        if not isinstance(item,dict) or not isinstance(item.get('path'),str):
+            raise BackupError('entrada de manifiesto inválida')
+        name=item['path']; _safe_member_name(name)
+        if name in metadata: raise BackupError('ruta duplicada en manifiesto')
+        size=item.get('size'); digest=item.get('sha256')
+        if not isinstance(size,int) or isinstance(size,bool) or size<0 or size>MAX_MEMBER or not isinstance(digest,str) or not re.fullmatch(r'[0-9a-f]{64}',digest):
+            raise BackupError('metadatos de archivo no válidos en manifiesto')
+        metadata[name]=(size,digest)
+    try:
+        with tarfile.open(fileobj=io.BytesIO(archive),mode='r:gz') as tar:
+            for member in tar:
+                name=member.name; _safe_member_name(name)
+                if name in seen or len(seen)>=MAX_FILES or not member.isfile() or member.issym() or member.islnk():
+                    raise BackupError('tipo, duplicado o cantidad no permitida en archivo')
+                if member.mode & 0o077 or member.size<0 or member.size>MAX_MEMBER:
+                    raise BackupError('permisos o tamaño no permitido en miembro de archivo')
+                total += member.size
+                if total > MAX_TOTAL_UNCOMPRESSED:
+                    raise BackupError('el archivo excede el límite agregado sin comprimir')
+                if name not in metadata or metadata[name][0] != member.size:
+                    raise BackupError('contenido del archivo no coincide con manifiesto')
+                stream=tar.extractfile(member)
+                if stream is None: raise BackupError('miembro ilegible')
+                chunks=[]; digest=hashlib.sha256(); remaining=member.size
+                while remaining:
+                    chunk=stream.read(min(1024*1024,remaining))
+                    if not chunk: raise BackupError('miembro truncado')
+                    digest.update(chunk); remaining-=len(chunk)
+                    if retain: chunks.append(chunk)
+                if stream.read(1): raise BackupError('miembro excede el tamaño declarado')
+                if not hmac.compare_digest(digest.hexdigest(),metadata[name][1]):
+                    raise BackupError(f'hash interno incorrecto: {name}')
+                if retain: extracted[name]=b''.join(chunks)
+                seen.add(name)
+    except (tarfile.TarError, OSError, EOFError) as exc:
+        raise BackupError('archivo tar.gz corrupto o no válido') from exc
+    if seen != set(metadata): raise BackupError('contenido del archivo no coincide con manifiesto')
+    return extracted
 
 def verify_data_dir(directory: Path):
     safe_dir(directory)
@@ -192,32 +257,7 @@ def verify_data_dir(directory: Path):
     if manifest.get('format')!='xray-manager-vless-data-backup' or manifest.get('format_version')!=1 or manifest.get('contains_master_key') is not False: raise BackupError('manifiesto no compatible o inseguro')
     archive=(directory/'backup.tar.gz').read_bytes()
     if not hmac.compare_digest(sha(archive),manifest.get('archive_sha256','')): raise BackupError('hash de archivo no coincide con manifiesto')
-    seen=set(); count=0
-    with tarfile.open(fileobj=io.BytesIO(archive),mode='r:gz') as tar:
-        for member in tar:
-            count+=1
-            p=PurePosixPath(member.name)
-            if count>MAX_FILES or p.is_absolute() or '..' in p.parts or not p.parts or p.parts[0] not in ('connections','secrets'):
-                raise BackupError('ruta o cantidad de entradas no segura en archivo')
-            if member.name in seen or not member.isfile() or member.issym() or member.islnk() or member.size>MAX_MEMBER:
-                raise BackupError('tipo, duplicado o tamaño no permitido en archivo')
-            if member.mode & 0o077: raise BackupError('permisos inseguros en miembro de archivo')
-            seen.add(member.name)
-            stream=tar.extractfile(member)
-            if stream is None: raise BackupError('miembro ilegible')
-            content=stream.read(MAX_MEMBER+1)
-            if len(content)!=member.size: raise BackupError('tamaño de miembro no coincide')
-    expected_files={x['path'] for x in manifest.get('files',[]) if isinstance(x,dict)}
-    if seen!=expected_files: raise BackupError('contenido del archivo no coincide con manifiesto')
-    for item in manifest['files']:
-        if not isinstance(item,dict) or not isinstance(item.get('path'),str): raise BackupError('entrada de manifiesto inválida')
-        # Hash interno comprobado directamente desde el archivo.
-        with tarfile.open(fileobj=io.BytesIO(archive),mode='r:gz') as tar:
-            f=tar.extractfile(item['path'])
-            if f is None: raise BackupError('archivo listado no existe')
-            data=f.read(MAX_MEMBER+1)
-        if len(data)!=item.get('size') or not hmac.compare_digest(sha(data),item.get('sha256','')):
-            raise BackupError(f'hash interno incorrecto: {item["path"]}')
+    _read_archive_members(archive,manifest,retain=False)
     return manifest
 
 def create_data(args):
@@ -300,16 +340,12 @@ def verify_recovery(directory: Path):
     return payload
 
 def validate_payload(archive: bytes, manifest: dict, key: bytes):
-    """Valida catálogo, referencias y autentica cada blob antes de publicar."""
+    """Valida rutas, tipos, tamaños, hashes y catálogo antes de publicar."""
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import vless_crypto as crypto
-    extracted={}
-    with tarfile.open(fileobj=io.BytesIO(archive),mode='r:gz') as tar:
-        for m in tar:
-            f=tar.extractfile(m)
-            if f is None: raise BackupError('miembro no legible')
-            extracted[m.name]=f.read(MAX_MEMBER+1)
+    if not isinstance(key,bytes) or len(key)!=32: raise BackupError('clave maestra inválida')
+    extracted=_read_archive_members(archive,manifest,retain=True)
     cat_bytes=extracted.get('connections/connections.json')
     if cat_bytes is None: raise BackupError('backup sin catálogo de conexiones')
     catalog=json.loads(cat_bytes)
@@ -329,9 +365,10 @@ def validate_payload(archive: bytes, manifest: dict, key: bytes):
         raw=extracted.get(name)
         if raw is None: raise BackupError('configuración referenciada ausente')
         cfg=json.loads(raw)
-        if cfg.get('connection_id')!=e['id'] or cfg.get('protocol')!='vless' or cfg.get('schema_version')!=1:
+        if not isinstance(cfg,dict) or cfg.get('connection_id')!=e['id'] or cfg.get('protocol')!='vless' or cfg.get('schema_version')!=1:
             raise BackupError('configuración neutral no válida')
         sec=cfg.get('security_options',{})
+        if not isinstance(sec,dict): raise BackupError('opciones de seguridad no válidas')
         secret_ref=e.get('secret_ref')
         if secret_ref is not None:
             sm=re.fullmatch(r'secrets/([A-Za-z0-9_.-]+)\.r([0-9]{6})\.bin',secret_ref if isinstance(secret_ref,str) else '')
@@ -350,21 +387,23 @@ def restore_data(args):
     require_root()
     root=Path(args.backups).absolute(); base=Path(args.base).absolute(); secrets_dir=Path(args.secrets_dir).absolute(); key_path=Path(args.master_key).absolute()
     safe_dir(root)
-    manifest=verify_data_dir(Path(args.backup_dir).absolute())
-    if key_path.exists():
-        safe_dir(key_path.parent); safe_regular(key_path,32); key=key_path.read_bytes()
-        if len(key)!=32: raise BackupError('clave maestra local inválida')
-    elif manifest.get('encrypted_secret_blob_count',0):
-        raise BackupError('falta clave maestra; use recuperación de clave antes de restaurar datos')
-    else: key=None
-    archive=(Path(args.backup_dir)/'backup.tar.gz').read_bytes()
-    extracted=validate_payload(archive,manifest,key) if key is not None else validate_payload_no_secrets(archive,manifest)
-    if root.joinpath('RESTORE_IN_PROGRESS.json').exists(): raise BackupError('hay una restauración interrumpida; se requiere recuperación manual del journal')
     fds=lock_pair()
     stage_base=None; stage_secrets=None; old_base=None; old_secrets=None; swapped=[]
     try:
-        # Revalidar clave y backup bajo los bloqueos para evitar carreras.
-        verify_data_dir(Path(args.backup_dir).absolute())
+        # Toda lectura y validación efectiva del backup se realiza bajo los locks.
+        if root.joinpath('RESTORE_IN_PROGRESS.json').exists(): raise BackupError('hay una restauración interrumpida; se requiere recuperación manual del journal')
+        backup_dir=Path(args.backup_dir).absolute(); safe_dir(backup_dir)
+        manifest=verify_data_dir(backup_dir)
+        if key_path.exists():
+            safe_dir(key_path.parent); safe_regular(key_path,32); key=key_path.read_bytes()
+            if len(key)!=32: raise BackupError('clave maestra local inválida')
+        elif manifest.get('encrypted_secret_blob_count',0):
+            raise BackupError('falta clave maestra; use recuperación de clave antes de restaurar datos')
+        else: key=None
+        archive=(backup_dir/'backup.tar.gz').read_bytes()
+        if not hmac.compare_digest(sha(archive),manifest.get('archive_sha256','')):
+            raise BackupError('el archivo cambió durante la validación del backup')
+        extracted=validate_payload(archive,manifest,key) if key is not None else validate_payload_no_secrets(archive,manifest)
         base_parent=base.parent; secrets_parent=secrets_dir.parent
         safe_dir(base_parent); safe_dir(secrets_parent)
         stage_base=Path(tempfile.mkdtemp(prefix='.vless-restore-connections.',dir=base_parent)); os.chmod(stage_base,0o700)
@@ -520,13 +559,7 @@ def recover_interrupted_restore(args):
 
 def validate_payload_no_secrets(archive: bytes, manifest: dict):
     if manifest.get('encrypted_secret_blob_count',0): raise BackupError('se requiere clave maestra para autenticar secretos')
-    # Misma validación estructural y de catálogo; sin blobs que descifrar.
-    extracted={}
-    with tarfile.open(fileobj=io.BytesIO(archive),mode='r:gz') as tar:
-        for m in tar:
-            f=tar.extractfile(m)
-            if f is None: raise BackupError('miembro no legible')
-            extracted[m.name]=f.read(MAX_MEMBER+1)
+    extracted=_read_archive_members(archive,manifest,retain=True)
     raw=extracted.get('connections/connections.json')
     if raw is None or not isinstance(json.loads(raw),list): raise BackupError('catálogo restaurado inválido')
     return extracted

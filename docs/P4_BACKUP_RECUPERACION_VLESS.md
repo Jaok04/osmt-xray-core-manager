@@ -1,6 +1,6 @@
 # P4 — Backup y recuperación segura de persistencia VLESS
 
-**Estado del incremento:** corrección del journal implementada y verificada; P4 continúa abierta hasta completar la auditoría de límites/permisos y recibir aceptación formal.
+**Estado del incremento:** journal, límites agregados y validación bajo locks implementados; P4 continúa abierta únicamente hasta revisión/aceptación formal y cualquier observación adicional.
 **Fecha:** 2026-11-02
 **Rama autorizada:** `design/user-identity-association-v1`
 
@@ -53,6 +53,8 @@ El paquete debe copiarse fuera de la VPS. La contraseña debe ser independiente 
 
 - exige confirmación interactiva escribiendo `RESTAURAR`;
 - exige la clave maestra local cuando el backup contiene secretos;
+- adquiere `lifecycle.lock` y después `integrity.lock` antes de leer/revalidar el backup, leer la clave, extraer y validar los datos; no reutiliza contenido extraído antes del lock;
+- valida autónomamente en el lector de payload los nombres/rutas relativas, tipos regulares, enlaces, duplicados, cantidad, tamaños individuales/agregados y hashes del manifiesto;
 - autentica los blobs AES-GCM y sus AAD antes de publicar los datos;
 - prepara directorios de staging y reemplaza los directorios de conexiones y secretos mediante renombrados dentro de sus respectivos padres;
 - conserva los directorios previos con nombres `.vless-*-before-*` como respaldo preventivo;
@@ -69,12 +71,13 @@ El menú de conexiones incorpora `Backup y recuperación VLESS`, con opciones pa
 ## 6. Pruebas ejecutadas
 
 - `tests/vless_backup.sh`: backup aislado, manifiesto, hash y rechazo de manipulación.
+- `tests/vless_backup_limits.sh`: límite agregado, rechazo autónomo de traversal/symlink y validación positiva.
 - `tests/vless_backup_restore.sh`: restauración aislada de catálogo, confirmación y conservación de datos previos.
 - `tests/vless_backup_recovery.sh`: paquete scrypt/AES-GCM, asociación por `backup_id`, contraseña incorrecta/correcta y recuperación autenticada en directorio temporal.
 - `tests/vless_backup_journal.sh`: rollback de journal nuevo y legacy, destino originalmente ausente, preservación de originales y cuarentena.
 - `tests/vless_backup_journal_crash_matrix.sh`: 32 interrupciones abruptas con `os._exit`, cubriendo las escrituras de fases del journal, renombrados de originales, publicación de ambos directorios y las cuatro combinaciones de existencia previa de `connections/` y `secrets/`.
 - `tests/vless_backup_restore_secrets.sh`: restore end-to-end de blobs REALITY/TLS, autenticación AES-GCM y certificado TLS externo referenciado pero ausente; la restauración conserva la dependencia, no la incorpora al backup y no activa runtime.
-- Suite completa final `tests/*.sh`: 31/31 PASS (2026-11-02, después de la corrección del journal).
+- Suite completa tras corrección de journal: 31/31 PASS. Suite posterior a los límites y TOCTOU: 32/32 PASS (2026-11-02).
 - `install.sh --check`, `bash -n` de todos los `.sh`, `py_compile`, ShellCheck y `shfmt` de las pruebas modificadas, y `git diff --check`: PASS en la revisión final.
 
 Publicación en GitHub: commit `90766d4cb8000ed1f94fb808b80f18483d5778cb` en `design/user-identity-association-v1`; árbol `cfdb26fd7716f622127ba5d7784884df58799b4c`. La VPS quedó sincronizada con `origin` y el working tree limpio.
@@ -83,8 +86,16 @@ No se creó ni leyó la clave maestra real de esta VPS; tampoco se creó un back
 
 ## 7. Pendientes antes de aceptación
 
-1. Auditar límites agregados de extracción/descompresión, memoria, número/tamaño total de archivos y rutas de staging/publicación; ajustar límites si la auditoría lo requiere.
-2. Revisar el diff completo y repetir la suite completa después de la revisión final.
-3. Obtener aceptación formal del propietario.
+1. Revisar el diff completo de esta corrección y cualquier observación de seguridad adicional.
+2. Obtener aceptación formal del propietario.
 
 **No forma parte de P4:** activar conexiones, aplicar configuración Xray, iniciar/reiniciar Xray, abrir puertos, cambiar firewall, ni desplegar certificados externos.
+
+
+## 8. Auditoría adicional: límites y consistencia de restauración — 2026-11-02
+
+Se añadió `MAX_TOTAL_UNCOMPRESSED = 512 MiB`. El límite se aplica al recolectar archivos para backup, al construir el tar y al leer/verificar/extractar miembros. La validación de miembros mantiene un máximo de 64 MiB por archivo y 20.000 entradas, verifica hashes mientras lee en bloques y evita retener datos durante la verificación. Durante la restauración se retienen como máximo 512 MiB de contenido extraído, además del archivo comprimido acotado a 512 MiB.
+
+La restauración ahora adquiere ambos locks antes de verificar y leer el backup, comprobar la clave y extraer el contenido. El lector común valida por sí mismo nombres de ruta, traversal, tipos, symlinks/hardlinks, duplicados, cantidad, tamaños y hashes del manifiesto, incluso si se invoca sin una validación estructural previa. El hash del archivo se vuelve a comprobar sobre los mismos bytes que se entregan al lector.
+
+Prueba focal nueva: `tests/vless_backup_limits.sh` (límite agregado, traversal, symlink y caso positivo). Suite completa posterior: 32/32 PASS. P4 continúa abierta hasta revisión y aceptación formal.
