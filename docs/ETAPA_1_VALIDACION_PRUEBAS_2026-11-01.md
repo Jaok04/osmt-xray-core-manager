@@ -68,3 +68,18 @@ La batería completa pasó 20/20. Bash syntax y ShellCheck pasaron en el proyect
 - M04: `system_xray_autostart` distingue `Habilitado`, `Deshabilitado`, `Enmascarado`, `No aplica (...)`, `No configurado` y `No disponible`. La prueba cubre explícitamente el estado `disabled`, además de `enabled` y unidad ausente.
 - M06: se añaden fallbacks para fallos y salidas vacías de cada proveedor de encabezado. La prueba inyecta fallos uno por uno en seis proveedores (IP, versión, servicio, autostart, perfil y fecha/hora) y luego simultáneamente; confirma que el menú principal conserva sus opciones.
 - Resultado final del 02/11/2026: suite completa 20/20 PASS; `bash -n`, ShellCheck y shfmt PASS; `./install.sh --check` PASS sin modificaciones. `tests/port_collisions.sh` tuvo un fallo intermitente en una primera ejecución integral; pasó tres ejecuciones aisladas consecutivas y volvió a pasar en la suite completa. Xray permaneció inactive.
+
+
+## Validación operativa en VPS desechable — 02/11/2026
+
+Se utilizó Ubuntu 24.04.4 LTS en el host de pruebas. La VPS de desarrollo no se modificó.
+
+1. **Instalador:** instalación con prefijo aislado y Xray ficticio; validó despliegue, archivos de estado, preferencias, permisos, unidad systemd y segunda ejecución idempotente. Se omitieron deliberadamente dependencias y descarga del core (`XRAY_MANAGER_SKIP_DEPENDENCIES=1`, `XRAY_MANAGER_SKIP_XRAY_INSTALL=1`).
+2. **Xray real ya instalado:** versión 26.10.31; se validó una configuración SOCKS temporal como usuario `xray` con `runuser`. Archivo temporal eliminado. Unidad real permaneció inactive/disabled. No se reinstaló el core.
+3. **Dependencias:** todas disponibles. `apt-get -s install` reportó 0 upgraded, 0 newly installed y 0 to remove. No se ejecutó una operación apt real.
+4. **Preferencias:** guardado atómico y recarga real de tema/fecha en `/etc/xray-manager/preferences.conf`; propiedad y modo root:root 600 verificados; contenido original restaurado exactamente.
+5. **Desinstalación:** el módulo eliminó realmente un `APP_ROOT` fixture en `/tmp`, con confirmación final. El guard systemd fue aislado; no se eliminó la unidad ni el Manager real.
+
+Los artefactos temporales de esta ronda se eliminaron. Se conservaron archivos temporales preexistentes de pruebas anteriores que no pertenecían a esta ronda. Estado final del host: Xray instalado, `xray.service` inactive/disabled, preferencias y datos persistentes presentes.
+
+**Límites:** aún falta una instalación/actualización real del core mediante descarga verificada y una prueba real de desinstalación con la unidad systemd en ventana controlada. Etapa 1 sigue **PARCIAL — no certificada**.
