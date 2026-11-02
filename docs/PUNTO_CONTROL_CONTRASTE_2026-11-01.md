@@ -140,7 +140,7 @@ En cada cierre de incremento se informará:
 - Qué queda pendiente.
 - Si el estado de una etapa cambia o permanece igual.
 
-**Conclusión vigente (actualizada 02/11/2026):** Etapa 1 sigue PARCIAL y no certificada. La coordinación interna de concurrencia, las confirmaciones destructivas y los requisitos M04/M06 del encabezado están implementados y probados. Siguen pendientes las validaciones operativas aisladas de instalación, dependencias, preferencias y desinstalación, además del cotejo final del resto de la matriz. No se debe declarar cierre por el solo hecho de que los menús y pruebas aisladas existan.
+**Conclusión vigente (actualizada 02/11/2026):** Etapa 1 sigue PARCIAL y no certificada. La coordinación interna de concurrencia, las confirmaciones destructivas y los requisitos M04/M06 del encabezado están implementados y probados. En VPS desechable se verificaron instalador aislado, Xray real preexistente, dependencias, preferencias y borrado de un árbol fixture. Siguen pendientes la descarga/instalación real de Xray-core, la desinstalación frente a una unidad systemd real y el cotejo final del resto de la matriz. No se debe declarar cierre por el solo hecho de que los menús y pruebas aisladas existan.
 
 
 ## 7. Actualización de contraste y pruebas — 2026-11-01
@@ -184,3 +184,12 @@ Informe detallado: docs/CONTRASTE_GITHUB_DESIGN_USER_IDENTITY_ASSOCIATION_V1_202
 - M06: `system_show_header` aísla fallos de cada fuente y conserva el menú principal. Las pruebas fallan independientemente IP, versión Xray, estado del servicio, autostart, perfil y fecha/hora, y luego todas simultáneamente.
 - Validación final: 20/20 scripts, Bash syntax, ShellCheck, shfmt y `./install.sh --check` PASS. `tests/port_collisions.sh` falló intermitentemente una vez, pasó tres ejecuciones aisladas consecutivas y pasó en la suite completa repetida. Xray permanece inactive.
 - M04/M06 pasan a IMPLEMENTADO. Etapa 1 continúa PARCIAL por las validaciones operativas reales y el cotejo final de los demás requisitos.
+
+
+## 10. Validación operativa desechable (02/11/2026)
+
+Se completaron pruebas operativas seguras en Ubuntu 24.04.4 LTS: instalación del Manager en prefijo temporal (Xray ficticio, sin apt), segunda ejecución idempotente, validación de Xray 26.10.31 real como usuario `xray`, reporte de dependencias sin faltantes y simulación apt sin cambios, guardado/recarga/restauración exacta de preferencias y borrado real de un `APP_ROOT` fixture mediante el módulo de desinstalación.
+
+No se descargó/reinstaló Xray real ni se eliminó el Manager/unidad reales. La unidad del host permaneció inactive/disabled; los datos persistentes y preferencias quedaron intactos.
+
+La Etapa 1 sigue PARCIAL. Los dos pendientes operativos concretos son: instalación/actualización real de Xray-core con verificación de artefactos y prueba del flujo de desinstalación frente a una unidad systemd real bajo control.
