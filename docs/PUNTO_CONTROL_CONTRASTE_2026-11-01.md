@@ -1,6 +1,6 @@
 # Punto de control de contraste — Xray Core Manager
 
-**Fecha:** 2026-11-01  
+**Fecha:** 2026-11-01 (actualizado tras validación de concurrencia y confirmaciones)  
 **Referencia funcional principal:** `Xray_Manager_Documentacion_Final_2026-10-31`  
 **Rama remota de referencia:** `design/user-identity-association-v1` (HEAD `3aeeb03c`); la copia VPS `/opt/xray-manager` no contiene metadatos `.git`, por lo que no se confirma rama local ni estado de commits.  
 **Propósito:** mantener cada incremento contrastado con el diseño aprobado y registrar explícitamente las ampliaciones posteriores.
@@ -31,7 +31,7 @@ Implementado:
 
 Parcial o pendiente:
 - Instalación/actualización/reinstalación/reparación: existe módulo controlado, catálogo compatible limitado a Xray 26.10.31 y validaciones de paquete; falta validación operativa real y ampliar pruebas de interrupción/rollback.
-- Desinstalación: flujo local reforzado con allowlist, rechazo de symlinks, locks de integridad/Xray, respaldo y exportación SSH/SCP verificada; pruebas aisladas pasan. Falta validación destructiva en entorno desechable.
+- Desinstalación: flujo local reforzado con allowlist, rechazo de symlinks, bloqueo de ciclo de vida/integridad/Xray antes del respaldo, exportación SSH/SCP verificada y confirmación final; pruebas aisladas pasan. Falta validación destructiva en entorno desechable.
 - Dependencias del sistema: módulo local implementado y probado con mocks; falta validar instalación/actualización real de paquetes en entorno desechable.
 - Configuración del administrador: módulo local implementado y probado con preferencias temporales; falta validación operativa con las rutas reales de configuración.
 - Certificados SSL/TLS y dominios: pendiente.
@@ -104,7 +104,7 @@ Certificados/dominios, configuraciones/perfiles/respaldos, servicio/diagnóstico
 ## 3. Estado operativo protegido
 
 A la fecha del punto de control:
-- Rama remota de referencia: design/user-identity-association-v1 (HEAD 3aeeb03c); /opt/xray-manager no contiene metadatos .git y no permite confirmar una rama local.
+- Rama remota de trabajo: `design/user-identity-association-v1`; `/opt/xray-manager` no contiene metadatos `.git`, por lo que la copia VPS no permite confirmar rama local ni estado de commits.
 - No hacer merge a `main` sin aprobación.
 - No ejecutar migración real sin autorización explícita.
 - No activar Xray ni aplicar configuraciones al runtime sin autorización explícita.
@@ -140,7 +140,7 @@ En cada cierre de incremento se informará:
 - Qué queda pendiente.
 - Si el estado de una etapa cambia o permanece igual.
 
-**Conclusión vigente:** Etapa 1 sigue PARCIAL y no certificada. La copia local ya incorpora dependencias, preferencias y un desinstalador más robusto que el HEAD remoto; aún faltan trazabilidad completa y validaciones operativas aisladas. No se debe avanzar de etapa ni declarar cierre por el solo hecho de que los menús y pruebas aisladas existan.
+**Conclusión vigente:** Etapa 1 sigue PARCIAL y no certificada. La coordinación interna de concurrencia y las confirmaciones destructivas están implementadas y probadas; siguen pendientes M04/M06 y las validaciones operativas aisladas de instalación, dependencias, preferencias y desinstalación. No se debe avanzar de etapa ni declarar cierre por el solo hecho de que los menús y pruebas aisladas existan.
 
 
 ## 7. Actualización de contraste y pruebas — 2026-11-01
@@ -161,8 +161,18 @@ Informe detallado: docs/CONTRASTE_GITHUB_DESIGN_USER_IDENTITY_ASSOCIATION_V1_202
 
 ### 7.2 Pruebas
 
-- Suite completa: 15/15 scripts aprobados en la última ejecución.
+- Suite completa: 20/20 scripts aprobados en la última ejecución.
 - bash -n: aprobado.
 - ShellCheck en los archivos de Etapa 1 y dependencias directas: aprobado.
 - shfmt -d: sin diferencias.
 - Las pruebas usaron fixtures temporales y mocks; no se ejecutaron operaciones reales de instalación/desinstalación ni se modificaron servicios, firewall, SSH o datos persistentes.
+
+
+## 8. Actualización — concurrencia y confirmaciones (2026-11-01)
+
+- Nuevo `lib/operation_lock.sh`: lock de ciclo de vida no bloqueante, permisos 600 y rechazo de rutas simbólicas.
+- Instalador: adquiere lifecycle e integridad antes de desplegar o inicializar datos. Administración Xray, dependencias y guardado de preferencias comparten lifecycle.
+- Desinstalación: adquiere lifecycle, uninstall, integridad y Xray antes de crear el respaldo; mantiene los locks durante respaldo, exportación, confirmación final y borrado.
+- `A11`, `U14` y `N03` pasan a IMPLEMENTADO para las operaciones internas cubiertas por estos locks.
+- Validación final de esta ronda: 20/20 pruebas, Bash syntax, ShellCheck y shfmt en archivos de producción modificados y pruebas con estilo homogéneo; `tests/uninstall.sh` conserva formato histórico mixto. `./install.sh --check` PASS. Xray permaneció inactivo; no se ejecutaron apt, instalación/desinstalación real, migraciones ni cambios de firewall/SSH.
+- La Etapa 1 continúa PARCIAL por M04/M06 y las validaciones operativas reales pendientes.
