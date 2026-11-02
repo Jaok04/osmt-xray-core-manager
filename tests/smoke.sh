@@ -62,12 +62,16 @@ if vless_model_build conn-test vless_ws 127.0.0.1 >/dev/null 2>&1; then
 	echo "ERROR: se aceptó una llamada con argumentos incompletos." >&2
 	exit 1
 fi
-printf '1\n1\n\n0\n0\ns\n' | "$ENTRY" >"$OUT"
+printf '1\n1\n1\n0\n0\n0\n0\ns\n' | "$ENTRY" >"$OUT"
 grep -q 'GESTIÓN DE PROTOCOLOS Y CONEXIONES' "$OUT"
+grep -q 'ADMINISTRAR VLESS' "$OUT"
+grep -q 'VLESS-WS (Sin TLS)' "$OUT"
+source "$ROOT/config/manager.conf"
+source "$ROOT/lib/ui.sh"
+source "$ROOT/modules/connections.sh"
+connections_show_catalog >"$OUT"
 grep -q 'CATÁLOGO DE PROTOCOLOS' "$OUT"
 grep -q 'vless_ws' "$OUT"
-printf '1\n3\n\n0\n0\ns\n' | "$ENTRY" >"$OUT"
-grep -q 'CONEXIONES REGISTRADAS' "$OUT"
 printf 'opcion-invalida\n\n0\ns\n' | "$ENTRY" >"$OUT"
 grep -q 'Opción no válida' "$OUT"
 
@@ -205,3 +209,5 @@ bash "$ROOT/tests/users_v2.sh"
 bash "$ROOT/tests/users_v2_menu.sh"
 
 bash "$ROOT/tests/xray_admin.sh"
+bash "$ROOT/tests/stage2_navigation.sh"
+bash "$ROOT/tests/stage2_existing.sh"
