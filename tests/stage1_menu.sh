@@ -195,9 +195,10 @@ connections_create_draft() {
     echo connection-create >>"$ACTION_CALLS"
     return 1
 }
-printf '2\n0\n' | connections_menu >"$tmp/connections-action-error.out" || true
+printf '1\n1\n1\n0\n0\n0\n' | connections_menu >"$tmp/connections-action-error.out" || true
 grep -Fxq connection-create "$ACTION_CALLS"
-[[ "$(grep -c 'GESTIÓN DE PROTOCOLOS Y CONEXIONES' "$tmp/connections-action-error.out")" -ge 2 ]]
+grep -q 'ADMINISTRAR VLESS' "$tmp/connections-action-error.out"
+grep -q 'VLESS-WS (Sin TLS)' "$tmp/connections-action-error.out"
 
 users_create() {
     echo user-create >>"$ACTION_CALLS"
