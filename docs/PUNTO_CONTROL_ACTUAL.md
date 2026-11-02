@@ -2,7 +2,7 @@
 
 **Fecha del corte:** 2026-11-02
 **Tarea:** correcciones aprobadas para el cierre técnico VMess; Bloques 1 y 2 ejecutados.
-**Estado:** Bloque 1 PUBLICADO/SINCRONIZADO; Bloque 2 del asistente VMess IMPLEMENTADO y VERIFICADO en pruebas focales, publicación pendiente. VMess continúa pendiente de aceptación formal.
+**Estado:** Bloque 1 PUBLICADO/SINCRONIZADO; Bloque 2 del asistente VMess IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO. VMess continúa pendiente de aceptación formal.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -100,7 +100,7 @@ Continuar con el Bloque 3 aprobado: ampliar las pruebas de cancelación, EOF, en
 
 ## 10. Bloque 2 — advertencias y resumen del asistente VMess
 
-**Estado:** IMPLEMENTADO y VERIFICADO en pruebas focales; pendiente publicación/sincronización.
+**Estado:** IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; commit `9d03d4b4e77e1a160b94ee2c2f3c74487977e362`.
 
 - Aviso operativo antes de pedir parámetros: sincronización de relojes cliente/servidor, desfase máximo 120 segundos.
 - Advertencia WebSocket: Xray 26.10.31 lo marca obsoleto/no recomendado y recomienda XHTTP H2/H3; se conserva por alcance aprobado.

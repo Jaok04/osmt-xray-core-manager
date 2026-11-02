@@ -269,4 +269,6 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Se incorporó un resumen completo posterior a `xray run -test` y anterior al consentimiento: identidad, dirección/puerto, modalidad, transporte/seguridad, usuarios y parámetros aplicables. El contenido de claves privadas TLS/REALITY no se muestra.
 - Se corrigió una colisión de variable local en funciones de lectura que impedía asignar el target REALITY al llamador.
 - `tests/vmess_assistant.sh` valida avisos, resumen, orden resumen→consentimiento y ocultamiento de secretos. Pruebas focales VMess assistant/model/integration/navigation: PASS; Xray-core 26.10.31 validó 14/14 modalidades y negativos previstos. `bash -n` y ShellCheck warning: PASS.
-- Estado: IMPLEMENTADO y VERIFICADO en pruebas focales; PUBLICADO/SINCRONIZADO pendiente. La suite completa posterior se ejecutará en Bloque 3; VMess sigue pendiente de aceptación formal.
+- Estado: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO en `9d03d4b4e77e1a160b94ee2c2f3c74487977e362`. La suite completa posterior se ejecutará en Bloque 3; VMess sigue pendiente de aceptación formal.
+
+- Publicación verificada: HEAD local/remoto y árboles idénticos en `9d03d4b4e77e1a160b94ee2c2f3c74487977e362`; sólo rama `design/user-identity-association-v1`.
