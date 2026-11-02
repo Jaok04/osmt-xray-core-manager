@@ -33,6 +33,8 @@ Se corrigió el journal de `scripts/vless_backup.py` para registrar si existían
 
 Evidencia focal: 32 interrupciones abruptas simuladas cubriendo fases/renombrados y las cuatro combinaciones de existencia previa; pruebas de journal legacy/nuevo; restauración TLS/REALITY con certificado externo referenciado pero ausente. Todas PASS. Suite completa final tras la última edición: 31/31 PASS; `install.sh --check`, sintaxis Bash, `py_compile`, ShellCheck, shfmt y `git diff --check`: PASS.
 
+Publicación confirmada en `design/user-identity-association-v1`: commit `90766d4cb8000ed1f94fb808b80f18483d5778cb`, árbol `cfdb26fd7716f622127ba5d7784884df58799b4c`. La VPS hizo fetch y quedó sincronizada con `origin`; la escritura remota se realizó mediante GitHub API porque la Deploy Key SSH es de solo lectura.
+
 P4 continúa ABIERTA: resta auditar límites agregados de extracción/descompresión, memoria, rutas y permisos de staging/publicación, y recibir aceptación formal. No se creó backup operativo ni se accedió a la clave maestra real.
 
 

@@ -128,4 +128,5 @@ Se creó una clave SSH Ed25519 dedicada a este repositorio y se registró en Git
 - `tests/vless_backup_restore.sh` y `tests/vless_backup_restore_secrets.sh`: PASS; el último prueba el certificado TLS externo referenciado pero ausente, sin impedir la restauración ni activar runtime.
 - Suite completa final `tests/*.sh`: 31/31 PASS. `install.sh --check`, sintaxis Bash de todos los scripts, `py_compile`, ShellCheck/shfmt de pruebas modificadas y `git diff --check`: PASS.
 - No se creó backup operativo ni se accedió a la clave maestra real. No se modificaron runtime, firewall ni certificados.
+- Publicado en GitHub, rama `design/user-identity-association-v1`, commit `90766d4cb8000ed1f94fb808b80f18483d5778cb`, árbol `cfdb26fd7716f622127ba5d7784884df58799b4c`; fetch y sincronización local/remota confirmados.
 - **Pendiente:** auditar límites agregados de extracción/descompresión, memoria, rutas y permisos de staging/publicación; repetir suite final; obtener aceptación formal. P4 NO está aceptada ni completada.

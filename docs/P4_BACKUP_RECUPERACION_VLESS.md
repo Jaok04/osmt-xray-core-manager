@@ -77,6 +77,8 @@ El menú de conexiones incorpora `Backup y recuperación VLESS`, con opciones pa
 - Suite completa final `tests/*.sh`: 31/31 PASS (2026-11-02, después de la corrección del journal).
 - `install.sh --check`, `bash -n` de todos los `.sh`, `py_compile`, ShellCheck y `shfmt` de las pruebas modificadas, y `git diff --check`: PASS en la revisión final.
 
+Publicación en GitHub: commit `90766d4cb8000ed1f94fb808b80f18483d5778cb` en `design/user-identity-association-v1`; árbol `cfdb26fd7716f622127ba5d7784884df58799b4c`. La VPS quedó sincronizada con `origin` y el working tree limpio.
+
 No se creó ni leyó la clave maestra real de esta VPS; tampoco se creó un backup operativo. Todas las pruebas de restauración se ejecutaron en directorios temporales.
 
 ## 7. Pendientes antes de aceptación
