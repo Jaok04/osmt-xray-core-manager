@@ -123,3 +123,9 @@ La especificación Etapa 2 revisión 1.3 quedó registrada como APROBADA. Define
 - Se añadieron rutas reservadas y directorios privados para claves/secretos; no se creó la clave maestra real ni se ejecutó apt-get.
 - Verificación: 21/21 scripts de pruebas PASS; bash -n, ShellCheck, py_compile, install --check y git diff --check PASS.
 - Sin cambios en conexiones reales, usuarios, firewall, servicio ni runtime. P2 pendiente.
+
+## 2026-11-02 — P2 almacén VLESS (implementación en curso)
+
+Se añadió `scripts/vless_config_store.py` y `tests/vless_config_store.sh`: almacenamiento versionado de configuraciones neutrales no secretas, referencias en catálogo, auditoría de referencias rotas/huérfanos y conservación de borradores. Prueba focal inicial PASS. P2 sigue en curso: faltan pruebas de fallos/interrupciones y concurrencia, suite completa y revisión final.
+
+P2: `tests/*.sh` 25/25 PASS; pruebas específicas incluyen interrupción antes de publicar catálogo (huérfano detectable) y dos escritores concurrentes. `install.sh --check`, sintaxis, py_compile, ShellCheck, shfmt y diff PASS. El campo `secret_ref` queda reservado como null hasta P3.

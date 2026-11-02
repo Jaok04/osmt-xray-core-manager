@@ -71,6 +71,13 @@ Hallazgo de seguridad: la clave privada REALITY se pasa actualmente a jq por --a
 
 ## 7. Próxima acción
 
-Continuar con P2: diseñar e implementar el almacén versionado de opciones no secretas, referencias a blobs cifrados y consistencia del catálogo. P1 está documentada en el apartado 12 de docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md. No generar todavía la clave maestra real; se creará al integrar el primer guardado en P3. Mantener borradores y no activar runtime.
+Continuar cerrando P2: añadir pruebas de interrupción/publicación fallida y concurrencia cruzada, revisar integridad de archivos y completar auditoría. P1 está publicada. No generar todavía la clave maestra real; se creará al integrar el primer guardado de secretos en P3. Mantener borradores y no activar runtime.
 
 No modificar main. No declarar Etapa 2 completada.
+
+
+### Actualización 2026-11-02 — P2 en curso
+
+Se implementó inicialmente `scripts/vless_config_store.py` con esquema neutral VLESS versión 1, revisiones inmutables, publicación atómica de referencias bajo el bloqueo compartido y auditoría sin borrado automático. `tests/vless_config_store.sh` PASS. P2 no está completado: quedan pruebas de interrupciones/concurrencia, suite completa y auditoría final. No se activó runtime ni se creó la clave maestra real.
+
+P2: `tests/*.sh` 25/25 PASS; pruebas específicas incluyen interrupción antes de publicar catálogo (huérfano detectable) y dos escritores concurrentes. `install.sh --check`, sintaxis, py_compile, ShellCheck, shfmt y diff PASS. El campo `secret_ref` queda reservado como null hasta P3.

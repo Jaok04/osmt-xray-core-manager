@@ -139,10 +139,17 @@ Si los archivos de continuidad contradicen el código o la documentación normat
 
 ## Diseño de persistencia segura VLESS — 2026-11-02
 
-La propuesta arquitectónica está en docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md. No se ha implementado ni se ha generado clave maestra. El diseño propone AES-256-GCM, clave local root-only, separación de opciones/secretos, referencias externas para claves TLS y recuperación fail-closed. Requiere aprobación expresa antes de implementar.
+El diseño arquitectónico está en docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md y fue aprobado por el usuario el 2026-11-02. P1 está publicado; P2 está en implementación. La clave maestra real aún no se ha generado.
 
 Hallazgo de seguridad: el asistente actual entrega la clave privada REALITY a jq mediante --arg; corregir esa exposición a argumentos de proceso será requisito de la fase de implementación.
 
 ## P1 — Infraestructura criptográfica VLESS (2026-11-02)
 
 P1 está implementada en scripts/vless_crypto.py y probada mediante tests/vless_crypto.sh. La dependencia python3-cryptography quedó formalizada en install.sh y modules/system_admin.sh. La clave maestra real no se ha generado y no se debe generar hasta integrar el guardado de la primera configuración en P3. Las funciones ensure_master_key, load_master_key, encrypt_secret, decrypt_secret, write_encrypted_blob y read_encrypted_blob forman la API inicial. El paso siguiente es P2: almacén versionado de configuración no secreta, referencias de secretos y consistencia transaccional con el catálogo.
+
+
+### Actualización 2026-11-02 — P2 en curso
+
+Se implementó inicialmente `scripts/vless_config_store.py` con esquema neutral VLESS versión 1, revisiones inmutables, publicación atómica de referencias bajo el bloqueo compartido y auditoría sin borrado automático. `tests/vless_config_store.sh` PASS. P2 no está completado: quedan pruebas de interrupciones/concurrencia, suite completa y auditoría final. No se activó runtime ni se creó la clave maestra real.
+
+P2: `tests/*.sh` 25/25 PASS; pruebas específicas incluyen interrupción antes de publicar catálogo (huérfano detectable) y dos escritores concurrentes. `install.sh --check`, sintaxis, py_compile, ShellCheck, shfmt y diff PASS. El campo `secret_ref` queda reservado como null hasta P3.

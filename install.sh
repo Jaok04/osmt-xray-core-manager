@@ -79,6 +79,7 @@ for candidate in \
     "$(path /var/lib/xray-manager)" \
     "$(path /var/lib/xray-manager/users)" \
     "$(path /var/lib/xray-manager/connections)" \
+    "$(path /var/lib/xray-manager/connections/configurations)" \
     "$(path /var/lib/xray-manager/secrets)" \
     "$(path /var/lib/xray-manager/profiles)" \
     "$(path /var/lib/xray-manager/domains)" \
@@ -242,6 +243,7 @@ install -d -o root -g root -m 700 \
     "$(path /var/lib/xray-manager)" \
     "$(path /var/lib/xray-manager/users)" \
     "$(path /var/lib/xray-manager/connections)" \
+    "$(path /var/lib/xray-manager/connections/configurations)" \
     "$(path /var/lib/xray-manager/secrets)" \
     "$(path /var/lib/xray-manager/profiles)" \
     "$(path /var/lib/xray-manager/domains)" \
@@ -257,6 +259,7 @@ for directory in \
     "$(path /var/lib/xray-manager)" \
     "$(path /var/lib/xray-manager/users)" \
     "$(path /var/lib/xray-manager/connections)" \
+    "$(path /var/lib/xray-manager/connections/configurations)" \
     "$(path /var/lib/xray-manager/secrets)" \
     "$(path /var/lib/xray-manager/profiles)" \
     "$(path /var/lib/xray-manager/domains)" \

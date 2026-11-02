@@ -140,3 +140,10 @@ Consultar docs/PUNTO_CONTROL_ACTUAL.md. No iniciar una nueva implementación de 
 - P1 VERIFICADO: 21/21 pruebas tests/*.sh PASS; controles de sintaxis, ShellCheck, compilación Python, install.sh --check y diff PASS.
 - La clave maestra real no fue generada; no se modificaron datos operativos ni runtime.
 - Siguiente: P2, almacén versionado de configuraciones y referencias.
+
+
+### Actualización 2026-11-02 — P2 en curso
+
+Se implementó inicialmente `scripts/vless_config_store.py` con esquema neutral VLESS versión 1, revisiones inmutables, publicación atómica de referencias bajo el bloqueo compartido y auditoría sin borrado automático. `tests/vless_config_store.sh` PASS. P2 no está completado: quedan pruebas de interrupciones/concurrencia, suite completa y auditoría final. No se activó runtime ni se creó la clave maestra real.
+
+P2: `tests/*.sh` 25/25 PASS; pruebas específicas incluyen interrupción antes de publicar catálogo (huérfano detectable) y dos escritores concurrentes. `install.sh --check`, sintaxis, py_compile, ShellCheck, shfmt y diff PASS. El campo `secret_ref` queda reservado como null hasta P3.

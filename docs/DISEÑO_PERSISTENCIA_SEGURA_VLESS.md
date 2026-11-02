@@ -2,7 +2,7 @@
 
 **Proyecto:** Xray Core Manager
 **Fecha:** 2026-11-02
-**Estado:** diseño técnico elaborado; pendiente de aprobación antes de implementar
+**Estado:** diseño aprobado por el usuario el 2026-11-02; P1 publicado y P2 en implementación
 **Base:** Etapa 2, decisión complementaria de 2026-11-02, modelo neutral VLESS y adaptador Xray-core 26.10.31.
 
 ## 1. Objetivo y alcance
@@ -212,3 +212,22 @@ Verificaciones ejecutadas:
 - git diff --check: PASS.
 
 P1 no incluye todavía el almacén de configuración por conexión ni integración con el asistente VLESS. El riesgo existente de paso de la clave REALITY a jq --arg permanece pendiente de P3; el asistente no fue modificado en P1.
+
+
+## 13. Ejecución de P2 — almacén versionado de configuración
+
+**Alcance implementado en esta revisión:** módulo independiente `scripts/vless_config_store.py` para guardar, leer y auditar configuraciones neutrales VLESS no secretas. El almacén usa revisiones inmutables bajo `connections/configurations/`, referencias versionadas en `connections.json` y el mismo bloqueo `integrity.lock` que conexiones/usuarios.
+
+- Esquema estricto versión 1; rechaza campos desconocidos, versiones desconocidas, IDs inseguros y modalidades no admitidas.
+- El catálogo reserva `secret_ref` como `null` hasta P3; P2 no persiste claves ni secretos y no marca una configuración REALITY como lista para runtime.
+- Verifica que la conexión exista, sea `draft`, tenga `runtime_applied=false` y que protocolo/modalidad/puerto coincidan.
+- Escribe la revisión nueva con archivo temporal, `fsync`, renombrado atómico y verificación posterior; solo después publica la referencia del catálogo mediante reemplazo atómico.
+- Conserva revisiones anteriores; las que dejan de estar referenciadas se reportan como huérfanas, nunca se borran automáticamente.
+- La auditoría detecta referencias rotas y huérfanos sin mutar datos.
+- Rechaza symlinks, archivos no regulares, permisos/propietario incorrectos y rutas/IDs no válidos.
+- Incluye opciones de transporte y metadatos no secretos TLS/REALITY. La clave privada REALITY y cualquier secreto permanecen fuera de este almacén y se integrarán en P3 usando P1.
+- No cambia estado del borrador, no activa runtime, no inicia Xray y no toca firewall/puertos.
+
+**Verificación de P2 en esta revisión:** prueba focal de almacenamiento, lectura, revisiones, referencias rotas, huérfanos, versión/campos desconocidos, ID traversal, fallo simulado antes de publicar el catálogo y dos escritores concurrentes: PASS. Suite completa `tests/*.sh`: 25/25 PASS. `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt y `git diff --check`: PASS. La prueba de concurrencia cubre dos escritores del almacén; la suite existente mantiene las pruebas de concurrencia cruzada de usuarios/conexiones.
+
+**Límite restante:** falta integrar el guardado y recuperación de secretos cifrados desde el asistente (P3), validar la exposición de clave privada REALITY y probar recuperación de backup/restore (P4). P2 no aplica runtime.
