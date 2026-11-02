@@ -108,7 +108,9 @@ El almacén VMess usa la clave maestra local compartida con VLESS, pero AES-256-
 - No inventar certificados ni generar secretos persistentes durante pruebas.
 - Rechazar datos incompletos, UUID inválidos, puertos fuera de rango y parámetros ajenos a la modalidad.
 - VMess no ofrece Forward Secrecy equivalente a TLS 1.3 por su propio mecanismo; TLS protege el transporte cuando se selecciona, pero no debe presentarse VMess como sustituto de protocolos modernos con garantías distintas.
-- WebSocket y HTTPUpgrade pueden presentar patrones de tráfico identificables y tienen advertencias de mantenimiento/recomendación en la documentación de Xray. Se conservan porque forman parte del alcance aprobado; el asistente debe advertirlo sin ocultar ni retirar las modalidades.
+- WebSocket y HTTPUpgrade presentan advertencias de obsolescencia/no recomendación en Xray 26.10.31; ambos transportes pueden ser retirados y Xray recomienda migrar a XHTTP H2/H3. También pueden presentar patrones de tráfico identificables. Se conservan porque forman parte del alcance aprobado; el asistente debe advertirlo sin ocultar ni retirar las modalidades.
+- Antes de solicitar parámetros, el asistente muestra el requisito operativo de sincronización horaria y el límite de desfase de 120 segundos. Para WebSocket y HTTPUpgrade muestra sus advertencias de transporte.
+- Después de validar el borrador con `xray run -test` y antes de pedir consentimiento, el asistente presenta un resumen con identidad de conexión, dirección/puerto, modalidad, transporte/seguridad, usuarios y parámetros aplicables de transporte/TLS/REALITY. El contenido de las claves privadas nunca se imprime; el resumen sólo indica su presencia/ubicación y que se almacenará cifrado.
 
 ## 8. Pruebas y criterios de aceptación
 
@@ -128,7 +130,9 @@ El almacén VMess usa la clave maestra local compartida con VLESS, pero AES-256-
 ### Asistente y persistencia
 - Recorrer individualmente las 14 combinaciones en la navegación, incluida cada elección de seguridad de gRPC, HTTPUpgrade, XHTTP y mKCP.
 - Verificar cancelación, EOF, entradas inválidas y resumen antes de guardar.
-- Confirmar que el guardado requiere consentimiento explícito.
+- Confirmar que el guardado requiere consentimiento explícito después de mostrar el resumen completo.
+- Confirmar los avisos de reloj (120 segundos), WebSocket y HTTPUpgrade.
+- Confirmar que el resumen no revela material secreto TLS/REALITY.
 - Confirmar cifrado/aislamiento de secretos y que los borradores no activan runtime.
 - Suite completa, sintaxis, ShellCheck, formato y `git diff --check`.
 

@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-02
-**Tarea:** correcciones aprobadas para el cierre técnico VMess; Bloque 1 ejecutado.
-**Estado:** Bloque 1 de protección VMess durante restore VLESS IMPLEMENTADO y VERIFICADO; VMess continúa pendiente de aceptación formal.
+**Tarea:** correcciones aprobadas para el cierre técnico VMess; Bloques 1 y 2 ejecutados.
+**Estado:** Bloque 1 PUBLICADO/SINCRONIZADO; Bloque 2 del asistente VMess IMPLEMENTADO y VERIFICADO en pruebas focales, publicación pendiente. VMess continúa pendiente de aceptación formal.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -44,7 +44,7 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 - Adaptador TLS reforzado: valida certificado PEM, clave privada PEM y correspondencia de claves públicas mediante `cryptography`; rechaza symlinks y archivos no regulares.
 - Casos negativos: TLS sin clave, symlink de clave, PEM inválido, certificado/clave no coincidentes, REALITY sin clave, short ID inválido, clave REALITY inválida, campos TLS en modalidad sin TLS, campos de transporte desconocidos y modelo/seguridad inconsistentes: PASS.
 - Navegación: 14/14 combinaciones VMess resueltas individualmente por el menú.
-- Suite completa anterior de VMess: 36/36 scripts PASS. La suite reejecutada tras el Bloque 1: 37/37 scripts PASS.
+- Suite completa anterior de VMess: 36/36 scripts PASS. Tras el Bloque 1: 37/37 scripts PASS. Tras el Bloque 2 se ejecutaron las pruebas focales del asistente, modelo, integración Xray y navegación: PASS; la suite completa se repetirá en el Bloque 3.
 - Controles estáticos tras Bloque 1: `bash -n` de todos los scripts Bash, `python3 -m py_compile scripts/*.py`, `./install.sh --check`, ShellCheck (`-S warning`) sobre las pruebas modificadas y `git diff --check`: PASS. shfmt no se reformateó; el criterio sigue pendiente del Bloque 4.
 
 ## 4. Límites que no bloquean el cierre de VMess
@@ -77,7 +77,7 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 
 ## 7. Siguiente acción
 
-Continuar con el Bloque 2 aprobado: advertencia de sincronización horaria VMess (máximo 120 segundos), advertencias de WS/HTTPUpgrade y resumen completo previo al guardado. Después ejecutar el Bloque 3 de pruebas y el Bloque 4 de documentación/criterio shfmt, respetando el orden del plan aprobado. VMess seguirá pendiente de aceptación formal hasta concluir la auditoría integral y revisión del propietario.
+Continuar con el Bloque 3 aprobado: ampliar pruebas de cancelación, EOF, entradas inválidas, resumen, almacenamiento, claves, ciphertext, referencias, huérfanos, symlinks y concurrencia. Después ejecutar el Bloque 4 de documentación/criterio shfmt y la auditoría integral. VMess seguirá pendiente de aceptación formal hasta concluir el proceso y revisión del propietario.
 
 No modificar `main`. No ampliar la corrección P4 más allá de la preservación VMess aprobada. No tocar runtime, firewall, puertos, certificados desplegados ni servicio.
 
@@ -95,4 +95,17 @@ No modificar `main`. No ampliar la corrección P4 más allá de la preservación
 
 ## 9. Siguiente acción permitida
 
-Continuar con el Bloque 2 aprobado: corregir el asistente VMess (advertencia de reloj, advertencias WS/HTTPUpgrade y resumen completo previo al guardado), sin ampliar el alcance. Mantener VMess pendiente de aceptación formal hasta superar todos los bloques, auditoría integral y revisión del propietario.
+Continuar con el Bloque 3 aprobado: ampliar las pruebas de cancelación, EOF, entradas inválidas, resumen, almacenamiento, claves, ciphertext, referencias, huérfanos, symlinks y concurrencia. Después ejecutar el Bloque 4 de documentación/criterio shfmt y la auditoría integral. Mantener VMess pendiente de aceptación formal hasta concluir el proceso y revisión del propietario.
+
+
+## 10. Bloque 2 — advertencias y resumen del asistente VMess
+
+**Estado:** IMPLEMENTADO y VERIFICADO en pruebas focales; pendiente publicación/sincronización.
+
+- Aviso operativo antes de pedir parámetros: sincronización de relojes cliente/servidor, desfase máximo 120 segundos.
+- Advertencia WebSocket: Xray 26.10.31 lo marca obsoleto/no recomendado y recomienda XHTTP H2/H3; se conserva por alcance aprobado.
+- Advertencia HTTPUpgrade: Xray 26.10.31 lo marca obsoleto/no recomendado, podría retirarlo y recomienda migrar a XHTTP H2/H3; también puede presentar patrones identificables. Se conserva por alcance aprobado.
+- Resumen tras `xray run -test` y antes del consentimiento: nombre/ID, dirección, puerto, modalidad, transporte/seguridad, usuarios, path/host/service/mode/header/seed y parámetros TLS/REALITY aplicables. No muestra contenido de claves privadas.
+- Se corrigió la asignación de `target` REALITY: el parámetro local de las funciones de lectura ya no oculta la variable destino del llamador.
+- `tests/vmess_assistant.sh` valida los avisos, los campos del resumen, el orden resumen→consentimiento y que no se revele material TLS/REALITY. `tests/vmess_assistant.sh`, `tests/vmess_model.sh`, `tests/xray_vmess_integration.sh` y `tests/stage2_navigation.sh`: PASS.
+- `bash -n` y ShellCheck warning de los dos archivos modificados: PASS. Suite completa posterior se ejecutará en Bloque 3.

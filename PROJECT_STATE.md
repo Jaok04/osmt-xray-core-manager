@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02 — corrección de restauración VLESS/VMess verificada; VMess pendiente de aceptación
+**Corte de estado:** 2026-11-02 — Bloques 1 y 2 de correcciones VMess implementados y verificados; publicación del Bloque 2 pendiente
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -221,3 +221,12 @@ El propietario autorizó la protección de las entradas VMess actuales durante u
 Pruebas: nuevo `tests/vless_restore_preserves_vmess.sh` cubre VMess anteriores/posteriores al backup, referencias de configuración/secreto, integridad byte a byte del almacén, colisiones, catálogo corrupto, refs rotas y fallo de escritura. `tests/vless_backup_journal_crash_matrix.sh` conserva cobertura de 32 interrupciones con catálogo VMess válido. Suite completa: 37/37 scripts PASS. `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de pruebas modificadas y `git diff --check`: PASS.
 
 Estado del incremento: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; aceptación formal específica pendiente. Commit: `c890b5b5362e17e439f198b9b8bbbdbe0af0c653`. P4 conserva su aceptación histórica para el alcance original; esta corrección posterior se registra por separado. No se creó backup operativo ni se accedió a la clave maestra real. No se modificaron runtime, servicio, firewall, puertos, certificados desplegados ni documentación normativa preliminar.
+
+
+## 11. Bloque 2 — advertencias y resumen del asistente VMess — 2026-11-02
+
+`modules/vmess_assistant.sh` muestra antes de solicitar parámetros el requisito de sincronización horaria VMess (desfase máximo 120 segundos). Añade advertencias específicas para WebSocket y HTTPUpgrade, sin retirar modalidades aprobadas. Tras `xray run -test` y antes del consentimiento de guardado, presenta un resumen de nombre/ID, dirección, puerto, modalidad, transporte/seguridad, usuarios y parámetros aplicables de transporte/TLS/REALITY. El contenido de claves privadas no se muestra; para TLS se muestra la ruta elegida, y para REALITY sólo la presencia del secreto y sus parámetros públicos.
+
+Se corrigió además una colisión de nombre local en las funciones de lectura de parámetros que impedía asignar correctamente el target REALITY. La prueba `tests/vmess_assistant.sh` ahora verifica advertencias, resumen, orden resumen-antes-de-guardar y ausencia de material secreto TLS/REALITY en la salida.
+
+Verificación focal: `tests/vmess_assistant.sh`, `tests/vmess_model.sh`, `tests/xray_vmess_integration.sh` (14/14 combinaciones y negativos) y `tests/stage2_navigation.sh` (14/14): PASS. `bash -n` y ShellCheck warning de archivos modificados: PASS. Suite completa posterior al Bloque 2 queda pendiente del Bloque 3. Estado: IMPLEMENTADO y VERIFICADO en pruebas focales; PUBLICADO/SINCRONIZADO pendiente. VMess sigue sin aceptación formal.

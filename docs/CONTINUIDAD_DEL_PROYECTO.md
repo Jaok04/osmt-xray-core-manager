@@ -282,3 +282,14 @@ Se creó `tests/vless_restore_preserves_vmess.sh` con casos de VMess anteriores 
 Estado del Bloque 1: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; commit `c890b5b5362e17e439f198b9b8bbbdbe0af0c653`. La aceptación formal específica permanece pendiente. P4 conserva su aceptación histórica para el alcance original; la corrección se registra como incremento posterior. No se creó backup operativo ni se accedió a la clave maestra real. No se tocó runtime, servicio, firewall, puertos ni certificados desplegados. La documentación normativa preliminar se mantuvo intacta.
 
 Próximo paso del plan aprobado: Bloque 2, correcciones del asistente VMess. Etapa 2 sigue ABIERTA y VMess no se considera ACEPTADO hasta completar el proceso de cierre.
+
+
+## 2026-11-02 — Bloque 2: advertencias y resumen del asistente VMess
+
+El asistente VMess ahora informa, antes de solicitar parámetros, que el desfase horario cliente/servidor no debe superar 120 segundos. Muestra una advertencia WebSocket (Xray 26.10.31 lo marca obsoleto/no recomendado y recomienda migrar a XHTTP H2/H3) y una advertencia HTTPUpgrade: Xray 26.10.31 lo marca obsoleto/no recomendado, podría retirarlo y recomienda XHTTP H2/H3; ambos transportes pueden presentar patrones identificables. Ambas modalidades se conservan conforme al alcance aprobado.
+
+Después de `xray run -test` y antes del consentimiento de guardado, se presenta el resumen de conexión: nombre/ID, dirección/puerto, modalidad, transporte/seguridad, usuarios y parámetros aplicables de transporte, TLS o REALITY. No se imprime el contenido de claves privadas. La ruta TLS se muestra como parámetro; para REALITY se indica sólo que la clave está presente y se almacenará cifrada.
+
+Durante la prueba REALITY se detectó una colisión de nombre en las funciones `connections_vmess_read*`: el parámetro local `target` ocultaba el destino del llamador al intentar capturar el target REALITY. Se renombró el parámetro local a `target_name` en las funciones de lectura; la captura REALITY y el resumen quedaron verificados.
+
+`tests/vmess_assistant.sh` cubre avisos, campos del resumen, orden previo al guardado y ausencia de material secreto TLS/REALITY. Pruebas focales `tests/vmess_assistant.sh`, `tests/vmess_model.sh`, `tests/xray_vmess_integration.sh` (14/14 y negativos) y `tests/stage2_navigation.sh` (14/14): PASS. `bash -n` y ShellCheck warning de archivos modificados: PASS. Estado Bloque 2: IMPLEMENTADO y VERIFICADO en pruebas focales; PUBLICADO/SINCRONIZADO pendiente. Suite completa se repetirá en Bloque 3.

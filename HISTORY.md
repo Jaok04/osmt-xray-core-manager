@@ -261,3 +261,12 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Próximo paso del plan aprobado: Bloque 2 del asistente VMess.
 
 - Verificación de publicación: HEAD local y `origin/design/user-identity-association-v1` coinciden en `c890b5b5362e17e439f198b9b8bbbdbe0af0c653`; árboles idénticos. `main` remoto (`656ecedc506a94a6461aee296b20871d51a38bf3`) no fue modificado.
+
+
+## 2026-11-02 — Bloque 2: advertencias y resumen del asistente VMess
+
+- Se añadió el aviso operativo de sincronización horaria VMess (máximo 120 segundos) y las advertencias específicas de WebSocket y HTTPUpgrade, conservando las modalidades aprobadas.
+- Se incorporó un resumen completo posterior a `xray run -test` y anterior al consentimiento: identidad, dirección/puerto, modalidad, transporte/seguridad, usuarios y parámetros aplicables. El contenido de claves privadas TLS/REALITY no se muestra.
+- Se corrigió una colisión de variable local en funciones de lectura que impedía asignar el target REALITY al llamador.
+- `tests/vmess_assistant.sh` valida avisos, resumen, orden resumen→consentimiento y ocultamiento de secretos. Pruebas focales VMess assistant/model/integration/navigation: PASS; Xray-core 26.10.31 validó 14/14 modalidades y negativos previstos. `bash -n` y ShellCheck warning: PASS.
+- Estado: IMPLEMENTADO y VERIFICADO en pruebas focales; PUBLICADO/SINCRONIZADO pendiente. La suite completa posterior se ejecutará en Bloque 3; VMess sigue pendiente de aceptación formal.

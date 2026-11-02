@@ -25,6 +25,7 @@ Decisiones principales:
 - La integración crea borradores y previsualizaciones temporales; no activa runtime ni cambia firewall/puertos.
 - Se exige xray run -test por combinación; la prueba de configuración no sustituye la interoperabilidad extremo a extremo.
 - Se conserva la advertencia sobre sincronización horaria VMess y sus límites de seguridad/huella de tráfico.
+- El asistente VMess presenta el desfase horario máximo de 120 segundos, advierte sobre WebSocket/HTTPUpgrade y muestra un resumen completo de revisión antes del consentimiento de guardado, sin revelar claves privadas.
 
 ## 3. Estado de implementación (actualización 2026-11-02)
 
