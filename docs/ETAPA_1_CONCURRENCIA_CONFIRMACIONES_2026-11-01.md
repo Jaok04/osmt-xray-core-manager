@@ -1,0 +1,57 @@
+# Informe de implementación — concurrencia y confirmaciones de Etapa 1
+
+**Fecha:** 01/11/2026  
+**Proyecto:** Xray Core Manager  
+**Rama destino:** `design/user-identity-association-v1`  
+**Estado:** implementado en la copia de trabajo; pendiente publicación tras validación final.
+
+## 1. Hallazgos que motivaron el cambio
+
+- `install.sh` no coordinaba su despliegue con otras operaciones del Manager ni con escrituras de usuarios/conexiones.
+- Las operaciones de instalación/actualización de dependencias y el guardado de preferencias no compartían un lock de ciclo de vida.
+- La desinstalación generaba el respaldo antes de adquirir sus locks. Por ello, el contenido respaldado podía diferir del estado protegido al momento de borrar.
+- La cancelación desde el menú de instalación Xray y la cancelación de la confirmación irreversible final no tenían pruebas directas.
+
+## 2. Cambios implementados
+
+### 2.1 Bloqueo común
+
+Nuevo `lib/operation_lock.sh` con adquisición no bloqueante, archivo de lock con modo 600, liberación explícita y rechazo de rutas con componentes simbólicos. El lock predeterminado es `/run/lock/xray-manager-lifecycle.lock`.
+
+Operaciones coordinadas: instalador, administración de Xray-core, instalación/actualización de dependencias y persistencia de preferencias. El instalador toma también el lock de integridad de usuarios/conexiones antes de inicializar o ajustar ese registro.
+
+### 2.2 Desinstalación
+
+El flujo adquiere lifecycle, uninstall, integridad y administración Xray en orden fijo y antes de crear el respaldo. Mantiene los locks durante el respaldo local, exportación opcional, resumen, confirmación irreversible y borrado. El trap de retorno libera los locks también al cancelar o fallar. El servicio, systemd, firewall y SSH siguen fuera del alcance de eliminación.
+
+### 2.3 Confirmaciones
+
+- Cancelar instalación desde el menú Xray no inicia descarga ni instalación.
+- Cancelar instalación/actualización de dependencias no ejecuta `apt-get`.
+- Cancelar la confirmación irreversible de desinstalación conserva las rutas seleccionadas y elimina el respaldo temporal de esa tentativa.
+- Se mantiene la advertencia y cancelación específica de certificados/claves privadas.
+
+## 3. Pruebas añadidas o ampliadas
+
+- `tests/operation_lock.sh`: exclusión mutua, liberación, modo 600 y rechazo de symlinks.
+- `tests/install.sh`: contención de lock lifecycle y lock de integridad antes de desplegar.
+- `tests/stage1_dependencies.sh`: contención lifecycle sin llamadas apt.
+- `tests/stage1_settings.sh`: bloqueo de escritura de preferencias durante otra operación lifecycle.
+- `tests/xray_admin.sh`: cancelación del menú y contención lifecycle en administración Xray.
+- `tests/uninstall.sh`: contención lifecycle/data/Xray, respaldo bajo locks y cancelación final sin borrado.
+
+## 4. Validación
+
+- 20/20 scripts `tests/*.sh`: PASS.
+- `bash -n` en bin, config, lib, modules, install y tests: PASS.
+- ShellCheck `-S warning -x` en el proyecto: PASS.
+- shfmt en archivos de producción modificados y pruebas con estilo homogéneo: PASS; `tests/uninstall.sh` conserva formato histórico mixto.
+- `./install.sh --check`: PASS, sin modificaciones.
+
+Las pruebas de instalación/desinstalación y contención utilizan prefijos y fixtures temporales. No se ejecutó `apt-get`, no se instaló ni desinstaló Xray real, no se modificaron unidades systemd, firewall, SSH ni datos operativos. Xray permaneció inactivo.
+
+## 5. Estado de Etapa 1
+
+A11 (confirmaciones), U14 (concurrencia de desinstalación) y N03 (confirmaciones destructivas) pasan a IMPLEMENTADO para las operaciones internas del Manager cubiertas por estos locks.
+
+Etapa 1 continúa **PARCIAL — no certificada**. Siguen pendientes M04 (estado explícito de autostart deshabilitado), M06 (fallo independiente de cada proveedor del encabezado) y validaciones operativas reales en VPS desechable para instalación Xray, dependencias, preferencias y desinstalación.
