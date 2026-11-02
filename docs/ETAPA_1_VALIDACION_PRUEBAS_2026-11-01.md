@@ -7,7 +7,7 @@
 
 ## Resultado
 
-- **16/16 suites** `tests/*.sh`: aprobadas.
+- **20/20 suites** `tests/*.sh`: aprobadas.
 - Sintaxis Bash de `bin`, `config`, `lib`, `modules`, `scripts` y `tests`: aprobada.
 - Compilación de `scripts/users_v2_cutover.py`: aprobada con `PYTHONPYCACHEPREFIX` temporal fuera del repositorio.
 
@@ -25,8 +25,9 @@
 
 `tests/uninstall.sh` verifica:
 
-- Contención del bloqueo de integridad de usuarios/conexiones.
-- Contención del bloqueo de administración Xray.
+- Contención de los bloqueos de ciclo de vida, integridad de usuarios/conexiones y administración Xray antes de crear el respaldo.
+- Cancelación de la confirmación irreversible final sin eliminar rutas.
+- El respaldo se genera mientras se mantienen los bloqueos de las operaciones internas que podrían modificar su contenido.
 - Advertencia específica de certificados/claves privadas y cancelación sin borrar la clave fixture.
 - Prueba individual de las nueve categorías: `xray-config`, `profiles`, `users`, `connections`, `domains`, `certificates`, `backups`, `preferences` y `logs` (incluye `history`).
 - Políticas `keep`, `all` y `selected` en los tres alcances (`xray`, `manager`, `both`), con fixtures temporales.
@@ -42,7 +43,7 @@ La prueba de integración VLESS produjo advertencias de Xray sobre la deprecaci�
 
 ## Límites y pendientes
 
-No se ejecutaron `apt-get`, instalación/reinstalación real de Xray, modificación de systemd, firewall o SSH, ni desinstalación de componentes reales. No se migraron datos operativos. Siguen pendientes la matriz exhaustiva de navegación y confirmaciones, concurrencia con otros procesos Manager y validación en VPS desechable.
+No se ejecutaron `apt-get`, instalación/reinstalación real de Xray, modificación de systemd, firewall o SSH, ni desinstalación de componentes reales. No se migraron datos operativos. Siguen pendientes M04/M06 y la validación operativa en VPS desechable.
 
 ## Actualización de desinstalación — 01/11/2026
 
@@ -51,3 +52,12 @@ Se amplió `tests/uninstall.sh` con pruebas individuales de las nueve categoría
 Las pruebas usan exclusivamente fixtures temporales. No se ejecutó la desinstalación real de Xray ni del Manager.
 
 **Dictamen:** Etapa 1 continúa **PARCIAL — no certificada**.
+
+
+## Actualización — bloqueos y confirmaciones (01/11/2026)
+
+Se incorporó `lib/operation_lock.sh` con locks no bloqueantes, permisos privados y rechazo de rutas simbólicas. El bloqueo `/run/lock/xray-manager-lifecycle.lock` coordina instalador, administración Xray, dependencias y guardado de preferencias. El instalador coordina además el lock de integridad de datos.
+
+La desinstalación toma lifecycle, uninstall, integridad y Xray antes de crear el respaldo y los conserva durante toda la operación. Pruebas de fixtures verifican contención de cada lock y cancelación de la confirmación irreversible sin borrado.
+
+La batería completa pasó 20/20. Bash syntax y ShellCheck pasaron en el proyecto; shfmt pasó en archivos de producción modificados y pruebas con estilo homogéneo. `tests/uninstall.sh` conserva formato histórico mixto. `./install.sh --check` pasó sin modificar el sistema. No se ejecutó instalación real ni desinstalación real.
