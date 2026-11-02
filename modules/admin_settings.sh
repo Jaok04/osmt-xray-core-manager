@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # shellcheck disable=SC2034
 # Preferencias persistentes de la interfaz y rutas administradas.
+# shellcheck disable=SC1091
+. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../lib" && pwd)/operation_lock.sh"
 
 manager_preferences_directory_is_safe() {
 	local directory="$1"
 	[[ "$directory" == /etc/xray-manager && "$MANAGER_PREFERENCES_FILE" == "$directory/preferences.conf" && ! -L "$directory" ]]
 }
 
-manager_settings_save() {
+manager_settings_save_unlocked() {
 	local directory temporary
 	directory="$(dirname "$MANAGER_PREFERENCES_FILE")"
 	manager_preferences_directory_is_safe "$directory" || return 1
@@ -43,6 +45,17 @@ manager_settings_save() {
 	else
 		unset EDITOR VISUAL
 	fi
+}
+
+manager_settings_save() {
+	local lifecycle_fd result
+	if ! manager_lock_acquire "${XRAY_MANAGER_LIFECYCLE_LOCK:-/run/lock/xray-manager-lifecycle.lock}" lifecycle_fd; then
+		printf 'Hay otra operación de ciclo de vida del Manager en curso; no se guardaron las preferencias.\n' >&2
+		return 1
+	fi
+	if manager_settings_save_unlocked; then result=0; else result=$?; fi
+	manager_lock_release "$lifecycle_fd"
+	return "$result"
 }
 
 manager_settings_path_input() {
