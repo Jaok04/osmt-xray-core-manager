@@ -82,7 +82,7 @@ No se modificaron:
 - Catálogo de conexiones o almacén persistente VMess/VLESS.
 - Certificados desplegados o claves permanentes.
 
-Todos los archivos de prueba se generaron bajo `/run/xray-manager/vmess-vm47/`; se retirarán tras registrar esta evidencia. No se guardó UUID, clave privada, certificado ni configuración temporal en Git.
+Todos los archivos de prueba se generaron bajo `/run/xray-manager/vmess-vm47/` y se retiraron tras registrar esta evidencia. Se comprobó que el directorio temporal ya no existe. No se guardó UUID, clave privada, certificado ni configuración temporal en Git.
 
 ## 8. Conclusión
 
