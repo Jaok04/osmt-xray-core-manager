@@ -133,3 +133,12 @@ P2: `tests/*.sh` 25/25 PASS; pruebas específicas incluyen interrupción antes d
 ### P3 — integración de persistencia segura VLESS (implementada y verificada)
 
 Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM de claves privadas TLS/REALITY, referencias versionadas en catálogo/configuración y recuperación temporal para validación. Nuevo `scripts/vless_prepare_config.py`; `vless_config_store.py` ahora admite secretos cifrados y auditoría de blobs. El asistente deja de pasar la clave REALITY como `jq --arg` y usa `--rawfile`. Pruebas focales REALITY/TLS/recuperación PASS. Borradores no se activan. Suite completa `tests/*.sh` 25/25 PASS; `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt y `git diff --check` PASS. Clave maestra real de VPS no generada. P3 aún no publicada en GitHub.
+
+## 2026-11-02 — Inicio P4 backup/recuperación VLESS
+
+- Aprobado contrato técnico P4.
+- Añadido `scripts/vless_backup.py` con backup de datos separado de clave maestra, manifiesto y hashes, paquete de recuperación scrypt/AES-256-GCM, verificación y restauración con confirmación, staging y journal.
+- Añadidos `modules/vless_backup.sh` e integración del menú de conexiones.
+- Pruebas focales de backup/manipulación, restauración aislada y recuperación scrypt/AES-GCM con rechazo de contraseña incorrecta PASS; suite completa 28/28 PASS.
+- P4 permanece abierta por resolución del journal tras interrupción abrupta y pruebas end-to-end de recuperación/restore de secretos TLS/REALITY.
+- No se creó backup operativo ni se accedió a la clave maestra real.

@@ -15,7 +15,7 @@ connections_menu() {
 		ui_clear
 		ui_title "GESTIÓN DE PROTOCOLOS Y CONEXIONES"
 		printf '\n  PROTOCOLOS PRINCIPALES\n  [1] VLESS\n  [2] VMess\n  [3] Trojan\n  [4] Shadowsocks\n  [5] Hysteria2\n'
-		printf '\n  PROTOCOLOS OPCIONALES\n  [6] Protocolos opcionales\n  [0] Volver al menú principal\n\n'
+		printf '\n  PROTOCOLOS OPCIONALES\n  [6] Protocolos opcionales\n  [7] Backup y recuperación VLESS\n  [0] Volver al menú principal\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
 			1) connections_family_menu vless ;;
@@ -24,6 +24,7 @@ connections_menu() {
 			4) connections_family_menu shadowsocks ;;
 			5) connections_family_menu hysteria2 ;;
 			6) connections_optional_menu ;;
+			7) vless_backup_menu ;;
 			0) return 0 ;;
 			*) printf '\nOpción no válida.\n'; ui_pause ;;
 		esac

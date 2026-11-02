@@ -157,3 +157,13 @@ P2: `tests/*.sh` 25/25 PASS; pruebas específicas incluyen interrupción antes d
 ### P3 — integración de persistencia segura VLESS (implementada y verificada)
 
 Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM de claves privadas TLS/REALITY, referencias versionadas en catálogo/configuración y recuperación temporal para validación. Nuevo `scripts/vless_prepare_config.py`; `vless_config_store.py` ahora admite secretos cifrados y auditoría de blobs. El asistente deja de pasar la clave REALITY como `jq --arg` y usa `--rawfile`. Pruebas focales REALITY/TLS/recuperación PASS. Borradores no se activan. Suite completa `tests/*.sh` 25/25 PASS; `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt y `git diff --check` PASS. Clave maestra real de VPS no generada. P3 aún no publicada en GitHub.
+
+### P4 — backup y recuperación segura VLESS (implementación inicial)
+
+Se añadieron `scripts/vless_backup.py`, `modules/vless_backup.sh`, `tests/vless_backup.sh`, `tests/vless_backup_restore.sh` y `docs/P4_BACKUP_RECUPERACION_VLESS.md`. El menú de conexiones ahora expone Backup y recuperación VLESS.
+
+El backup de datos separa blobs cifrados y clave maestra; genera manifiesto y SHA256SUMS; verifica rutas, tipos, tamaños y hashes. El paquete de recuperación cifra la clave con scrypt + AES-256-GCM, contraseña interactiva y asociación por backup_id. La restauración exige confirmación, autentica blobs con la clave, prepara staging, conserva directorios previos y usa un journal para fallar cerrado ante interrupción abrupta.
+
+Pruebas iniciales: backup/verificación/manipulación y restauración aislada sin secretos PASS. Suite completa `tests/*.sh`: 28/28 PASS antes de las últimas correcciones menores del script. Sintaxis, ShellCheck de módulos, py_compile y diff PASS. No se creó backup operativo ni se accedió a la clave maestra real.
+
+**P4 no está completada ni aceptada:** falta recuperación automática/controlada del journal tras corte abrupto y pruebas end-to-end de restore de secretos TLS/REALITY. La recuperación scrypt/AES-GCM con contraseña incorrecta/correcta ya tiene prueba aislada. Ver `docs/P4_BACKUP_RECUPERACION_VLESS.md`.

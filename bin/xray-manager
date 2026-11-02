@@ -40,6 +40,8 @@ source "$APP_ROOT/modules/vless_xray_26_10_31.sh"
 # shellcheck disable=SC1091
 source "$APP_ROOT/modules/vless_assistant.sh"
 # shellcheck disable=SC1091
+source "$APP_ROOT/modules/vless_backup.sh"
+# shellcheck disable=SC1091
 source "$APP_ROOT/modules/xray_admin.sh"
 # shellcheck disable=SC1091
 source "$APP_ROOT/modules/xray_service.sh"
