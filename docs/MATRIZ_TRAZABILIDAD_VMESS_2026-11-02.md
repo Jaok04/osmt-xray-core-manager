@@ -6,7 +6,7 @@
 
 | ID | Requisito / componente | Diseño / referencia | Implementación | Prueba / evidencia | Estado |
 |---|---|---|---|---|---|
-| VM-01 | Acceso desde menú Gestión de protocolos | Etapa 2 §2 | connections_menu | suite 39/39; navegación | VERIFICADO |
+| VM-01 | Acceso desde menú Gestión de protocolos | Etapa 2 §2 | connections_menu | suite 40/40; navegación | VERIFICADO |
 | VM-02 | Cinco principales y tres modalidades adicionales del menú VMess | Etapa 2 §3.2 | `connections_family_menu` | `stage2_navigation.sh` | VERIFICADO |
 | VM-03 | 14 combinaciones transporte/seguridad aprobadas | Diseño VMess §3; decisión HTTPUpgrade-TLS | `vmess_model.sh`, adaptador, catálogo | Xray 14/14; navegación 14/14 | VERIFICADO |
 | VM-04 | VMess-WS claramente sin TLS adicional | Etapa 2 §3.2; decisión de etiquetas | menú y `connections_mode_label` | aserciones de menú/listado | VERIFICADO |
@@ -43,9 +43,9 @@
 | VM-35 | Coherencia revisión de catálogo ↔ referencia ↔ schema | diseño de persistencia versionada y decisión correctiva autorizada | store/read/audit validan revisión, schema y referencia de secreto | pruebas de revision/schema catálogo/documento/secreto y metadatos parciales | VERIFICADO EN FIXTURES |
 | VM-36 | Audit de refs rotas, huérfanos, symlinks y metadatos versionados | diseño VMess §8 | acción audit | refs rotas, huérfanos, symlinks, revisiones/schema incoherentes; sin borrado automático | VERIFICADO EN FIXTURES |
 | VM-37 | Lista numerada, selección y detalle | Etapa 2 §5.2 | `connections_manage_existing` | `stage2_existing.sh` / suite | VERIFICADO |
-| VM-38 | Lista vacía informativa y [0] volver | Etapa 2 §5.3-6 | `connections_manage_existing` | revisión de implementación; falta caso focal específico | IMPLEMENTADO; PRUEBA ESPECÍFICA PENDIENTE |
-| VM-39 | Navegación [0], entradas inválidas y errores recuperables | Etapa 2 §6 | menú/administrador | navegación/suite general | VERIFICADO PARCIAL |
-| VM-40 | Confirmación de acción destructiva | Etapa 2 §6 | eliminación de borrador | suite general `uninstall`/stage2 | VERIFICADO PARCIAL |
+| VM-38 | Lista vacía informativa y [0] volver | Etapa 2 §5.3-6 | `connections_manage_existing` | `vmess_navigation_edge_cases.sh`: mensaje, [0] y catálogo intacto | VERIFICADO EN FIXTURES |
+| VM-39 | Navegación [0], entradas inválidas y errores recuperables | Etapa 2 §6 | menú/administrador | `vmess_navigation_edge_cases.sh`: entradas inválidas en lista/administrador, recuperación y retorno sin cambios | VERIFICADO EN FIXTURES |
+| VM-40 | Confirmación de acción destructiva | Etapa 2 §6 | eliminación de borrador | `vmess_navigation_edge_cases.sh`: frase incorrecta cancela; `ELIMINAR` exacto elimina | VERIFICADO EN FIXTURES |
 | VM-41 | Preservar VMess en restauración VLESS | autorización específica y P4 §9 | `vless_backup.py` | `vless_restore_preserves_vmess.sh` | VERIFICADO |
 | VM-42 | Backup/restore VMess independiente | fuera del alcance aprobado | no implementado | no aplica | NO APLICABLE — requiere diseño/autorización |
 | VM-43 | Identidades globales y asociaciones | Etapa 3 | usuarios VMess manuales | no corresponde a Etapa 2 | NO APLICABLE — Etapa 3 |
@@ -61,4 +61,9 @@
 - La validación `xray run -test` no equivale a interoperabilidad ni conectividad extremo a extremo.
 - La limitación de rollback transaccional está documentada y no debe describirse como función implementada.
 - VM-42 y VM-43 permanecen fuera del alcance actual.
-- La Etapa 2 sigue ABIERTA; esta matriz sólo cubre VMess y sus integraciones directas. F-01 a F-04 se corrigieron en el bloque autorizado del 2026-11-02; F-05 y los límites operativos/funcionales identificados permanecen sin verificar o pendientes según su fila.
+- La Etapa 2 sigue ABIERTA; esta matriz sólo cubre VMess y sus integraciones directas. F-01 a F-04 están corregidos; VM-38/39/40 se verificaron con pruebas focales. F-05 live y VM-47 conectividad cliente-servidor permanecen NO VERIFICADOS; VM-48 requiere aceptación formal.
+
+
+## Revalidación controlada en VPS de desarrollo — 2026-11-02
+
+Se agregó `tests/vmess_navigation_edge_cases.sh`: VM-38 lista vacía y `[0]`; VM-39 entradas inválidas recuperables en lista y administrador; VM-40 cancelación con confirmación incorrecta y eliminación sólo con `ELIMINAR`. Los tres casos pasaron. La suite completa `tests/*.sh` pasó 40/40. F-05 live continúa NO VERIFICADO porque no se inicializaron `/etc/xray-manager/keys/master.key` ni el almacén real VMess.

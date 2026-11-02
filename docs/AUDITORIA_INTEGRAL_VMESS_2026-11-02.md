@@ -4,7 +4,7 @@
 **Proyecto:** Xray Core Manager
 **Etapa:** 2 — Gestión de protocolos y conexiones
 **Alcance de esta revisión:** módulo VMess y sus integraciones directas. Esta auditoría no certifica la Etapa 2 completa.
-**Resultado actualizado:** **NO APTO PARA ACEPTACIÓN FORMAL** — F-01 a F-04 resueltos y revalidados en fixtures; F-05 live sigue no verificado y permanecen límites de cobertura registrados en la matriz.
+**Resultado actualizado:** **NO APTO PARA ACEPTACIÓN FORMAL** — F-01 a F-04 resueltos; VM-38/39/40 verificados con pruebas focales; F-05 live y conectividad cliente-servidor siguen no verificados.
 
 ## 1. Línea base y autoridad
 
@@ -169,15 +169,24 @@ No se creó almacén/clave maestra live; no se modificó runtime, firewall, puer
 | Diseño | APROBADO |
 | Código base | IMPLEMENTADO |
 | Compatibilidad estática Xray | VERIFICADA 14/14 |
-| Suite de regresión | VERIFICADA 39/39 |
+| Suite de regresión | VERIFICADA 40/40 (revalidación controlada 2026-11-02) |
 | Auditoría integral del módulo | F-01 a F-04 RESUELTOS; F-05 live NO VERIFICADO; otros límites explícitos en matriz |
 | Documentación de auditoría | DOCUMENTADA en este expediente y matriz |
 | Publicación | Bloque correctivo y expediente publicados en d2d33a3 |
-| Sincronización | HEAD VPS/local/remoto verificado: 0a39af5c2aa35bf853c05f3a864bcc362d86bf67 |
+| Sincronización | Revalidación local en VPS de desarrollo sobre HEAD `4c87557e0aff4166c540c633effe5cb6dac40096`; nueva prueba focal pendiente de publicar |
 | Aceptación formal del propietario | PENDIENTE |
 
-**Conclusión:** F-01 a F-04 quedaron corregidos y sus pruebas focales/regresión pasaron. VMess todavía NO está ACEPTADO: F-05 live permanece no verificado; VM-38 conserva prueba específica pendiente y VM-39/VM-40 mantienen cobertura parcial según la matriz; tampoco se ejecutó conectividad cliente-servidor. La Etapa 2 continúa ABIERTA por VMess y por los demás protocolos y opciones aún no implementados/auditados.
+**Conclusión:** F-01 a F-04 están corregidos; VM-38/39/40 pasaron pruebas focales y la suite completa pasó 40/40. VMess todavía NO está ACEPTADO: F-05 live permanece no verificado y tampoco se ejecutó conectividad cliente-servidor. La Etapa 2 continúa ABIERTA por VMess y por los demás protocolos y opciones aún no implementados/auditados.
 
 ## 8. Siguiente paso permitido
 
-El bloque correctivo F-01 a F-04 está ejecutado. Siguiente paso independiente: solicitar autorización para una validación live controlada de F-05 y decidir cómo completar las pruebas pendientes de VM-38/VM-39/VM-40. No crear almacén/clave real, activar runtime, tocar puertos/firewall/servicio ni iniciar Trojan sin autorización específica y aceptación formal de VMess.
+El bloque correctivo F-01 a F-04 está ejecutado y VM-38/39/40 están verificados en fixtures. Siguiente paso independiente: obtener autorización específica para inicializar la clave maestra y el almacén VMess en la VPS de desarrollo y ejecutar F-05 live controlado. No activar runtime, tocar puertos/firewall/servicio ni iniciar Trojan sin autorización específica y aceptación formal de VMess.
+
+
+## 2026-11-02 — Revalidación controlada en VPS de desarrollo
+
+El propietario autorizó usar la VPS de desarrollo para pruebas controladas. Se verificó el acceso root y que el repositorio estaba en `design/user-identity-association-v1`, HEAD `4c87557e0aff4166c540c633effe5cb6dac40096`, sin cambios versionados pendientes. Xray no está instalado en esa VPS y el servicio permanece inactivo; las pruebas de integración utilizaron el binario de validación Xray 26.10.31 disponible en caché.
+
+Se añadió `tests/vmess_navigation_edge_cases.sh`: VM-38 lista vacía y `[0]`; VM-39 entradas inválidas recuperables en lista y administrador; VM-40 cancelación y confirmación destructiva exacta. Los tres casos pasaron. La suite completa `tests/*.sh` pasó 40/40, incluidas colisiones TCP/UDP; la primera ejecución de `port_collisions.sh` falló transitoriamente en la comprobación UDP, pero su repetición aislada y la suite completa posterior pasaron.
+
+No se inicializó `/etc/xray-manager/keys/master.key`, no se creó `/var/lib/xray-manager/vmess`, no se añadió conexión live y no se modificó runtime, firewall, puertos ni servicio. F-05 sigue NO VERIFICADO; VM-47 conectividad cliente-servidor sigue NO VERIFICADO. VMess no está aceptado y Etapa 2 permanece ABIERTA.

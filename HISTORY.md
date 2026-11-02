@@ -322,3 +322,13 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Publicación y sincronización del bloque correctivo y su expediente: commit d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7 en design/user-identity-association-v1; HEAD local/remoto coincidente, main intacta.
 
 - Referencias finales del HEAD y la sincronización documental actualizadas en commit 0a39af5c2aa35bf853c05f3a864bcc362d86bf67; rama autorizada y VPS coincidentes, main intacta.
+
+
+## 2026-11-02 — Revalidación controlada en VPS de desarrollo
+
+- Se confirmó acceso root a la VPS de desarrollo `/opt/xray-manager`, rama `design/user-identity-association-v1`, HEAD `4c87557e0aff4166c540c633effe5cb6dac40096`; árbol versionado limpio.
+- Se creó `tests/vmess_navigation_edge_cases.sh`: VM-38 lista vacía y `[0]`; VM-39 entradas inválidas recuperables en lista/administrador; VM-40 cancelación y confirmación destructiva exacta. Todos PASS.
+- Suite completa `tests/*.sh`: 40/40 PASS. Xray 26.10.31 validó 14/14 modalidades y 16 casos negativos PASS. Sintaxis Bash, py_compile, install check y diff check PASS.
+- `tests/port_collisions.sh` falló en una primera ejecución parcial en el caso UDP; la repetición aislada y la suite completa posterior pasaron. Se registra el evento sin ocultarlo.
+- No se creó clave maestra ni almacén VMess live; no se añadió conexión live. Xray no está instalado en la VPS de desarrollo, el test de integración utilizó el binario de validación en caché. Servicio inactivo; no se tocó runtime, firewall, puertos ni servicios. F-05 y conectividad cliente-servidor siguen NO VERIFICADOS; VMess no aceptado; Etapa 2 abierta.
+- Nuevo test pendiente de publicar y sincronizar: `tests/vmess_navigation_edge_cases.sh`. `scripts/__pycache__/` permanece sin seguimiento y no se elimina.

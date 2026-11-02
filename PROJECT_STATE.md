@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02 — bloque correctivo F-01–F-04 corrección publicada en d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7; continuidad sincronizada hasta 0a39af5c2aa35bf853c05f3a864bcc362d86bf67; suite 39/39; F-05 live pendiente; VMess no aceptado
+**Corte de estado:** 2026-11-02 — F-01–F-04 corregidos; VM-38/39/40 verificados; suite 40/40; F-05 live y conectividad cliente-servidor pendientes; VMess no aceptado
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -128,7 +128,7 @@ Se documentan resultados PASS para navegación, administración de borradores, V
 ## 7. Pendientes principales de Etapa 2
 
 - Resolver y formalizar las discrepancias normativas indicadas.
-- VMess: base implementada/publicada; suite 38/38 y Xray 14/14 PASS en esta auditoría, pero el cierre está BLOQUEADO por F-01 a F-04 y la validación operativa live F-05 permanece NO VERIFICADA. No solicitar aceptación todavía.
+- VMess: base implementada/publicada; estado vigente y revalidación documentados en `docs/PUNTO_CONTROL_ACTUAL.md`, `docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md` y `docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md`. Suite actual 40/40; VM-38/39/40 PASS; F-05 live y conectividad cliente-servidor NO VERIFICADOS. No solicitar aceptación todavía.
 - La restauración VLESS conserva las entradas VMess vigentes y su almacén aislado; el backup/restore VMess independiente requiere diseño y aprobación separados.
 - Integrar usuarios VMess con asociaciones globales de Etapa 3 solo cuando se aborde esa integración conforme a su especificación.
 - Definir e implementar modelos, generadores y validadores para Trojan, Shadowsocks e Hysteria2.
@@ -269,4 +269,11 @@ Se implementó el alcance autorizado: clave TLS root:root 0600 y un solo hardlin
 
 Pruebas: suite completa 39/39 PASS; Xray 14/14 modalidades y 16 casos negativos PASS; pruebas focales VMess PASS. bash -n, py_compile, ShellCheck de todos los archivos modificados, install.sh --check, shfmt de los cuatro archivos definidos en README y git diff --check PASS. ShellCheck global conserva warning preexistente SC2174 en tests/vless_backup_restore.sh:7, fuera del alcance y sin cambios.
 
-F-01 a F-04 RESUELTOS y VERIFICADOS EN FIXTURES. F-05 NO VERIFICADO; VM-38 prueba específica pendiente y VM-39/VM-40 cobertura parcial. No hubo prueba cliente-servidor real. VMess NO ACEPTADO; Etapa 2 ABIERTA. No se creó almacén/clave real ni se tocó runtime/firewall/puertos/servicio; main intacta.
+F-01 a F-04 RESUELTOS y VERIFICADOS EN FIXTURES. VM-38/39/40 verificados con prueba focal. F-05 NO VERIFICADO; no hubo prueba cliente-servidor real. VMess NO ACEPTADO; Etapa 2 ABIERTA. No se creó almacén/clave real ni se tocó runtime/firewall/puertos/servicio; main intacta.
+
+
+## Revalidación controlada VMess — 2026-11-02
+
+En la VPS de desarrollo, sobre HEAD `4c87557e0aff4166c540c633effe5cb6dac40096`, se agregó `tests/vmess_navigation_edge_cases.sh`. VM-38/39/40 pasan. Suite completa `tests/*.sh`: 40/40 PASS; Xray 26.10.31 valida 14/14 modalidades y 16 casos negativos. La primera ejecución parcial de la prueba de colisiones tuvo un fallo UDP transitorio; repetición aislada y suite completa posterior PASS.
+
+F-05 live no se ejecutó: no se creó `/etc/xray-manager/keys/master.key`, almacén VMess real ni conexión persistente. Xray no está instalado en esta VPS; se utilizó el binario de validación en caché. Servicio inactivo y sin cambios en runtime/firewall/puertos/servicio. VM-47 conectividad cliente-servidor sigue NO VERIFICADO. VMess no aceptado; Etapa 2 abierta.

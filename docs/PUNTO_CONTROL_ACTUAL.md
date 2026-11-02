@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-02
-**Tarea:** bloque correctivo autorizado F-01 a F-04 y revalidación de VMess.
-**Estado vigente:** F-01 a F-04 CORREGIDOS y VERIFICADOS en fixtures; suite 39/39 PASS; Xray 14/14 y 16 negativos PASS. F-05 live NO VERIFICADO. VMess NO está aceptado; Etapa 2 ABIERTA.
+**Tarea:** revalidación controlada VMess en VPS de desarrollo; cobertura VM-38/39/40.
+**Estado vigente:** F-01 a F-04 CORREGIDOS; VM-38/39/40 VERIFICADOS en fixtures; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS. F-05 live y conectividad cliente-servidor NO VERIFICADOS. VMess NO está aceptado; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -11,7 +11,7 @@
 - Repositorio: `Jaok04/xray-core-manager`.
 - Rama autorizada: `design/user-identity-association-v1`.
 - Proyecto VPS: `/opt/xray-manager`.
-- HEAD de partida de la auditoría: df632aee5d8139c721b81a6d65f14d93f7676226; corrección publicada en d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7 y documentación de continuidad sincronizada hasta 0a39af5c2aa35bf853c05f3a864bcc362d86bf67.
+- HEAD de partida de la auditoría histórica: df632aee5d8139c721b81a6d65f14d93f7676226; bloque correctivo y continuidad publicados hasta `4c87557e0aff4166c540c633effe5cb6dac40096`. Revalidación actual ejecutada sobre ese HEAD.
 - Commit Bloque 1: `c890b5b5362e17e439f198b9b8bbbdbe0af0c653` (`fix(vless): preserve current VMess entries on restore`), publicado y sincronizado.
 - Remoto: `git@github.com-xray-core-manager:Jaok04/xray-core-manager.git`.
 - Deploy Key SSH dedicada con permiso de escritura configurado.
@@ -44,8 +44,8 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 - Adaptador TLS reforzado: valida certificado PEM, clave privada PEM y correspondencia de claves públicas mediante `cryptography`; rechaza symlinks y archivos no regulares.
 - Casos negativos: TLS sin clave, symlink de clave, PEM inválido, certificado/clave no coincidentes, REALITY sin clave, short ID inválido, clave REALITY inválida, campos TLS en modalidad sin TLS, campos de transporte desconocidos y modelo/seguridad inconsistentes: PASS.
 - Navegación: 14/14 combinaciones VMess resueltas individualmente por el menú.
-- Suite completa anterior de VMess: 36/36 scripts PASS. Tras el Bloque 1: 37/37 scripts PASS. Tras el Bloque 3: suite completa `tests/*.sh` 38/38 PASS, incluyendo las pruebas ampliadas de asistente y persistencia.
-- Controles estáticos tras Bloque 3: `bash -n` de todos los scripts Bash, `python3 -m py_compile scripts/*.py`, `./install.sh --check`, ShellCheck (`-S warning`) sobre los archivos modificados y `git diff --check`: PASS. shfmt no se reformateó; el criterio sigue pendiente del Bloque 4.
+- Suites históricas anteriores: 36/36, 37/37, 38/38 y 39/39 PASS. Revalidación actual: `tests/*.sh` 40/40 PASS, incluida `tests/vmess_navigation_edge_cases.sh`.
+- Controles estáticos históricos: `bash -n`, `python3 -m py_compile scripts/*.py`, `./install.sh --check`, ShellCheck y `git diff --check`: PASS. La revalidación actual también pasó ShellCheck y `shfmt -d -i 4 -ci` para la nueva prueba focal.
 
 ## 4. Límites que no bloquean el cierre de VMess
 
@@ -70,14 +70,14 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 | Estado | Resultado |
 |---|---|
 | IMPLEMENTADO | Sí — base VMess y correcciones F-01 a F-04 implementadas |
-| VERIFICADO | Pruebas focales y suite 39/39 PASS; Xray 14/14 y 16 negativos PASS. F-05 live no verificado; VM-38 prueba específica pendiente y VM-39/40 cobertura parcial |
-| PUBLICADO | Base, Bloques 1–4 y bloque correctivo F-01–F-04 publicados; commit d2d33a3 |
-| SINCRONIZADO | HEAD VPS/local/remoto coincidente: 0a39af5c2aa35bf853c05f3a864bcc362d86bf67 |
+| VERIFICADO | Suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-38/39/40 focal PASS. F-05 live y conectividad cliente-servidor pendientes |
+| PUBLICADO | Base y bloque correctivo publicados hasta HEAD `4c87557e0aff4166c540c633effe5cb6dac40096`; nueva prueba focal no publicada |
+| SINCRONIZADO | HEAD de partida VPS/local/remoto: `4c87557e0aff4166c540c633effe5cb6dac40096`; publicación de esta revalidación pendiente |
 | ACEPTADO | NO — F-05 live y cobertura de auditoría restante pendientes |
 
 ## 7. Siguiente acción
 
-F-01 a F-04 están corregidos y revalidados. Siguiente paso independiente: solicitar autorización para validar F-05 en un entorno live controlado y resolver cobertura pendiente de VM-38/39/40. No aceptar VMess ni iniciar Trojan.
+VM-38/39/40 ya están verificados. Siguiente paso: solicitar autorización específica para inicializar la clave maestra y el almacén VMess en la VPS de desarrollo y validar F-05 live. No aceptar VMess ni iniciar Trojan.
 
 No modificar `main`. No ampliar la corrección P4 más allá de la preservación VMess aprobada. No tocar runtime, firewall, puertos, certificados desplegados ni servicio.
 
@@ -131,3 +131,10 @@ Presentar F-01 a F-04 al propietario para autorización de corrección y decisi�
 - `tests/stage2_navigation.sh` añade comprobaciones de ambas etiquetas tanto en menú como en función de listado.
 - `README.md` documenta `shfmt -d -i 4 -ci` para archivos seleccionados. Se inspeccionaron las convenciones existentes y el diff potencial; no se reformatearon archivos ni se amplió el alcance de formato.
 - Pruebas focales y suite completa 38/38 PASS; controles estáticos y shfmt baseline PASS. Cambios publicados y sincronizados. Pendiente: auditoría integral documentada de VMess.
+
+
+## 12. Revalidación controlada VMess — 2026-11-02
+
+La VPS de desarrollo se confirmó accesible como root; rama `design/user-identity-association-v1`, HEAD de partida `4c87557e0aff4166c540c633effe5cb6dac40096`. Se agregó `tests/vmess_navigation_edge_cases.sh`, con VM-38/39/40 focales PASS. Suite completa `tests/*.sh`: 40/40 PASS. `port_collisions.sh` falló en UDP durante una primera ejecución aislada dentro de la suite parcial; repetición aislada y suite completa posterior pasaron.
+
+Preflight live de la VPS de desarrollo: `/etc/xray-manager/keys/master.key` y `/var/lib/xray-manager/vmess/` no existen; catálogo de conexiones válido y vacío; servicio Xray inactivo. F-05 no se ejecutó: no se creó clave maestra real, almacén VMess live ni conexión persistente. Xray no está instalado localmente; la integración usó binario de validación en caché. Servicio inactivo; sin cambios de runtime, firewall, puertos o servicios. VM-47 conectividad real no verificada.

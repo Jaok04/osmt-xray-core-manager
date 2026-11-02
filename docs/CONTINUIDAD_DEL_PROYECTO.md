@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Estado vigente 2026-11-02:** bloque correctivo F-01–F-04 implementado y revalidado; suite 39/39 PASS; Xray 14/14 y 16 casos negativos PASS. F-05 live NO VERIFICADO; VMess NO está aceptado y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. No iniciar Trojan. Los hitos históricos posteriores conservan su contexto y no sustituyen este estado vigente.
+> **Estado vigente 2026-11-02:** F-01–F-04 corregidos; VM-38/39/40 verificados; suite 40/40 PASS; Xray 14/14 y 16 casos negativos PASS. F-05 live y conectividad cliente-servidor NO VERIFICADOS; VMess NO está aceptado y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. No iniciar Trojan. Los hitos históricos posteriores conservan su contexto y no sustituyen este estado vigente.
 
 
 ## 1. Objetivo
@@ -336,3 +336,10 @@ F-01 exige clave TLS root:root 0600 y un solo enlace duro en adaptador/preparado
 Suite 39/39 PASS; Xray 14/14 modalidades y 16/16 negativos PASS. bash -n, py_compile, ShellCheck de archivos modificados, install.sh --check, gate shfmt README y git diff --check PASS. ShellCheck global informa warning preexistente SC2174 en tests/vless_backup_restore.sh:7, archivo VLESS sin cambios.
 
 Corrección de código publicada en d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7; actualización final de continuidad sincronizada en 0a39af5c2aa35bf853c05f3a864bcc362d86bf67. F-05 live permanece NO VERIFICADO: catálogo vacío, almacén VMess y clave maestra no inicializados. No se tocó runtime, firewall, puertos ni servicio. VMess no está aceptado; Etapa 2 abierta. Requiere autorización separada validar live y completar VM-38/39/40.
+
+
+## Revalidación controlada — 2026-11-02
+
+La VPS de desarrollo `/opt/xray-manager` fue confirmada accesible como root, en la rama autorizada y HEAD `4c87557e0aff4166c540c633effe5cb6dac40096`. Se añadió `tests/vmess_navigation_edge_cases.sh`; VM-38 lista vacía/[0], VM-39 entradas inválidas recuperables y VM-40 confirmación destructiva exacta pasan. Suite completa `tests/*.sh`: 40/40 PASS. La primera ejecución parcial de `port_collisions.sh` falló en la comprobación UDP; la repetición aislada y la suite completa posterior pasaron.
+
+F-05 live queda pendiente de autorización específica para crear clave maestra y almacén VMess persistentes en esta VPS de desarrollo. No se crearon, ni se añadió conexión live. Xray no está instalado localmente; las pruebas de integración utilizaron el binario de validación 26.10.31 en caché. Servicio inactivo; no se tocaron runtime, firewall, puertos ni servicios.
