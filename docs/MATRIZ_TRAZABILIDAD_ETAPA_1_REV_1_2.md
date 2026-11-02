@@ -58,7 +58,7 @@
 | U11 | Vista previa de alcance, categorías, rutas, respaldo/exportación y advertencias | Resumen previo a la confirmación final | tests/uninstall.sh cubre parte del texto; falta verificar todos los campos | PARCIAL |
 | U12 | Confirmación final explícita e irreversible | locks adquiridos antes del respaldo; ui_confirm final antes de borrar | tests/uninstall.sh | IMPLEMENTADO |
 | U13 | Rechazar rutas fuera de allowlist y componentes simbólicos | uninstall_paths_are_allowed y uninstall_path_has_symlink_component | tests/uninstall.sh | IMPLEMENTADO |
-| U14 | Evitar carreras con operaciones de usuarios/conexiones y administración Xray | Bloqueo compartido de ciclo de vida más locks de desinstalación, integridad y administración Xray; todos se adquieren antes del respaldo y se mantienen hasta finalizar/cancelar | tests/uninstall.sh prueba contención de lifecycle, integridad y Xray; tests/install.sh prueba contención lifecycle/integridad; tests/xray_admin.sh, tests/stage1_dependencies.sh y tests/stage1_settings.sh verifican coordinación con las operaciones correspondientes | IMPLEMENTADO para operaciones internas del Manager |
+| U14 | Evitar carreras con operaciones de usuarios/conexiones y administración Xray | Bloqueo compartido de ciclo de vida para instalador, acciones de servicio, administración Xray, dependencias y preferencias, más locks de desinstalación e integridad; la desinstalación adquiere lifecycle/uninstall/integridad/Xray antes del respaldo y los mantiene hasta finalizar/cancelar | tests/uninstall.sh prueba contención de lifecycle, integridad y Xray; tests/install.sh prueba lifecycle/integridad; tests/xray_service_control.sh prueba que start no actúa con lifecycle ocupado; tests/xray_admin.sh, tests/stage1_dependencies.sh y tests/stage1_settings.sh verifican las operaciones correspondientes | IMPLEMENTADO para operaciones internas del Manager |
 | U15 | No modificar unidades systemd, firewall o SSH; bloquear si Xray está activo | uninstall_service_guard y flujo de eliminación | Prueba con guard simulado; falta entorno desechable con servicio real controlado | PARCIAL |
 
 ## 5. Navegación y seguridad general
@@ -102,7 +102,7 @@ Estas evidencias no sustituyen la validación operativa en una VPS desechable. L
 
 ## Actualización — coordinación de concurrencia y confirmaciones (01/11/2026)
 
-La matriz incorpora un bloqueo de ciclo de vida no bloqueante en `/run/lock/xray-manager-lifecycle.lock`, compartido por el instalador, administración Xray, instalación/actualización de dependencias y persistencia de preferencias. El instalador toma además el bloqueo de integridad de usuarios/conexiones.
+La matriz incorpora un bloqueo de ciclo de vida no bloqueante en `/run/lock/xray-manager-lifecycle.lock`, compartido por el instalador, administración Xray, acciones mutantes de `xray.service`, instalación/actualización de dependencias y persistencia de preferencias. El instalador toma además el bloqueo de integridad de usuarios/conexiones.
 
 La desinstalación adquiere, antes de crear el respaldo, los bloqueos de ciclo de vida, desinstalación, integridad y administración Xray. Los conserva durante el respaldo, exportación, confirmación final y borrado. Así se evita que operaciones internas cubiertas por esos locks alteren el contenido entre el respaldo y la eliminación.
 
