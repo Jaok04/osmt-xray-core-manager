@@ -71,8 +71,8 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 |---|---|
 | IMPLEMENTADO | Sí — módulo VMess y Bloques 1, 2 y 3 del plan correctivo |
 | VERIFICADO | Sí — 14/14 modalidades Xray; suite completa 38/38 y controles estáticos PASS |
-| PUBLICADO | VMess base y Bloques 1, 2 y 3 publicados; Bloque 4 pendiente de publicación |
-| SINCRONIZADO | HEAD local/remoto verificado tras cada publicación anterior; Bloque 4 pendiente |
+| PUBLICADO | VMess base y Bloques 1, 2 y 3 publicados; Bloque 4 PUBLICADO/SINCRONIZADO en `9528f4b00f6b9654f7236050bbadfd8f9415bf69` |
+| SINCRONIZADO | HEAD local/remoto verificado tras cada publicación anterior; Bloque 4 publicado y sincronizado en `9528f4b00f6b9654f7236050bbadfd8f9415bf69` |
 | ACEPTADO | Pendiente de confirmación formal del propietario |
 
 ## 7. Siguiente acción
@@ -124,10 +124,10 @@ Continuar con el Bloque 4 aprobado: completar la documentación técnica, defini
 
 ## 12. Bloque 4 — etiquetas explícitas VMess y formato
 
-**Estado:** cambios de etiquetas IMPLEMENTADOS; pruebas focales y auditoría integral pendientes.
+**Estado:** etiquetas IMPLEMENTADAS, VERIFICADAS, PUBLICADAS y SINCRONIZADAS; commit `9528f4b00f6b9654f7236050bbadfd8f9415bf69`. Auditoría integral pendiente.
 
 - Menú y listados: `VMess-WS (sin TLS adicional)` y `VMess-TLS (RAW/TCP + TLS)`.
 - IDs, modalidades y navegación sin cambios: `vmess_ws`, `vmess_tcp_tls`; matriz 14/14 preservada.
 - `tests/stage2_navigation.sh` añade comprobaciones de ambas etiquetas tanto en menú como en función de listado.
 - `README.md` documenta `shfmt -d -i 4 -ci` para archivos seleccionados. Se inspeccionaron las convenciones existentes y el diff potencial; no se reformatearon archivos ni se amplió el alcance de formato.
-- Pendiente: ejecutar pruebas focales y suite completa, auditoría integral y sincronizar cambios/documentación.
+- Pruebas focales y suite completa 38/38 PASS; controles estáticos y shfmt baseline PASS. Cambios publicados y sincronizados. Pendiente: auditoría integral documentada de VMess.

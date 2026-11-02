@@ -249,4 +249,4 @@ Se corrigieron las etiquetas visibles del menú VMess y de los listados que usan
 
 Criterio de formato: `README.md` documenta `shfmt -d -i 4 -ci` para archivos Bash seleccionados. Se inspeccionó el formato existente y se compararon las diferencias que `shfmt` produciría en módulos VMess. No existe una regla que autorice reformatear todo el árbol y el cambio produciría diffs de estilo fuera del alcance; por tanto, no se reformateó ningún archivo. El criterio del proyecto se mantiene: aplicar shfmt con `-i 4 -ci` sólo a los archivos incluidos explícitamente en las verificaciones de README, sin ampliar automáticamente el conjunto.
 
-Estado Bloque 4: etiquetas IMPLEMENTADAS y VERIFICADAS mediante pruebas focales y suite completa; PUBLICACIÓN/SINCRONIZACIÓN pendiente. Auditoría integral de VMess pendiente. No se cierra VMess ni Etapa 2.
+Estado Bloque 4: etiquetas IMPLEMENTADAS, VERIFICADAS, PUBLICADAS y SINCRONIZADAS en `9528f4b00f6b9654f7236050bbadfd8f9415bf69`. Auditoría integral de VMess pendiente. No se cierra VMess ni Etapa 2.

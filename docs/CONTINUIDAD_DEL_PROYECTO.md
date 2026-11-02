@@ -312,4 +312,6 @@ Se actualizó `modules/connections.sh`: VMess-WS se muestra como `VMess-WS (sin 
 
 Se confirmó que `README.md` define `shfmt -d -i 4 -ci` para archivos Bash seleccionados. No se reformateó el árbol: la aplicación general generaría diffs ajenos al alcance y el proyecto no declara una política para reformateo global. La regla permanece limitada a los archivos explicitados en README.
 
-Cambios implementados y verificados: pruebas focales y suite completa 38/38 PASS; controles estáticos y shfmt baseline PASS. Auditoría integral de VMess, publicación y sincronización pendientes.
+Cambios implementados y verificados: pruebas focales y suite completa 38/38 PASS; controles estáticos y shfmt baseline PASS. Auditoría integral de VMess pendiente. Cambios publicados y sincronizados en `9528f4b00f6b9654f7236050bbadfd8f9415bf69`.
+
+Publicación Bloque 4: commit `9528f4b00f6b9654f7236050bbadfd8f9415bf69`; HEAD local/remoto y árboles verificados idénticos. `main` no fue modificada.

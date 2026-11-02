@@ -291,4 +291,6 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - IDs `vmess_ws` y `vmess_tcp_tls`, las 14 modalidades y la navegación se conservan.
 - `tests/stage2_navigation.sh` incorpora aserciones de las dos etiquetas.
 - Criterio shfmt contrastado con README: `-i 4 -ci` en archivos seleccionados; no se aplicó reformateo global.
-- Pruebas focales y suite completa 38/38 PASS; controles estáticos y shfmt baseline PASS. Auditoría integral, publicación y sincronización pendientes.
+- Pruebas focales y suite completa 38/38 PASS; controles estáticos y shfmt baseline PASS. Auditoría integral pendiente; cambios publicados y sincronizados en `9528f4b00f6b9654f7236050bbadfd8f9415bf69`.
+
+- Publicación Bloque 4 confirmada: `9528f4b00f6b9654f7236050bbadfd8f9415bf69`; HEAD local/remoto y árboles idénticos. Rama `main` intacta.
