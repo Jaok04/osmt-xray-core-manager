@@ -43,7 +43,7 @@ La prueba de integración VLESS produjo advertencias de Xray sobre la deprecaci�
 
 ## Límites y pendientes
 
-No se ejecutaron `apt-get`, instalación/reinstalación real de Xray, modificación de systemd, firewall o SSH, ni desinstalación de componentes reales. No se migraron datos operativos. M04/M06 ya cuentan con cobertura automatizada y pasan a IMPLEMENTADO. Sigue pendiente la validación operativa en VPS desechable y el cotejo final del resto de la matriz.
+En esa ronda inicial (01/11) no se ejecutaron `apt-get`, instalación/reinstalación real de Xray, modificación de systemd, firewall o SSH, ni desinstalación de componentes reales. Las pruebas operativas posteriores del 02/11 se documentan en `ETAPA_1_VALIDACION_OPERATIVA_VPS_DESECHABLE_2026-11-02.md`. M04/M06 cuentan con cobertura automatizada y pasan a IMPLEMENTADO.
 
 ## Actualización de desinstalación — 01/11/2026
 
@@ -83,3 +83,24 @@ Se utilizó Ubuntu 24.04.4 LTS en el host de pruebas. La VPS de desarrollo no se
 Los artefactos temporales de esta ronda se eliminaron. Se conservaron archivos temporales preexistentes de pruebas anteriores que no pertenecían a esta ronda. Estado final del host: Xray instalado, `xray.service` inactive/disabled, preferencias y datos persistentes presentes.
 
 **Límites:** aún falta una instalación/actualización real del core mediante descarga verificada y una prueba real de desinstalación con la unidad systemd en ventana controlada. Etapa 1 sigue **PARCIAL — no certificada**.
+
+
+## Actualización operativa adicional — 02/11/2026
+
+Se probó `xray_admin_install_version` con el release oficial 26.10.31 en un prefijo temporal: descarga, digest oficial, SHA-256 fijado, extracción segura, instalación y versión resultante correctos. Sobre el mismo prefijo, `install.sh --install` desplegó el Manager y preparó la unidad en modo de prueba; la segunda ejecución fue idempotente.
+
+En el host real, `systemd-analyze verify` pasó. Con la unidad `xray.service` instalada e inactive/disabled, el alcance Manager-only eliminó solo un `APP_ROOT` fixture y preservó la unidad y el binario; el alcance Xray-only fue bloqueado. El guard también bloquea cualquier alcance si Xray está activo. U15 pasa a IMPLEMENTADO. U11 también pasa a IMPLEMENTADO tras verificar todos los campos del resumen previo y las tres confirmaciones.
+
+
+## Actualización — U11 vista previa completa (02/11/2026)
+
+`tests/uninstall.sh` ahora verifica el resumen `both + selected(users)` con respaldo y exportación simulada: alcance, política, categorías, rutas, respaldo temporal, exportación verificada, advertencia systemd, exclusiones Etapa 5 y prompts de respaldo/exportación/confirmación irreversible. Se valida además el modo 600 del archivo de respaldo y la eliminación exclusiva de rutas seleccionadas.
+
+Se corrigieron los saltos de línea de las advertencias del resumen. Suite integral posterior: 20/20 PASS; `bash -n`, ShellCheck y shfmt de archivos con estilo homogéneo PASS; `./install.sh --check` PASS. `tests/uninstall.sh` conserva su formato histórico mixto.
+
+
+## Actualización — guard de desinstalación dependiente del alcance (02/11/2026)
+
+Se corrigió `uninstall_service_guard`: el estado activo de Xray bloquea todos los alcances; si está detenido, Manager-only puede retirarse sin tocar la unidad ni Xray; Xray-only/both se bloquean si la unidad está instalada para evitar una unidad huérfana. `tests/uninstall.sh` cubre estos tres escenarios.
+
+En VPS desechable con unidad real inactive/disabled se ejecutó Manager-only contra un `APP_ROOT` fixture: el árbol fue eliminado y Xray/unidad permanecieron intactos. Xray-only fue bloqueado por la unidad real.
