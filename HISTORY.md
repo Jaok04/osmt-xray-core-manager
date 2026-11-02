@@ -1,3 +1,13 @@
+## 2026-11-02 — Aprobación y formalización del diseño VMess
+
+- El propietario aprobó el diseño técnico VMess y confirmó expresamente que VMess-HTTPUpgrade-TLS también será implementado.
+- La matriz aprobada contempla 14 identificadores del catálogo: WS sin TLS/TLS; RAW/TCP TLS/REALITY; gRPC sin TLS/TLS/REALITY; HTTPUpgrade sin TLS/TLS; XHTTP sin TLS/TLS/REALITY; mKCP sin TLS/TLS.
+- Se contrastó la decisión con la especificación preliminar Etapa 2 revisión 1.3, el catálogo config/protocols.tsv, la navegación y las decisiones complementarias existentes. La especificación preliminar no se reescribió; la ampliación queda registrada como decisión complementaria.
+- Se confirmó que el catálogo contiene vmess_httpupgrade_tls, pero el menú actual sólo permite seleccionar HTTPUpgrade sin TLS. No hay todavía modelo, adaptador, asistente ni persistencia VMess.
+- Se creó docs/DISEÑO_TECNICO_VMESS.md y se actualizaron docs/DECISIONES_ETAPA_2.md, PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md.
+- No se modificó código, catálogo, pruebas, runtime, firewall, puertos ni certificados. Esta actualización formaliza diseño; la implementación requiere un contraste previo específico y autorización expresa posterior.
+- VMess permanece NO IMPLEMENTADO; HTTPUpgrade-TLS está APROBADO EN DISEÑO, NO IMPLEMENTADO y NO VERIFICADO. Etapa 2 permanece abierta.
+
 ### Precisión del estado de Etapa 3
 
 Durante la revisión final se ajustaron PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md para no describir Etapa 3 como inexistente: el árbol contiene módulos, pruebas y documentación de usuarios/identidades/asociaciones (incluidos users_v2). Su estado formal y cobertura requieren una auditoría específica.

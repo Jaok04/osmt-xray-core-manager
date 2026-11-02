@@ -1,149 +1,61 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-02
-**Tarea actual:** Etapa 2 — P4, backup y recuperación segura VLESS.
-**Estado actual:** P4 BACKUP/RECUPERACIÓN VLESS COMPLETADA Y ACEPTADA el 2026-11-02; suite completa 32/32 PASS; commit de implementación y documentación sincronizados.
+**Tarea actual:** Etapa 2 — formalización del diseño VMess.
+**Estado:** diseño VMess APROBADO y documentado; implementación todavía no autorizada.
 
-> **Condición obligatoria para el siguiente trabajo:** antes de proponer o implementar cualquier continuación de Etapa 2, realizar el contraste formal con la documentación preliminar aprobada en `/root/Xray_Manager_Documentacion_Final_2026-10-31`. Presentar discrepancias y mejoras; no modificar el alcance ni el código hasta recibir autorización expresa. Ver `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`.
-
-## 1. Entorno
+## 1. Entorno verificado
 
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: design/user-identity-association-v1.
-- VPS/proyecto: /opt/xray-manager.
-- HEAD local de inicio: 8f23b0fbd3be8b61e370be74369ce1bcfd0e5ca0.
-- Árbol de trabajo estaba limpio al iniciar.
-- Commit de implementación publicado: 29459ce3abd6961238182631a28738633b7cc8d0 (feat: integrate VLESS draft configuration assistant).
+- Proyecto VPS: /opt/xray-manager.
+- HEAD local y remoto al iniciar esta actualización: b249b3e5b005c2dae301dd1f9230712933f9f482.
+- Árbol de trabajo limpio antes de esta actualización.
 - Documentación normativa: /root/Xray_Manager_Documentacion_Final_2026-10-31.
-- Etapa 1: aceptada formalmente; no reabrir.
+- Etapa 1: aceptada formalmente.
 - Etapa 2: en desarrollo y abierta.
-- Etapa 3: existen módulos/documentación; su cierre requiere auditoría independiente.
+- P4 de persistencia/backup VLESS: completada y aceptada.
+- La VPS tiene checkout Git; la referencia remota se comprobó con git ls-remote.
 
-## 2. Decisiones complementarias aprobadas
+## 2. Decisión más reciente del propietario
 
-El propietario aprobó el 2026-11-02:
-- conservar las nueve modalidades VLESS del catálogo, incluidas las tres variantes XHTTP;
-- dejar VMess-HTTPUpgrade-TLS pendiente de validación, sin considerarlo modalidad funcionalmente aprobada;
-- continuar con la integración del asistente VLESS.
+El propietario aprobó el diseño técnico VMess y confirmó que **VMess-HTTPUpgrade-TLS también se implementará**.
 
-La especificación normativa 1.3 no se reescribió. Ver docs/DECISIONES_ETAPA_2.md.
+La matriz aprobada incluye:
+- WS sin TLS/TLS.
+- RAW/TCP con TLS o REALITY.
+- gRPC sin TLS/TLS/REALITY.
+- HTTPUpgrade sin TLS/TLS.
+- XHTTP sin TLS/TLS/REALITY.
+- mKCP sin TLS/TLS.
 
-## 3. Cambios implementados en este corte
+La especificación preliminar 1.3 se conserva sin reescritura retroactiva. La ampliación queda registrada como decisión complementaria en docs/DECISIONES_ETAPA_2.md.
 
-- Nuevo módulo modules/vless_assistant.sh.
-- Integración del módulo en bin/xray-manager.
-- El flujo de alta de borradores VLESS llama al asistente después de registrar el borrador.
-- Menú VLESS presenta las modalidades XHTTP sin TLS, TLS y REALITY.
-- El asistente solicita dirección de escucha y opciones por modalidad, construye modelo neutral y configuración temporal con el adaptador v26.10.31.
-- Solicita de forma oculta la clave privada REALITY.
-- Ejecuta xray run -test si el binario de validación fijado está disponible.
-- Los JSON temporales/secretos se eliminan al terminar. No se persisten secretos ni se guarda una configuración reutilizable.
-- El registro permanece state=draft y runtime_applied=false. No se inicia Xray, no se abren puertos ni se modifica firewall.
-- Documentación técnica y decisión complementaria: docs/GENERADOR_VLESS_DISENO.md y docs/DECISIONES_ETAPA_2.md.
-- Nueva prueba: tests/vless_assistant.sh.
+## 3. Diseño formal
 
-## 4. Verificación ejecutada en esta sesión
+Documento: docs/DISEÑO_TECNICO_VMESS.md.
 
-- Todos los scripts tests/*.sh: PASS.
-- Incluye pruebas de concurrencia, integridad JSON, instalador, navegación, conexiones, usuarios legacy/v2, servicios y desinstalación.
-- tests/xray_vless_integration.sh: PASS para las nueve modalidades con Xray 26.10.31; también rechaza opciones XHTTP incompletas y modo desconocido.
-- tests/vless_assistant.sh: PASS; valida previsualización temporal, rechazo de ruta WS inválida y conservación del borrador.
-- bash -n: PASS para módulos modificados y punto de entrada.
-- ShellCheck: PASS para modules/vless_assistant.sh y modules/connections.sh.
-- shfmt aplicado al nuevo módulo.
-- git diff --check: PASS.
-- El binario Xray solo ejecutó modo -test sobre archivos temporales; no se inició servicio ni se abrió listener.
+Decisiones clave:
+- Xray-core v26.10.31 como versión objetivo.
+- VMess usa settings.users (id, level, email), no settings.clients de VLESS.
+- UUID como identificador de usuario.
+- Modelo neutral separado del adaptador Xray.
+- Asistente de creación, previsualización temporal y persistencia versionada/segura.
+- Borradores sin activación de runtime.
+- Pruebas xray run -test para cada combinación, incluida una prueba positiva específica de HTTPUpgrade-TLS.
+- Advertencias de sincronización horaria, Forward Secrecy y huella de tráfico VMess documentadas.
 
-Advertencias observadas en Xray 26.10.31: WebSocket y gRPC están marcados como obsoletos/no recomendados; REALITY avisa sobre riesgo de bloqueo si escucha en puerto distinto de 443. No son fallos de configuración.
+## 4. Contraste del estado existente
 
-## 5. Límites y trabajo pendiente
+- Catálogo: están presentes los 14 identificadores VMess, incluidos vmess_httpupgrade y vmess_httpupgrade_tls.
+- Menú: HTTPUpgrade sólo permite seleccionar la modalidad sin TLS; falta selector de seguridad para HTTPUpgrade-TLS.
+- Implementación: no existen todavía vmess_model.sh, vmess_xray_26_10_31.sh, vmess_assistant.sh ni persistencia VMess específica.
+- Validación histórica temporal: PASS para VMess-WS sin TLS, gRPC sin TLS, XHTTP-REALITY y mKCP sin TLS. No cubre la matriz completa.
+- HTTPUpgrade-TLS: aprobado en el diseño; aún no probado específicamente, implementado ni verificado.
+- No se modificó código, catálogo, runtime, firewall, puertos ni certificados durante la formalización documental.
 
-- La configuración no se persiste: el diseño de almacenamiento seguro está documentado y pendiente de aprobación.
-- No se implementó aplicación transaccional, activación runtime, apertura de puertos, firewall ni rollback.
-- No se hizo prueba de conectividad extremo a extremo.
-- VMess-HTTPUpgrade-TLS sigue pendiente de validación.
-- Faltan modelos/asistentes/validadores para VMess, Trojan, Shadowsocks, Hysteria2 y protocolos opcionales.
-- Falta integrar asociaciones WireGuard con identidades/Etapa 3.
+## 5. Siguiente paso permitido
 
-## 6. Diseño de persistencia segura
+Realizar el contraste previo específico para implementar VMess: revisar nuevamente la documentación preliminar, diseño aprobado, catálogo, navegación, módulos, almacenamiento seguro, asociaciones de identidad, binario Xray y pruebas. Presentar una matriz de brechas y los archivos exactos que se modificarían. Después solicitar autorización expresa para implementar.
 
-Se documentó la propuesta en docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md: AES-256-GCM mediante python3-cryptography, clave maestra local root-only, separación de datos, referencias TLS externas, escritura atómica, bloqueo compartido, material descifrado solo bajo /run y recuperación fail-closed. La implementación se divide en P1 infraestructura criptográfica, P2 almacén, P3 integración del asistente y P4 backup/restore.
-
-Hallazgo de seguridad: la clave privada REALITY se pasa actualmente a jq por --arg; debe eliminarse antes de persistir secretos. No se ha instalado dependencia, creado clave maestra ni cambiado el asistente durante este corte.
-
-## 7. Próxima acción
-
-Continuar cerrando P2: añadir pruebas de interrupción/publicación fallida y concurrencia cruzada, revisar integridad de archivos y completar auditoría. P1 está publicada. No generar todavía la clave maestra real; se creará al integrar el primer guardado de secretos en P3. Mantener borradores y no activar runtime.
-
-No modificar main. No declarar Etapa 2 completada.
-
-
-### Actualización 2026-11-02 — P2 en curso
-
-Se implementó inicialmente `scripts/vless_config_store.py` con esquema neutral VLESS versión 1, revisiones inmutables, publicación atómica de referencias bajo el bloqueo compartido y auditoría sin borrado automático. `tests/vless_config_store.sh` PASS. P2 no está completado: quedan pruebas de interrupciones/concurrencia, suite completa y auditoría final. No se activó runtime ni se creó la clave maestra real.
-
-P2: `tests/*.sh` 25/25 PASS; pruebas específicas incluyen interrupción antes de publicar catálogo (huérfano detectable) y dos escritores concurrentes. `install.sh --check`, sintaxis, py_compile, ShellCheck, shfmt y diff PASS. El campo `secret_ref` queda reservado como null hasta P3.
-
-### P3 — integración de persistencia segura VLESS (implementada y verificada)
-
-Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM de claves privadas TLS/REALITY, referencias versionadas en catálogo/configuración y recuperación temporal para validación. Nuevo `scripts/vless_prepare_config.py`; `vless_config_store.py` ahora admite secretos cifrados y auditoría de blobs. El asistente deja de pasar la clave REALITY como `jq --arg` y usa `--rawfile`. Pruebas focales REALITY/TLS/recuperación PASS. Borradores no se activan. Suite completa `tests/*.sh` 25/25 PASS; `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt y `git diff --check` PASS. Clave maestra real de VPS no generada. P3 aún no publicada en GitHub.
-
-## Registro histórico — 2026-11-02, P4 en implementación (estado posteriormente superado)
-
-- HEAD inicial: `46c3e52b2a59f6ca69ea2de9013cf3cda0e0331a`, rama autorizada limpia.
-- Aprobado por el usuario el contrato técnico de P4.
-- Añadidos backup de datos y manifiesto verificable, paquete de recuperación scrypt/AES-256-GCM, verificación y restauración con staging/journal; menú de acceso integrado.
-- Pruebas focales backup, restore aislado y recuperación scrypt/AES-GCM PASS; suite completa 29/29 PASS en primera revisión. Se añadieron correcciones posteriores y pruebas focales repetidas.
-- No se tocó `/var/backups/xray-manager` histórico, la clave maestra real, datos operativos, firewall ni runtime.
-- En este corte histórico P4 seguía ABIERTA. Los puntos pendientes se resolvieron en revisiones posteriores; véase la aceptación formal de P4 al final de este documento.
-
-
-## Registro histórico — EOF en menús y auditoría de disco (2026-11-02; estado Git de aquel momento, posteriormente reconciliado)
-
-**Tarea actual:** corregir el tratamiento de EOF que provocó bucles de menús y crecimiento ilimitado de archivos de salida durante pruebas.
-
-**Entorno verificado al iniciar:** rama `design/user-identity-association-v1`, HEAD `4ecd898ab9034ae0a499f2a2b5dac74c7b35ad71`, remoto `origin` en el mismo commit. `/opt/xray-manager` tiene `.git`; el árbol tenía dos artefactos locales sin seguimiento: `scripts/__pycache__/` y `tests/vless_backup_restore_secrets.sh`.
-
-**Cambios implementados:**
-- `ui_read_option()` ahora devuelve estado 1 al detectar EOF y limpia la variable destino.
-- Los menús principales/secundarios y los prompts de selección salen de forma ordenada al recibir EOF.
-- Los prompts de identificador del menú de backup VLESS también abortan al recibir EOF.
-- `tests/stage1_menu.sh` incluye pruebas EOF para navegación directa/anidada y limita a 1 MiB la salida de cada caso de regresión.
-- Se incorpora `tests/vless_backup_restore_secrets.sh`, preexistente en la VPS, después de revisar su aislamiento y ejecutar PASS.
-
-**Verificación ejecutada:** `tests/stage1_menu.sh`, `tests/users_v2_menu.sh`, `tests/stage1_settings.sh` y `tests/vless_backup_restore_secrets.sh`: PASS. `bash -n` para todos los scripts `.sh`, ShellCheck para archivos modificados y `git diff --check`: PASS. Suite completa `tests/*.sh`: 30/30 PASS; `install.sh --check`, `bash -n` de todos los scripts shell, ShellCheck, shfmt del test nuevo y `git diff --check`: PASS.
-
-**Incidente de disco:** se eliminó únicamente `/tmp/tmp.oaFf5wTZwt` tras detener PID 36728 y confirmar que no había handles abiertos. Se liberaron el archivo de 20.46 GB y el archivo borrado de ~925 MB que el proceso retenía. Estado posterior: 3.7 GB usados, 71 GB libres, 5%. Los directorios `/tmp/tmp.u7Vq57eHNx` (282 MB) y `/tmp/tmp.EsxO527Ihe` (47 MB) se inspeccionaron y se dejaron intactos; son salidas históricas de pruebas de menú V2.
-
-**Publicación verificada:** GitHub `design/user-identity-association-v1` apunta al commit `fa7242a61248a71b64552511d1db932ebbc8d7d0`; su árbol `b03db9b450288eccbf61e761655f286763df3a70` coincide con el árbol del commit local `b520c53bd5a32007b30519e0756fce13fe8916b5` en los 17 archivos. El push SSH de la VPS fue rechazado por falta de clave autorizada y el fetch HTTPS requiere credenciales; la referencia local `origin/...` permanece en el commit base anterior. Esta nota refleja el estado Git y P4 de aquel momento; posteriormente se habilitó el fetch, se reconciliaron las referencias y se publicaron las correcciones restantes. P4 fue aceptada formalmente; véase el cierre al final de este documento.
-
-## 2026-11-02 — autenticación SSH y reconciliación de referencias
-
-Se creó una clave SSH Ed25519 dedicada a este repositorio y se registró en GitHub como Deploy Key de solo lectura (sin permiso de escritura). La VPS autentica correctamente mediante el alias `github.com-xray-core-manager`; la URL `origin` de este checkout usa ese alias y los demás repositorios/configuraciones SSH no se modificaron. `git fetch` se completó correctamente. Se verificó que el árbol local anterior y el árbol remoto eran idénticos (`b6ed32ae1ff32dc4c8c6953a2d1eec48159b1d08`), por lo que se movió únicamente la referencia local de la rama con comprobación del SHA anterior, sin resetear ni sobrescribir archivos. Estado final: `design/user-identity-association-v1` y `origin/design/user-identity-association-v1` apuntan a `5ade7feda328ff4a4f6796fd7ab263237b40dbfa`; working tree limpio y sin divergencia. Las notas anteriores sobre falta de autenticación y refs obsoletas quedan superadas por esta verificación. La clave SSH anterior se conservó intacta. La Deploy Key nueva es de solo lectura; las publicaciones futuras deberán seguir usando el mecanismo autorizado de GitHub API u otro acceso de escritura expresamente configurado.
-
-
-## Punto de control actualizado — P4 journal/restore (2026-11-02)
-
-- Se corrigió `scripts/vless_backup.py`: el journal registra la existencia previa de `connections/` y `secrets/`; cada rename relevante fuerza `fsync` del directorio padre antes de avanzar la fase. `recover-restore` acepta journals nuevos y legacy y preserva los artefactos parciales en cuarentena.
-- `tests/vless_backup_journal_crash_matrix.sh`: 32 interrupciones abruptas simuladas mediante `os._exit`, con cobertura de fases, renombrados, publicación y las cuatro combinaciones de existencia previa. PASS.
-- `tests/vless_backup_journal.sh`: rollback de journal legacy/nuevo y destino originalmente ausente. PASS.
-- `tests/vless_backup_restore.sh` y `tests/vless_backup_restore_secrets.sh`: PASS; el último prueba el certificado TLS externo referenciado pero ausente, sin impedir la restauración ni activar runtime.
-- Suite completa final `tests/*.sh`: 31/31 PASS. `install.sh --check`, sintaxis Bash de todos los scripts, `py_compile`, ShellCheck/shfmt de pruebas modificadas y `git diff --check`: PASS.
-- No se creó backup operativo ni se accedió a la clave maestra real. No se modificaron runtime, firewall ni certificados.
-- Publicado en GitHub, rama `design/user-identity-association-v1`, commit `90766d4cb8000ed1f94fb808b80f18483d5778cb`, árbol `cfdb26fd7716f622127ba5d7784884df58799b4c`; fetch y sincronización local/remota confirmados.
-- **Pendiente:** auditar límites agregados de extracción/descompresión, memoria, rutas y permisos de staging/publicación; repetir suite final; obtener aceptación formal. P4 NO está aceptada ni completada.
-
-
-## Punto de control actualizado — límites agregados y TOCTOU P4 (2026-11-02)
-
-- Se aplicó límite agregado de 512 MiB sin comprimir en recolección, creación, verificación y extracción; se mantienen 64 MiB por miembro, 20.000 miembros y 512 MiB comprimidos.
-- El lector de payload valida por sí mismo rutas relativas/traversal, tipo regular, symlinks/hardlinks, duplicados, cantidad, límites y hashes del manifiesto.
-- La restauración adquiere `lifecycle.lock` e `integrity.lock` antes de verificar/leer el backup y la clave y antes de extraer. No usa un diccionario extraído previamente al lock. Recomprueba el hash sobre los bytes que procesa.
-- Nueva prueba `tests/vless_backup_limits.sh`: PASS. Suite completa posterior: 32/32 PASS.
-- No se creó backup operativo, no se leyó la clave maestra real, y no se modificó runtime, firewall ni certificados.
-- **Cerrado:** propietario aceptó formalmente las correcciones el 2026-11-02. P4 COMPLETADA.
-
-
-## Aceptación formal de P4 — 2026-11-02
-
-El propietario confirmó la aceptación de las correcciones de límites agregados y TOCTOU. P4 BACKUP/RECUPERACIÓN VLESS queda **COMPLETADA Y ACEPTADA**. Suite completa `tests/*.sh`: 32/32 PASS. `install.sh --check`, sintaxis Bash, `py_compile`, ShellCheck, shfmt y `git diff --check`: PASS. No se creó backup operativo ni se accedió a la clave maestra real. No se modificaron runtime, firewall ni certificados. Las actividades de activación de conexiones/runtime, reinicio de Xray, apertura de puertos, cambios de firewall y despliegue de certificados externos están expresamente fuera del alcance de P4.
+**No iniciar cambios de código hasta esa autorización.** No declarar VMess implementado ni Etapa 2 completada.

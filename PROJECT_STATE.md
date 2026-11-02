@@ -1,9 +1,9 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02  
-**Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.  
-**Repositorio:** https://github.com/Jaok04/xray-core-manager  
-**Rama autorizada:** design/user-identity-association-v1  
+**Corte de estado:** 2026-11-02
+**Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
+**Repositorio:** https://github.com/Jaok04/xray-core-manager
+**Rama autorizada:** design/user-identity-association-v1
 **VPS de desarrollo:** /opt/xray-manager
 
 > Este documento es una fotografía de estado, no sustituye la documentación normativa. Antes de actuar, verifica el HEAD actual de GitHub y vuelve a inspeccionar la VPS.
@@ -101,9 +101,10 @@ La especificación funcional aprobada es revisión 1.3, aprobada el 30/10/2026. 
 - No se abren puertos ni se modifica firewall por el flujo de conexiones.
 - El asistente VLESS ya está integrado con el modelo/adaptador para construir una previsualización temporal; cuando está disponible, incorpora usuarios VLESS en estado borrador.
 - El asistente solicita opciones por modalidad y ejecuta xray run -test con el binario fijado si está disponible. Los archivos temporales se eliminan al terminar.
-- Hallazgo de seguridad pendiente de corregir: la clave privada REALITY se pasa a jq mediante --arg; la implementación de persistencia debe eliminar esa exposición en argumentos de proceso.
-- No hay persistencia segura de configuración ni secretos; no se aplica runtime ni se activa el servicio.
-- Diseño propuesto de persistencia: docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md. Pendiente de aprobación; no se ha instalado ninguna dependencia ni generado clave maestra.
+- La persistencia segura VLESS P1–P4 está implementada, verificada y aceptada; incluye almacenamiento versionado, cifrado de secretos y backup/recuperación. Consultar docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md y docs/P4_BACKUP_RECUPERACION_VLESS.md.
+- El asistente VLESS conserva el flujo de borrador/previsualización y no aplica runtime ni activa el servicio.
+- La clave REALITY dejó de pasarse a jq mediante --arg; la integración usa lectura de archivo privado para evitar exposición en argumentos de proceso.
+- La finalización de P4 no implica despliegue de certificados externos, activación runtime, puertos ni firewall.
 - La validación xray run -test no prueba conectividad extremo a extremo.
 - La prueba documentada de nueve modalidades corresponde al entorno y binario Xray 26.10.31; no asumir que se reejecutó en cada sesión.
 
@@ -114,14 +115,17 @@ Se documentan resultados PASS para navegación, administración de borradores, V
 ## 6. Decisiones complementarias aprobadas el 2026-11-02
 
 - Se conservan las nueve modalidades VLESS del catálogo, incluidas XHTTP sin TLS, TLS y REALITY.
-- VMess-HTTPUpgrade-TLS queda pendiente de validación técnica/funcional; su presencia en catálogo/código no se considera aprobación funcional.
-- La especificación normativa 1.3 no se reescribió retroactivamente. La decisión queda registrada en docs/DECISIONES_ETAPA_2.md.
+- El propietario aprobó el diseño técnico VMess y confirmó que VMess-HTTPUpgrade-TLS se implementará.
+- La matriz VMess aprobada incluye HTTPUpgrade sin TLS y HTTPUpgrade-TLS. Esta última aún no está disponible desde el menú ni implementada/verificada.
+- La especificación normativa 1.3 no se reescribió retroactivamente. Las decisiones y el diseño se registran en docs/DECISIONES_ETAPA_2.md y docs/DISEÑO_TECNICO_VMESS.md.
+- La aprobación del diseño no autoriza por sí sola cambios de código; antes de implementar se hará el contraste específico y se solicitará autorización expresa.
 
 ## 7. Pendientes principales de Etapa 2
 
 - Resolver y formalizar las discrepancias normativas indicadas.
-- Diseñar y aprobar persistencia segura de opciones VLESS y secretos. Propuesta documentada en docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md; aún no implementada.
-- Definir e implementar modelos, generadores y validadores para VMess, Trojan, Shadowsocks e Hysteria2.
+- Extender el patrón de persistencia segura a VMess conforme al diseño aprobado, después del contraste previo y autorización expresa de implementación.
+- Implementar VMess conforme al diseño aprobado en docs/DISEÑO_TECNICO_VMESS.md, incluida la opción HTTPUpgrade-TLS; falta autorización expresa de implementación tras el contraste previo.
+- Definir e implementar modelos, generadores y validadores para Trojan, Shadowsocks e Hysteria2.
 - Implementar administradores específicos SOCKS, HTTP Proxy y WireGuard.
 - Integrar peers WireGuard con las identidades/asociaciones de Etapa 3.
 - Diseñar aplicación transaccional de configuración, validación, verificación y rollback.
@@ -182,3 +186,8 @@ Se corrigieron los dos hallazgos adicionales de auditoría. `scripts/vless_backu
 ### Aceptación formal P4 — 2026-11-02
 
 El propietario respondió afirmativamente a la solicitud de aceptación de las correcciones adicionales de límites agregados y TOCTOU. **P4 BACKUP/RECUPERACIÓN VLESS: COMPLETADA Y ACEPTADA.** Cierre respaldado por suite completa 32/32 PASS, `install.sh --check`, sintaxis Bash, `py_compile`, ShellCheck, shfmt y `git diff --check` satisfactorios; commit publicado y VPS sincronizada. El alcance excluye activar conexiones/runtime, reiniciar Xray, abrir puertos, cambiar firewall o desplegar certificados externos. No se creó backup operativo ni se leyó la clave maestra real durante estas pruebas.
+
+
+## 10. Diseño técnico VMess aprobado — 2026-11-02
+
+docs/DISEÑO_TECNICO_VMESS.md formaliza el diseño aprobado para VMess sobre Xray-core v26.10.31. Incluye 14 identificadores de modalidad del catálogo, settings.users, UUID, validación de combinaciones, asistente, persistencia y pruebas. HTTPUpgrade-TLS está expresamente dentro del alcance aprobado, pero no implementado ni verificado. El siguiente paso es un contraste previo específico de implementación y la solicitud de autorización de código. Etapa 2 continúa abierta.
