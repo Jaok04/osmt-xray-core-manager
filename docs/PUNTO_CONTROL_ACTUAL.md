@@ -69,7 +69,7 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 | IMPLEMENTADO | Sí |
 | VERIFICADO | Sí — 36/36 scripts y controles estáticos |
 | PUBLICADO | Sí — `ab76a57032faa9793a62348f865fba2c9a7d8f77` en la rama autorizada |
-| SINCRONIZADO | Sí — VPS y remoto coinciden en `ab76a57032faa9793a62348f865fba2c9a7d8f77` |
+| SINCRONIZADO | Sí — verificación posterior a los commits de código y documentación; obtener SHA vigente con `git rev-parse HEAD` |
 | ACEPTADO | Pendiente de confirmación formal del propietario |
 
 ## 7. Siguiente acción

@@ -233,4 +233,4 @@ La regla quedó desarrollada en `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.m
 - No se modificaron P4 VLESS ni `scripts/vless_backup.py`; tampoco runtime, servicio, firewall, puertos ni certificados desplegados. Las pruebas usan temporales.
 - VMess queda IMPLEMENTADO y VERIFICADO. La aceptación formal del propietario sigue pendiente. Backup/restore VMess continúa como diseño separado; identidad global continúa en Etapa 3.
 - Se actualizaron `docs/DISEÑO_TECNICO_VMESS.md`, `PROJECT_STATE.md`, `docs/PUNTO_CONTROL_ACTUAL.md` y este documento de continuidad.
-- Publicación confirmada únicamente en `design/user-identity-association-v1`: commit `ab76a57032faa9793a62348f865fba2c9a7d8f77`. La VPS hizo push/fetch y HEAD local/remoto coinciden. `main` permanece intacta.
+- Publicación confirmada únicamente en `design/user-identity-association-v1`: commit funcional `ab76a57032faa9793a62348f865fba2c9a7d8f77`; se publicó después la actualización documental. La VPS hizo push/fetch y HEAD local/remoto se verificaron coincidentes. `main` permanece intacta.

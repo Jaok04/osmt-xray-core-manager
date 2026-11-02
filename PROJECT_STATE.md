@@ -24,7 +24,7 @@
 
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: design/user-identity-association-v1.
-- HEAD publicado tras el cierre técnico VMess: `ab76a57032faa9793a62348f865fba2c9a7d8f77` (`fix(vmess): validate TLS pairs and complete coverage`).
+- Commit funcional de cierre VMess: `ab76a57032faa9793a62348f865fba2c9a7d8f77` (`fix(vmess): validate TLS pairs and complete coverage`). La documentación de cierre también se publicó después; consultar `git rev-parse HEAD` para el HEAD vigente.
 - La rama main no se modificó.
 - Verificar siempre el HEAD remoto antes de nuevas tareas.
 
@@ -34,7 +34,7 @@
 - La ruta contiene un checkout Git válido.
 - El remoto origin apunta al repositorio oficial mediante el alias SSH dedicado.
 - La VPS tiene una Deploy Key SSH dedicada con `Allow write access`; el alias `github.com-xray-core-manager` se usa para fetch/push de este repositorio.
-- Tras la publicación del cierre técnico, HEAD local y `origin/design/user-identity-association-v1` coinciden en `ab76a57032faa9793a62348f865fba2c9a7d8f77`; el árbol de trabajo quedó limpio.
+- Tras la publicación del cierre técnico y la actualización documental, HEAD local y `origin/design/user-identity-association-v1` se verificaron coincidentes y el árbol de trabajo quedó limpio.
 - No se deben asumir estados históricos de sincronización: comprobar rama, HEAD, remoto, árbol y git status en cada sesión.
 
 ## 3. Etapas
