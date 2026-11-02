@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2016
+# shellcheck disable=SC2016,SC2034
 if ! declare -F json_store_commit >/dev/null 2>&1; then
 	# shellcheck disable=SC1091
 	source "${APP_ROOT:-/opt/xray-manager}/lib/json_store.sh"
 fi
-CONNECTION_CATALOG="$APP_ROOT/config/protocols.tsv"
+CONNECTION_CATALOG="${APP_ROOT:-/opt/xray-manager}/config/protocols.tsv"
 CONNECTION_DATA_DIR="${XRAY_MANAGER_CONNECTIONS_DIR:-/var/lib/xray-manager/connections}"
 CONNECTION_DATA_FILE="${XRAY_MANAGER_CONNECTIONS_FILE:-/var/lib/xray-manager/connections/connections.json}"
 CONNECTION_LOCK="${XRAY_MANAGER_INTEGRITY_LOCK:-${XRAY_MANAGER_CONNECTIONS_LOCK:-/run/xray-manager/integrity.lock}}"
@@ -14,27 +14,288 @@ connections_menu() {
 	while true; do
 		ui_clear
 		ui_title "GESTIÓN DE PROTOCOLOS Y CONEXIONES"
-		printf '\n  [1] Consultar catálogo de protocolos y modalidades\n  [2] Registrar una conexión (borrador)\n  [3] Consultar conexiones registradas\n  [4] Editar una conexión (solo borradores)\n  [5] Eliminar una conexión (solo borradores)\n  [0] Volver al menú principal\n\n'
+		printf '\n  PROTOCOLOS PRINCIPALES\n  [1] VLESS\n  [2] VMess\n  [3] Trojan\n  [4] Shadowsocks\n  [5] Hysteria2\n'
+		printf '\n  PROTOCOLOS OPCIONALES\n  [6] Protocolos opcionales\n  [0] Volver al menú principal\n\n'
 		ui_read_option "Selecciona una opción: " option
 		case "$option" in
-		1)
-			connections_show_catalog
-			ui_pause
-			;;
-		2) connections_create_draft ;;
-		3)
-			connections_list
-			ui_pause
-			;;
-		4) connections_edit_draft ;;
-		5) connections_delete_draft ;;
-		0) return 0 ;;
-		*)
-			printf '\nOpción no válida.\n'
-			ui_pause
-			;;
+			1) connections_family_menu vless ;;
+			2) connections_family_menu vmess ;;
+			3) connections_family_menu trojan ;;
+			4) connections_family_menu shadowsocks ;;
+			5) connections_family_menu hysteria2 ;;
+			6) connections_optional_menu ;;
+			0) return 0 ;;
+			*) printf '\nOpción no válida.\n'; ui_pause ;;
 		esac
 	done
+}
+connections_family_menu() {
+	local family="$1" option
+	while true; do
+		ui_clear
+		case "$family" in
+			vless)
+				ui_title "ADMINISTRAR VLESS"
+				printf '\n  [1] VLESS-WS (Sin TLS)\n  [2] VLESS-TLS (RAW/TCP + TLS)\n  [3] VLESS-WS-TLS\n  [4] VLESS-REALITY (RAW/TCP + REALITY)\n  [5] VLESS-GRPC (TLS o REALITY)\n'
+				;;
+			vmess)
+				ui_title "ADMINISTRAR VMESS"
+				printf '\n  PRINCIPALES\n  [1] VMess-WS\n  [2] VMess-TLS\n  [3] VMess-WS-TLS\n  [4] VMess-REALITY\n  [5] VMess-GRPC\n  ADICIONALES\n  [6] VMess-HTTPUpgrade\n  [7] VMess-XHTTP\n  [8] VMess-mKCP\n'
+				;;
+			trojan)
+				ui_title "ADMINISTRAR TROJAN"
+				printf '\n  PRINCIPALES\n  [1] Trojan-TLS\n  [2] Trojan-WS-TLS\n  [3] Trojan-GRPC-TLS\n  ADICIONALES\n  [4] Trojan-XHTTP-TLS\n  [5] Trojan-HTTPUpgrade-TLS\n'
+				;;
+			shadowsocks)
+				ui_title "ADMINISTRAR SHADOWSOCKS"
+				printf '\n  [1] Shadowsocks-TCP\n  [2] Shadowsocks-UDP\n  [3] Shadowsocks-TCP-UDP\n  OFUSCACIÓN / PLUGINS\n  [4] Shadowsocks + OBFS\n  [5] Shadowsocks + V2Ray-Plugin\n'
+				;;
+			hysteria2)
+				ui_title "ADMINISTRAR HYSTERIA 2"
+				printf '\n  [1] Hysteria2-QUIC (UDP + TLS)\n'
+				;;
+			*) printf '\nFamilia desconocida.\n'; return 1 ;;
+		esac
+		printf '  [0] Volver\n\n'
+		ui_read_option "Selecciona una modalidad: " option
+		[[ "$option" == 0 ]] && return 0
+		case "$family:$option" in
+			vless:1) connections_manage_mode vless_ws ;;
+			vless:2) connections_manage_mode vless_tcp_tls ;;
+			vless:3) connections_manage_mode vless_ws_tls ;;
+			vless:4) connections_manage_mode vless_reality ;;
+			vless:5) connections_manage_mode vless_grpc ;;
+			vmess:1) connections_manage_mode vmess_ws ;;
+			vmess:2) connections_manage_mode vmess_tcp_tls ;;
+			vmess:3) connections_manage_mode vmess_ws_tls ;;
+			vmess:4) connections_manage_mode vmess_reality ;;
+			vmess:5) connections_manage_mode vmess_grpc ;;
+			vmess:6) connections_manage_mode vmess_httpupgrade ;;
+			vmess:7) connections_manage_mode vmess_xhttp ;;
+			vmess:8) connections_manage_mode vmess_mkcp ;;
+			trojan:1) connections_manage_mode trojan_tcp_tls ;;
+			trojan:2) connections_manage_mode trojan_ws_tls ;;
+			trojan:3) connections_manage_mode trojan_grpc_tls ;;
+			trojan:4) connections_manage_mode trojan_xhttp_tls ;;
+			trojan:5) connections_manage_mode trojan_httpupgrade_tls ;;
+			shadowsocks:1) connections_manage_mode shadowsocks_tcp ;;
+			shadowsocks:2) connections_manage_mode shadowsocks_udp ;;
+			shadowsocks:3) connections_manage_mode shadowsocks_tcp_udp ;;
+			shadowsocks:4) connections_shadowsocks_obfs_menu ;;
+			shadowsocks:5) connections_manage_mode shadowsocks_v2ray_plugin ;;
+			hysteria2:1) connections_manage_mode hysteria2_quic_tls ;;
+			*) printf '\nOpción no válida.\n'; ui_pause ;;
+		esac
+	done
+}
+connections_shadowsocks_obfs_menu() {
+	local option
+	while true; do
+		ui_clear
+		ui_title "SHADOWSOCKS - OBFS"
+		printf '\n  [1] OBFS-HTTP (plugin externo)\n  [2] OBFS-TLS (plugin externo)\n  [0] Volver\n\n'
+		ui_read_option "Selecciona una opción: " option
+		case "$option" in
+			1) connections_manage_mode shadowsocks_obfs_http ;;
+			2) connections_manage_mode shadowsocks_obfs_tls ;;
+			0) return 0 ;;
+			*) printf '\nOpción no válida.\n'; ui_pause ;;
+		esac
+	done
+}
+connections_optional_menu() {
+	local option
+	while true; do
+		ui_clear
+		ui_title "PROTOCOLOS OPCIONALES"
+		printf '\n  PROXIES AUXILIARES\n  [1] SOCKS\n  [2] HTTP Proxy\n'
+		printf '\n  TÚNELES Y REDES\n  [3] WireGuard\n  [0] Volver\n\n'
+		ui_read_option "Selecciona un protocolo: " option
+		case "$option" in
+			1) connections_manage_mode socks_tcp ;;
+			2) connections_manage_mode http_tcp ;;
+			3) connections_manage_mode wireguard_udp ;;
+			0) return 0 ;;
+			*) printf '\nOpción no válida.\n'; ui_pause ;;
+		esac
+	done
+}
+connections_mode_label() {
+	case "$1" in
+		vless_ws) printf 'VLESS-WS (Sin TLS)' ;;
+		vless_tcp_tls) printf 'VLESS-TLS (RAW/TCP + TLS)' ;;
+		vless_ws_tls) printf 'VLESS-WS-TLS' ;;
+		vless_reality) printf 'VLESS-REALITY' ;;
+		vless_grpc_tls) printf 'VLESS-GRPC-TLS' ;;
+		vless_grpc_reality) printf 'VLESS-GRPC-REALITY' ;;
+		vless_grpc) printf 'VLESS-GRPC' ;;
+		vmess_ws) printf 'VMess-WS' ;;
+		vmess_tcp_tls) printf 'VMess-TLS' ;;
+		vmess_ws_tls) printf 'VMess-WS-TLS' ;;
+		vmess_reality) printf 'VMess-REALITY' ;;
+		vmess_grpc) printf 'VMess-GRPC (selección de seguridad)' ;;
+		vmess_grpc_tls) printf 'VMess-GRPC-TLS' ;;
+		vmess_grpc_reality) printf 'VMess-GRPC-REALITY' ;;
+		vmess_httpupgrade) printf 'VMess-HTTPUpgrade sin TLS' ;;
+		vmess_httpupgrade_tls) printf 'VMess-HTTPUpgrade-TLS' ;;
+		vmess_xhttp) printf 'VMess-XHTTP (selección de seguridad)' ;;
+		vmess_xhttp_tls) printf 'VMess-XHTTP-TLS' ;;
+		vmess_xhttp_reality) printf 'VMess-XHTTP-REALITY' ;;
+		vmess_mkcp) printf 'VMess-mKCP sin TLS' ;;
+		vmess_mkcp_tls) printf 'VMess-mKCP-TLS' ;;
+		trojan_tcp_tls) printf 'Trojan-TLS' ;;
+		trojan_ws_tls) printf 'Trojan-WS-TLS' ;;
+		trojan_grpc_tls) printf 'Trojan-GRPC-TLS' ;;
+		trojan_xhttp_tls) printf 'Trojan-XHTTP-TLS' ;;
+		trojan_httpupgrade_tls) printf 'Trojan-HTTPUpgrade-TLS' ;;
+		shadowsocks_tcp) printf 'Shadowsocks-TCP' ;;
+		shadowsocks_udp) printf 'Shadowsocks-UDP' ;;
+		shadowsocks_tcp_udp) printf 'Shadowsocks-TCP-UDP' ;;
+		shadowsocks_obfs_http) printf 'Shadowsocks + OBFS-HTTP' ;;
+		shadowsocks_obfs_tls) printf 'Shadowsocks + OBFS-TLS' ;;
+		shadowsocks_v2ray_plugin) printf 'Shadowsocks + V2Ray-Plugin' ;;
+		hysteria2_quic_tls) printf 'Hysteria2-QUIC (UDP + TLS)' ;;
+		socks_tcp) printf 'SOCKS' ;;
+		http_tcp) printf 'HTTP Proxy' ;;
+		wireguard_udp) printf 'WireGuard' ;;
+		*) printf '%s' "$1" ;;
+	esac
+}
+connections_resolve_mode() {
+	local mode_key="$1" option
+	# shellcheck disable=SC2034
+	local -n result_ref="$2"
+	case "$mode_key" in
+		vless_grpc)
+			printf '\nSeguridad VLESS-GRPC:\n  [1] TLS\n  [2] REALITY\n  [0] Cancelar\n'
+			ui_read_option "Selecciona seguridad: " option
+			case "$option" in 1) result_ref=vless_grpc_tls ;; 2) result_ref=vless_grpc_reality ;; *) return 1 ;; esac
+			;;
+		vmess_grpc)
+			printf '\nSeguridad VMess-GRPC:\n  [1] Sin TLS\n  [2] TLS\n  [3] REALITY\n  [0] Cancelar\n'
+			ui_read_option "Selecciona seguridad: " option
+			case "$option" in 1) result_ref=vmess_grpc ;; 2) result_ref=vmess_grpc_tls ;; 3) result_ref=vmess_grpc_reality ;; *) return 1 ;; esac
+			;;
+		vmess_xhttp)
+			printf '\nSeguridad VMess-XHTTP:\n  [1] Sin TLS\n  [2] TLS\n  [3] REALITY\n  [0] Cancelar\n'
+			ui_read_option "Selecciona seguridad: " option
+			case "$option" in 1) result_ref=vmess_xhttp ;; 2) result_ref=vmess_xhttp_tls ;; 3) result_ref=vmess_xhttp_reality ;; *) return 1 ;; esac
+			;;
+		vmess_mkcp)
+			printf '\nSeguridad VMess-mKCP:\n  [1] Sin TLS\n  [2] TLS\n  [0] Cancelar\n'
+			ui_read_option "Selecciona seguridad: " option
+			case "$option" in 1) result_ref=vmess_mkcp ;; 2) result_ref=vmess_mkcp_tls ;; *) return 1 ;; esac
+			;;
+		*) result_ref="$mode_key" ;;
+	esac
+}
+connections_manage_mode() {
+	local selected="$1" resolved option
+	if ! connections_resolve_mode "$selected" resolved; then return 0; fi
+	while true; do
+		ui_clear
+		ui_title "ADMINISTRAR $(connections_mode_label "$resolved")"
+		printf '\n  [1] Crear una configuración nueva\n  [2] Administrar configuraciones existentes\n  [0] Volver\n\n'
+		ui_read_option "Selecciona una opción: " option
+		case "$option" in
+			1) connections_create_draft "$resolved" || true ;;
+			2) connections_manage_existing "$resolved" || true ;;
+			0) return 0 ;;
+			*) printf '\nOpción no válida.\n'; ui_pause ;;
+		esac
+	done
+}
+connections_manage_existing() {
+	local protocol_id="$1" fd list_json option selected_id
+	if ! connections_require_storage_tools || ! connections_lock fd; then
+		printf '\nNo fue posible consultar las conexiones.\n'
+		ui_pause
+		return 1
+	fi
+	list_json="$(jq --arg p "$protocol_id" '[.[] | select(.protocol_id == $p)]' "$CONNECTION_DATA_FILE")"
+	connections_unlock "$fd"
+	if [[ "$(jq 'length' <<<"$list_json")" -eq 0 ]]; then
+		printf '\nNo hay configuraciones disponibles para este protocolo o modalidad.\n'
+		printf '[0] Volver\n'
+		ui_pause
+		return 0
+	fi
+	while true; do
+		ui_clear
+		ui_title "CONEXIONES $(connections_mode_label "$protocol_id")"
+		jq -r 'to_entries[] | "[\(.key + 1)] \(.value.name) - puerto \(.value.port) [\(.value.state)]"' <<<"$list_json"
+		printf '\n[0] Volver\n'
+		ui_read_option "Selecciona una conexión: " option
+		if [[ "$option" == 0 ]]; then return 0; fi
+		if [[ ! "$option" =~ ^[0-9]+$ ]] || ((10#$option < 1 || 10#$option > $(jq 'length' <<<"$list_json"))); then
+			printf '\nSelección no válida.\n'
+			ui_pause
+			continue
+		fi
+		selected_id="$(jq -r --argjson idx "$((10#$option-1))" '.[$idx].id' <<<"$list_json")"
+		connections_existing_menu "$selected_id"
+		if ! connections_require_storage_tools || ! connections_lock fd; then return 1; fi
+		list_json="$(jq --arg p "$protocol_id" '[.[] | select(.protocol_id == $p)]' "$CONNECTION_DATA_FILE")"
+		connections_unlock "$fd"
+		if [[ "$(jq 'length' <<<"$list_json")" -eq 0 ]]; then
+			printf '\nNo quedan configuraciones para esta modalidad.\n'
+			ui_pause
+			return 0
+		fi
+	done
+}
+connections_existing_menu() {
+	local id="$1" option fd state name protocol_id port
+	while true; do
+		if ! connections_require_storage_tools || ! connections_lock fd; then
+			printf '\nNo fue posible consultar la conexión.\n'
+			ui_pause
+			return 1
+		fi
+		if ! jq -e --arg id "$id" 'any(.[]; .id == $id)' "$CONNECTION_DATA_FILE" >/dev/null; then
+			connections_unlock "$fd"
+			printf '\nLa conexión ya no existe.\n'
+			ui_pause
+			return 0
+		fi
+		state="$(jq -r --arg id "$id" '.[] | select(.id == $id) | .state' "$CONNECTION_DATA_FILE")"
+		name="$(jq -r --arg id "$id" '.[] | select(.id == $id) | .name' "$CONNECTION_DATA_FILE")"
+		protocol_id="$(jq -r --arg id "$id" '.[] | select(.id == $id) | .protocol_id' "$CONNECTION_DATA_FILE")"
+		port="$(jq -r --arg id "$id" '.[] | select(.id == $id) | .port' "$CONNECTION_DATA_FILE")"
+		connections_unlock "$fd"
+		ui_clear
+		ui_title "ADMINISTRAR CONEXIÓN"
+		printf '\nNombre: %s\nID: %s\nModalidad: %s\nPuerto: %s\nEstado: %s\n' "$name" "$id" "$protocol_id" "$port" "$state"
+		printf '\n  [1] Consultar detalles\n'
+		if [[ "$state" == draft ]]; then
+			printf '  [2] Editar borrador\n  [3] Eliminar borrador\n'
+		fi
+		printf '  [0] Volver\n\n'
+		ui_read_option "Selecciona una opción: " option
+		case "$option" in
+			1) connections_show_existing_detail "$id" ;;
+			2)
+				if [[ "$state" == draft ]]; then connections_edit_draft "$id" || true; else printf '\nOperación no disponible.\n'; ui_pause; fi
+				;;
+			3)
+				if [[ "$state" == draft ]]; then connections_delete_draft "$id" || true; else printf '\nOperación no disponible.\n'; ui_pause; fi
+				return 0
+				;;
+			0) return 0 ;;
+			*) printf '\nOpción no válida.\n'; ui_pause ;;
+		esac
+	done
+}
+connections_show_existing_detail() {
+	local id="$1" fd
+	if ! connections_require_storage_tools || ! connections_lock fd; then
+		printf '\nNo fue posible consultar la conexión.\n'
+		ui_pause
+		return 1
+	fi
+	jq -r --arg id "$id" '.[] | select(.id == $id) | "Nombre: \(.name)\nID: \(.id)\nModalidad: \(.protocol_id)\nPuerto: \(.port)\nSlots: \(.max_users)\nEstado: \(.state)\nAplicada a runtime: \(.runtime_applied)\nCreada: \(.created_at)"' "$CONNECTION_DATA_FILE"
+	connections_unlock "$fd"
+	ui_pause
 }
 connections_show_catalog() {
 	local id name detail
@@ -121,7 +382,7 @@ connections_atomic_update() {
 	fi
 }
 connections_create_draft() {
-	local name protocol_id port max_users id created_at fd
+	local name protocol_id="${1:-}" port max_users id created_at fd
 	ui_clear
 	ui_title "REGISTRAR CONEXIÓN - BORRADOR"
 	printf '\nEste registro no configura Xray ni abre puertos.\n\nNombre descriptivo: '
@@ -132,10 +393,12 @@ connections_create_draft() {
 		ui_pause
 		return 1
 	fi
-	printf '\nIdentificadores disponibles:\n'
-	connections_show_catalog
-	printf '\nIdentificador exacto de modalidad: '
-	IFS= read -r protocol_id || return 0
+	if [[ -z "$protocol_id" ]]; then
+		printf '\nIdentificadores disponibles:\n'
+		connections_show_catalog
+		printf '\nIdentificador exacto de modalidad: '
+		IFS= read -r protocol_id || return 0
+	fi
 	if ! connections_valid_protocol "$protocol_id"; then
 		printf '\nModalidad no reconocida.\n'
 		ui_pause
@@ -208,11 +471,13 @@ connections_list() {
 	connections_unlock "$fd"
 }
 connections_edit_draft() {
-	local id name protocol_id port max_users fd state
+	local id="${1:-}" name protocol_id port max_users fd state
 	ui_clear
 	ui_title "EDITAR CONEXIÓN - BORRADOR"
-	printf '\nID exacto: '
-	IFS= read -r id || return 0
+	if [[ -z "$id" ]]; then
+		printf '\nID exacto: '
+		IFS= read -r id || return 0
+	fi
 	if ! connections_require_storage_tools || ! connections_lock fd; then
 		printf '\nNo fue posible acceder al registro.\n'
 		ui_pause
@@ -299,12 +564,14 @@ connections_edit_draft() {
 	ui_pause
 }
 connections_delete_draft() {
-	local id confirmation fd state users_file
+	local id="${1:-}" confirmation fd state users_file
 	users_file="${USER_DATA_FILE:-${XRAY_MANAGER_USERS_FILE:-/var/lib/xray-manager/users/users.json}}"
 	ui_clear
 	ui_title "ELIMINAR CONEXIÓN - BORRADOR"
-	printf '\nID exacto: '
-	IFS= read -r id || return 0
+	if [[ -z "$id" ]]; then
+		printf '\nID exacto: '
+		IFS= read -r id || return 0
+	fi
 	if ! connections_require_storage_tools || ! connections_lock fd; then
 		printf '\nNo fue posible acceder al registro.\n'
 		ui_pause
