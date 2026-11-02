@@ -22,7 +22,7 @@
 | M04 | Encabezado con autostart y perfil activo | lib/system.sh: system_xray_autostart, system_active_profile, system_show_header | tests/stage1_header.sh cubre perfil ausente/presente y servicio no configurado/habilitado; falta el estado explícito deshabilitado | PARCIAL |
 | M05 | Fecha/hora local | lib/system.sh: system_show_header; preferencias APP_TIMEZONE/APP_DATE_FORMAT/APP_TIME_FORMAT | tests/stage1_settings.sh | IMPLEMENTADO |
 | M06 | Datos no disponibles no deben impedir mostrar el menú | Funciones system_* con fallback y menú desacoplado de los datos | Falta prueba de fallo independiente para cada proveedor de datos | PARCIAL |
-| M07 | Al volver al menú principal, actualizar el encabezado | system_show_header se ejecuta dentro del bucle de menu_main | tests/stage1_menu.sh verifica una segunda lectura tras volver de [8]; falta extenderlo a todos los submenús | PARCIAL |
+| M07 | Al volver al menú principal, actualizar el encabezado | system_show_header se ejecuta dentro del bucle de menu_main | tests/stage1_menu.sh verifica el renderizado inicial y los retornos desde las nueve entradas principales | IMPLEMENTADO |
 | M08 | Salir requiere confirmación | menu_main, opción 0 | tests/stage1_menu.sh | IMPLEMENTADO |
 
 ## 3. Opción [8] — Configuración del sistema y administrador
@@ -38,7 +38,7 @@
 | A07 | Configuración del administrador y preferencias | config/preferences.sh; modules/admin_settings.sh | tests/stage1_settings.sh | IMPLEMENTADO con almacenamiento temporal |
 | A08 | Información de instalación | menu_installation_information, menu_installation_paths, menu_installation_files, menu_installation_systemd | tests/stage1_menu.sh | IMPLEMENTADO |
 | A09 | Errores de submenús no deben cerrar el administrador | Enrutamiento de menu_system_admin con recuperación de errores | tests/stage1_menu.sh inyecta retorno de error en las cinco opciones del administrador y comprueba que el menú continúa | IMPLEMENTADO |
-| A10 | Todos los submenús usan [0] Volver y regresan al nivel anterior | Menús de Xray, dependencias, preferencias e información | tests/stage1_menu.sh | PARCIAL: falta matriz automatizada de todos los caminos |
+| A10 | Todos los submenús usan [0] Volver y regresan al nivel anterior | Menús funcionales de conexiones, usuarios legacy/v2, Xray, dependencias y preferencias | tests/stage1_menu.sh verifica 11 rutas de retorno [0] y siete fallos de acciones inyectados | IMPLEMENTADO |
 | A11 | Operaciones destructivas requieren confirmación | Instalación/reinstalación/reparación, cambios de dependencias y desinstalación | tests/stage1_menu.sh, tests/stage1_dependencies.sh, tests/xray_admin.sh, tests/uninstall.sh | PARCIAL: cobertura de confirmaciones por operación aún no exhaustiva |
 
 ## 4. Desinstalación única — opción [8] > [5]
@@ -65,7 +65,7 @@
 
 | ID | Requisito aprobado | Implementación | Evidencia | Estado |
 |---|---|---|---|---|
-| N01 | [0] Volver en todos los submenús | Menús principales y submenús de Etapa 1 con retorno explícito | tests/stage1_menu.sh comprueba retorno de las nueve entradas principales y los submenús del sistema; falta cubrir todos los submenús funcionales | PARCIAL |
+| N01 | [0] Volver en todos los submenús | Menús principales y submenús funcionales de Etapa 1 con retorno explícito | tests/stage1_menu.sh cubre 11 rutas internas de [0] Volver, además de las nueve entradas principales | IMPLEMENTADO |
 | N02 | Error no debe cerrar Manager | Llamadas recuperables desde menú principal | tests/stage1_menu.sh inyecta fallos en las nueve entradas principales y comprueba que el bucle continúa hasta la salida confirmada | IMPLEMENTADO para dispatch principal |
 | N03 | Operaciones destructivas con confirmación | Xray, dependencias y desinstalación | Pruebas por módulo | PARCIAL |
 | N04 | Salir con confirmación | menu_main | tests/stage1_menu.sh | IMPLEMENTADO |
@@ -77,10 +77,9 @@
 
 Bloqueos para certificación:
 
-1. Completar la matriz de navegación [0] Volver para los submenús funcionales internos (conexiones, usuarios, preferencias y dependencias), y fallos inyectados en sus acciones.
-2. Revisar la concurrencia con otros procesos del Manager y completar los escenarios restantes de confirmaciones destructivas.
-3. Validar instalación Xray, dependencias, preferencias y desinstalación en un VPS desechable.
-4. Revisar cualquier discrepancia encontrada en la matriz contra la especificación aprobada y actualizar la documentación de implementación.
+1. Revisar la concurrencia con otros procesos del Manager y completar los escenarios restantes de confirmaciones destructivas.
+2. Validar instalación Xray, dependencias, preferencias y desinstalación en un VPS desechable.
+3. Resolver las discrepancias pendientes de encabezado (M04/M06) y cotejar el resto de la matriz contra la especificación aprobada.
 
 Las pruebas actuales son fixtures/mocks. No se ejecutaron apt-get, instalación real de Xray, desinstalación real, cambios de systemd, firewall, SSH ni migraciones de datos reales.
 
@@ -90,10 +89,10 @@ Las pruebas actuales son fixtures/mocks. No se ejecutaron apt-get, instalación 
 Se incorporaron pruebas automatizadas adicionales:
 
 - `tests/stage1_header.sh`: fallo de consulta IP, binario Xray ausente/presente, unidad systemd no configurada, perfil ausente y renderizado completo del encabezado.
-- `tests/stage1_menu.sh`: segunda consulta del encabezado al regresar desde la opción [8]; las cinco opciones de Administración del sistema se prueban con retornos de error.
+- `tests/stage1_menu.sh`: refresco del encabezado al regresar desde las nueve entradas principales; matriz de 11 rutas internas `[0] Volver` y siete fallos de acciones inyectados en conexiones, usuarios legacy/v2, preferencias, dependencias, administración Xray y gestión del servicio.
 - `tests/uninstall.sh`: contención de locks, aviso/cancelación de certificados, prueba individual de nueve categorías y políticas keep/all/selected en los tres alcances, incluida la limpieza de respaldos.
 
-**Ejecución integral:** 16/16 scripts `tests/*.sh` aprobados; sintaxis Bash aprobada para bin, config, lib, modules, scripts y tests; compilación de `scripts/users_v2_cutover.py` aprobada con caché temporal fuera del repositorio.
+**Ejecución integral:** 19/19 scripts `tests/*.sh` aprobados; sintaxis Bash aprobada para bin, config, lib, modules, scripts y tests; compilación de `scripts/users_v2_cutover.py` aprobada con caché temporal fuera del repositorio.
 
 La integración Xray validó las configuraciones generadas. Xray emitió avisos de deprecación para transportes WebSocket/gRPC y advertencias de REALITY al usar puertos distintos de 443; no fueron fallos de validación.
 
