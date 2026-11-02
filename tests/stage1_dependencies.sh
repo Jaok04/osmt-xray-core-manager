@@ -17,7 +17,7 @@ chmod 700 "$MANAGER_APT_GET"
 APT_CALL_LOG="$tmp/apt.log"
 export APT_CALL_LOG
 
-expected="$(printf '%s\n' apt ca-certificates coreutils curl dpkg grep gzip iproute2 jq mawk procps python3 tar util-linux | sort -u)"
+expected="$(printf '%s\n' apt ca-certificates coreutils curl dpkg grep gzip iproute2 jq mawk procps python3 tar util-linux uuid-runtime libc-bin passwd systemd | sort -u)"
 actual="$(manager_dependencies_packages)"
 [[ "$actual" == "$expected" ]]
 
@@ -32,12 +32,12 @@ PATH="$tmp:$PATH"
 upgrade_packages="$(manager_dependencies_installed_packages)"
 PATH="$old_path"
 if grep -Fxq apt <<<"$upgrade_packages"; then
-	printf 'ERROR: Etapa 1 intentaría actualizar apt.\\n' >&2
-	exit 1
+    printf 'ERROR: Etapa 1 intentaría actualizar apt.\\n' >&2
+    exit 1
 fi
 if grep -Fxq dpkg <<<"$upgrade_packages"; then
-	printf 'ERROR: Etapa 1 intentaría actualizar dpkg.\\n' >&2
-	exit 1
+    printf 'ERROR: Etapa 1 intentaría actualizar dpkg.\\n' >&2
+    exit 1
 fi
 grep -Fxq curl <<<"$upgrade_packages"
 
