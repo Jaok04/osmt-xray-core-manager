@@ -33,6 +33,7 @@ Este SHA es una referencia conocida, no una garantía de que siga siendo HEAD. C
 - En la inspección del 2026-11-02 no existía /opt/xray-manager/.git.
 - Por ello no se puede establecer desde esa ruta branch, HEAD ni git status.
 - La VPS y GitHub deben compararse por contenido/hashes; no asumir equivalencia.
+- El sistema de continuidad de cinco archivos está creado en la VPS y publicado en la rama autorizada; la primera verificación encontró coincidencia exacta de texto entre ambos destinos.
 - En una auditoría previa, la mayoría de los archivos comparados coincidían. modules/main_menu.sh y docs/ETAPA_2_IMPLEMENTACION_MENU_2026-11-02.md mostraron SHA distintos pese a que el texto recuperado parecía igual. La causa no quedó determinada; mantenerlos como divergencia pendiente de reconciliación hasta volver a comparar bytes.
 
 ## 3. Etapas
