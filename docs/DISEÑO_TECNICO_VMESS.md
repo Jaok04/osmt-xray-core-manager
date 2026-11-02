@@ -94,7 +94,7 @@ Para preservar sin cambios el contrato P4 de VLESS, el almacén VMess usa rutas 
 
 VMess no escribe ni interpreta `configuration_ref`, `secret_ref`, `configuration_revision` o `configuration_schema_version`, reservados al flujo VLESS. El bloqueo de integridad compartido se conserva para serializar cambios al catálogo.
 
-P4 VLESS no se modifica y no incluye los archivos del almacén VMess. Advertencia: el backup VLESS conserva una copia del catálogo común. Restaurar una copia antigua puede revertir/eliminar registros VMess del catálogo aunque no toque los archivos del almacén VMess; en ese caso podrían quedar archivos VMess huérfanos. No existe todavía backup/restore VMess; requiere diseño y autorización independientes.
+El backup VLESS no incluye los archivos del almacén VMess. La restauración VLESS recibió una corrección posterior autorizada: combina las entradas VLESS del backup con las entradas VMess vigentes, valida las referencias y conserva el almacén VMess sin modificarlo. Las entradas VMess antiguas incluidas en la instantánea no reemplazan el catálogo VMess actual. La corrección está documentada y probada en `docs/P4_BACKUP_RECUPERACION_VLESS.md`, sección 9; su aceptación formal específica permanece pendiente. No existe todavía backup/restore VMess independiente; requiere diseño y autorización separados.
 
 El almacén VMess usa la clave maestra local compartida con VLESS, pero AES-256-GCM mantiene AAD específico `xray-manager:vmess-secret:v1:<connection_id>` para separar criptográficamente el contexto.
 

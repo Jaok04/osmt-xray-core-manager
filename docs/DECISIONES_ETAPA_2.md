@@ -26,15 +26,14 @@ Decisiones principales:
 - Se exige xray run -test por combinación; la prueba de configuración no sustituye la interoperabilidad extremo a extremo.
 - Se conserva la advertencia sobre sincronización horaria VMess y sus límites de seguridad/huella de tráfico.
 
-## 3. Estado de implementación
+## 3. Estado de implementación (actualización 2026-11-02)
 
-- El menú, modelo neutral, adaptador Xray 26.10.31 y asistente VMess existen en la VPS como cambios locales aún no publicados.
-- Las 14 combinaciones fueron aceptadas por `xray run -test` en la prueba de integración VMess ejecutada previamente en esta sesión.
-- El asistente guarda borradores y recupera configuraciones; HTTPUpgrade-TLS está incluido.
+- El menú, modelo neutral, adaptador Xray 26.10.31, asistente, preparación de configuración y almacén VMess están implementados, verificados técnicamente, publicados y sincronizados en la rama autorizada. La aceptación formal del módulo VMess permanece pendiente.
+- Las 14 combinaciones fueron aceptadas por `xray run -test`; la cobertura de navegación y los casos negativos están registrados en `docs/DISEÑO_TECNICO_VMESS.md` y `docs/PUNTO_CONTROL_ACTUAL.md`.
 - El almacén VMess se mantiene aislado en `/var/lib/xray-manager/vmess/{configurations,secrets}` y usa campos de catálogo `vmess_*` independientes.
 - VMess aún no está integrado con las asociaciones globales de identidad de Etapa 3; sus usuarios se capturan manualmente en el asistente.
-- El backup/restore P4 sigue siendo exclusivamente VLESS. No incluye configuraciones ni secretos VMess. Como el catálogo es compartido, restaurar un backup VLESS antiguo puede revertir entradas VMess del catálogo; el almacén VMess separado no se modifica y puede quedar con archivos huérfanos.
-- La implementación local permanece en revisión y no está publicada ni aceptada como módulo completo.
+- El backup/restore P4 sigue siendo exclusivamente VLESS y no incluye configuraciones ni secretos VMess. La restauración VLESS ahora combina las entradas VLESS del backup con las entradas VMess vigentes, valida sus referencias y conserva el almacén VMess sin modificarlo. El detalle y la evidencia de esta corrección se registran en la sección 9 de `docs/P4_BACKUP_RECUPERACION_VLESS.md`; su aceptación formal específica está pendiente.
+- Backup/restore VMess independiente sigue fuera del alcance y requiere diseño/autorización separados.
 
 ## 4. Alcance de integración VLESS aprobado
 

@@ -100,3 +100,36 @@ Se añadió `MAX_TOTAL_UNCOMPRESSED = 512 MiB`. El límite se aplica al recolect
 La restauración ahora adquiere ambos locks antes de verificar y leer el backup, comprobar la clave y extraer el contenido. El lector común valida por sí mismo nombres de ruta, traversal, tipos, symlinks/hardlinks, duplicados, cantidad, tamaños y hashes del manifiesto, incluso si se invoca sin una validación estructural previa. El hash del archivo se vuelve a comprobar sobre los mismos bytes que se entregan al lector.
 
 Prueba focal nueva: `tests/vless_backup_limits.sh` (límite agregado, traversal, symlink y caso positivo). Suite completa posterior: 32/32 PASS. El propietario aceptó formalmente estas correcciones el 2026-11-02; P4 queda COMPLETADA.
+
+
+## 9. Corrección posterior: preservar VMess durante restauraciones VLESS — 2026-11-02
+
+**Estado del incremento:** IMPLEMENTADO y VERIFICADO; aceptación formal específica pendiente del propietario. Esta corrección posterior no amplía el contenido del backup VLESS ni modifica la aceptación histórica del alcance P4 original.
+
+### 9.1 Comportamiento
+
+El catálogo `connections.json` es compartido por VLESS y VMess, aunque sus almacenes de configuración y secretos son independientes. Antes de esta corrección, `restore-data` sustituía el directorio `connections/` completo con la instantánea del backup. Eso podía revertir o eliminar entradas VMess creadas después del backup y dejar referencias VMess sin registro.
+
+La restauración ahora prepara el catálogo de publicación combinando:
+- Las entradas VLESS contenidas en el backup seleccionado.
+- Las entradas VMess que existen en el catálogo vigente inmediatamente antes de la restauración.
+
+Las entradas VMess históricas presentes en la instantánea del backup no prevalecen sobre las entradas actuales. Las entradas VMess vigentes se conservan completas, incluidos `vmess_configuration_ref`, `vmess_secret_ref`, `vmess_configuration_revision` y `vmess_configuration_schema_version`. Los archivos de `/var/lib/xray-manager/vmess/` no se copian, reemplazan, modifican ni incorporan al backup VLESS.
+
+### 9.2 Validaciones y fallo seguro
+
+La combinación se realiza mientras se mantienen `lifecycle.lock` e `integrity.lock`, antes de crear el journal o publicar directorios. Se valida el catálogo actual, la unicidad de IDs, las modalidades VMess, la coherencia de las referencias y la existencia/seguridad de los archivos VMess referenciados. También se verifica el catálogo combinado después de su escritura atómica en staging.
+
+La restauración se detiene antes de publicar si el catálogo actual falta o es ilegible, contiene registros/IDs inválidos, referencias VMess rotas, una modalidad desconocida, un protocolo no cubierto por esta operación o una colisión entre el ID VLESS restaurado y un ID VMess vigente. Los errores de escritura del catálogo combinado tampoco modifican el catálogo activo.
+
+El resultado informa por separado las conexiones VLESS restauradas, las VMess preservadas y el total combinado. Se mantiene la confirmación interactiva `RESTAURAR`, el journal, el rollback, la conservación preventiva de directorios anteriores y la ausencia de activación runtime.
+
+### 9.3 Pruebas y evidencia
+
+- `tests/vless_restore_preserves_vmess.sh`: backup con VMess histórico; VMess creado antes y después del backup; restauración VLESS; preservación de referencias de configuración y secreto; almacén VMess byte a byte sin cambios; rechazo de IDs duplicados; catálogo corrupto; referencias rotas; y fallo de escritura staging sin modificación del catálogo activo.
+- `tests/vless_backup_journal_crash_matrix.sh`: sus fixtures ahora usan un catálogo JSON válido que incluye una entrada VMess sin configuración, de modo que las 32 interrupciones siguen probando fases/renombrados y rollback bajo el nuevo contrato de validación.
+- Suite completa `tests/*.sh`: 37/37 scripts PASS.
+- `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck (`-S warning`) sobre las pruebas modificadas y `git diff --check`: PASS.
+- Las pruebas se ejecutaron con directorios temporales; no se creó un backup operativo ni se leyó/creó la clave maestra real de la VPS.
+
+**Límites:** el backup continúa siendo exclusivamente VLESS; backup/restore VMess no se implementa aquí. No se modificaron runtime, servicio, firewall, puertos, certificados desplegados ni la documentación normativa preliminar.

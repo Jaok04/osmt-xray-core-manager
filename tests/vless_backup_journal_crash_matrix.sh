@@ -57,7 +57,9 @@ for had_connections in (False, True):
       case_base = case/'connections'; case_secrets = case/'secrets'; case_backups = case/'backups'
       case_backups.mkdir(mode=0o700)
       if had_connections:
-        case_base.mkdir(mode=0o700); (case_base/'connections.json').write_text('ORIGINAL-CONNECTIONS\n'); (case_base/'connections.json').chmod(0o600)
+        case_base.mkdir(mode=0o700)
+        original_catalog='[{"id":"original-vmess","name":"Original VMess","protocol_id":"vmess_ws","port":62000,"max_users":1,"state":"draft","runtime_applied":false}]\n'
+        (case_base/'connections.json').write_text(original_catalog); (case_base/'connections.json').chmod(0o600)
       if had_secrets:
         case_secrets.mkdir(mode=0o700); (case_secrets/'original.bin').write_text('ORIGINAL-SECRETS\n'); (case_secrets/'original.bin').chmod(0o600)
       snapshot = case_backups/'snapshot'; shutil.copytree(source_snapshot, snapshot)
@@ -74,7 +76,7 @@ for had_connections in (False, True):
       assert result['status'] == 'rolled_back', (scenario, event, result)
       assert not (case_backups/'RESTORE_IN_PROGRESS.json').exists(), (scenario, event, 'journal persistente')
       if had_connections:
-        assert case_base.is_dir() and (case_base/'connections.json').read_text() == 'ORIGINAL-CONNECTIONS\n', (scenario, event, 'conexiones originales no restauradas')
+        assert case_base.is_dir() and (case_base/'connections.json').read_text() == original_catalog, (scenario, event, 'catálogo original no restaurado')
       else:
         assert not case_base.exists(), (scenario, event, 'directorio nuevo no fue retirado a cuarentena')
       if had_secrets:

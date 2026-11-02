@@ -229,7 +229,7 @@ El diseño VMess y su implementación fueron autorizados por el propietario, inc
 
 La persistencia VMess se ubica en `/var/lib/xray-manager/vmess/`, con `configurations/` y `secrets/` privados. El catálogo común continúa en `/var/lib/xray-manager/connections/connections.json`, pero VMess solo usa `vmess_configuration_ref`, `vmess_secret_ref`, `vmess_configuration_revision` y `vmess_configuration_schema_version`. No cambiar los campos VLESS ni `scripts/vless_backup.py` como parte de esta tarea. El bloqueo de integridad continúa compartido para serializar escrituras del catálogo.
 
-P4 VLESS no incluye el almacén VMess separado. Advertencia de compatibilidad: el backup VLESS sí contiene una instantánea del catálogo compartido; restaurar un backup antiguo puede revertir o eliminar entradas VMess del catálogo aunque no modifique los archivos VMess. Los archivos pueden quedar huérfanos. Backup/restore VMess debe diseñarse y aprobarse por separado.
+P4 VLESS no incluye el almacén VMess separado. La restauración VLESS ahora combina las entradas VLESS del backup con las entradas VMess vigentes y valida sus referencias; los archivos del almacén VMess permanecen intactos. Esta corrección posterior se documenta en la sección 9 de `docs/P4_BACKUP_RECUPERACION_VLESS.md`. Backup/restore VMess independiente debe diseñarse y aprobarse por separado.
 
 Los usuarios VMess todavía se introducen manualmente; la asociación con identidades globales pertenece a Etapa 3 y no debe implementarse dentro de esta tarea sin su definición/autorización.
 
@@ -269,3 +269,16 @@ Límites conservados:
 Publicación del cierre técnico confirmada en `design/user-identity-association-v1`: commit `ab76a57032faa9793a62348f865fba2c9a7d8f77`. La VPS hizo push y fetch del commit funcional y de la actualización documental; HEAD local/remoto se verificaron coincidentes y el árbol quedó limpio. Obtener el SHA vigente con `git rev-parse HEAD`. La Deploy Key SSH actual tiene permiso de escritura; la nota anterior de solo lectura es histórica y está superada.
 
 El punto de reanudación exacto está en `docs/PUNTO_CONTROL_ACTUAL.md`. No iniciar Trojan hasta recibir la aceptación formal de VMess y efectuar el contraste específico de Trojan.
+
+
+## 2026-11-02 — Bloque 1: preservar VMess durante restauración VLESS
+
+El propietario aprobó el plan completo de correcciones para el cierre de VMess y autorizó iniciar por el Bloque 1. Se contrastó de nuevo la gobernanza, la documentación preliminar de Etapa 2 y el contrato P4 documentado. Se confirmó que `restore_data()` reemplazaba `connections/` con el catálogo histórico del backup; como el catálogo es compartido, esto podía perder entradas VMess actuales.
+
+Se implementó en `scripts/vless_backup.py` una combinación en staging bajo `lifecycle.lock` e `integrity.lock`: las conexiones VLESS proceden del backup y las VMess proceden del catálogo vigente. Las VMess históricas del snapshot no prevalecen. Se validan catálogo actual, IDs únicos, modalidades VMess, referencias de configuración/secreto y archivos regulares con permisos seguros. Colisiones VLESS/VMess, catálogo corrupto, referencias rotas, protocolo desconocido o fallo de escritura staging detienen la operación antes de publicar. El almacén VMess separado no se modifica ni se incluye en el backup VLESS.
+
+Se creó `tests/vless_restore_preserves_vmess.sh` con casos de VMess anteriores y posteriores al backup, referencias `vmess_*`, comprobación byte a byte del almacén, colisión de IDs, catálogo corrupto, refs rotas y fallo de escritura. Se ajustó `tests/vless_backup_journal_crash_matrix.sh` para que su estado previo sea un catálogo VMess JSON válido y se conservaron las 32 pruebas de interrupción/rollback. Suite completa: 37/37 scripts PASS. `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de las pruebas modificadas y `git diff --check`: PASS.
+
+Estado del Bloque 1: IMPLEMENTADO y VERIFICADO; falta PUBLICAR, SINCRONIZAR y aceptación formal específica. P4 conserva su aceptación histórica para el alcance original; la corrección se registra como incremento posterior. No se creó backup operativo ni se accedió a la clave maestra real. No se tocó runtime, servicio, firewall, puertos ni certificados desplegados. La documentación normativa preliminar se mantuvo intacta.
+
+Próximo paso del plan aprobado: Bloque 2, correcciones del asistente VMess. Etapa 2 sigue ABIERTA y VMess no se considera ACEPTADO hasta completar el proceso de cierre.

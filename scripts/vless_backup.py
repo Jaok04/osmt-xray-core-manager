@@ -383,6 +383,114 @@ def validate_payload(archive: bytes, manifest: dict, key: bytes):
     if sorted(e['id'] for e in catalog)!=manifest_ids: raise BackupError('IDs de catálogo no coinciden con manifiesto')
     return extracted
 
+def merge_current_vmess_entries(stage_base: Path, live_base: Path):
+    """Combina VLESS del backup con las entradas VMess vigentes.
+
+    El catálogo es compartido, pero el almacén VMess vive en el directorio
+    hermano ``vmess``. Esta operación solo preserva registros y referencias;
+    nunca copia, modifica ni incorpora archivos del almacén VMess al backup.
+    Debe ejecutarse bajo lifecycle.lock e integrity.lock.
+    """
+    restored_path = stage_base / 'connections.json'
+    safe_regular(restored_path, 4 * 1024 * 1024)
+    restored = json.loads(restored_path.read_text(encoding='utf-8'))
+    if not isinstance(restored, list):
+        raise BackupError('catálogo VLESS preparado inválido')
+
+    vless_entries = []
+    restored_ids = set()
+    for entry in restored:
+        if not isinstance(entry, dict) or not isinstance(entry.get('id'), str) or not ID_RE.fullmatch(entry['id']):
+            raise BackupError('registro restaurado inválido durante combinación')
+        protocol_id = entry.get('protocol_id')
+        if isinstance(protocol_id, str) and protocol_id.startswith('vmess_'):
+            # Un backup histórico VLESS puede contener el catálogo compartido
+            # de aquella fecha. Esas entradas nunca prevalecen sobre VMess vivo.
+            continue
+        if not isinstance(protocol_id, str) or not protocol_id.startswith('vless_'):
+            raise BackupError('el backup contiene un protocolo ajeno a VLESS/VMess')
+        if entry['id'] in restored_ids:
+            raise BackupError('IDs duplicados en catálogo VLESS restaurado')
+        restored_ids.add(entry['id'])
+        vless_entries.append(entry)
+
+    current_vmess = []
+    if live_base.is_symlink():
+        raise BackupError('symlink en el directorio del catálogo actual')
+    if live_base.exists():
+        safe_dir(live_base)
+        live_catalog_path = live_base / 'connections.json'
+        if not live_catalog_path.exists():
+            raise BackupError('catálogo actual ausente; no es posible proteger entradas VMess')
+        safe_regular(live_catalog_path, 4 * 1024 * 1024)
+        live_catalog = json.loads(live_catalog_path.read_text(encoding='utf-8'))
+        if not isinstance(live_catalog, list):
+            raise BackupError('catálogo actual inválido; restauración detenida')
+        all_current_ids = set()
+        vmess_root = live_base.parent / 'vmess'
+        vmess_store = None
+        for entry in live_catalog:
+            if not isinstance(entry, dict) or not isinstance(entry.get('id'), str) or not ID_RE.fullmatch(entry['id']):
+                raise BackupError('registro inválido en catálogo actual')
+            cid = entry['id']
+            if cid in all_current_ids:
+                raise BackupError('IDs duplicados en catálogo actual')
+            all_current_ids.add(cid)
+            protocol_id = entry.get('protocol_id')
+            if not isinstance(protocol_id, str) or not (protocol_id.startswith('vless_') or protocol_id.startswith('vmess_')):
+                raise BackupError('el catálogo actual contiene un protocolo no cubierto por la restauración VLESS')
+            if protocol_id.startswith('vmess_'):
+                if vmess_store is None:
+                    import importlib
+                    sys.path.insert(0, str(Path(__file__).resolve().parent))
+                    vmess_store = importlib.import_module('vmess_config_store')
+                if protocol_id not in vmess_store.MODES:
+                    raise BackupError('modalidad VMess desconocida en catálogo actual')
+                config_ref = entry.get('vmess_configuration_ref')
+                secret_ref = entry.get('vmess_secret_ref')
+                if config_ref is None:
+                    if secret_ref is not None or entry.get('vmess_configuration_schema_version') not in (None, 0) or entry.get('vmess_configuration_revision') not in (None, 0):
+                        raise BackupError('referencias VMess incompletas en catálogo actual')
+                else:
+                    config_match = re.fullmatch(rf'configurations/{re.escape(cid)}\.r([0-9]{{6}})\.json', config_ref if isinstance(config_ref, str) else '')
+                    if (not config_match or type(entry.get('vmess_configuration_schema_version')) is not int or
+                            entry.get('vmess_configuration_schema_version') != 1 or
+                            type(entry.get('vmess_configuration_revision')) is not int or
+                            entry.get('vmess_configuration_revision') != int(config_match.group(1))):
+                        raise BackupError('referencia de configuración VMess inválida')
+                    config_dir = vmess_root / 'configurations'
+                    safe_dir(vmess_root); safe_dir(config_dir)
+                    config_path = config_dir / f'{cid}.r{int(config_match.group(1)):06d}.json'
+                    safe_regular(config_path, vmess_store.MAX_CONFIG)
+                    config = json.loads(config_path.read_text(encoding='utf-8'))
+                    try:
+                        vmess_store.validate(config, entry, secret_ref)
+                    except Exception as exc:
+                        raise BackupError('configuración VMess actual inválida') from exc
+                    if secret_ref is not None:
+                        secret_match = re.fullmatch(rf'secrets/{re.escape(cid)}\.r([0-9]{{6}})\.bin', secret_ref if isinstance(secret_ref, str) else '')
+                        if not secret_match or int(secret_match.group(1)) != int(config_match.group(1)):
+                            raise BackupError('referencia de secreto VMess inválida')
+                        secret_dir = vmess_root / 'secrets'
+                        safe_dir(secret_dir)
+                        encrypted_limit = ((vmess_store.MAX_SECRET + 28 + 2) // 3) * 4 + 4096
+                        safe_regular(secret_dir / f'{cid}.r{int(secret_match.group(1)):06d}.bin', encrypted_limit)
+                current_vmess.append(entry)
+
+    conflicts = restored_ids.intersection(entry['id'] for entry in current_vmess)
+    if conflicts:
+        raise BackupError('conflicto de IDs entre VLESS del backup y VMess actuales: ' + ', '.join(sorted(conflicts)))
+
+    merged = vless_entries + current_vmess
+    if len({entry['id'] for entry in merged}) != len(merged):
+        raise BackupError('IDs duplicados en catálogo combinado')
+    payload = (json.dumps(merged, ensure_ascii=False, sort_keys=True, separators=(',', ':')) + '\n').encode()
+    atomic_file(restored_path, payload)
+    if restored_path.read_bytes() != payload:
+        raise BackupError('falló la verificación del catálogo combinado')
+    return {'vless_restored': len(vless_entries), 'vmess_preserved': len(current_vmess), 'total': len(merged)}
+
+
 def restore_data(args):
     require_root()
     root=Path(args.backups).absolute(); base=Path(args.base).absolute(); secrets_dir=Path(args.secrets_dir).absolute(); key_path=Path(args.master_key).absolute()
@@ -420,10 +528,13 @@ def restore_data(args):
             fd=os.open(dest,os.O_WRONLY|os.O_CREAT|os.O_EXCL|getattr(os,'O_NOFOLLOW',0),0o600)
             with os.fdopen(fd,'wb') as f: f.write(data); f.flush(); os.fsync(f.fileno())
         if not (stage_base/'connections.json').is_file(): raise BackupError('el backup no contiene catálogo')
+        # El catálogo compartido se reconstruye con VLESS del backup y VMess
+        # vigentes; los archivos VMess permanecen en su almacén independiente.
+        merge_counts = merge_current_vmess_entries(stage_base, base)
         # Confirmación explícita: CLI interactiva; no acepta confirmación implícita.
         if not sys.stdin.isatty(): raise BackupError('restauración requiere terminal interactiva para confirmación')
-        print(f"Se restaurarán {manifest['connection_count']} conexiones desde {manifest['backup_id']}.")
-        answer=input('Esto reemplazará el almacén VLESS actual. Escribe RESTAURAR para continuar: ')
+        print(f"Se restaurarán {merge_counts['vless_restored']} conexiones VLESS y se conservarán {merge_counts['vmess_preserved']} conexiones VMess actuales desde {manifest['backup_id']}.")
+        answer=input('Esto reemplazará los datos VLESS actuales y conservará las entradas VMess. Escribe RESTAURAR para continuar: ')
         if answer!='RESTAURAR': raise BackupError('restauración cancelada')
         if base.exists(): safe_dir(base)
         if secrets_dir.exists(): safe_dir(secrets_dir)
@@ -452,7 +563,7 @@ def restore_data(args):
                 sys.path.insert(0,str(Path(__file__).resolve().parent)); import vless_crypto as crypto
                 crypto.decrypt_secret(crypto_path.read_bytes(),key,e['id'],1)
         journal.unlink();
-        return {'status':'restored','backup_id':manifest['backup_id'],'connections':manifest['connection_count'],'previous_data_preserved':True,'previous_connections_path':str(old_base) if old_base.exists() else None,'previous_secrets_path':str(old_secrets) if old_secrets.exists() else None,'external_tls_dependencies':certs,'runtime_activated':False}
+        return {'status':'restored','backup_id':manifest['backup_id'],'connections':merge_counts['total'],'vless_connections_restored':merge_counts['vless_restored'],'vmess_connections_preserved':merge_counts['vmess_preserved'],'previous_data_preserved':True,'previous_connections_path':str(old_base) if old_base.exists() else None,'previous_secrets_path':str(old_secrets) if old_secrets.exists() else None,'external_tls_dependencies':certs,'runtime_activated':False}
     except Exception:
         # Rollback best-effort en orden inverso. Si el proceso/host se interrumpe,
         # el journal persistente bloquea operaciones posteriores para evitar daño.

@@ -248,3 +248,14 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - La regla aplica a todas las etapas y a cualquier IA/desarrollador que retome el proyecto. Los documentos normativos preliminares siguen siendo la línea base y la regla de contraste previo continúa siendo obligatoria.
 - Se creó `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md` y se integró la obligación en `AGENTS.md`, `docs/CONTINUIDAD_DEL_PROYECTO.md`, `PROJECT_STATE.md`, `docs/PUNTO_CONTROL_ACTUAL.md` y `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`.
 - La Etapa 2 permanece ABIERTA; el cierre técnico individual de VMess no constituye cierre de la etapa.
+
+
+## 2026-11-02 — Bloque 1: protección de VMess durante restauración VLESS
+
+- El propietario aprobó el plan completo de correcciones de cierre VMess y autorizó iniciar el Bloque 1. Se contrastaron las reglas de gobernanza, el diseño normativo Etapa 2 y `docs/P4_BACKUP_RECUPERACION_VLESS.md` antes de modificar código.
+- Se corrigió `scripts/vless_backup.py`: restore VLESS combina las conexiones VLESS del backup con las entradas VMess actuales del catálogo compartido. Las entradas VMess antiguas de la instantánea no reemplazan las vigentes. Se validan IDs, modalidades, referencias y archivos VMess; las colisiones, datos corruptos, referencias rotas y fallos staging se rechazan antes de publicar.
+- El almacén VMess separado no se copia ni modifica; el backup VLESS continúa sin contener configuraciones ni secretos VMess.
+- Nuevo `tests/vless_restore_preserves_vmess.sh`: VMess pre/post backup, refs de configuración/secreto, integridad del almacén, colisión IDs, catálogo corrupto, refs rotas y fallo de escritura sin cambio activo. Se actualizó el fixture de `tests/vless_backup_journal_crash_matrix.sh` para usar catálogo VMess válido; 32 interrupciones siguen PASS.
+- Verificación: suite `tests/*.sh` 37/37 PASS; `python3 -m py_compile scripts/*.py`; `bash -n` de todos los scripts Bash; `install.sh --check`; ShellCheck warning de pruebas modificadas; `git diff --check`: PASS.
+- Estado: IMPLEMENTADO y VERIFICADO; PUBLICADO/SINCRONIZADO y aceptación formal específica pendientes. P4 mantiene la aceptación histórica de su alcance original. No se generó backup operativo ni se accedió a la clave maestra real. Sin cambios de runtime, servicio, firewall, puertos, certificados desplegados ni documentación normativa preliminar.
+- Próximo paso del plan aprobado: Bloque 2 del asistente VMess.
