@@ -304,3 +304,12 @@ Se creó `tests/vmess_persistence_hardening.sh`: store/read TLS AES-256-GCM y AA
 La prueba de fallo inyectado confirma que una interrupción después de escribir archivos y antes de publicar el catálogo deja huérfanos detectables, mientras el catálogo permanece intacto. No hay rollback transaccional VMess en el diseño aprobado; `audit` detecta los huérfanos y no los borra automáticamente. No se modificó código de producción en este bloque. La rama autorizada y la VPS quedaron sincronizadas en `08b2044dd820eb465afecbb6ec66fccefe6397a5`; la rama `main` no fue modificada.
 
 Suite completa `tests/*.sh`: 38/38 PASS. También PASS: `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de los archivos modificados y `git diff --check`. Estado Bloque 3: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO en `08b2044dd820eb465afecbb6ec66fccefe6397a5`.
+
+
+## 2026-11-02 — Bloque 4: etiquetas explícitas de modalidades VMess
+
+Se actualizó `modules/connections.sh`: VMess-WS se muestra como `VMess-WS (sin TLS adicional)` y VMess-TLS como `VMess-TLS (RAW/TCP + TLS)`, tanto en el menú como en `connections_mode_label` usado por listados. No se cambiaron IDs, modalidades ni el orden. `tests/stage2_navigation.sh` comprueba las etiquetas y conserva las verificaciones de las 14 combinaciones.
+
+Se confirmó que `README.md` define `shfmt -d -i 4 -ci` para archivos Bash seleccionados. No se reformateó el árbol: la aplicación general generaría diffs ajenos al alcance y el proyecto no declara una política para reformateo global. La regla permanece limitada a los archivos explicitados en README.
+
+Cambios implementados y verificados: pruebas focales y suite completa 38/38 PASS; controles estáticos y shfmt baseline PASS. Auditoría integral de VMess, publicación y sincronización pendientes.

@@ -41,7 +41,7 @@ connections_family_menu() {
 				;;
 			vmess)
 				ui_title "ADMINISTRAR VMESS"
-				printf '\n  PRINCIPALES\n  [1] VMess-WS\n  [2] VMess-TLS\n  [3] VMess-WS-TLS\n  [4] VMess-REALITY\n  [5] VMess-GRPC\n  ADICIONALES\n  [6] VMess-HTTPUpgrade (sin TLS / TLS)\n  [7] VMess-XHTTP\n  [8] VMess-mKCP\n'
+				printf '\n  PRINCIPALES\n  [1] VMess-WS (sin TLS adicional)\n  [2] VMess-TLS (RAW/TCP + TLS)\n  [3] VMess-WS-TLS\n  [4] VMess-REALITY\n  [5] VMess-GRPC\n  ADICIONALES\n  [6] VMess-HTTPUpgrade (sin TLS / TLS)\n  [7] VMess-XHTTP\n  [8] VMess-mKCP\n'
 				;;
 			trojan)
 				ui_title "ADMINISTRAR TROJAN"
@@ -136,8 +136,8 @@ connections_mode_label() {
 		vless_xhttp) printf 'VLESS-XHTTP (Sin TLS)' ;;
 		vless_xhttp_tls) printf 'VLESS-XHTTP-TLS' ;;
 		vless_xhttp_reality) printf 'VLESS-XHTTP-REALITY' ;;
-		vmess_ws) printf 'VMess-WS' ;;
-		vmess_tcp_tls) printf 'VMess-TLS' ;;
+		vmess_ws) printf 'VMess-WS (sin TLS adicional)' ;;
+		vmess_tcp_tls) printf 'VMess-TLS (RAW/TCP + TLS)' ;;
 		vmess_ws_tls) printf 'VMess-WS-TLS' ;;
 		vmess_reality) printf 'VMess-REALITY' ;;
 		vmess_grpc) printf 'VMess-GRPC (selección de seguridad)' ;;

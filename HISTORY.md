@@ -283,3 +283,12 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - No se modificó código de producción en este bloque. Estado: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO en `08b2044dd820eb465afecbb6ec66fccefe6397a5`. VMess sigue pendiente de aceptación formal.
 
 - Publicación confirmada: HEAD local/remoto y árboles idénticos en `08b2044dd820eb465afecbb6ec66fccefe6397a5`; rama `main` no modificada.
+
+
+## 2026-11-02 — Bloque 4: etiquetas VMess
+
+- Menú y etiquetas de listado ahora muestran `VMess-WS (sin TLS adicional)` y `VMess-TLS (RAW/TCP + TLS)`.
+- IDs `vmess_ws` y `vmess_tcp_tls`, las 14 modalidades y la navegación se conservan.
+- `tests/stage2_navigation.sh` incorpora aserciones de las dos etiquetas.
+- Criterio shfmt contrastado con README: `-i 4 -ci` en archivos seleccionados; no se aplicó reformateo global.
+- Pruebas focales y suite completa 38/38 PASS; controles estáticos y shfmt baseline PASS. Auditoría integral, publicación y sincronización pendientes.

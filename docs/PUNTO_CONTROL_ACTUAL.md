@@ -71,13 +71,13 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 |---|---|
 | IMPLEMENTADO | Sí — módulo VMess y Bloques 1, 2 y 3 del plan correctivo |
 | VERIFICADO | Sí — 14/14 modalidades Xray; suite completa 38/38 y controles estáticos PASS |
-| PUBLICADO | VMess base, Bloques 1 y 2 publicados; Bloque 3 pendiente de publicación |
-| SINCRONIZADO | HEAD local/remoto verificado tras cada publicación anterior; Bloque 3 pendiente |
+| PUBLICADO | VMess base y Bloques 1, 2 y 3 publicados; Bloque 4 pendiente de publicación |
+| SINCRONIZADO | HEAD local/remoto verificado tras cada publicación anterior; Bloque 4 pendiente |
 | ACEPTADO | Pendiente de confirmación formal del propietario |
 
 ## 7. Siguiente acción
 
-Continuar con el Bloque 3 aprobado: ampliar pruebas de cancelación, EOF, entradas inválidas, resumen, almacenamiento, claves, ciphertext, referencias, huérfanos, symlinks y concurrencia. Después ejecutar el Bloque 4 de documentación/criterio shfmt y la auditoría integral. VMess seguirá pendiente de aceptación formal hasta concluir el proceso y revisión del propietario.
+Ejecutar la auditoría integral de cierre VMess: inventario requisito→diseño→implementación→prueba→evidencia; revisar todos los componentes, criterios positivos/negativos/límites/regresión/operativos y documentación; registrar estados individuales y brechas. Las etiquetas VMess-WS/VMess-TLS ya están corregidas, pero el Bloque 4 y la auditoría integral siguen pendientes de verificación y publicación. VMess continuará sin aceptación formal hasta revisión expresa del propietario.
 
 No modificar `main`. No ampliar la corrección P4 más allá de la preservación VMess aprobada. No tocar runtime, firewall, puertos, certificados desplegados ni servicio.
 
@@ -120,3 +120,14 @@ Continuar con el Bloque 4 aprobado: completar la documentación técnica, defini
 - El fallo inyectado entre escritura de archivos y publicación de catálogo deja huérfanos detectables, sin cambiar el catálogo. Es el comportamiento previsto: VMess no ofrece rollback transaccional y la auditoría no borra automáticamente.
 - Suite completa: 38/38 scripts PASS. `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de los archivos modificados y `git diff --check`: PASS.
 - No se modificó código de producción en este bloque. No se accedió a la clave maestra real ni se tocó runtime.
+
+
+## 12. Bloque 4 — etiquetas explícitas VMess y formato
+
+**Estado:** cambios de etiquetas IMPLEMENTADOS; pruebas focales y auditoría integral pendientes.
+
+- Menú y listados: `VMess-WS (sin TLS adicional)` y `VMess-TLS (RAW/TCP + TLS)`.
+- IDs, modalidades y navegación sin cambios: `vmess_ws`, `vmess_tcp_tls`; matriz 14/14 preservada.
+- `tests/stage2_navigation.sh` añade comprobaciones de ambas etiquetas tanto en menú como en función de listado.
+- `README.md` documenta `shfmt -d -i 4 -ci` para archivos seleccionados. Se inspeccionaron las convenciones existentes y el diff potencial; no se reformatearon archivos ni se amplió el alcance de formato.
+- Pendiente: ejecutar pruebas focales y suite completa, auditoría integral y sincronizar cambios/documentación.

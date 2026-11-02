@@ -70,4 +70,12 @@ run_vmess_case 7 2 vmess_xhttp_tls
 run_vmess_case 7 3 vmess_xhttp_reality
 run_vmess_case 8 1 vmess_mkcp
 run_vmess_case 8 2 vmess_mkcp_tls
+
+# Las etiquetas visibles distinguen transporte/seguridad sin cambiar IDs ni navegación.
+VMESS_MENU_OUTPUT="$(printf '0\n' | connections_family_menu vmess 2>&1)"
+grep -Fq '[1] VMess-WS (sin TLS adicional)' <<<"$VMESS_MENU_OUTPUT"
+grep -Fq '[2] VMess-TLS (RAW/TCP + TLS)' <<<"$VMESS_MENU_OUTPUT"
+[[ "$(connections_mode_label vmess_ws)" == 'VMess-WS (sin TLS adicional)' ]]
+[[ "$(connections_mode_label vmess_tcp_tls)" == 'VMess-TLS (RAW/TCP + TLS)' ]]
+printf 'PASS: etiquetas VMess-WS y VMess-TLS explican transporte/seguridad en menú y listado.\n'
 printf 'OK: navegación de las 14 combinaciones VMess, familias, modalidades, seguridad seleccionable y protocolos opcionales.\n'

@@ -40,7 +40,7 @@ No se ofrecerá REALITY para WebSocket, HTTPUpgrade ni mKCP. No se crearán comb
 
 VMess-HTTPUpgrade-TLS forma parte del alcance aprobado. El asistente deberá permitir seleccionar explícitamente entre HTTPUpgrade sin TLS y HTTPUpgrade con TLS. La variante TLS usará los parámetros y referencias de certificado/clave privada admitidos por el adaptador Xray objetivo; los secretos no se expondrán en argumentos de proceso, logs ni mensajes de error.
 
-El catálogo ya contiene `vmess_httpupgrade_tls`, pero la navegación actual sólo selecciona `vmess_httpupgrade`. La integración deberá añadir el selector de seguridad y pruebas de navegación para ambas variantes.
+El catálogo contiene `vmess_httpupgrade` y `vmess_httpupgrade_tls`. La navegación implementada presenta un selector de seguridad y resuelve ambas variantes; `tests/stage2_navigation.sh` recorre individualmente ambas opciones. La prueba de integración Xray valida la matriz completa de 14 combinaciones.
 
 ## 4. Modelo neutral VMess
 
@@ -153,4 +153,9 @@ En la auditoría técnica anterior se ejecutaron pruebas temporales correctas de
 4. Implementar sólo después de esa autorización.
 5. Ejecutar pruebas, actualizar continuidad e historial y sincronizar VPS/GitHub.
 
-**Estado de implementación (2026-11-02):** modelo, adaptador, asistente, persistencia VMess aislada y pruebas están implementados y publicados en la rama autorizada. Xray-core 26.10.31 aceptó las 14 combinaciones. La navegación recorre las 14 combinaciones; las pruebas negativas rechazan certificados/clave TLS ausentes, PEM inválido, par no coincidente, enlaces simbólicos, parámetros incompatibles y errores REALITY. La suite completa y los controles estáticos se ejecutaron y pasaron en la auditoría final. El módulo queda pendiente únicamente de aceptación formal del propietario. Usuarios VMess aún manuales, pendientes de integración con asociaciones de identidad de Etapa 3. Backup/restore VMess no forma parte del cierre actual y requiere diseño independiente. No se probó conectividad extremo a extremo ni se activó runtime.
+**Estado de implementación (2026-11-02):** modelo, adaptador, asistente, persistencia VMess aislada, menú y pruebas están implementados y publicados en la rama autorizada. Xray-core 26.10.31 aceptó las 14 combinaciones. La navegación recorre las 14 combinaciones; las pruebas negativas rechazan certificados/clave TLS ausentes, PEM inválido, par no coincidente, enlaces simbólicos, parámetros incompatibles y errores REALITY. La suite completa y los controles estáticos se ejecutaron y pasaron en la auditoría final. El módulo queda pendiente únicamente de aceptación formal del propietario. Usuarios VMess aún manuales, pendientes de integración con asociaciones de identidad de Etapa 3. Backup/restore VMess no forma parte del cierre actual y requiere diseño independiente. No se probó conectividad extremo a extremo ni se activó runtime.
+
+
+## 11. Etiquetas explícitas de menú y listado
+
+Las etiquetas visibles de las dos modalidades principales identifican el transporte y la seguridad de transporte sin alterar los identificadores del catálogo: `vmess_ws` se presenta como **VMess-WS (sin TLS adicional)** y `vmess_tcp_tls` como **VMess-TLS (RAW/TCP + TLS)**. La primera aclaración no significa que VMess carezca de su cifrado propio. Estas etiquetas se muestran tanto en el menú de modalidades como en los listados que utilizan `connections_mode_label`. Las pruebas de navegación verifican ambos textos y que las 14 combinaciones conservan su resolución original.
