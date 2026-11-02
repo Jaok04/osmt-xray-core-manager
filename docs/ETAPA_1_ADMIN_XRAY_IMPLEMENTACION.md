@@ -51,7 +51,7 @@ modules/uninstall.sh implementa el único punto de entrada para [8] > [5] Desins
 - Respaldo temporal fuera del árbol de respaldos que se va a eliminar, modo 600, validación tar -tzf y gzip -t.
 - Exportación a otro host mediante SSH/SCP, BatchMode, StrictHostKeyChecking y comparación SHA-256 del archivo remoto con el local.
 - Si falla el respaldo o su exportación solicitada, se cancela el borrado.
-- Lock no bloqueante de ciclo de vida compartido por instalador, administración Xray, dependencias y guardado de preferencias. El instalador toma además el lock de integridad de usuarios/conexiones.
+- Lock no bloqueante de ciclo de vida compartido por instalador, administración Xray, acciones mutantes de servicio, dependencias y guardado de preferencias. El instalador toma además el lock de integridad de usuarios/conexiones.
 - La desinstalación adquiere locks lifecycle, uninstall, integridad y Xray antes de crear el respaldo y los conserva hasta terminar o cancelar; el directorio runtime que aloja los locks no se incluye en el borrado.
 - Si existe una unidad systemd Xray o un proceso Xray activo, el flujo se bloquea; no elimina ni modifica unidades, no detiene procesos y no toca firewall ni SSH.
 - Con política «eliminar todos», se eliminan los respaldos locales del alcance y el respaldo temporal del proceso; una copia externa verificada será la única copia superviviente.
@@ -128,7 +128,7 @@ No se ejecutaron apt-get, instalación real de Xray, desinstalación real, cambi
 
 ## Incremento: coordinación de ciclo de vida y confirmaciones (2026-11-01)
 
-- Se añadió `lib/operation_lock.sh` con lock exclusivo no bloqueante, permisos 600 y rechazo de componentes simbólicos.
+- Se añadió `lib/operation_lock.sh` con lock exclusivo no bloqueante, permisos 600 y rechazo de componentes simbólicos. Las acciones `start/stop/restart/enable/disable` de `xray.service` usan el mismo lock.
 - `install.sh` serializa despliegue y preparación de Xray frente a dependencias, preferencias, administración Xray y desinstalación; además comparte el lock de integridad antes de tocar `connections.json`.
 - Administración Xray, instalación/actualización de dependencias y persistencia de preferencias toman el lock de ciclo de vida.
 - La desinstalación adquiere lifecycle, uninstall, integridad y Xray antes del respaldo, mantiene los locks durante exportación y confirmación final y los libera en todos los retornos.
