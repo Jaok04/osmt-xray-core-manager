@@ -77,7 +77,7 @@
 
 Bloqueos para certificación:
 
-1. Validar instalación Xray, dependencias, preferencias y desinstalación en un VPS desechable.
+1. Completar la validación operativa que aún falta: descarga/reinstalación real de Xray-core y prueba de desinstalación con la unidad systemd real bajo control en un VPS desechable.
 2. Cotejar el resto de la matriz contra la especificación aprobada y resolver cualquier discrepancia restante.
 
 Las pruebas actuales son fixtures/mocks. No se ejecutaron apt-get, instalación real de Xray, desinstalación real, cambios de systemd, firewall, SSH ni migraciones de datos reales.
@@ -108,7 +108,7 @@ La desinstalación adquiere, antes de crear el respaldo, los bloqueos de ciclo d
 
 Se añadieron pruebas de contención para instalador, dependencias, preferencias, administración Xray y desinstalación, además de cancelaciones explícitas en el menú Xray y en la confirmación irreversible final. `A11`, `U14` y `N03` pasan a IMPLEMENTADO dentro del alcance de operaciones internas del Manager.
 
-M04 y M06 pasan a IMPLEMENTADO con cobertura automatizada de estados y fallos independientes. La Etapa 1 permanece PARCIAL por las validaciones operativas reales de instalación, dependencias, preferencias y desinstalación en VPS desechable y el cotejo final del resto de la matriz.
+M04 y M06 pasan a IMPLEMENTADO con cobertura automatizada de estados y fallos independientes. La Etapa 1 permanece PARCIAL por la descarga/instalación real de Xray-core, la prueba de desinstalación frente a una unidad systemd real y el cotejo final del resto de la matriz.
 
 
 ## Actualización — encabezado M04/M06 (02/11/2026)
@@ -117,3 +117,16 @@ M04 y M06 pasan a IMPLEMENTADO con cobertura automatizada de estados y fallos in
 - M06: `system_show_header` aísla el fallo o salida vacía de cada proveedor: IP pública, versión Xray, estado del servicio, autostart, perfil y fecha/hora. Cada campo adopta `No disponible` sin cancelar el resto del encabezado.
 - La prueba provoca cada fallo por separado y después todos simultáneamente; confirma que `menu_main` sigue mostrando sus opciones y permite salir normalmente.
 - M04 y M06 pasan a IMPLEMENTADO. La Etapa 1 sigue PARCIAL por las validaciones operativas reales y el cotejo final de los demás requisitos.
+
+
+## Actualización — validación operativa en VPS desechable (02/11/2026)
+
+Entorno: Ubuntu 24.04.4 LTS, host de pruebas desechable. No se modificó la VPS de desarrollo.
+
+- Instalador: `install.sh --install` se ejecutó con prefijo temporal, `XRAY_MANAGER_SKIP_DEPENDENCIES=1` y `XRAY_MANAGER_SKIP_XRAY_INSTALL=1`, usando un binario Xray ficticio. Se verificaron despliegue del Manager, directorios, JSON de estado, preferencias modo 600, unidad systemd modo 644, identidad `xray` declarada en la unidad y segunda ejecución idempotente. Esta prueba no descarga ni instala el core real ni recarga systemd.
+- Xray real preexistente: se verificó Xray 26.10.31, permisos y directorios. Se creó una configuración SOCKS temporal en `/etc/xray`, se validó con `runuser -u xray -- xray run -test`, y se eliminó. `xray.service` permaneció inactive/disabled. No se ejecutó una reinstalación ni descarga real del core porque ya estaba instalado.
+- Dependencias: el gestor informó todas las dependencias requeridas disponibles. `apt-get -s install` resolvió 0 upgrades, 0 instalaciones y 0 eliminaciones; no se ejecutó `apt-get update` ni se modificaron paquetes.
+- Preferencias: se cambió temporalmente `APP_THEME` y `APP_DATE_FORMAT` en `/etc/xray-manager/preferences.conf`, se guardaron y recargaron correctamente, se verificó root:root 600 y se restauró el archivo original byte por byte.
+- Desinstalación: se ejecutó el flujo real del módulo contra un `APP_ROOT` fixture dentro de `/tmp`; el árbol temporal se eliminó tras la confirmación. El guard de systemd se aisló para no tocar la unidad real del host. Xray, unidad, datos persistentes y Manager instalados quedaron intactos.
+
+**Pendiente operativo:** probar la descarga/verificación/instalación real de Xray-core en una VPS limpia y probar el bloqueo/desinstalación real de la unidad systemd bajo una ventana controlada. La prueba del desinstalador solo cubrió borrado real de un árbol fixture; no se desinstaló el Manager ni Xray reales del host.
