@@ -36,7 +36,7 @@ Estado: menú, administración Xray, dependencias, preferencias y desinstalació
 - Validar instalación/actualización/reinstalación/reparación en un VPS desechable, incluyendo fallos e interrupciones controladas.
 - Validar la instalación de dependencias y la persistencia de preferencias en un entorno aislado con las rutas reales de configuración.
 - Ejecutar la desinstalación completa en un entorno desechable para cada alcance y política, incluyendo advertencia de certificados, categorías, interrupción, borrado parcial y recuperación.
-- Revisar exhaustivamente navegación, retorno, actualización del encabezado, errores recuperables y confirmaciones destructivas antes de certificar la etapa.
+- Resolver M04/M06 del encabezado y validar operaciones reales de instalación, dependencias, preferencias y desinstalación en un VPS desechable antes de certificar la etapa.
 - Los apartados 3–7 del menú principal son entradas de sus respectivas etapas; su presencia no significa que esas etapas estén implementadas.
 
 ## Incremento: desinstalación segura (2026-11-01)
@@ -51,14 +51,15 @@ modules/uninstall.sh implementa el único punto de entrada para [8] > [5] Desins
 - Respaldo temporal fuera del árbol de respaldos que se va a eliminar, modo 600, validación tar -tzf y gzip -t.
 - Exportación a otro host mediante SSH/SCP, BatchMode, StrictHostKeyChecking y comparación SHA-256 del archivo remoto con el local.
 - Si falla el respaldo o su exportación solicitada, se cancela el borrado.
-- Locks no bloqueantes para la operación de desinstalación, integridad de usuarios/conexiones y administración Xray. El directorio runtime que aloja el lock de integridad no se incluye en el borrado.
+- Lock no bloqueante de ciclo de vida compartido por instalador, administración Xray, dependencias y guardado de preferencias. El instalador toma además el lock de integridad de usuarios/conexiones.
+- La desinstalación adquiere locks lifecycle, uninstall, integridad y Xray antes de crear el respaldo y los conserva hasta terminar o cancelar; el directorio runtime que aloja los locks no se incluye en el borrado.
 - Si existe una unidad systemd Xray o un proceso Xray activo, el flujo se bloquea; no elimina ni modifica unidades, no detiene procesos y no toca firewall ni SSH.
 - Con política «eliminar todos», se eliminan los respaldos locales del alcance y el respaldo temporal del proceso; una copia externa verificada será la única copia superviviente.
 - El resumen advierte expresamente que los respaldos de Etapa 5 no recuperan historial de versiones/modificaciones de perfiles, historial de validaciones, informes de restauración ni registros técnicos/logs.
 
 ### Pruebas y límites
 
-tests/uninstall.sh cubre allowlist, padre simbólico, respaldo, exportación SSH/SCP simulada con SHA-256 correcto e incorrecto, estado de exportación en el resumen, contención del lock de integridad, cancelación ante fallo del respaldo y borrado exclusivamente sobre fixtures temporales.
+tests/uninstall.sh cubre allowlist, padre simbólico, respaldo, exportación SSH/SCP simulada con SHA-256 correcto e incorrecto, estado de exportación en el resumen, contención de locks lifecycle/integridad/Xray, cancelación de la confirmación irreversible y borrado exclusivamente sobre fixtures temporales.
 
 No se ejecutó ninguna desinstalación real en el VPS. La prueba de exportación usa ejecutables SSH/SCP simulados; no se conectó a un servidor externo real. La eliminación real, interrupciones durante el borrado y restauración completa siguen pendientes de un entorno desechable.
 
@@ -115,7 +116,7 @@ No se ejecutó ninguna desinstalación real en el VPS. La prueba de exportación
 ### Validación ejecutada
 
 - tests/stage1_menu.sh, tests/stage1_dependencies.sh, tests/stage1_settings.sh, tests/uninstall.sh y tests/xray_admin.sh: pasaron.
-- Suite completa: 15/15 scripts pasaron en la última ejecución. Una ejecución anterior tuvo un fallo intermitente en tests/port_collisions.sh; la prueba pasó aislada y volvió a pasar en la repetición completa.
+- Suite completa actualizada: 20/20 scripts pasaron en la última ejecución, incluyendo `tests/operation_lock.sh` y las pruebas de contención de ciclo de vida.
 - bash -n sobre lanzador, configuración, librerías, módulos y pruebas: pasó.
 - ShellCheck sobre los archivos de Etapa 1 y sus dependencias directas: pasó.
 - shfmt -d sobre los scripts del proyecto: sin diferencias.
@@ -123,3 +124,15 @@ No se ejecutó ninguna desinstalación real en el VPS. La prueba de exportación
 ### Límites operativos
 
 No se ejecutaron apt-get, instalación real de Xray, desinstalación real, cambios de systemd, firewall o SSH. Las pruebas de instalación, desinstalación y exportación usan fixtures temporales y mocks. Etapa 1 permanece PARCIAL hasta completar la matriz de trazabilidad y la validación operativa aislada.
+
+
+## Incremento: coordinación de ciclo de vida y confirmaciones (2026-11-01)
+
+- Se añadió `lib/operation_lock.sh` con lock exclusivo no bloqueante, permisos 600 y rechazo de componentes simbólicos.
+- `install.sh` serializa despliegue y preparación de Xray frente a dependencias, preferencias, administración Xray y desinstalación; además comparte el lock de integridad antes de tocar `connections.json`.
+- Administración Xray, instalación/actualización de dependencias y persistencia de preferencias toman el lock de ciclo de vida.
+- La desinstalación adquiere lifecycle, uninstall, integridad y Xray antes del respaldo, mantiene los locks durante exportación y confirmación final y los libera en todos los retornos.
+- Se añadieron pruebas de contención y de cancelación desde el menú Xray y desde la confirmación irreversible de desinstalación.
+- Validación: 20/20 scripts, `bash -n`, ShellCheck, shfmt en archivos de producción modificados y pruebas con estilo homogéneo: PASS (`tests/uninstall.sh` conserva formato histórico mixto); `./install.sh --check`: PASS. No se ejecutó instalación/desinstalación real ni se modificó el runtime.
+
+Etapa 1 sigue PARCIAL. Permanecen M04/M06 y la validación operativa real en VPS desechable.
