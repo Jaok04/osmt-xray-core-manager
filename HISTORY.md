@@ -305,3 +305,5 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Estado: VMess IMPLEMENTADO en su base funcional, VERIFICADO PARCIALMENTE, DOCUMENTADO; aceptación pendiente y bloqueada por hallazgos. Etapa 2 ABIERTA. Se requiere autorización para corregir F-01/F-02/F-04 y decisión expresa sobre F-03.
 
 - Publicación documental de auditoría y matriz: commit 88f82f2f9d7d19833b814d9a810dedb4bc3edc8c en design/user-identity-association-v1; push confirmado. main sin cambios.
+
+- Actualización de referencias del punto de control/estado para registrar la publicación del expediente: commit 81f485ffb77d84afb0a46ccb3ed46fe29814a83d; rama autorizada sincronizada, main intacta.

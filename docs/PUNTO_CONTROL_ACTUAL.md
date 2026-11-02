@@ -11,7 +11,7 @@
 - Repositorio: `Jaok04/xray-core-manager`.
 - Rama autorizada: `design/user-identity-association-v1`.
 - Proyecto VPS: `/opt/xray-manager`.
-- HEAD actual de la rama autorizada, VPS y remoto: df632aee5d8139c721b81a6d65f14d93f7676226.
+- HEAD de partida de la auditoría: df632aee5d8139c721b81a6d65f14d93f7676226; informe/matriz publicados en 88f82f2f9d7d19833b814d9a810dedb4bc3edc8c; actualización de referencia de continuidad en 81f485ffb77d84afb0a46ccb3ed46fe29814a83d.
 - Commit Bloque 1: `c890b5b5362e17e439f198b9b8bbbdbe0af0c653` (`fix(vless): preserve current VMess entries on restore`), publicado y sincronizado.
 - Remoto: `git@github.com-xray-core-manager:Jaok04/xray-core-manager.git`.
 - Deploy Key SSH dedicada con permiso de escritura configurado.
