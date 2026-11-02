@@ -154,3 +154,10 @@ Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM 
 - Se revisó y ejecutó PASS `tests/vless_backup_restore_secrets.sh`, que existía localmente sin seguimiento Git; se incluye en el cierre de sincronización.
 - PASS: pruebas `stage1_menu`, `users_v2_menu`, `stage1_settings`, restore end-to-end de secretos TLS/REALITY, `bash -n` de scripts shell, ShellCheck de archivos modificados y `git diff --check`. Suite completa `tests/*.sh`: 30/30 PASS; `install.sh --check`, `bash -n` de todos los scripts shell, ShellCheck, shfmt del test nuevo y `git diff --check`: PASS.
 - Se conservaron sin borrar los directorios `/tmp/tmp.u7Vq57eHNx` (282 MB) y `/tmp/tmp.EsxO527Ihe` (47 MB), con salidas históricas repetitivas de pruebas V2.
+
+
+### Publicación GitHub — corrección EOF
+
+- Publicación verificada en `design/user-identity-association-v1`: `fa7242a61248a71b64552511d1db932ebbc8d7d0` (`fix: handle EOF safely in interactive menus`).
+- El árbol remoto `b03db9b450288eccbf61e761655f286763df3a70` coincide exactamente con el árbol del commit local `b520c53bd5a32007b30519e0756fce13fe8916b5`; 17 archivos.
+- La VPS no pudo hacer push/fetch nativo por falta de autenticación SSH/HTTPS. El contenido está sincronizado; la referencia Git local `origin/...` quedó obsoleta y debe reconciliarse en una sesión con autenticación disponible, sin duplicar los cambios.
