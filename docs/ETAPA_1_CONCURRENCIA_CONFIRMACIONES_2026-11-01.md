@@ -18,11 +18,11 @@
 
 Nuevo `lib/operation_lock.sh` con adquisición no bloqueante, archivo de lock con modo 600, liberación explícita y rechazo de rutas con componentes simbólicos. El lock predeterminado es `/run/lock/xray-manager-lifecycle.lock`.
 
-Operaciones coordinadas: instalador, administración de Xray-core, instalación/actualización de dependencias y persistencia de preferencias. El instalador toma también el lock de integridad de usuarios/conexiones antes de inicializar o ajustar ese registro.
+Operaciones coordinadas: instalador, administración de Xray-core, acciones mutantes del servicio systemd, instalación/actualización de dependencias y persistencia de preferencias. El instalador toma también el lock de integridad de usuarios/conexiones antes de inicializar o ajustar ese registro.
 
 ### 2.2 Desinstalación
 
-El flujo adquiere lifecycle, uninstall, integridad y administración Xray en orden fijo y antes de crear el respaldo. Mantiene los locks durante el respaldo local, exportación opcional, resumen, confirmación irreversible y borrado. El trap de retorno libera los locks también al cancelar o fallar. El servicio, systemd, firewall y SSH siguen fuera del alcance de eliminación.
+El flujo adquiere lifecycle, uninstall, integridad y administración Xray en orden fijo y antes de crear el respaldo. Mantiene los locks durante el respaldo local, exportación opcional, resumen, confirmación irreversible y borrado. El trap de retorno libera los locks también al cancelar o fallar. El servicio, systemd, firewall y SSH siguen fuera del alcance de eliminación. Las acciones de control del servicio también comparten lifecycle para impedir carreras de inicio/reinicio durante el flujo de desinstalación.
 
 ### 2.3 Confirmaciones
 
@@ -38,6 +38,7 @@ El flujo adquiere lifecycle, uninstall, integridad y administración Xray en ord
 - `tests/stage1_dependencies.sh`: contención lifecycle sin llamadas apt.
 - `tests/stage1_settings.sh`: bloqueo de escritura de preferencias durante otra operación lifecycle.
 - `tests/xray_admin.sh`: cancelación del menú y contención lifecycle en administración Xray.
+- `tests/xray_service_control.sh`: una acción `start` con lifecycle ocupado se rechaza sin invocar systemctl ni cambiar el estado simulado.
 - `tests/uninstall.sh`: contención lifecycle/data/Xray, respaldo bajo locks y cancelación final sin borrado.
 
 ## 4. Validación
