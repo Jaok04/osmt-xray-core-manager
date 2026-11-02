@@ -184,6 +184,21 @@ if [[ "$ACTION" == check ]]; then
     exit 0
 fi
 
+# Serializa el despliegue completo frente a otras operaciones de ciclo de vida.
+. "$SOURCE_ROOT/lib/operation_lock.sh"
+lifecycle_fd='' data_fd=''
+lifecycle_lock="${XRAY_MANAGER_LIFECYCLE_LOCK:-$(path /run/lock/xray-manager-lifecycle.lock)}"
+if ! manager_lock_acquire "$lifecycle_lock" lifecycle_fd; then
+    fail "ya hay otra operación de ciclo de vida del Manager en curso o no se pudo adquirir su bloqueo"
+fi
+data_lock="${XRAY_MANAGER_INTEGRITY_LOCK:-$(path /run/xray-manager/integrity.lock)}"
+if ! manager_lock_acquire "$data_lock" data_fd; then
+    printf 'ERROR: hay una operación de usuarios/conexiones en curso o no se pudo adquirir su bloqueo.\n' >&2
+    manager_lock_release "$lifecycle_fd"
+    exit 1
+fi
+trap 'manager_lock_release "$data_fd"; manager_lock_release "$lifecycle_fd"' EXIT
+
 if [[ "$SKIP_DEPS" != 1 && "${#missing[@]}" -gt 0 ]]; then
     info "Se actualizarán índices e instalarán únicamente los paquetes faltantes; no se ejecutará apt upgrade."
     DEBIAN_FRONTEND=noninteractive apt-get update
@@ -314,6 +329,7 @@ if [[ "$PREFIX" != "/" ]]; then
 fi
 export APP_ROOT XRAY_ADMIN_BIN XRAY_ADMIN_DATA XRAY_MANAGER_CACHE_DIR
 export XRAY_MANAGER_BACKUP_DIR XRAY_CONFIG_DIR XRAY_CONFIG_FILE XRAY_SERVICE_ROOT XRAY_SERVICE_TEST_MODE
+export XRAY_MANAGER_LIFECYCLE_LOCK_HELD=1 XRAY_MANAGER_LIFECYCLE_LOCK="$lifecycle_lock"
 # shellcheck disable=SC1091
 . "$APP_ROOT/config/xray-version.conf"
 # shellcheck disable=SC1091
