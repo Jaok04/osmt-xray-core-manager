@@ -54,6 +54,7 @@ No implementes, publiques, sincronices ni modifiques nada durante la auditoría.
 4. docs/PUNTO_CONTROL_ACTUAL.md: tarea exacta en la que se detuvo el trabajo.
 5. HISTORY.md: decisiones e hitos cronológicos.
 6. Documentación normativa de la VPS y documentos técnicos específicos de la etapa que se vaya a trabajar.
+7. `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md` y `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
 ## 4. Auditoría de recuperación obligatoria
 
@@ -88,6 +89,23 @@ Antes de iniciar cualquier etapa o tarea de implementación, consulta directamen
 Las mejoras son posibles, pero toda mejora o cambio respecto del alcance aprobado debe justificarse, describir sus impactos y alternativas, y recibir autorización expresa del propietario antes de modificar diseño o código. No infieras autorización por silencio, continuidad de la conversación ni aprobaciones anteriores de otras tareas. Si la fuente no está disponible o existe una contradicción relevante, detente y solicita aclaración.
 
 Procedimiento completo y vinculante: `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`. Esta regla complementa AGENTS.md y es de cumplimiento obligatorio para cualquier IA o colaborador.
+
+
+## 4.2 Auditoría integral obligatoria antes de cerrar cualquier etapa
+
+Regla permanente del propietario: ninguna etapa puede declararse TERMINADA/COMPLETADA si no se han auditado y documentado técnicamente todos sus puntos, subpuntos, módulos, submódulos y componentes internos. No basta con cerrar un protocolo, completar una funcionalidad, pasar pruebas, publicar o sincronizar.
+
+Antes de proponer un cierre:
+- construir el inventario completo desde la documentación preliminar aprobada;
+- trazar cada requisito hacia diseño, implementación, pruebas y evidencia;
+- auditar cada elemento individualmente, incluyendo comportamiento, diseño, código, datos, seguridad, errores, integración, pruebas y documentación técnica aplicables;
+- identificar explícitamente ausencias, incompletitudes, divergencias, elementos no verificados, riesgos y decisiones pendientes;
+- completar la documentación técnica de cada punto/módulo y la regresión integral de la etapa;
+- emitir un informe final de auditoría y obtener aceptación formal expresa del propietario.
+
+Cualquier elemento sin auditoría, documentación o evidencia suficiente bloquea el cierre, salvo excepción específica autorizada y documentada por el propietario. Un módulo sí puede cerrarse individualmente, pero la etapa permanece ABIERTA hasta superar la puerta integral.
+
+Documento operativo vinculante: `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`. Debe leerse junto con la regla de contraste previo; ambas son obligatorias y no se sustituyen entre sí.
 
 ## 5. Cómo reanudar el desarrollo
 

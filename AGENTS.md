@@ -42,6 +42,24 @@ La documentación preliminar aprobada es la línea base funcional. Las mejoras e
 
 Documento operativo: `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`.
 
+## 2.2 Regla obligatoria: auditoría integral y cierre de etapas
+
+**Ninguna etapa puede declararse TERMINADA/COMPLETADA sin una auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos.** Cerrar un módulo, pasar pruebas, publicar código o sincronizar la VPS no cierra la etapa.
+
+Antes de proponer el cierre de una etapa, es obligatorio:
+1. Consultar la documentación preliminar aprobada en `/root/Xray_Manager_Documentacion_Final_2026-10-31` y aplicar la regla 2.1.
+2. Construir un inventario exhaustivo de todos los requisitos y componentes internos de la etapa.
+3. Mantener una matriz de trazabilidad requisito → diseño → implementación → pruebas → evidencia.
+4. Auditar individualmente cada punto y módulo: comportamiento, diseño, implementación, datos/persistencia, seguridad, errores/recuperación, integración, pruebas, documentación técnica y evidencia aplicables.
+5. Documentar explícitamente los estados de cada elemento; nunca inferir que algo está completo porque no se haya mencionado.
+6. Resolver todos los bloqueos o solicitar al propietario una excepción expresa, específica y documentada. Los elementos no verificados, incompletos, divergentes o sin documentación bloquean el cierre, salvo excepción aprobada.
+7. Ejecutar integración y regresión de la etapa completa, emitir el informe final y obtener aceptación formal expresa del propietario.
+8. Actualizar la continuidad y publicar el expediente aprobado en la rama autorizada, verificando GitHub y VPS.
+
+Un módulo puede recibir un estado individual (IMPLEMENTADO, VERIFICADO, DOCUMENTADO o ACEPTADO), pero la etapa permanece ABIERTA hasta superar esta puerta formal. La auditoría integral y los documentos técnicos no pueden existir únicamente en el chat: deben estar versionados en el repositorio.
+
+Documento operativo vinculante: `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`. Esta regla se aplica a todas las etapas y prevalece frente a cualquier resumen o plan que sugiera cerrar una etapa con auditoría parcial.
+
 ## 3. Procedimiento obligatorio al iniciar una sesión
 
 Antes de implementar:

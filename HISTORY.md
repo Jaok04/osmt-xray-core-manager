@@ -234,3 +234,17 @@ La regla quedó desarrollada en `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.m
 - VMess queda IMPLEMENTADO y VERIFICADO. La aceptación formal del propietario sigue pendiente. Backup/restore VMess continúa como diseño separado; identidad global continúa en Etapa 3.
 - Se actualizaron `docs/DISEÑO_TECNICO_VMESS.md`, `PROJECT_STATE.md`, `docs/PUNTO_CONTROL_ACTUAL.md` y este documento de continuidad.
 - Publicación confirmada únicamente en `design/user-identity-association-v1`: commit funcional `ab76a57032faa9793a62348f865fba2c9a7d8f77`; se publicó después la actualización documental. La VPS hizo push/fetch y HEAD local/remoto se verificaron coincidentes. `main` permanece intacta.
+
+## 2026-11-02 — Regla permanente de auditoría integral y cierre de etapas
+
+Por instrucción expresa del propietario se establece una segunda regla obligatoria de gobernanza, acumulativa a la regla de contraste previo con la documentación preliminar aprobada:
+
+- Ninguna etapa puede declararse TERMINADA/COMPLETADA sin auditoría integral de todos sus puntos, subpuntos, módulos, submódulos y componentes internos.
+- Se exige inventario exhaustivo, matriz de trazabilidad requisito → diseño → implementación → pruebas → evidencia, auditoría individual de cada elemento y documentación técnica suficiente de cada módulo/componente.
+- La auditoría debe cubrir, según aplique, comportamiento, diseño, implementación, datos/persistencia, seguridad, errores/recuperación, integración, pruebas, documentación y evidencia.
+- Elementos ausentes, incompletos, divergentes, no verificados o sin documentación bloquean el cierre, salvo excepción específica autorizada y documentada por el propietario.
+- Cerrar un módulo individual, pasar una suite, publicar o sincronizar no equivale a cerrar la etapa.
+- Se requiere informe final, regresión integral y aceptación formal expresa del propietario.
+- La regla aplica a todas las etapas y a cualquier IA/desarrollador que retome el proyecto. Los documentos normativos preliminares siguen siendo la línea base y la regla de contraste previo continúa siendo obligatoria.
+- Se creó `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md` y se integró la obligación en `AGENTS.md`, `docs/CONTINUIDAD_DEL_PROYECTO.md`, `PROJECT_STATE.md`, `docs/PUNTO_CONTROL_ACTUAL.md` y `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`.
+- La Etapa 2 permanece ABIERTA; el cierre técnico individual de VMess no constituye cierre de la etapa.

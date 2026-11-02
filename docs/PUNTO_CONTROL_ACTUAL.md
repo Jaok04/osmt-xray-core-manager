@@ -4,6 +4,8 @@
 **Tarea:** cierre técnico VMess antes de iniciar Trojan.
 **Estado:** VMess IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; aceptación formal pendiente del propietario.
 
+**Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
+
 ## 1. Entorno verificado
 
 - Repositorio: `Jaok04/xray-core-manager`.

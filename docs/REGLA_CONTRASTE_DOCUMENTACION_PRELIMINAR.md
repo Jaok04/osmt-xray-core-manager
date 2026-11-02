@@ -56,3 +56,7 @@ Si la documentación normativa no está disponible, su versión no puede identif
 Esta regla complementa `AGENTS.md` y se aplica a todas las etapas del proyecto. La documentación preliminar aprobada determina el alcance funcional; las decisiones complementarias solo pueden modificarlo cuando el propietario las autorice expresamente y queden registradas. La especificación original no se reescribe retroactivamente para ocultar diferencias: se conserva y se registra la decisión complementaria con su fecha y alcance.
 
 Cualquier IA o colaborador que retome el proyecto debe leer esta regla y cumplirla antes de proponer o ejecutar una implementación.
+
+## 6. Regla complementaria de cierre integral de etapas
+
+El contraste previo no es suficiente para cerrar una etapa. Una vez implementada, la etapa debe superar una auditoría integral de todos sus puntos y componentes internos, con documentación técnica exhaustiva, matriz de trazabilidad, pruebas y aceptación formal. El cierre de un módulo no equivale al cierre de la etapa. La regla vinculante y sus criterios se encuentran en `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`; ambas reglas deben cumplirse de forma acumulativa.
