@@ -1,6 +1,6 @@
 # Etapa 1 — Administración de Xray-core: implementación inicial
 
-Estado: menú, administración Xray, dependencias, preferencias y desinstalación cuentan con implementación y pruebas aisladas; Etapa 1 continúa PARCIAL y no está certificada ni validada mediante operaciones reales en VPS.
+Estado vigente: Etapa 1 IMPLEMENTADA y lista para aceptación formal; no certificada formalmente hasta aprobación del usuario. Se completaron pruebas automatizadas y validaciones operativas en VPS desechable; consultar los informes de validación y auditoría final.
 
 ## Alcance actual
 
@@ -61,7 +61,7 @@ modules/uninstall.sh implementa el único punto de entrada para [8] > [5] Desins
 
 tests/uninstall.sh cubre allowlist, padre simbólico, respaldo, exportación SSH/SCP simulada con SHA-256 correcto e incorrecto, estado de exportación en el resumen, contención de locks lifecycle/integridad/Xray, cancelación de la confirmación irreversible y borrado exclusivamente sobre fixtures temporales.
 
-No se ejecutó ninguna desinstalación real en el VPS. La prueba de exportación usa ejecutables SSH/SCP simulados; no se conectó a un servidor externo real. La eliminación real, interrupciones durante el borrado y restauración completa siguen pendientes de un entorno desechable.
+No se desinstalaron los componentes reales del host. El módulo sí se ejecutó contra árboles fixture temporales y el guard de unidad real se probó en la VPS desechable. La exportación externa se verifica con SHA-256, pero la prueba automatizada usa SSH/SCP simulados; no se conectó a un servidor externo real.
 
 ## Incremento: centralización inicial de rutas (2026-11-01)
 
@@ -123,7 +123,7 @@ No se ejecutó ninguna desinstalación real en el VPS. La prueba de exportación
 
 ### Límites operativos
 
-No se ejecutaron apt-get, instalación real de Xray, desinstalación real, cambios de systemd, firewall o SSH. Las pruebas de instalación, desinstalación y exportación usan fixtures temporales y mocks. Etapa 1 permanece PARCIAL hasta completar la matriz de trazabilidad y la validación operativa aislada.
+La validación posterior del 02/11 descargó e instaló Xray 26.10.31 en prefijo temporal con digest/SHA-256 verificados, ejecutó el instalador del Manager sobre ese prefijo y probó el guard real de unidad systemd. No se ejecutó apt-get real ni se desinstalaron componentes reales del host; tampoco se modificaron systemd, firewall o SSH. La exportación remota sigue probada con mocks. La matriz se cotejó contra la especificación aprobada con 47/47 comprobaciones PASS. Etapa 1 está implementada y lista para aceptación formal; no se declara certificada hasta aprobación del usuario.
 
 
 ## Incremento: coordinación de ciclo de vida y confirmaciones (2026-11-01)
@@ -135,4 +135,4 @@ No se ejecutaron apt-get, instalación real de Xray, desinstalación real, cambi
 - Se añadieron pruebas de contención y de cancelación desde el menú Xray y desde la confirmación irreversible de desinstalación.
 - Validación: 20/20 scripts, `bash -n`, ShellCheck, shfmt en archivos de producción modificados y pruebas con estilo homogéneo: PASS (`tests/uninstall.sh` conserva formato histórico mixto); `./install.sh --check`: PASS. No se ejecutó instalación/desinstalación real ni se modificó el runtime.
 
-Etapa 1 sigue PARCIAL. Permanecen M04/M06 y la validación operativa real en VPS desechable.
+La matriz se cotejó contra la especificación aprobada con 47/47 comprobaciones PASS. Etapa 1 está IMPLEMENTADA y lista para aceptación formal; no se declara certificada hasta aprobación del usuario. La validación operativa de Xray-core y del instalador se documenta en `ETAPA_1_VALIDACION_OPERATIVA_VPS_DESECHABLE_2026-11-02.md`.
