@@ -188,3 +188,12 @@ Nueva prueba `tests/vless_backup_limits.sh`: PASS. Suite completa posterior: 32/
 ## 2026-11-02 — Aceptación formal y cierre de P4
 
 El propietario aceptó formalmente las correcciones adicionales de seguridad (límite agregado de 512 MiB descomprimidos, validación autónoma de miembros y rutas, y lectura/verificación/extracción bajo locks para cerrar TOCTOU). Con la suite completa 32/32 PASS y las verificaciones estáticas satisfactorias, **P4 BACKUP/RECUPERACIÓN VLESS queda COMPLETADA Y ACEPTADA**. No se creó backup operativo ni se accedió a la clave maestra real. La activación de conexiones/runtime, reinicio de Xray, puertos, firewall y despliegue de certificados externos permanecen fuera del alcance de P4.
+
+
+## 2026-11-02 — Regla permanente de contraste con documentación preliminar aprobada
+
+Por instrucción expresa del propietario, se estableció como regla obligatoria que antes de implementar cualquier etapa, subetapa, módulo, protocolo, modalidad o funcionalidad se consulte y contraste el estado real del proyecto con la documentación preliminar aprobada conservada en `/root/Xray_Manager_Documentacion_Final_2026-10-31`. El contraste debe identificar conformidades, ausencias, divergencias y elementos no verificados, y presentarse antes de editar o implementar.
+
+Las mejoras siguen permitidas, pero deben justificarse y presentarse al propietario; requieren autorización expresa previa antes de modificar diseño, alcance o código. Se prohíben las modificaciones silenciosas y completar vacíos mediante suposiciones. Si la referencia no está disponible o hay contradicciones relevantes, se detiene el trabajo y se solicita aclaración.
+
+La regla quedó desarrollada en `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md` y referenciada en `AGENTS.md`, `PROJECT_STATE.md`, `docs/CONTINUIDAD_DEL_PROYECTO.md` y `docs/PUNTO_CONTROL_ACTUAL.md`. Aplicable a todas las etapas y a cualquier IA o colaborador que retome el proyecto.
