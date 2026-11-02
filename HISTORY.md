@@ -303,3 +303,5 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Hallazgos: F-01 clave TLS root-owned 0644 aceptada; F-02 read/audit aceptan metadatos de revisión/schema incoherentes; F-03 el flujo común deja un registro draft vacío al cancelar el asistente; F-04 modelo acepta email duplicado mientras store lo rechaza; F-05 estado live no verificado porque catálogo está vacío y almacén/clave maestra VMess no existen.
 - Nuevos documentos: docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. No se modificó código de producción ni la documentación normativa. No se creó almacén/clave real ni se tocó runtime, firewall, puertos o servicio.
 - Estado: VMess IMPLEMENTADO en su base funcional, VERIFICADO PARCIALMENTE, DOCUMENTADO; aceptación pendiente y bloqueada por hallazgos. Etapa 2 ABIERTA. Se requiere autorización para corregir F-01/F-02/F-04 y decisión expresa sobre F-03.
+
+- Publicación documental de auditoría y matriz: commit 88f82f2f9d7d19833b814d9a810dedb4bc3edc8c en design/user-identity-association-v1; push confirmado. main sin cambios.

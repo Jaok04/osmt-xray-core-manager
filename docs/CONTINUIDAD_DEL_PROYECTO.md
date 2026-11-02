@@ -326,4 +326,4 @@ El informe vigente y la matriz requisito→diseño→implementación→prueba→
 
 Hallazgos pendientes: F-01 la clave TLS root-owned 0644 se acepta; F-02 read/audit no detectan incoherencia de revisión/schema; F-03 cancelar el asistente deja el registro base draft creado previamente; F-04 el modelo acepta email duplicado que el almacén rechaza; F-05 el estado live no se ha inicializado (catálogo vacío, almacén VMess y master key ausentes). No se corrigió código. Solicitar autorización antes de modificar.
 
-Rama autorizada y VPS en df632aee5d8139c721b81a6d65f14d93f7676226; main no modificada. scripts/__pycache__/ permanece sin seguimiento y no se eliminó.
+Auditoría y matriz publicadas/sincronizadas en commit 88f82f2f9d7d19833b814d9a810dedb4bc3edc8c de la rama autorizada; main no modificada. scripts/__pycache__/ permanece sin seguimiento y no se eliminó.
