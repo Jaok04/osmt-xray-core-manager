@@ -81,6 +81,14 @@ Antes de proponer implementación:
 - No asumir que una diferencia de hash con texto aparentemente igual carece de importancia; revisar bytes, codificación, saltos de línea y final de archivo.
 - Identificar cualquier cambio no publicado o no sincronizado.
 
+## 4.1 Contraste normativo obligatorio antes de implementar
+
+Antes de iniciar cualquier etapa o tarea de implementación, consulta directamente la documentación preliminar aprobada en `/root/Xray_Manager_Documentacion_Final_2026-10-31` y contrástala punto por punto con el estado real de GitHub, la VPS, el código, los catálogos, las pruebas y la documentación técnica. Presenta el informe de conformidad, omisiones y divergencias antes de editar.
+
+Las mejoras son posibles, pero toda mejora o cambio respecto del alcance aprobado debe justificarse, describir sus impactos y alternativas, y recibir autorización expresa del propietario antes de modificar diseño o código. No infieras autorización por silencio, continuidad de la conversación ni aprobaciones anteriores de otras tareas. Si la fuente no está disponible o existe una contradicción relevante, detente y solicita aclaración.
+
+Procedimiento completo y vinculante: `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`. Esta regla complementa AGENTS.md y es de cumplimiento obligatorio para cualquier IA o colaborador.
+
 ## 5. Cómo reanudar el desarrollo
 
 Después de la auditoría:
