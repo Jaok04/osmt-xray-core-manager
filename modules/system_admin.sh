@@ -11,6 +11,7 @@ MANAGER_REQUIRED_DEPENDENCIES=(
     "curl|curl"
     "jq|jq"
     "python3|python3"
+    "python3-cryptography|python3-cryptography|package"
     "tar|tar"
     "gzip|gzip"
     "flock|util-linux"

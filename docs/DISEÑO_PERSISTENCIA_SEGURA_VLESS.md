@@ -186,3 +186,29 @@ Cada incremento tendrá pruebas, actualización de continuidad y sincronización
 3. Aprobar conservar las claves TLS como referencias a archivos externos en esta primera iteración.
 4. Aprobar que la pérdida de la clave maestra implique bloqueo seguro y restauración desde respaldo de recuperación, nunca regeneración automática.
 5. Aprobar el alcance P1–P4, manteniendo toda conexión como draft hasta una etapa posterior de aplicación transaccional.
+
+## 12. Ejecución de P1 — 2026-11-02
+
+**Estado:** IMPLEMENTADO y VERIFICADO en entorno de desarrollo; pendiente de aceptación específica del hito.
+
+Archivos añadidos/modificados:
+- scripts/vless_crypto.py: primitivas AES-256-GCM, generación idempotente de clave maestra, lectura fail-closed, AAD vinculada a ID/versión, blobs versionados, lectura/escritura atómica y validación de permisos.
+- tests/vless_crypto.sh: pruebas de ida/vuelta, nonce aleatorio, AAD, tag, clave incorrecta, IDs inválidos, symlinks, permisos inseguros y clave ausente.
+- config/paths.sh: rutas reservadas para clave maestra y almacén de secretos.
+- install.sh: dependencia python3-cryptography y directorios privados 0700.
+- modules/system_admin.sh: dependencia incorporada al catálogo del administrador.
+- tests/stage1_dependencies.sh: catálogo esperado actualizado.
+
+La clave maestra no se ha creado en el sistema real. El test genera una clave temporal dentro de su directorio de pruebas y lo elimina al terminar. No se ejecutó apt-get; la dependencia ya estaba instalada en la VPS. No se modificaron conexiones, usuarios, firewall, servicio Xray ni runtime.
+
+Verificaciones ejecutadas:
+- tests/vless_crypto.sh: PASS.
+- tests/stage1_dependencies.sh: PASS.
+- tests/install.sh: PASS.
+- ./install.sh --check: PASS, sin modificar el sistema.
+- Todos los tests/*.sh: PASS (21 scripts, cero fallos).
+- bash -n y ShellCheck en los archivos Bash afectados: PASS.
+- python3 -m py_compile scripts/vless_crypto.py: PASS.
+- git diff --check: PASS.
+
+P1 no incluye todavía el almacén de configuración por conexión ni integración con el asistente VLESS. El riesgo existente de paso de la clave REALITY a jq --arg permanece pendiente de P3; el asistente no fue modificado en P1.

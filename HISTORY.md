@@ -114,3 +114,12 @@ La especificación Etapa 2 revisión 1.3 quedó registrada como APROBADA. Define
 - Se detectó que el asistente VLESS actual pasa la clave privada REALITY a jq mediante --arg, con posible exposición temporal en argumentos del proceso.
 - Se creó docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md con propuesta AES-256-GCM, separación de datos, clave maestra local, flujos atómicos, recuperación fail-closed, pruebas y fases P1–P4.
 - Diseño pendiente de aprobación; no se modificó el código ni se generó clave maestra/secretos persistentes.
+
+## 2026-11-02 — P1 infraestructura criptográfica VLESS
+
+- El propietario aprobó las cinco decisiones del diseño de persistencia segura.
+- Se implementó scripts/vless_crypto.py con AES-256-GCM, clave maestra local root-only, AAD por conexión/esquema, blobs versionados, escritura atómica y validación estricta de permisos.
+- Se añadió tests/vless_crypto.sh y se formalizó python3-cryptography en instalador y catálogo de dependencias.
+- Se añadieron rutas reservadas y directorios privados para claves/secretos; no se creó la clave maestra real ni se ejecutó apt-get.
+- Verificación: 21/21 scripts de pruebas PASS; bash -n, ShellCheck, py_compile, install --check y git diff --check PASS.
+- Sin cambios en conexiones reales, usuarios, firewall, servicio ni runtime. P2 pendiente.

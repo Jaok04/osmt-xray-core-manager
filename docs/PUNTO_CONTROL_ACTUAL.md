@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-02
-**Tarea:** diseño de persistencia segura para configuraciones VLESS y secretos.
-**Estado:** diseño técnico documentado; pendiente aprobación antes de implementar.
+**Tarea:** P1 infraestructura criptográfica para persistencia segura VLESS.
+**Estado:** P1 implementada y verificada; P2 pendiente.
 
 ## 1. Entorno
 
@@ -71,6 +71,6 @@ Hallazgo de seguridad: la clave privada REALITY se pasa actualmente a jq por --a
 
 ## 7. Próxima acción
 
-Solicitar aprobación de las cinco decisiones del apartado 11 de docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md. Solo después implementar P1–P4 por incrementos, manteniendo borradores y sin activar runtime.
+Continuar con P2: diseñar e implementar el almacén versionado de opciones no secretas, referencias a blobs cifrados y consistencia del catálogo. P1 está documentada en el apartado 12 de docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md. No generar todavía la clave maestra real; se creará al integrar el primer guardado en P3. Mantener borradores y no activar runtime.
 
 No modificar main. No declarar Etapa 2 completada.

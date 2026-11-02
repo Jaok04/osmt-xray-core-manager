@@ -75,9 +75,11 @@ parent="$(dirname -- "$APP_ROOT")"
 for candidate in \
     "$APP_ROOT" "$parent" \
     "$(path /etc/xray-manager)" \
+    "$(path /etc/xray-manager/keys)" \
     "$(path /var/lib/xray-manager)" \
     "$(path /var/lib/xray-manager/users)" \
     "$(path /var/lib/xray-manager/connections)" \
+    "$(path /var/lib/xray-manager/secrets)" \
     "$(path /var/lib/xray-manager/profiles)" \
     "$(path /var/lib/xray-manager/domains)" \
     "$(path /var/lib/xray-manager/certificates)" \
@@ -133,7 +135,7 @@ if [[ "$ACTION" == install && "$EUID" -ne 0 ]]; then
     fail "la instalación requiere root; no se intentará autoelevar"
 fi
 
-REQUIRED_PACKAGES=(ca-certificates coreutils curl grep gzip iproute2 jq libc-bin mawk passwd procps python3 systemd tar util-linux uuid-runtime)
+REQUIRED_PACKAGES=(ca-certificates coreutils curl grep gzip iproute2 jq libc-bin mawk passwd procps python3 python3-cryptography systemd tar util-linux uuid-runtime)
 REQUIRED_COMMANDS=(apt-get cut dpkg-query awk curl flock getent grep groupadd gzip id install jq python3 sha256sum sort ss systemctl systemd-analyze tar useradd uuidgen)
 missing=()
 for package in "${REQUIRED_PACKAGES[@]}"; do
@@ -236,9 +238,11 @@ fi
 # Crear exclusivamente directorios del Manager. No tocar /etc/xray ni Xray-core.
 install -d -o root -g root -m 700 \
     "$(path /etc/xray-manager)" \
+    "$(path /etc/xray-manager/keys)" \
     "$(path /var/lib/xray-manager)" \
     "$(path /var/lib/xray-manager/users)" \
     "$(path /var/lib/xray-manager/connections)" \
+    "$(path /var/lib/xray-manager/secrets)" \
     "$(path /var/lib/xray-manager/profiles)" \
     "$(path /var/lib/xray-manager/domains)" \
     "$(path /var/lib/xray-manager/certificates)" \
@@ -249,9 +253,11 @@ install -d -o root -g root -m 700 \
     "$(path /var/backups/xray-manager)"
 for directory in \
     "$(path /etc/xray-manager)" \
+    "$(path /etc/xray-manager/keys)" \
     "$(path /var/lib/xray-manager)" \
     "$(path /var/lib/xray-manager/users)" \
     "$(path /var/lib/xray-manager/connections)" \
+    "$(path /var/lib/xray-manager/secrets)" \
     "$(path /var/lib/xray-manager/profiles)" \
     "$(path /var/lib/xray-manager/domains)" \
     "$(path /var/lib/xray-manager/certificates)" \

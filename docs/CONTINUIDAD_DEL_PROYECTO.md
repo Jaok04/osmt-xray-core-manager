@@ -142,3 +142,7 @@ Si los archivos de continuidad contradicen el código o la documentación normat
 La propuesta arquitectónica está en docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md. No se ha implementado ni se ha generado clave maestra. El diseño propone AES-256-GCM, clave local root-only, separación de opciones/secretos, referencias externas para claves TLS y recuperación fail-closed. Requiere aprobación expresa antes de implementar.
 
 Hallazgo de seguridad: el asistente actual entrega la clave privada REALITY a jq mediante --arg; corregir esa exposición a argumentos de proceso será requisito de la fase de implementación.
+
+## P1 — Infraestructura criptográfica VLESS (2026-11-02)
+
+P1 está implementada en scripts/vless_crypto.py y probada mediante tests/vless_crypto.sh. La dependencia python3-cryptography quedó formalizada en install.sh y modules/system_admin.sh. La clave maestra real no se ha generado y no se debe generar hasta integrar el guardado de la primera configuración en P3. Las funciones ensure_master_key, load_master_key, encrypt_secret, decrypt_secret, write_encrypted_blob y read_encrypted_blob forman la API inicial. El paso siguiente es P2: almacén versionado de configuración no secreta, referencias de secretos y consistencia transaccional con el catálogo.

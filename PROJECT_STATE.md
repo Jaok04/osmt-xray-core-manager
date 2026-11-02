@@ -133,3 +133,10 @@ Usa siempre IMPLEMENTADO, VERIFICADO, PUBLICADO, SINCRONIZADO y ACEPTADO como es
 ## 9. Siguiente punto de control
 
 Consultar docs/PUNTO_CONTROL_ACTUAL.md. No iniciar una nueva implementación de Etapa 2 hasta recuperar GitHub/VPS, resolver las discrepancias y obtener autorización explícita para la siguiente tarea.
+## Hito P1 — Persistencia segura VLESS (2026-11-02)
+
+- P1 IMPLEMENTADO: primitivas AES-256-GCM, clave maestra idempotente y fail-closed, AAD, blobs versionados, escritura atómica y controles de permisos.
+- Dependencia python3-cryptography formalizada en instalador y gestor de dependencias.
+- P1 VERIFICADO: 21/21 pruebas tests/*.sh PASS; controles de sintaxis, ShellCheck, compilación Python, install.sh --check y diff PASS.
+- La clave maestra real no fue generada; no se modificaron datos operativos ni runtime.
+- Siguiente: P2, almacén versionado de configuraciones y referencias.

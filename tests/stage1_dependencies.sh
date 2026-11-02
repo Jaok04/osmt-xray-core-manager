@@ -19,7 +19,7 @@ chmod 700 "$MANAGER_APT_GET"
 APT_CALL_LOG="$tmp/apt.log"
 export APT_CALL_LOG
 
-expected="$(printf '%s\n' apt ca-certificates coreutils curl dpkg grep gzip iproute2 jq mawk procps python3 tar util-linux uuid-runtime libc-bin passwd systemd | sort -u)"
+expected="$(printf '%s\n' apt ca-certificates coreutils curl dpkg grep gzip iproute2 jq mawk procps python3 python3-cryptography tar util-linux uuid-runtime libc-bin passwd systemd | sort -u)"
 actual="$(manager_dependencies_packages)"
 [[ "$actual" == "$expected" ]]
 
