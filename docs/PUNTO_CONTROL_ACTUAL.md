@@ -9,7 +9,7 @@
 - Repositorio: `Jaok04/xray-core-manager`.
 - Rama autorizada: `design/user-identity-association-v1`.
 - Proyecto VPS: `/opt/xray-manager`.
-- HEAD previo a este cierre: `fd96e214f0f916c01a2f1bc547991d53495a82b3`.
+- Commit de cierre técnico VMess: `ab76a57032faa9793a62348f865fba2c9a7d8f77` (`fix(vmess): validate TLS pairs and complete coverage`).
 - Remoto: `git@github.com-xray-core-manager:Jaok04/xray-core-manager.git`.
 - Deploy Key SSH dedicada con permiso de escritura configurado.
 - Documentación normativa: `/root/Xray_Manager_Documentacion_Final_2026-10-31`.
@@ -68,8 +68,8 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 |---|---|
 | IMPLEMENTADO | Sí |
 | VERIFICADO | Sí — 36/36 scripts y controles estáticos |
-| PUBLICADO | Sí — rama autorizada; verificar SHA vigente en Git |
-| SINCRONIZADO | Sí — VPS y remoto deben coincidir al cerrar publicación |
+| PUBLICADO | Sí — `ab76a57032faa9793a62348f865fba2c9a7d8f77` en la rama autorizada |
+| SINCRONIZADO | Sí — VPS y remoto coinciden en `ab76a57032faa9793a62348f865fba2c9a7d8f77` |
 | ACEPTADO | Pendiente de confirmación formal del propietario |
 
 ## 7. Siguiente acción

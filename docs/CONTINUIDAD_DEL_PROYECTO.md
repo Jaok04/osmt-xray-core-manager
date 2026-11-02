@@ -248,4 +248,6 @@ Límites conservados:
 
 **Estado de acceso Git vigente:** la Deploy Key SSH de este repositorio tiene actualmente permiso de escritura y el alias `github.com-xray-core-manager` está configurado en la VPS. Las notas históricas anteriores que la describen como solo lectura quedan superadas por esta configuración posterior.
 
+Publicación del cierre técnico confirmada en `design/user-identity-association-v1`: commit `ab76a57032faa9793a62348f865fba2c9a7d8f77`. La VPS hizo push y fetch; HEAD local/remoto coinciden en ese commit y el árbol quedó limpio. La Deploy Key SSH actual tiene permiso de escritura; la nota anterior de solo lectura es histórica y está superada.
+
 El punto de reanudación exacto está en `docs/PUNTO_CONTROL_ACTUAL.md`. No iniciar Trojan hasta recibir la aceptación formal de VMess y efectuar el contraste específico de Trojan.
