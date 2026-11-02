@@ -39,7 +39,7 @@
 | A08 | Información de instalación | menu_installation_information, menu_installation_paths, menu_installation_files, menu_installation_systemd | tests/stage1_menu.sh | IMPLEMENTADO |
 | A09 | Errores de submenús no deben cerrar el administrador | Enrutamiento de menu_system_admin con recuperación de errores | tests/stage1_menu.sh inyecta retorno de error en las cinco opciones del administrador y comprueba que el menú continúa | IMPLEMENTADO |
 | A10 | Todos los submenús usan [0] Volver y regresan al nivel anterior | Menús funcionales de conexiones, usuarios legacy/v2, Xray, dependencias y preferencias | tests/stage1_menu.sh verifica 11 rutas de retorno [0] y cinco fallos de acciones inyectados | IMPLEMENTADO |
-| A11 | Operaciones destructivas requieren confirmación | Instalación/reinstalación/reparación, cambios de dependencias y desinstalación | tests/stage1_menu.sh, tests/stage1_dependencies.sh, tests/xray_admin.sh, tests/uninstall.sh | PARCIAL: cobertura de confirmaciones por operación aún no exhaustiva |
+| A11 | Operaciones destructivas requieren confirmación | Instalación/actualización/reinstalación/reparación, cambios de dependencias y desinstalación | tests/xray_admin.sh verifica cancelación desde el menú Xray sin iniciar descarga; tests/stage1_dependencies.sh verifica cancelación de instalación/actualización sin ejecutar apt; tests/uninstall.sh verifica cancelación de certificados y de la confirmación final sin borrar rutas | IMPLEMENTADO |
 
 ## 4. Desinstalación única — opción [8] > [5]
 
@@ -56,9 +56,9 @@
 | U09 | Si se elige eliminar todo, eliminar respaldos existentes y respaldo temporal local | Política all en uninstall_menu_action | tests/uninstall.sh crea respaldo previo temporal y respaldo preexistente; verifica ambos respaldos desaparecen en Xray-core, Manager y ambos | IMPLEMENTADO en fixtures |
 | U10 | Advertir exclusiones de respaldos Etapa 5: historial de perfiles, validaciones, informes de restauración y logs técnicos | Advertencia enumerada en el resumen previo | tests/uninstall.sh | IMPLEMENTADO |
 | U11 | Vista previa de alcance, categorías, rutas, respaldo/exportación y advertencias | Resumen previo a la confirmación final | tests/uninstall.sh cubre parte del texto; falta verificar todos los campos | PARCIAL |
-| U12 | Confirmación final explícita e irreversible | ui_confirm antes de adquirir locks y borrar | tests/uninstall.sh | IMPLEMENTADO |
+| U12 | Confirmación final explícita e irreversible | locks adquiridos antes del respaldo; ui_confirm final antes de borrar | tests/uninstall.sh | IMPLEMENTADO |
 | U13 | Rechazar rutas fuera de allowlist y componentes simbólicos | uninstall_paths_are_allowed y uninstall_path_has_symlink_component | tests/uninstall.sh | IMPLEMENTADO |
-| U14 | Evitar carreras con operaciones de usuarios/conexiones y administración Xray | Locks no bloqueantes de uninstall, integridad y Xray; runtime lock no se elimina | tests/uninstall.sh prueba contención independiente de los locks de integridad y administración Xray | PARCIAL: falta revisar otros procesos Manager concurrentes |
+| U14 | Evitar carreras con operaciones de usuarios/conexiones y administración Xray | Bloqueo compartido de ciclo de vida más locks de desinstalación, integridad y administración Xray; todos se adquieren antes del respaldo y se mantienen hasta finalizar/cancelar | tests/uninstall.sh prueba contención de lifecycle, integridad y Xray; tests/install.sh prueba contención lifecycle/integridad; tests/xray_admin.sh, tests/stage1_dependencies.sh y tests/stage1_settings.sh verifican coordinación con las operaciones correspondientes | IMPLEMENTADO para operaciones internas del Manager |
 | U15 | No modificar unidades systemd, firewall o SSH; bloquear si Xray está activo | uninstall_service_guard y flujo de eliminación | Prueba con guard simulado; falta entorno desechable con servicio real controlado | PARCIAL |
 
 ## 5. Navegación y seguridad general
@@ -67,7 +67,7 @@
 |---|---|---|---|---|
 | N01 | [0] Volver en todos los submenús | Menús principales y submenús funcionales de Etapa 1 con retorno explícito | tests/stage1_menu.sh cubre 11 rutas internas de [0] Volver, además de las nueve entradas principales | IMPLEMENTADO |
 | N02 | Error no debe cerrar Manager | Llamadas recuperables desde menú principal | tests/stage1_menu.sh inyecta fallos en las nueve entradas principales y comprueba que el bucle continúa hasta la salida confirmada | IMPLEMENTADO para dispatch principal |
-| N03 | Operaciones destructivas con confirmación | Xray, dependencias y desinstalación | Pruebas por módulo | PARCIAL |
+| N03 | Operaciones destructivas con confirmación | Xray, dependencias y desinstalación | tests/xray_admin.sh, tests/stage1_dependencies.sh y tests/uninstall.sh verifican cancelación sin ejecutar la acción destructiva | IMPLEMENTADO |
 | N04 | Salir con confirmación | menu_main | tests/stage1_menu.sh | IMPLEMENTADO |
 | N05 | Actualizar encabezado al volver al menú principal | Bucle de menu_main vuelve a invocar system_show_header | tests/stage1_menu.sh verifica 10 renderizados del encabezado: entrada inicial, retorno de las nueve opciones y ciclo de salida | IMPLEMENTADO para opciones principales |
 
@@ -77,9 +77,8 @@
 
 Bloqueos para certificación:
 
-1. Revisar la concurrencia con otros procesos del Manager y completar los escenarios restantes de confirmaciones destructivas.
-2. Validar instalación Xray, dependencias, preferencias y desinstalación en un VPS desechable.
-3. Resolver las discrepancias pendientes de encabezado (M04/M06) y cotejar el resto de la matriz contra la especificación aprobada.
+1. Validar instalación Xray, dependencias, preferencias y desinstalación en un VPS desechable.
+2. Resolver las discrepancias pendientes de encabezado (M04/M06) y cotejar el resto de la matriz contra la especificación aprobada.
 
 Las pruebas actuales son fixtures/mocks. No se ejecutaron apt-get, instalación real de Xray, desinstalación real, cambios de systemd, firewall, SSH ni migraciones de datos reales.
 
@@ -90,10 +89,23 @@ Se incorporaron pruebas automatizadas adicionales:
 
 - `tests/stage1_header.sh`: fallo de consulta IP, binario Xray ausente/presente, unidad systemd no configurada, perfil ausente y renderizado completo del encabezado.
 - `tests/stage1_menu.sh`: refresco del encabezado al regresar desde las nueve entradas principales; matriz de 11 rutas internas `[0] Volver` y cinco fallos de acciones inyectados en conexiones, usuarios legacy/v2, preferencias, dependencias, administración Xray y gestión del servicio.
-- `tests/uninstall.sh`: contención de locks, aviso/cancelación de certificados, prueba individual de nueve categorías y políticas keep/all/selected en los tres alcances, incluida la limpieza de respaldos.
+- `tests/uninstall.sh`: contención de locks, aviso/cancelación de certificados y cancelación de la confirmación final; prueba individual de nueve categorías y políticas keep/all/selected en los tres alcances, incluida la limpieza de respaldos.
+- `lib/operation_lock.sh`: bloqueo exclusivo no bloqueante, permisos 600, liberación y rechazo de componentes simbólicos.
+- `install.sh`: bloqueo de ciclo de vida e integridad antes de apt/despliegue; pruebas de contención sin modificar el prefijo.
+- Dependencias, preferencias y administración Xray comparten el bloqueo de ciclo de vida. La desinstalación adquiere lifecycle, uninstall, integridad y Xray antes de crear el respaldo y los conserva hasta terminar o cancelar.
 
-**Ejecución integral:** 19/19 scripts `tests/*.sh` aprobados; sintaxis Bash aprobada para bin, config, lib, modules, scripts y tests; compilación de `scripts/users_v2_cutover.py` aprobada con caché temporal fuera del repositorio.
+**Ejecución integral:** 20/20 scripts `tests/*.sh` aprobados; sintaxis Bash aprobada para bin, config, lib, modules, install y tests; ShellCheck `-S warning -x` aprobado; shfmt aprobado en los archivos de producción modificados y en las pruebas con estilo de indentación homogéneo; `tests/uninstall.sh` conserva su formato histórico mixto; `./install.sh --check` aprobado sin modificaciones.
 
 La integración Xray validó las configuraciones generadas. Xray emitió avisos de deprecación para transportes WebSocket/gRPC y advertencias de REALITY al usar puertos distintos de 443; no fueron fallos de validación.
 
 Estas evidencias no sustituyen la validación operativa en una VPS desechable. La Etapa 1 permanece **PARCIAL — no certificada**.
+
+## Actualización — coordinación de concurrencia y confirmaciones (01/11/2026)
+
+La matriz incorpora un bloqueo de ciclo de vida no bloqueante en `/run/lock/xray-manager-lifecycle.lock`, compartido por el instalador, administración Xray, instalación/actualización de dependencias y persistencia de preferencias. El instalador toma además el bloqueo de integridad de usuarios/conexiones.
+
+La desinstalación adquiere, antes de crear el respaldo, los bloqueos de ciclo de vida, desinstalación, integridad y administración Xray. Los conserva durante el respaldo, exportación, confirmación final y borrado. Así se evita que operaciones internas cubiertas por esos locks alteren el contenido entre el respaldo y la eliminación.
+
+Se añadieron pruebas de contención para instalador, dependencias, preferencias, administración Xray y desinstalación, además de cancelaciones explícitas en el menú Xray y en la confirmación irreversible final. `A11`, `U14` y `N03` pasan a IMPLEMENTADO dentro del alcance de operaciones internas del Manager.
+
+La Etapa 1 permanece PARCIAL: continúan pendientes M04/M06 y las validaciones operativas reales de instalación, dependencias, preferencias y desinstalación en VPS desechable.
