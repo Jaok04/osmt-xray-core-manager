@@ -4,6 +4,8 @@
 **Tarea actual:** Etapa 2 — P4, backup y recuperación segura VLESS.
 **Estado actual:** P4 BACKUP/RECUPERACIÓN VLESS COMPLETADA Y ACEPTADA el 2026-11-02; suite completa 32/32 PASS; commit de implementación y documentación sincronizados.
 
+> **Condición obligatoria para el siguiente trabajo:** antes de proponer o implementar cualquier continuación de Etapa 2, realizar el contraste formal con la documentación preliminar aprobada en `/root/Xray_Manager_Documentacion_Final_2026-10-31`. Presentar discrepancias y mejoras; no modificar el alcance ni el código hasta recibir autorización expresa. Ver `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`.
+
 ## 1. Entorno
 
 - Repositorio: Jaok04/xray-core-manager.
