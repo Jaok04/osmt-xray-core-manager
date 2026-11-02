@@ -55,7 +55,7 @@ Las pruebas de instalación/desinstalación y contención utilizan prefijos y fi
 
 A11 (confirmaciones), U14 (concurrencia de desinstalación) y N03 (confirmaciones destructivas) pasan a IMPLEMENTADO para las operaciones internas del Manager cubiertas por estos locks.
 
-Etapa 1 continúa **PARCIAL — no certificada**. Siguen pendientes M04 (estado explícito de autostart deshabilitado), M06 (fallo independiente de cada proveedor del encabezado) y validaciones operativas reales en VPS desechable para instalación Xray, dependencias, preferencias y desinstalación.
+En la fotografía de esta ronda (01/11), Etapa 1 continuaba **PARCIAL — no certificada**. M04/M06 y las validaciones operativas se cerraron en las actualizaciones del 02/11; el estado vigente se encuentra en la matriz y en `ETAPA_1_VALIDACION_OPERATIVA_VPS_DESECHABLE_2026-11-02.md`.
 
 
 ## Actualización — encabezado M04/M06 (02/11/2026)
@@ -64,4 +64,4 @@ M04 pasa a IMPLEMENTADO: la función de autostart distingue expresamente unidad 
 
 M06 pasa a IMPLEMENTADO: el encabezado captura fallos/salidas vacías de cada proveedor y muestra `No disponible` en el campo afectado. `tests/stage1_header.sh` falla de forma independiente IP, versión, estado del servicio, autostart, perfil y fecha/hora, y después falla todos a la vez al entrar a `menu_main`; las opciones [1] y [0] siguen visibles.
 
-La Etapa 1 permanece PARCIAL por las validaciones operativas reales pendientes y el cotejo final del resto de la matriz.
+En la fotografía de esta ronda (01/11), la Etapa 1 permanecía PARCIAL. Las validaciones operativas y el cotejo final se completaron el 02/11; el estado vigente está registrado en la matriz y en el informe de auditoría final.
