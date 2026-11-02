@@ -318,3 +318,5 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - F-04: modelo, adaptador y almacén validan unicidad exacta de email; pruebas negativas antes de consentimiento y en adaptador.
 - Nueva prueba tests/vmess_creation_flow.sh; pruebas ampliadas de modelo, asistente, persistencia e integración Xray. Suite completa 39/39 PASS; Xray 14/14 y 16 negativos PASS; sintaxis, py_compile, ShellCheck de modificados, install check, shfmt README y diff check PASS. ShellCheck global mantiene warning preexistente SC2174 en prueba VLESS sin modificar.
 - F-01–F-04 RESUELTOS/VERIFICADOS EN FIXTURES. F-05 live no verificado; VM-38 test específico pendiente y VM-39/40 cobertura parcial. No se creó almacén/clave real, no se tocó runtime/firewall/puertos/servicio, main intacta. VMess no aceptado; Etapa 2 abierta.
+
+- Publicación y sincronización del bloque correctivo y su expediente: commit d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7 en design/user-identity-association-v1; HEAD local/remoto coincidente, main intacta.

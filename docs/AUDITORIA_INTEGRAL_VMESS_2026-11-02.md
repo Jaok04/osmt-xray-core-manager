@@ -27,7 +27,7 @@ La especificación YAML usa el identificador `vmess_tls`; el catálogo/implement
 
 - VPS: `/opt/xray-manager`.
 - Rama autorizada: `design/user-identity-association-v1`.
-- HEAD de partida de la auditoría: df632aee5d8139c721b81a6d65f14d93f7676226; el bloque correctivo se publica en commits posteriores.
+- HEAD de partida de la auditoría: df632aee5d8139c721b81a6d65f14d93f7676226. Commit correctivo y expediente actualizado: d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7, publicado en la rama autorizada.
 - HEAD remoto de la rama autorizado al inicio: el mismo SHA que el HEAD de partida.
 - HEAD remoto de `main`: `656ecedc506a94a6461aee296b20871d51a38bf3`; no se modificó.
 - Árbol de trabajo: único elemento sin seguimiento `scripts/__pycache__/`, preexistente al inicio de esta auditoría. No se eliminó ni se incorporó.
@@ -172,8 +172,8 @@ No se creó almacén/clave maestra live; no se modificó runtime, firewall, puer
 | Suite de regresión | VERIFICADA 39/39 |
 | Auditoría integral del módulo | F-01 a F-04 RESUELTOS; F-05 live NO VERIFICADO; otros límites explícitos en matriz |
 | Documentación de auditoría | DOCUMENTADA en este expediente y matriz |
-| Publicación | Bloque correctivo y expediente actualizado pendientes de publicación |
-| Sincronización | Pendiente de confirmar el commit correctivo |
+| Publicación | Bloque correctivo y expediente publicados en d2d33a3 |
+| Sincronización | HEAD VPS/local/remoto verificado: d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7 |
 | Aceptación formal del propietario | PENDIENTE |
 
 **Conclusión:** F-01 a F-04 quedaron corregidos y sus pruebas focales/regresión pasaron. VMess todavía NO está ACEPTADO: F-05 live permanece no verificado; VM-38 conserva prueba específica pendiente y VM-39/VM-40 mantienen cobertura parcial según la matriz; tampoco se ejecutó conectividad cliente-servidor. La Etapa 2 continúa ABIERTA por VMess y por los demás protocolos y opciones aún no implementados/auditados.

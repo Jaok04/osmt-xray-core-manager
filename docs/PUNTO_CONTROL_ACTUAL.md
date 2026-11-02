@@ -11,7 +11,7 @@
 - Repositorio: `Jaok04/xray-core-manager`.
 - Rama autorizada: `design/user-identity-association-v1`.
 - Proyecto VPS: `/opt/xray-manager`.
-- HEAD de partida de la auditoría: df632aee5d8139c721b81a6d65f14d93f7676226; expediente previo publicado en 88f82f2f9d7d19833b814d9a810dedb4bc3edc8c. El commit del bloque correctivo se registrará al publicar esta actualización.
+- HEAD de partida de la auditoría: df632aee5d8139c721b81a6d65f14d93f7676226; bloque correctivo y expediente publicados/sincronizados en d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7.
 - Commit Bloque 1: `c890b5b5362e17e439f198b9b8bbbdbe0af0c653` (`fix(vless): preserve current VMess entries on restore`), publicado y sincronizado.
 - Remoto: `git@github.com-xray-core-manager:Jaok04/xray-core-manager.git`.
 - Deploy Key SSH dedicada con permiso de escritura configurado.
@@ -71,8 +71,8 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 |---|---|
 | IMPLEMENTADO | Sí — base VMess y correcciones F-01 a F-04 implementadas |
 | VERIFICADO | Pruebas focales y suite 39/39 PASS; Xray 14/14 y 16 negativos PASS. F-05 live no verificado; VM-38 prueba específica pendiente y VM-39/40 cobertura parcial |
-| PUBLICADO | Base y Bloques 1–4 publicados; bloque correctivo y actualización documental pendientes de publicación |
-| SINCRONIZADO | Se verificará HEAD local/remoto después del commit correctivo |
+| PUBLICADO | Base, Bloques 1–4 y bloque correctivo F-01–F-04 publicados; commit d2d33a3 |
+| SINCRONIZADO | HEAD VPS/local/remoto coincidente: d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7 |
 | ACEPTADO | NO — F-05 live y cobertura de auditoría restante pendientes |
 
 ## 7. Siguiente acción

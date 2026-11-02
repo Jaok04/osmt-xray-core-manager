@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02 — bloque correctivo F-01–F-04 implementado y probado; suite 39/39; F-05 live pendiente; VMess no aceptado
+**Corte de estado:** 2026-11-02 — bloque correctivo F-01–F-04 publicado/sincronizado en d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7; suite 39/39; F-05 live pendiente; VMess no aceptado
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
