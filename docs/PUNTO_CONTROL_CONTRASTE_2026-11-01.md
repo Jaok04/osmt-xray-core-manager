@@ -1,6 +1,7 @@
 # Punto de control de contraste — Xray Core Manager
 
-**Fecha:** 2026-11-01 (actualizado tras validación de concurrencia y confirmaciones)  
+**Fecha original:** 2026-11-01  
+**Última actualización:** 2026-11-02  
 **Referencia funcional principal:** `Xray_Manager_Documentacion_Final_2026-10-31`  
 **Rama remota de referencia:** `design/user-identity-association-v1` (HEAD `3aeeb03c`); la copia VPS `/opt/xray-manager` no contiene metadatos `.git`, por lo que no se confirma rama local ni estado de commits.  
 **Propósito:** mantener cada incremento contrastado con el diseño aprobado y registrar explícitamente las ampliaciones posteriores.
@@ -18,7 +19,7 @@
 
 ### Etapa 1 — Menú principal y organización general
 
-**Estado: PARCIAL; no declarada completa.**
+**Estado vigente: IMPLEMENTADA — lista para aceptación formal; no certificada formalmente.**
 
 Implementado:
 - Menú principal y navegación inicial.
@@ -140,7 +141,7 @@ En cada cierre de incremento se informará:
 - Qué queda pendiente.
 - Si el estado de una etapa cambia o permanece igual.
 
-**Conclusión vigente (actualizada 02/11/2026):** Etapa 1 sigue PARCIAL y no certificada. La coordinación interna de concurrencia, las confirmaciones destructivas y los requisitos M04/M06 del encabezado están implementados y probados. En VPS desechable se verificaron instalador aislado, Xray real preexistente, dependencias, preferencias y borrado de un árbol fixture. Siguen pendientes la descarga/instalación real de Xray-core, la desinstalación frente a una unidad systemd real y el cotejo final del resto de la matriz. No se debe declarar cierre por el solo hecho de que los menús y pruebas aisladas existan.
+**Conclusión vigente (actualizada 02/11/2026):** Etapa 1 está IMPLEMENTADA y lista para aceptación formal; no se declara certificada hasta la aprobación del usuario. La coordinación interna de concurrencia, las confirmaciones destructivas y los requisitos M04/M06 del encabezado están implementados y probados. En VPS desechable se verificaron instalador aislado, Xray real preexistente, dependencias, preferencias y borrado de un árbol fixture. La descarga/instalación real de Xray-core ya se validó en prefijo temporal. El guard es dependiente del alcance: Manager-only se permite si Xray está detenido, mientras Xray-only/both se bloquean si la unidad sigue instalada; cualquier alcance se bloquea si Xray está activo. U11 se cerró con aserciones completas de la vista previa y confirmaciones. El cotejo final se completó con 47/47 comprobaciones PASS. Limitación conocida: U08 se verificó con mocks SSH/SCP y no con un servidor remoto real. No se debe confundir la implementación verificada con una certificación formal sin aceptación del usuario.
 
 
 ## 7. Actualización de contraste y pruebas — 2026-11-01
@@ -175,7 +176,7 @@ Informe detallado: docs/CONTRASTE_GITHUB_DESIGN_USER_IDENTITY_ASSOCIATION_V1_202
 - Desinstalación: adquiere lifecycle, uninstall, integridad y Xray antes de crear el respaldo; mantiene los locks durante respaldo, exportación, confirmación final y borrado.
 - `A11`, `U14` y `N03` pasan a IMPLEMENTADO para las operaciones internas cubiertas por estos locks.
 - Validación final de esta ronda: 20/20 pruebas, Bash syntax, ShellCheck y shfmt en archivos de producción modificados y pruebas con estilo homogéneo; `tests/uninstall.sh` conserva formato histórico mixto. `./install.sh --check` PASS. Xray permaneció inactivo; no se ejecutaron apt, instalación/desinstalación real, migraciones ni cambios de firewall/SSH.
-- M04/M06 se cierran como IMPLEMENTADO en la actualización del 02/11/2026. La Etapa 1 continúa PARCIAL por las validaciones operativas reales y el cotejo del resto de la matriz.
+- En la fotografía de ese corte, M04/M06 estaban cerrados; las validaciones operativas y el cotejo final se completaron después, el 02/11/2026.
 
 
 ## 9. Actualización — M04/M06 (02/11/2026)
@@ -183,7 +184,7 @@ Informe detallado: docs/CONTRASTE_GITHUB_DESIGN_USER_IDENTITY_ASSOCIATION_V1_202
 - M04: se añadió la cobertura explícita del autostart `disabled`; ahora se distinguen unidad no configurada, habilitada, deshabilitada, enmascarada y estados no aplicables.
 - M06: `system_show_header` aísla fallos de cada fuente y conserva el menú principal. Las pruebas fallan independientemente IP, versión Xray, estado del servicio, autostart, perfil y fecha/hora, y luego todas simultáneamente.
 - Validación final: 20/20 scripts, Bash syntax, ShellCheck, shfmt y `./install.sh --check` PASS. `tests/port_collisions.sh` falló intermitentemente una vez, pasó tres ejecuciones aisladas consecutivas y pasó en la suite completa repetida. Xray permanece inactive.
-- M04/M06 pasan a IMPLEMENTADO. Etapa 1 continúa PARCIAL por las validaciones operativas reales y el cotejo final de los demás requisitos.
+- M04/M06 pasan a IMPLEMENTADO en esta actualización histórica; el cierre operativo y el cotejo final se registran en las secciones posteriores.
 
 
 ## 10. Validación operativa desechable (02/11/2026)
@@ -192,4 +193,34 @@ Se completaron pruebas operativas seguras en Ubuntu 24.04.4 LTS: instalación de
 
 No se descargó/reinstaló Xray real ni se eliminó el Manager/unidad reales. La unidad del host permaneció inactive/disabled; los datos persistentes y preferencias quedaron intactos.
 
-La Etapa 1 sigue PARCIAL. Los dos pendientes operativos concretos son: instalación/actualización real de Xray-core con verificación de artefactos y prueba del flujo de desinstalación frente a una unidad systemd real bajo control.
+En esta fotografía intermedia aún se consideraba PARCIAL. La instalación real de Xray-core en prefijo temporal, el despliegue del Manager, el guard de desinstalación frente a la unidad real y la revisión final se completaron en actualizaciones posteriores del 02/11.
+
+
+## 11. Xray-core real aislado y guard de desinstalación (02/11/2026)
+
+Se descargó Xray 26.10.31 del release oficial, se verificó el digest publicado y el SHA-256 fijado, y se instaló binario/geodata en prefijo temporal. Después `install.sh --install` desplegó el Manager sobre ese prefijo, preparó la unidad sin tocar systemd del host y pasó una segunda ejecución idempotente.
+
+`systemd-analyze verify` pasó para la unidad real del host. Con `xray.service` inactive/disabled, Manager-only eliminó únicamente un `APP_ROOT` fixture y preservó la unidad y el core; Xray-only fue bloqueado por la unidad real. No se alteraron systemd, firewall ni SSH. U15 pasa a IMPLEMENTADO.
+
+U11 se implementó y probó: resumen completo de alcance, política, categorías, rutas, respaldo/exportación, advertencias y confirmaciones. Cotejo final: 47/47 comprobaciones PASS; no quedan filas normativas PARCIAL/PENDIENTE. U08 mantiene como limitación no haber usado un destino SSH/SCP real. Etapa 1 queda lista para aceptación formal.
+
+
+## 12. U11 — vista previa completa de desinstalación (02/11/2026)
+
+`tests/uninstall.sh` cubre un escenario `both + selected(users)` y verifica alcance, política, categoría seleccionada, todas las rutas, respaldo temporal, exportación verificada, advertencia de systemd, exclusiones de Etapa 5 y los prompts de respaldo, exportación y confirmación irreversible. El respaldo fixture queda en modo 600 y las rutas seleccionadas se eliminan. Se corrigieron los saltos de línea del resumen. U11 pasa a IMPLEMENTADO.
+
+Validación de ese corte: suite 20/20; sintaxis Bash, ShellCheck, shfmt de archivos homogéneos e `install.sh --check`: PASS. El cotejo final 47/47 se completó posteriormente y se documenta en la sección 14.
+
+
+## 13. U15 — guard de desinstalación según alcance (02/11/2026)
+
+Se corrigió la sobreprotección detectada: ahora Manager-only puede retirar el administrador cuando Xray está detenido, aunque la unidad siga instalada, y conserva binario/unidad. Si el alcance incluye Xray-core, se bloquea ante una unidad instalada para evitar dejar una unidad huérfana. Si Xray está activo, todos los alcances se bloquean.
+
+Pruebas automatizadas y VPS desechable con unidad real inactive/disabled confirmaron Manager-only sobre fixture, preservación de Xray/unidad y bloqueo de Xray-only. No se modificaron systemd, firewall ni SSH.
+
+
+## 14. Cotejo final de la especificación (02/11/2026)
+
+Se parseó `Etapa_1_Menu_Principal.yaml` y se cotejaron las etiquetas del menú principal, las entradas de opción [8], las seis opciones de administración Xray y los alcances/políticas/categorías de desinstalación con el código. También se revisaron advertencias, orden de respaldo/confirmación/borrado, verificación SHA-256, fallbacks del encabezado, límite de paquetes y confirmación de salida. Resultado: **47/47 PASS**.
+
+La matriz no conserva filas normativas PARCIAL o PENDIENTE. U15 es un control adicional de seguridad. U08 tiene código y pruebas automatizadas con mocks; no se hizo una exportación real por SSH/SCP por falta de destino/credenciales. Etapa 1 está implementada y lista para aceptación formal, no certificada formalmente hasta aprobación del usuario.
