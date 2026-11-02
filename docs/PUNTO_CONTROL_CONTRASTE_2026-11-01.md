@@ -170,7 +170,7 @@ Informe detallado: docs/CONTRASTE_GITHUB_DESIGN_USER_IDENTITY_ASSOCIATION_V1_202
 
 ## 8. Actualización — concurrencia y confirmaciones (2026-11-01)
 
-- Nuevo `lib/operation_lock.sh`: lock de ciclo de vida no bloqueante, permisos 600 y rechazo de rutas simbólicas.
+- Nuevo `lib/operation_lock.sh`: lock de ciclo de vida no bloqueante, permisos 600 y rechazo de rutas simbólicas. Las acciones mutantes de `xray.service` también lo adquieren.
 - Instalador: adquiere lifecycle e integridad antes de desplegar o inicializar datos. Administración Xray, dependencias y guardado de preferencias comparten lifecycle.
 - Desinstalación: adquiere lifecycle, uninstall, integridad y Xray antes de crear el respaldo; mantiene los locks durante respaldo, exportación, confirmación final y borrado.
 - `A11`, `U14` y `N03` pasan a IMPLEMENTADO para las operaciones internas cubiertas por estos locks.
