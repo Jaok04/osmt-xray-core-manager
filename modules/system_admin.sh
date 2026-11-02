@@ -27,6 +27,8 @@ MANAGER_REQUIRED_DEPENDENCIES=(
     "ca-certificates|ca-certificates|package"
 )
 MANAGER_APT_GET="${MANAGER_APT_GET:-apt-get}"
+# shellcheck disable=SC1091
+. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../lib" && pwd)/operation_lock.sh"
 
 manager_dependencies_require_root() {
     if [[ "$EUID" -ne 0 ]]; then
@@ -106,7 +108,7 @@ manager_dependencies_report() {
 }
 
 manager_dependencies_install_missing() {
-    local packages
+    local packages lifecycle_fd
     manager_dependencies_require_root || return 1
     manager_dependencies_require_apt || return 1
     packages="$(manager_dependencies_missing_packages)"
@@ -122,7 +124,13 @@ manager_dependencies_install_missing() {
         ui_pause
         return 0
     fi
+    if ! manager_lock_acquire "${XRAY_MANAGER_LIFECYCLE_LOCK:-/run/lock/xray-manager-lifecycle.lock}" lifecycle_fd; then
+        printf 'Hay otra operación de ciclo de vida del Manager en curso.\n' >&2
+        ui_pause
+        return 1
+    fi
     if ! "$MANAGER_APT_GET" update; then
+        manager_lock_release "$lifecycle_fd"
         printf 'Falló apt-get update. No se instalaron dependencias.\n' >&2
         ui_pause
         return 1
@@ -130,16 +138,18 @@ manager_dependencies_install_missing() {
     local -a package_array=()
     mapfile -t package_array <<<"$packages"
     if ! "$MANAGER_APT_GET" install -y --no-install-recommends "${package_array[@]}"; then
+        manager_lock_release "$lifecycle_fd"
         printf 'Falló la instalación de dependencias. Comprueba el estado del gestor de paquetes.\n' >&2
         ui_pause
         return 1
     fi
+    manager_lock_release "$lifecycle_fd"
     printf '\nComprobación posterior:\n'
     manager_dependencies_report
 }
 
 manager_dependencies_update() {
-    local packages
+    local packages lifecycle_fd
     manager_dependencies_require_root || return 1
     manager_dependencies_require_apt || return 1
     packages="$(manager_dependencies_installed_packages)"
@@ -156,7 +166,13 @@ manager_dependencies_update() {
         ui_pause
         return 0
     fi
+    if ! manager_lock_acquire "${XRAY_MANAGER_LIFECYCLE_LOCK:-/run/lock/xray-manager-lifecycle.lock}" lifecycle_fd; then
+        printf 'Hay otra operación de ciclo de vida del Manager en curso.\n' >&2
+        ui_pause
+        return 1
+    fi
     if ! "$MANAGER_APT_GET" update; then
+        manager_lock_release "$lifecycle_fd"
         printf 'Falló apt-get update. No se actualizaron paquetes.\n' >&2
         ui_pause
         return 1
@@ -164,10 +180,12 @@ manager_dependencies_update() {
     local -a package_array=()
     mapfile -t package_array <<<"$packages"
     if ! "$MANAGER_APT_GET" install --only-upgrade -y --no-install-recommends "${package_array[@]}"; then
+        manager_lock_release "$lifecycle_fd"
         printf 'Falló la actualización de dependencias requeridas.\n' >&2
         ui_pause
         return 1
     fi
+    manager_lock_release "$lifecycle_fd"
     printf '\nActualización de dependencias terminada.\n'
     manager_dependencies_report
 }
