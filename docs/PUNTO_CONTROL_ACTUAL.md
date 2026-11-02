@@ -2,7 +2,7 @@
 
 **Fecha del corte:** 2026-11-02
 **Tarea:** integración inicial del asistente de creación VLESS con el modelo neutral y el adaptador Xray-core 26.10.31.
-**Estado:** implementación y pruebas completadas; commit local creado; pendiente push y verificación remota.
+**Estado:** implementación, pruebas, publicación y sincronización verificadas.
 
 ## 1. Entorno
 
@@ -11,7 +11,7 @@
 - VPS/proyecto: /opt/xray-manager.
 - HEAD local de inicio: 8f23b0fbd3be8b61e370be74369ce1bcfd0e5ca0.
 - Árbol de trabajo estaba limpio al iniciar.
-- Commit local creado: faa2c45c67f24cd4e3faad4480ce8bc77ab70605 (feat: integrate VLESS draft configuration assistant).
+- Commit de implementación publicado: 29459ce3abd6961238182631a28738633b7cc8d0 (feat: integrate VLESS draft configuration assistant).
 - Documentación normativa: /root/Xray_Manager_Documentacion_Final_2026-10-31.
 - Etapa 1: aceptada formalmente; no reabrir.
 - Etapa 2: en desarrollo y abierta.
@@ -68,7 +68,7 @@ Advertencias observadas en Xray 26.10.31: WebSocket y gRPC están marcados como 
 1. Revisar diff completo y permisos.
 2. Actualizar continuidad (este documento, PROJECT_STATE.md, HISTORY.md y CONTINUIDAD_DEL_PROYECTO.md).
 3. Crear commit en design/user-identity-association-v1.
-4. Publicar el commit faa2c45c67f24cd4e3faad4480ce8bc77ab70605 en la rama autorizada.
-5. Verificar SHA remoto y que VPS/remoto quedan sincronizados.
+4. Commit 29459ce3abd6961238182631a28738633b7cc8d0 publicado en la rama autorizada.
+5. SHA local y remoto coinciden; árbol de trabajo limpio.
 
 No modificar main. No declarar Etapa 2 completada.

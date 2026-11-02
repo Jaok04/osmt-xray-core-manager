@@ -104,5 +104,5 @@ La especificación Etapa 2 revisión 1.3 quedó registrada como APROBADA. Define
 - No persiste secretos/configuración ni activa runtime. Los registros permanecen draft y runtime_applied=false.
 - Se añadieron docs y tests/vless_assistant.sh.
 - Verificación actual: todos los tests/*.sh PASS; bash -n, ShellCheck de módulos modificados y git diff --check PASS; shfmt aplicado al nuevo módulo.
-- Commit local: faa2c45c67f24cd4e3faad4480ce8bc77ab70605 (feat: integrate VLESS draft configuration assistant).
-- Pendiente en el momento de redactar esta entrada: push y verificación remota.
+- Commit publicado: 29459ce3abd6961238182631a28738633b7cc8d0 (feat: integrate VLESS draft configuration assistant).
+- Push confirmado en design/user-identity-association-v1; SHA local/remoto idénticos y árbol de trabajo limpio.
