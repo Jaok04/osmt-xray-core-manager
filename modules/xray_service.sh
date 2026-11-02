@@ -6,6 +6,8 @@ XRAY_SERVICE_USER="${XRAY_SERVICE_USER:-xray}"
 XRAY_SERVICE_GROUP="${XRAY_SERVICE_GROUP:-xray}"
 XRAY_SERVICE_ROOT="${XRAY_SERVICE_ROOT:-/}"
 XRAY_SERVICE_UNIT_NAME="${XRAY_SERVICE_UNIT_NAME:-xray.service}"
+# shellcheck disable=SC1091
+. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../lib" && pwd)/operation_lock.sh"
 
 xray_service_path() {
     local path="$1"
@@ -545,6 +547,24 @@ xray_service_show_logs() {
 }
 
 xray_service_action() {
+    local action="${1:-}" lifecycle_fd result
+    case "$action" in
+        start | stop | restart | enable | disable) ;;
+        *)
+            xray_service_fail "operación de servicio desconocida: $action"
+            return 1
+            ;;
+    esac
+    if ! manager_lock_acquire "${XRAY_MANAGER_LIFECYCLE_LOCK:-/run/lock/xray-manager-lifecycle.lock}" lifecycle_fd; then
+        xray_service_fail "hay otra operación de ciclo de vida del Manager en curso; no se modificó el servicio"
+        return 1
+    fi
+    if xray_service_action_locked "$action"; then result=0; else result=$?; fi
+    manager_lock_release "$lifecycle_fd"
+    return "$result"
+}
+
+xray_service_action_locked() {
     local action="$1"
     xray_service_control_require_root || return 1
     xray_service_managed_unit_check || return 1
