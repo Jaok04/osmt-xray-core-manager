@@ -5,6 +5,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck disable=SC1091
 source "$ROOT/modules/uninstall.sh"
 tmp="$(mktemp -d)"
+XRAY_MANAGER_LIFECYCLE_LOCK="$tmp/lifecycle.lock"
+export XRAY_MANAGER_LIFECYCLE_LOCK
 trap 'rm -rf -- "$tmp"' EXIT
 
 APP_ROOT="$tmp/app"
@@ -152,6 +154,50 @@ archive="$(find "$UNINSTALL_BACKUP_STAGING_DIR" -name pre-uninstall.tar.gz -type
 tar -tzf "$archive" | grep -Fq "${APP_ROOT#/}/marker.txt"
 grep -Fq 'Se conservan todos los datos persistentes' "$tmp/uninstall-flow.out"
 grep -Fq 'Exportación externa: No solicitada' "$tmp/uninstall-flow.out"
+
+# Un instalador/gestor de dependencias activo bloquea el inicio de desinstalación.
+mkdir -p "$APP_ROOT"
+printf 'preserve under lifecycle lock\n' >"$APP_ROOT/marker.txt"
+UNINSTALL_LOCK="$tmp/uninstall-lifecycle-busy.lock"
+UNINSTALL_DATA_LOCK="$tmp/integrity-lifecycle-busy.lock"
+UNINSTALL_XRAY_LOCK="$tmp/xray-lifecycle-busy.lock"
+XRAY_MANAGER_LIFECYCLE_LOCK="$tmp/lifecycle-busy.lock"
+exec {busy_lifecycle_fd}>"$XRAY_MANAGER_LIFECYCLE_LOCK"
+flock -x "$busy_lifecycle_fd"
+ui_confirm() { return 0; }
+if printf '2\n1\n' | uninstall_menu_action >"$tmp/uninstall-lifecycle-busy.out" 2>&1; then
+	printf 'ERROR: se desinstaló mientras había otra operación de ciclo de vida.\n' >&2
+	exit 1
+fi
+grep -Fq 'otra operación de ciclo de vida' "$tmp/uninstall-lifecycle-busy.out"
+[[ -f "$APP_ROOT/marker.txt" ]]
+flock -u "$busy_lifecycle_fd"
+exec {busy_lifecycle_fd}>&-
+
+# Cancelar la confirmación irreversible final no elimina el componente ni sus datos.
+reset_uninstall_ui() {
+	ui_clear() { :; }
+	ui_title() { :; }
+	ui_pause() { :; }
+	ui_read_option() { IFS= read -r "$2"; }
+	uninstall_service_guard() { return 0; }
+}
+UNINSTALL_LOCK="$tmp/uninstall-final-cancel.lock"
+UNINSTALL_DATA_LOCK="$tmp/integrity-final-cancel.lock"
+UNINSTALL_XRAY_LOCK="$tmp/xray-final-cancel.lock"
+XRAY_MANAGER_LIFECYCLE_LOCK="$tmp/lifecycle-final-cancel.lock"
+UNINSTALL_BACKUP_STAGING_DIR="$tmp/staging-final-cancel"
+mkdir -p "$APP_ROOT"
+printf 'preserve after final cancel\n' >"$APP_ROOT/marker.txt"
+confirm_count=0
+ui_confirm() {
+	((confirm_count += 1))
+	[[ "$confirm_count" -eq 1 ]]
+}
+printf '2\n1\n' | uninstall_menu_action >"$tmp/uninstall-final-cancel.out"
+grep -Fq 'Operación cancelada. No se eliminó ninguna ruta.' "$tmp/uninstall-final-cancel.out"
+[[ -f "$APP_ROOT/marker.txt" ]]
+[[ -z "$(find "$UNINSTALL_BACKUP_STAGING_DIR" -name pre-uninstall.tar.gz -type f -print -quit 2>/dev/null)" ]]
 
 # Un respaldo fallido debe cancelar la eliminación y dejar intacta la ruta.
 mkdir -p "$APP_ROOT"
