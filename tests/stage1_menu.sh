@@ -3,12 +3,19 @@
 set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "$0")/.." && pwd)"
 source "$ROOT/config/manager.conf"
+source "$ROOT/config/preferences.sh"
 source "$ROOT/config/paths.sh"
 source "$ROOT/config/xray-version.conf"
 source "$ROOT/lib/ui.sh"
 source "$ROOT/lib/system.sh"
 source "$ROOT/modules/xray_admin.sh"
 source "$ROOT/modules/uninstall.sh"
+source "$ROOT/modules/system_admin.sh"
+source "$ROOT/modules/admin_settings.sh"
+source "$ROOT/modules/connections.sh"
+source "$ROOT/modules/users.sh"
+source "$ROOT/modules/users_v2_menu.sh"
+source "$ROOT/modules/xray_service.sh"
 source "$ROOT/modules/main_menu.sh"
 
 tmp="$(mktemp -d)"
@@ -139,3 +146,89 @@ ui_confirm() { return 0; }
 printf '1\n2\n3\n4\n5\n6\n7\n8\n9\n0\n' | menu_main >"$tmp/all-main-returns.out"
 [[ "$(wc -l <"$TOP_LEVEL_CALLS")" -eq 9 ]]
 [[ "$(wc -l <"$HEADER_CALLS")" -eq 10 ]]
+
+# Restaurar implementaciones reales después de los stubs del bloque de enrutamiento.
+source "$ROOT/modules/connections.sh"
+source "$ROOT/modules/users.sh"
+source "$ROOT/modules/users_v2_menu.sh"
+
+source "$ROOT/modules/system_admin.sh"
+source "$ROOT/modules/admin_settings.sh"
+source "$ROOT/modules/main_menu.sh"
+
+# Matriz de retorno [0] en submenús funcionales de Etapa 1.
+# Se ejecutan solo rutas de navegación; no se invocan operaciones del sistema.
+ui_pause() { :; }
+system_xray_service_state() { printf 'inactive'; }
+system_xray_autostart() { printf 'disabled'; }
+printf '0\n' | connections_menu >"$tmp/connections-back.out"
+printf '0\n' | users_menu >"$tmp/users-back.out"
+printf '0\n' | users_v2_menu >"$tmp/users-v2-back.out"
+printf '0\n' | manager_dependencies_menu >"$tmp/dependencies-back.out"
+printf '0\n' | manager_settings_menu >"$tmp/settings-back.out"
+printf '0\n' | manager_settings_language_date_menu >"$tmp/settings-language-back.out"
+printf '0\n' | manager_settings_backup_menu >"$tmp/settings-backup-back.out"
+printf '0\n' | manager_settings_theme_menu >"$tmp/settings-theme-back.out"
+printf '0\n' | manager_settings_editor_menu >"$tmp/settings-editor-back.out"
+printf '0\n' | menu_xray_service >"$tmp/xray-service-back.out"
+printf '0\n' | menu_xray_admin >"$tmp/xray-admin-back.out"
+for output in connections-back users-back users-v2-back dependencies-back settings-back \
+    settings-language-back settings-backup-back settings-theme-back settings-editor-back \
+    xray-service-back xray-admin-back; do
+    [[ -f "$tmp/$output.out" ]]
+done
+grep -q '\[0\] Volver' "$tmp/connections-back.out"
+grep -q '\[0\] Volver' "$tmp/users-back.out"
+grep -q '\[0\] Volver al menú principal' "$tmp/users-v2-back.out"
+grep -q '\[0\] Volver' "$tmp/dependencies-back.out"
+grep -q '\[0\] Volver' "$tmp/settings-back.out"
+grep -q '\[0\] Volver' "$tmp/settings-language-back.out"
+grep -q '\[0\] Volver' "$tmp/settings-backup-back.out"
+grep -q '\[0\] Volver' "$tmp/settings-theme-back.out"
+grep -q '\[0\] Volver' "$tmp/xray-service-back.out"
+grep -q '\[0\] Volver' "$tmp/xray-admin-back.out"
+
+# Fallos inyectados en acciones de submenús: el bucle debe seguir disponible
+# y aceptar [0] sin cerrar el gestor ni repetir la operación fallida.
+ACTION_CALLS="$tmp/nested-action-calls"
+connections_create_draft() {
+    echo connection-create >>"$ACTION_CALLS"
+    return 1
+}
+printf '2\n0\n' | connections_menu >"$tmp/connections-action-error.out" || true
+grep -Fxq connection-create "$ACTION_CALLS"
+[[ "$(grep -c 'GESTIÓN DE PROTOCOLOS Y CONEXIONES' "$tmp/connections-action-error.out")" -ge 2 ]]
+
+users_create() {
+    echo user-create >>"$ACTION_CALLS"
+    return 1
+}
+printf '1\n0\n' | users_menu >"$tmp/users-action-error.out" || true
+grep -Fxq user-create "$ACTION_CALLS"
+[[ "$(grep -c 'GESTIÓN DE USUARIOS VLESS' "$tmp/users-action-error.out")" -ge 2 ]]
+
+users_v2_menu_list() {
+    echo users-v2-list >>"$ACTION_CALLS"
+    return 1
+}
+printf '1\n0\n' | users_v2_menu >"$tmp/users-v2-action-error.out" || true
+grep -Fxq users-v2-list "$ACTION_CALLS"
+[[ "$(grep -c 'GESTIÓN DE IDENTIDADES Y ASOCIACIONES (V2)' "$tmp/users-v2-action-error.out")" -ge 2 ]]
+
+manager_settings_paths_menu() {
+    echo settings-paths >>"$ACTION_CALLS"
+    return 1
+}
+printf '1\n0\n' | manager_settings_menu >"$tmp/settings-action-error.out" || true
+grep -Fxq settings-paths "$ACTION_CALLS"
+[[ "$(grep -c 'CONFIGURACIÓN DEL ADMINISTRADOR' "$tmp/settings-action-error.out")" -ge 2 ]]
+
+manager_dependencies_report() {
+    echo dependencies-report >>"$ACTION_CALLS"
+    return 1
+}
+printf '1\n0\n' | manager_dependencies_menu >"$tmp/dependencies-action-error.out" || true
+grep -Fxq dependencies-report "$ACTION_CALLS"
+[[ "$(grep -c 'DEPENDENCIAS DEL SISTEMA' "$tmp/dependencies-action-error.out")" -ge 2 ]]
+
+printf 'OK: matriz de [0] Volver en submenús funcionales y recuperación tras fallos inyectados.\n'
