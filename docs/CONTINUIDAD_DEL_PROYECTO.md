@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Estado vigente 2026-11-02:** F-01–F-04 corregidos; VM-38/39/40 verificados; suite 40/40 PASS; Xray 14/14 y 16 casos negativos PASS. F-05 live y conectividad cliente-servidor NO VERIFICADOS; VMess NO está aceptado y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. No iniciar Trojan. Los hitos históricos posteriores conservan su contexto y no sustituyen este estado vigente.
+> **Estado vigente 2026-11-02:** F-01–F-05 corregidos/verificados; VM-38/39/40 verificados; suite 40/40 PASS; Xray 14/14 y 16 casos negativos PASS. VM-47 conectividad cliente-servidor NO VERIFICADA; VMess NO está aceptado formalmente y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. No iniciar Trojan. Los hitos históricos posteriores conservan su contexto y no sustituyen este estado vigente.
 
 
 ## 1. Objetivo
@@ -343,3 +343,8 @@ Corrección de código publicada en d2d33a32bdf5e21d1d35ad41d00bd0b116443cb7; ac
 La VPS de desarrollo `/opt/xray-manager` fue confirmada accesible como root, en la rama autorizada y HEAD `4c87557e0aff4166c540c633effe5cb6dac40096`. Se añadió `tests/vmess_navigation_edge_cases.sh`; VM-38 lista vacía/[0], VM-39 entradas inválidas recuperables y VM-40 confirmación destructiva exacta pasan. Suite completa `tests/*.sh`: 40/40 PASS. La primera ejecución parcial de `port_collisions.sh` falló en la comprobación UDP; la repetición aislada y la suite completa posterior pasaron.
 
 F-05 live queda pendiente de autorización específica para crear clave maestra y almacén VMess persistentes en esta VPS de desarrollo. No se crearon, ni se añadió conexión live. Xray no está instalado localmente; las pruebas de integración utilizaron el binario de validación 26.10.31 en caché. Servicio inactivo; no se tocaron runtime, firewall, puertos ni servicios.
+
+
+## Validación live F-05 — 2026-11-02
+
+El propietario autorizó la inicialización persistente controlada en la VPS de desarrollo. F-05/VM-46 quedó VERIFICADO LIVE: clave maestra compartida generada con 32 bytes `root:root 0600`; almacén VMess creado con directorios `root:root 0700`; borrador VMess-TLS guardado, leído/descifrado, recuperado por el asistente y validado con Xray 26.10.31. Auditoría limpia y alteración GCM rechazada sin plaintext. La conexión temporal y sus dos archivos versionados fueron retirados; catálogo vacío. Se conservan clave maestra y directorios VMess vacíos como estado inicial. Sin activación de runtime, cambios de firewall/puertos/servicios ni certificado desplegado. VM-47 conectividad cliente-servidor sigue NO VERIFICADA. Detalle: `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`.

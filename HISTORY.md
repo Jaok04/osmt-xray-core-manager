@@ -332,3 +332,14 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - `tests/port_collisions.sh` falló en una primera ejecución parcial en el caso UDP; la repetición aislada y la suite completa posterior pasaron. Se registra el evento sin ocultarlo.
 - No se creó clave maestra ni almacén VMess live; no se añadió conexión live. Xray no está instalado en la VPS de desarrollo, el test de integración utilizó el binario de validación en caché. Servicio inactivo; no se tocó runtime, firewall, puertos ni servicios. F-05 y conectividad cliente-servidor siguen NO VERIFICADOS; VMess no aceptado; Etapa 2 abierta.
 - Nuevo test pendiente de publicar y sincronizar: `tests/vmess_navigation_edge_cases.sh`. `scripts/__pycache__/` permanece sin seguimiento y no se elimina.
+
+
+## 2026-11-02 — F-05 validación live VMess
+
+- El propietario autorizó inicializar clave maestra y almacén VMess reales en la VPS de desarrollo para una prueba temporal controlada.
+- Preflight: catálogo compartido vacío, sin entradas/datos VLESS persistidos, sin clave maestra ni almacén VMess previos; servicio Xray inactivo. La clave maestra es compartida por VLESS/VMess.
+- Se creó por el flujo real un borrador VMess-TLS, se validó con Xray 26.10.31, se almacenó con secreto AES-256-GCM, se recuperó byte a byte y se reconstruyó/validó mediante el asistente. Permisos: clave `root:root 0600`, directorios VMess `root:root 0700`.
+- Auditoría live: cero referencias rotas, huérfanos o entradas inseguras. Ciphertext alterado rechazado sin producir plaintext.
+- Se retiró la conexión temporal y sus dos archivos versionados; catálogo vacío y auditoría posterior limpia. Se conservaron clave maestra compartida y directorios VMess vacíos como inicialización persistente intencional. Se eliminaron certificados/clave TLS y outputs temporales.
+- Xray permaneció inactivo; puerto de prueba sin escucha; sin cambios de runtime, firewall, puertos, servicios o certificados desplegados. F-05/VM-46 VERIFICADO LIVE. VM-47 conectividad cliente-servidor sigue NO VERIFICADA. VMess no aceptado formalmente; Etapa 2 abierta.
+- Informe: `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`.

@@ -2,7 +2,7 @@
 
 **Fecha del corte:** 2026-11-02
 **Tarea:** revalidación controlada VMess en VPS de desarrollo; cobertura VM-38/39/40.
-**Estado vigente:** F-01 a F-04 CORREGIDOS; VM-38/39/40 VERIFICADOS en fixtures; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS. F-05 live y conectividad cliente-servidor NO VERIFICADOS. VMess NO está aceptado; Etapa 2 ABIERTA.
+**Estado vigente:** F-01 a F-05 CORREGIDOS/VERIFICADOS; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS. VM-47 conectividad cliente-servidor NO VERIFICADA. VMess NO está aceptado formalmente; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -69,15 +69,15 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 
 | Estado | Resultado |
 |---|---|
-| IMPLEMENTADO | Sí — base VMess y correcciones F-01 a F-04 implementadas |
-| VERIFICADO | Suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-38/39/40 focal PASS. F-05 live y conectividad cliente-servidor pendientes |
-| PUBLICADO | Base y bloque correctivo publicados hasta HEAD `4c87557e0aff4166c540c633effe5cb6dac40096`; nueva prueba focal no publicada |
-| SINCRONIZADO | HEAD de partida VPS/local/remoto: `4c87557e0aff4166c540c633effe5cb6dac40096`; publicación de esta revalidación pendiente |
-| ACEPTADO | NO — F-05 live y cobertura de auditoría restante pendientes |
+| IMPLEMENTADO | Sí — base VMess y correcciones F-01 a F-05 implementadas/verificadas |
+| VERIFICADO | Suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-38/39/40 focal PASS; F-05 live PASS. VM-47 conectividad cliente-servidor pendiente |
+| PUBLICADO | Base y pruebas anteriores publicadas; este informe y la validación live se incluyen en la actualización de la rama autorizada |
+| SINCRONIZADO | Actualización live documentada y sincronizada en `design/user-identity-association-v1`; `main` intacta |
+| ACEPTADO | NO — pendiente aceptación formal del propietario; VM-47 no verificada |
 
 ## 7. Siguiente acción
 
-VM-38/39/40 ya están verificados. Siguiente paso: solicitar autorización específica para inicializar la clave maestra y el almacén VMess en la VPS de desarrollo y validar F-05 live. No aceptar VMess ni iniciar Trojan.
+F-05 live está verificado. Siguiente paso: revisar la evidencia y decidir si se requiere conectividad cliente-servidor (VM-47) antes de la aceptación formal. No iniciar Trojan.
 
 No modificar `main`. No ampliar la corrección P4 más allá de la preservación VMess aprobada. No tocar runtime, firewall, puertos, certificados desplegados ni servicio.
 
@@ -138,3 +138,10 @@ Presentar F-01 a F-04 al propietario para autorización de corrección y decisi�
 La VPS de desarrollo se confirmó accesible como root; rama `design/user-identity-association-v1`, HEAD de partida `4c87557e0aff4166c540c633effe5cb6dac40096`. Se agregó `tests/vmess_navigation_edge_cases.sh`, con VM-38/39/40 focales PASS. Suite completa `tests/*.sh`: 40/40 PASS. `port_collisions.sh` falló en UDP durante una primera ejecución aislada dentro de la suite parcial; repetición aislada y suite completa posterior pasaron.
 
 Preflight live de la VPS de desarrollo: `/etc/xray-manager/keys/master.key` y `/var/lib/xray-manager/vmess/` no existen; catálogo de conexiones válido y vacío; servicio Xray inactivo. F-05 no se ejecutó: no se creó clave maestra real, almacén VMess live ni conexión persistente. Xray no está instalado localmente; la integración usó binario de validación en caché. Servicio inactivo; sin cambios de runtime, firewall, puertos o servicios. VM-47 conectividad real no verificada.
+
+
+## 13. Validación live F-05 — 2026-11-02
+
+Autorización del propietario ejecutada en la VPS de desarrollo. Preflight: catálogo vacío, sin entradas/datos VLESS persistidos y sin clave maestra previa; servicio Xray inactivo. Se creó un borrador `vmess_tcp_tls` temporal mediante el flujo real; Xray 26.10.31 aceptó el borrador. Store generó clave maestra compartida (32 bytes, `root:root 0600`) y almacén VMess (directorios `root:root 0700`), persistió config y secreto AES-256-GCM. Read recuperó el secreto byte a byte; el recuperador real reconstruyó la configuración y Xray volvió a validarla. Audit live limpio. El ciphertext alterado fue rechazado sin producir plaintext.
+
+Se eliminó el borrador temporal y sus dos archivos versionados; auditoría posterior limpia y catálogo vacío. Se conservaron intencionalmente la clave maestra compartida y los directorios VMess vacíos. Certificado/clave temporal y outputs de prueba se retiraron. Servicio Xray continuó `inactive`; puerto de prueba sin escucha; runtime/firewall/puertos/servicios intactos. F-05/VM-46: VERIFICADO LIVE. VM-47 conectividad cliente-servidor: NO VERIFICADO. Evidencia completa: `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`.

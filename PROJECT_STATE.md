@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02 — F-01–F-04 corregidos; VM-38/39/40 verificados; suite 40/40; F-05 live y conectividad cliente-servidor pendientes; VMess no aceptado
+**Corte de estado:** 2026-11-02 — F-01–F-05 corregidos/verificados; VM-38/39/40 verificados; suite 40/40; VM-47 conectividad cliente-servidor pendiente; VMess no aceptado formalmente
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -128,7 +128,7 @@ Se documentan resultados PASS para navegación, administración de borradores, V
 ## 7. Pendientes principales de Etapa 2
 
 - Resolver y formalizar las discrepancias normativas indicadas.
-- VMess: base implementada/publicada; estado vigente y revalidación documentados en `docs/PUNTO_CONTROL_ACTUAL.md`, `docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md` y `docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md`. Suite actual 40/40; VM-38/39/40 PASS; F-05 live y conectividad cliente-servidor NO VERIFICADOS. No solicitar aceptación todavía.
+- VMess: base implementada/publicada; estado vigente en `docs/PUNTO_CONTROL_ACTUAL.md`, `docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md`, `docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md` y `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`. Suite 40/40; VM-38/39/40 PASS; F-05/VM-46 VERIFICADO LIVE; VM-47 conectividad cliente-servidor NO VERIFICADA. No solicitar aceptación hasta revisión y aceptación formal.
 - La restauración VLESS conserva las entradas VMess vigentes y su almacén aislado; el backup/restore VMess independiente requiere diseño y aprobación separados.
 - Integrar usuarios VMess con asociaciones globales de Etapa 3 solo cuando se aborde esa integración conforme a su especificación.
 - Definir e implementar modelos, generadores y validadores para Trojan, Shadowsocks e Hysteria2.
@@ -277,3 +277,8 @@ F-01 a F-04 RESUELTOS y VERIFICADOS EN FIXTURES. VM-38/39/40 verificados con pru
 En la VPS de desarrollo, sobre HEAD `4c87557e0aff4166c540c633effe5cb6dac40096`, se agregó `tests/vmess_navigation_edge_cases.sh`. VM-38/39/40 pasan. Suite completa `tests/*.sh`: 40/40 PASS; Xray 26.10.31 valida 14/14 modalidades y 16 casos negativos. La primera ejecución parcial de la prueba de colisiones tuvo un fallo UDP transitorio; repetición aislada y suite completa posterior PASS.
 
 F-05 live no se ejecutó: no se creó `/etc/xray-manager/keys/master.key`, almacén VMess real ni conexión persistente. Xray no está instalado en esta VPS; se utilizó el binario de validación en caché. Servicio inactivo y sin cambios en runtime/firewall/puertos/servicio. VM-47 conectividad cliente-servidor sigue NO VERIFICADO. VMess no aceptado; Etapa 2 abierta.
+
+
+## Validación live F-05 — 2026-11-02
+
+F-05/VM-46 VERIFICADO LIVE en VPS de desarrollo: clave maestra compartida creada (32 bytes, root:root 0600), almacén VMess inicializado (directorios root:root 0700), primer store VMess-TLS, lectura/descifrado byte a byte, recuperación por asistente y validación Xray 26.10.31. Audit limpio; GCM alterado rechazado sin plaintext. Conexión temporal y archivos versionados retirados; catálogo vacío. Clave y directorios vacíos conservados. Sin runtime/firewall/puertos/servicios; Xray inactivo. VM-47 conectividad cliente-servidor NO VERIFICADA. VMess no aceptado; Etapa 2 abierta. Evidencia: `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`.
