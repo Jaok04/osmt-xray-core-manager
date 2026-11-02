@@ -16,14 +16,7 @@ uninstall_release_operation_locks() {
 }
 
 uninstall_service_guard() {
-	local unit
-	for unit in xray.service xray@.service; do
-		if command -v systemctl >/dev/null 2>&1 &&
-			systemctl list-unit-files "$unit" --no-legend 2>/dev/null | grep -q "^$unit"; then
-			printf 'Se detectó la unidad systemd %s. La desinstalación se bloquea porque la gestión y propiedad de esa unidad pertenecen al módulo de servicio.\n' "$unit" >&2
-			return 1
-		fi
-	done
+	local scope="${1:-both}" unit
 	if command -v systemctl >/dev/null 2>&1 && systemctl is-active --quiet xray.service 2>/dev/null; then
 		printf 'Xray está activo. Detén y revisa el servicio por separado antes de desinstalar.\n' >&2
 		return 1
@@ -32,6 +25,23 @@ uninstall_service_guard() {
 		printf 'Se detectó un proceso Xray activo fuera de la comprobación de systemd. La desinstalación se bloquea.\n' >&2
 		return 1
 	fi
+	# Manager-only preserves the Xray binary and unit; removing Xray-core
+	# while its unit remains would leave an orphaned systemd unit.
+	case "$scope" in
+	active | manager) return 0 ;;
+	xray | both) ;;
+	*)
+		printf 'Alcance de desinstalación no válido para la protección del servicio.\n' >&2
+		return 1
+		;;
+	esac
+	for unit in xray.service xray@.service; do
+		if command -v systemctl >/dev/null 2>&1 &&
+			systemctl list-unit-files "$unit" --no-legend 2>/dev/null | grep -q "^$unit"; then
+			printf 'Se detectó la unidad systemd %s. No se eliminará Xray-core porque este flujo no modifica ni elimina unidades; usa el alcance Manager si solo deseas retirar el administrador.\n' "$unit" >&2
+			return 1
+		fi
+	done
 	return 0
 }
 
@@ -99,7 +109,7 @@ uninstall_menu_action() {
 		ui_pause
 		return 1
 	fi
-	if ! uninstall_service_guard; then
+	if ! uninstall_service_guard active; then
 		ui_pause
 		return 1
 	fi
@@ -123,6 +133,10 @@ uninstall_menu_action() {
 			return 1
 			;;
 		esac
+	fi
+	if ! uninstall_service_guard "$scope"; then
+		ui_pause
+		return 1
 	fi
 
 	printf '\n  [1] Conservar todos los datos\n  [2] Eliminar todos los datos\n  [3] Seleccionar categorías\n'
@@ -271,7 +285,7 @@ uninstall_menu_action() {
 		return 1
 	fi
 	trap 'uninstall_release_operation_locks "$lifecycle_fd" "$fd" "$data_fd" "$xray_fd"; trap - RETURN' RETURN
-	if ! uninstall_service_guard || ! uninstall_paths_are_allowed "${paths[@]}"; then
+	if ! uninstall_service_guard "$scope" || ! uninstall_paths_are_allowed "${paths[@]}"; then
 		printf 'El estado del servicio o el inventario de rutas cambió; se cancela la desinstalación.\n' >&2
 		ui_pause
 		return 1
@@ -350,11 +364,11 @@ uninstall_menu_action() {
 	fi
 	printf 'Exportación externa: %s\n' "$export_status"
 	printf 'Las unidades systemd no se eliminan ni modifican desde este flujo. Si existe una unidad Xray, la operación se bloquea.\n'
-	printf 'ADVERTENCIA: los respaldos de Etapa 5 no incluyen ni permiten recuperar estos datos:\\n'
-	printf '  - Historial de versiones/modificaciones de perfiles\\n'
-	printf '  - Historial de validaciones\\n'
-	printf '  - Informes de restauración\\n'
-	printf '  - Registros técnicos y logs\\n'
+	printf 'ADVERTENCIA: los respaldos de Etapa 5 no incluyen ni permiten recuperar estos datos:\n'
+	printf '  - Historial de versiones/modificaciones de perfiles\n'
+	printf '  - Historial de validaciones\n'
+	printf '  - Informes de restauración\n'
+	printf '  - Registros técnicos y logs\n'
 	printf '\n'
 	if ! ui_confirm "CONFIRMACIÓN FINAL: ¿ejecutar esta operación irreversible?"; then
 		printf 'Operación cancelada. No se eliminó ninguna ruta.\n'
