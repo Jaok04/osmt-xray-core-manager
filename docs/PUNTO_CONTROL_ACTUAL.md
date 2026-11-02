@@ -86,17 +86,17 @@ P2: `tests/*.sh` 25/25 PASS; pruebas específicas incluyen interrupción antes d
 
 Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM de claves privadas TLS/REALITY, referencias versionadas en catálogo/configuración y recuperación temporal para validación. Nuevo `scripts/vless_prepare_config.py`; `vless_config_store.py` ahora admite secretos cifrados y auditoría de blobs. El asistente deja de pasar la clave REALITY como `jq --arg` y usa `--rawfile`. Pruebas focales REALITY/TLS/recuperación PASS. Borradores no se activan. Suite completa `tests/*.sh` 25/25 PASS; `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt y `git diff --check` PASS. Clave maestra real de VPS no generada. P3 aún no publicada en GitHub.
 
-## Actualización 2026-11-02 — P4 en implementación
+## Registro histórico — 2026-11-02, P4 en implementación (estado posteriormente superado)
 
 - HEAD inicial: `46c3e52b2a59f6ca69ea2de9013cf3cda0e0331a`, rama autorizada limpia.
 - Aprobado por el usuario el contrato técnico de P4.
 - Añadidos backup de datos y manifiesto verificable, paquete de recuperación scrypt/AES-256-GCM, verificación y restauración con staging/journal; menú de acceso integrado.
 - Pruebas focales backup, restore aislado y recuperación scrypt/AES-GCM PASS; suite completa 29/29 PASS en primera revisión. Se añadieron correcciones posteriores y pruebas focales repetidas.
 - No se tocó `/var/backups/xray-manager` histórico, la clave maestra real, datos operativos, firewall ni runtime.
-- P4 sigue ABIERTA: falta probar cortes abruptos en todas las fronteras del journal y completar pruebas end-to-end de restauración de blobs cifrados TLS/REALITY. Detalle en `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
+- En este corte histórico P4 seguía ABIERTA. Los puntos pendientes se resolvieron en revisiones posteriores; véase la aceptación formal de P4 al final de este documento.
 
 
-## Actualización de punto de control — EOF en menús y auditoría de disco (2026-11-02)
+## Registro histórico — EOF en menús y auditoría de disco (2026-11-02; estado Git de aquel momento, posteriormente reconciliado)
 
 **Tarea actual:** corregir el tratamiento de EOF que provocó bucles de menús y crecimiento ilimitado de archivos de salida durante pruebas.
 
@@ -113,7 +113,7 @@ Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM 
 
 **Incidente de disco:** se eliminó únicamente `/tmp/tmp.oaFf5wTZwt` tras detener PID 36728 y confirmar que no había handles abiertos. Se liberaron el archivo de 20.46 GB y el archivo borrado de ~925 MB que el proceso retenía. Estado posterior: 3.7 GB usados, 71 GB libres, 5%. Los directorios `/tmp/tmp.u7Vq57eHNx` (282 MB) y `/tmp/tmp.EsxO527Ihe` (47 MB) se inspeccionaron y se dejaron intactos; son salidas históricas de pruebas de menú V2.
 
-**Publicación verificada:** GitHub `design/user-identity-association-v1` apunta al commit `fa7242a61248a71b64552511d1db932ebbc8d7d0`; su árbol `b03db9b450288eccbf61e761655f286763df3a70` coincide con el árbol del commit local `b520c53bd5a32007b30519e0756fce13fe8916b5` en los 17 archivos. El push SSH de la VPS fue rechazado por falta de clave autorizada y el fetch HTTPS requiere credenciales; la referencia local `origin/...` permanece en el commit base anterior. En la próxima sesión, recuperar autenticación Git y reconciliar el HEAD local con el remoto sin volver a aplicar cambios. P4 sigue abierta: faltan pruebas de corte abrupto en todas las fronteras del journal, comportamiento ante certificado TLS externo ausente y aceptación formal.
+**Publicación verificada:** GitHub `design/user-identity-association-v1` apunta al commit `fa7242a61248a71b64552511d1db932ebbc8d7d0`; su árbol `b03db9b450288eccbf61e761655f286763df3a70` coincide con el árbol del commit local `b520c53bd5a32007b30519e0756fce13fe8916b5` en los 17 archivos. El push SSH de la VPS fue rechazado por falta de clave autorizada y el fetch HTTPS requiere credenciales; la referencia local `origin/...` permanece en el commit base anterior. Esta nota refleja el estado Git y P4 de aquel momento; posteriormente se habilitó el fetch, se reconciliaron las referencias y se publicaron las correcciones restantes. P4 fue aceptada formalmente; véase el cierre al final de este documento.
 
 ## 2026-11-02 — autenticación SSH y reconciliación de referencias
 
