@@ -94,3 +94,34 @@ grep -q 'componente simbólico' "$TMP/symlink.out"
 [[ -z "$(find "$OUTSIDE" -mindepth 1 -print -quit)" ]]
 
 printf '%s\n' 'OK: instalador, despliegue aislado, permisos, idempotencia, protección de datos, colisiones y rutas simbólicas.'
+
+# Un despliegue concurrente debe abortar antes de crear rutas o datos.
+LOCKED="$TMP/locked-install"
+LIFECYCLE_LOCK="$TMP/installer-lifecycle.lock"
+exec {busy_fd}>"$LIFECYCLE_LOCK"
+flock -x "$busy_fd"
+if XRAY_MANAGER_INSTALL_PREFIX="$LOCKED" XRAY_MANAGER_LIFECYCLE_LOCK="$LIFECYCLE_LOCK" \
+    XRAY_MANAGER_SKIP_DEPENDENCIES=1 XRAY_MANAGER_SKIP_XRAY_INSTALL=1 \
+    "$ROOT/install.sh" --install >"$TMP/locked-install.out" 2>&1; then
+    printf 'ERROR: se permitió un instalador concurrente.\n' >&2
+    exit 1
+fi
+grep -q 'operación de ciclo de vida' "$TMP/locked-install.out"
+[[ ! -e "$LOCKED/opt/xray-manager" ]]
+flock -u "$busy_fd"
+exec {busy_fd}>&-
+
+DATA_LOCKED="$TMP/data-locked-install"
+DATA_LOCK="$TMP/installer-data.lock"
+exec {busy_data_fd}>"$DATA_LOCK"
+flock -x "$busy_data_fd"
+if XRAY_MANAGER_INSTALL_PREFIX="$DATA_LOCKED" XRAY_MANAGER_LIFECYCLE_LOCK="$TMP/data-case-lifecycle.lock" \
+    XRAY_MANAGER_INTEGRITY_LOCK="$DATA_LOCK" XRAY_MANAGER_SKIP_DEPENDENCIES=1 \
+    XRAY_MANAGER_SKIP_XRAY_INSTALL=1 "$ROOT/install.sh" --install >"$TMP/locked-data-install.out" 2>&1; then
+    printf 'ERROR: el instalador ignoró el bloqueo de usuarios/conexiones.\n' >&2
+    exit 1
+fi
+grep -q 'operación de usuarios/conexiones' "$TMP/locked-data-install.out"
+[[ ! -e "$DATA_LOCKED/opt/xray-manager" ]]
+flock -u "$busy_data_fd"
+exec {busy_data_fd}>&-
