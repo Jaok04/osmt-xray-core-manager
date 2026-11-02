@@ -18,6 +18,7 @@ export XRAY_MOCK_LOG="$TMP/systemctl.log"
 export XRAY_TEST_CONFIG_VALID=0
 export XRAY_MOCK_FAIL=0
 export XRAY_MOCK_STUCK=0
+export XRAY_MANAGER_LIFECYCLE_LOCK="$TMP/lifecycle.lock"
 printf 'inactive\n' >"$XRAY_MOCK_STATE"
 printf 'disabled\n' >"$XRAY_MOCK_ENABLED"
 : >"$XRAY_MOCK_LOG"
@@ -109,8 +110,20 @@ if grep -Eq '^(start|restart|enable) ' "$XRAY_MOCK_LOG"; then
     exit 1
 fi
 
-# Valid config permits start, and status reports systemd details.
+# The shared lifecycle lock prevents a service mutation from racing uninstall/install.
 XRAY_TEST_CONFIG_VALID=1
+exec {busy_fd}>"$XRAY_MANAGER_LIFECYCLE_LOCK"
+flock -x "$busy_fd"
+log_before="$(wc -l <"$XRAY_MOCK_LOG")"
+if xray_service_action start >"$TMP/lifecycle-busy.out" 2>&1; then
+    echo 'ERROR: start ignoró el bloqueo de ciclo de vida.' >&2
+    exit 1
+fi
+grep -q 'otra operación de ciclo de vida' "$TMP/lifecycle-busy.out"
+[[ "$(wc -l <"$XRAY_MOCK_LOG")" == "$log_before" ]]
+[[ "$(<"$XRAY_MOCK_STATE")" == inactive ]]
+flock -u "$busy_fd"
+exec {busy_fd}>&-
 xray_service_action start >"$TMP/start.out"
 grep -q 'quedó iniciado y activo' "$TMP/start.out"
 [[ "$(<"$XRAY_MOCK_STATE")" == active ]]
