@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02 — Bloques 1, 2 y 3 implementados y verificados; publicación del Bloque 3 pendiente
+**Corte de estado:** 2026-11-02 — Bloques 1–4 publicados; auditoría VMess con hallazgos F-01–F-05; aceptación pendiente
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -26,7 +26,7 @@
 
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: design/user-identity-association-v1.
-- Commit funcional de cierre VMess: `ab76a57032faa9793a62348f865fba2c9a7d8f77`.
+- HEAD de partida previo a esta actualización documental, verificado en VPS y remoto: df632aee5d8139c721b81a6d65f14d93f7676226. Informe: docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md; matriz: docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md.
 - Corrección posterior Bloque 1 (restore VLESS preserva VMess): `c890b5b5362e17e439f198b9b8bbbdbe0af0c653` (`fix(vless): preserve current VMess entries on restore`), publicado y sincronizado en la rama autorizada.
 - La rama main no se modificó.
 - Verificar siempre el HEAD remoto antes de nuevas tareas.
@@ -128,7 +128,7 @@ Se documentan resultados PASS para navegación, administración de borradores, V
 ## 7. Pendientes principales de Etapa 2
 
 - Resolver y formalizar las discrepancias normativas indicadas.
-- VMess: auditoría técnica y pruebas de regresión completadas; pendiente aceptación formal del propietario.
+- VMess: base implementada/publicada; suite 38/38 y Xray 14/14 PASS en esta auditoría, pero el cierre está BLOQUEADO por F-01 a F-04 y la validación operativa live F-05 permanece NO VERIFICADA. No solicitar aceptación todavía.
 - La restauración VLESS conserva las entradas VMess vigentes y su almacén aislado; el backup/restore VMess independiente requiere diseño y aprobación separados.
 - Integrar usuarios VMess con asociaciones globales de Etapa 3 solo cuando se aborde esa integración conforme a su especificación.
 - Definir e implementar modelos, generadores y validadores para Trojan, Shadowsocks e Hysteria2.
@@ -144,7 +144,7 @@ Usa siempre IMPLEMENTADO, VERIFICADO, PUBLICADO, SINCRONIZADO y ACEPTADO como es
 
 ## 9. Siguiente punto de control
 
-Consultar `docs/PUNTO_CONTROL_ACTUAL.md`. El cierre técnico de VMess está publicado y sincronizado; esperar aceptación formal del propietario antes de declarar el módulo ACEPTADO o iniciar Trojan.
+Consultar docs/PUNTO_CONTROL_ACTUAL.md y docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md. Resolver F-01 a F-04 con autorización expresa y decidir la semántica de cancelación; no aceptar VMess ni iniciar Trojan todavía.
 ## Hito P1 — Persistencia segura VLESS (2026-11-02)
 
 - P1 IMPLEMENTADO: primitivas AES-256-GCM, clave maestra idempotente y fail-closed, AAD, blobs versionados, escritura atómica y controles de permisos.
@@ -196,7 +196,9 @@ El propietario respondió afirmativamente a la solicitud de aceptación de las c
 
 ## 10. VMess — cierre técnico y aceptación pendiente (2026-11-02)
 
-El módulo VMess está IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO en la rama autorizada. La aceptación formal del propietario sigue pendiente.
+> Registro histórico de la auditoría inicial. El estado vigente y sus hallazgos se actualizan en la sección 14 de este documento.
+
+La base de código VMess está IMPLEMENTADA, PUBLICADA y SINCRONIZADA. La verificación previa 14/14 y 38/38 se confirmó nuevamente; la auditoría actual detectó F-01 a F-04, por lo que la verificación integral queda INCOMPLETA y no procede aceptación formal.
 
 - Matriz aprobada: 14/14 combinaciones.
 - Xray-core 26.10.31: 14/14 configuraciones aceptadas mediante `xray run -test`.
@@ -250,3 +252,12 @@ Se corrigieron las etiquetas visibles del menú VMess y de los listados que usan
 Criterio de formato: `README.md` documenta `shfmt -d -i 4 -ci` para archivos Bash seleccionados. Se inspeccionó el formato existente y se compararon las diferencias que `shfmt` produciría en módulos VMess. No existe una regla que autorice reformatear todo el árbol y el cambio produciría diffs de estilo fuera del alcance; por tanto, no se reformateó ningún archivo. El criterio del proyecto se mantiene: aplicar shfmt con `-i 4 -ci` sólo a los archivos incluidos explícitamente en las verificaciones de README, sin ampliar automáticamente el conjunto.
 
 Estado Bloque 4: etiquetas IMPLEMENTADAS, VERIFICADAS, PUBLICADAS y SINCRONIZADAS en `9528f4b00f6b9654f7236050bbadfd8f9415bf69`. Auditoría integral de VMess pendiente. No se cierra VMess ni Etapa 2.
+
+
+## 14. Auditoría integral VMess — 2026-11-02
+
+Se ejecutó auditoría con contraste directo de la línea base normativa Etapa 2 revisión 1.3 y del diseño complementario VMess. Suite completa 38/38 PASS; Xray 14/14 y 10 casos negativos PASS; sintaxis Bash, AST Python (7 archivos), ShellCheck, install.sh --check, git diff --check y el gate shfmt exacto del README PASS.
+
+Hallazgos bloqueantes: F-01 clave TLS root-owned 0644 aceptada; F-02 read/audit aceptan incoherencia entre revisión/schema del catálogo y referencia/archivo; F-03 cancelación del asistente deja registro base draft creado antes de invocarlo; F-04 modelo acepta emails duplicados mientras el almacén los rechaza. F-05 live no verificado: catálogo vacío, almacén VMess y clave maestra ausentes. Detalle y trazabilidad en los dos documentos de auditoría.
+
+Estado: VMess IMPLEMENTADO en su base funcional, VERIFICADO PARCIALMENTE, DOCUMENTADO, PUBLICADO y SINCRONIZADO; NO ACEPTADO. Etapa 2 ABIERTA. No se modificó código, no se creó almacén/clave real, no se tocó runtime/firewall/puertos/servicio y no se modificó main.

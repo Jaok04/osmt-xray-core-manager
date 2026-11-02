@@ -294,3 +294,12 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Pruebas focales y suite completa 38/38 PASS; controles estáticos y shfmt baseline PASS. Auditoría integral pendiente; cambios publicados y sincronizados en `9528f4b00f6b9654f7236050bbadfd8f9415bf69`.
 
 - Publicación Bloque 4 confirmada: `9528f4b00f6b9654f7236050bbadfd8f9415bf69`; HEAD local/remoto y árboles idénticos. Rama `main` intacta.
+
+
+## 2026-11-02 — Auditoría integral VMess: hallazgos y trazabilidad
+
+- Se consultó directamente la línea base normativa Etapa 2 revisión 1.3 (Markdown/YAML), el informe de auditoría técnica, AGENTS y las reglas permanentes de contraste/cierre. Se limitó el alcance a VMess y sus integraciones directas; Etapa 2 completa sigue abierta.
+- Se reejecutó la suite completa: 38/38 PASS; Xray 26.10.31 aceptó 14/14 combinaciones y rechazó 10 casos negativos. Sintaxis Bash, AST Python (7 archivos), ShellCheck, install.sh --check, git diff --check y gate shfmt del README PASS.
+- Hallazgos: F-01 clave TLS root-owned 0644 aceptada; F-02 read/audit aceptan metadatos de revisión/schema incoherentes; F-03 el flujo común deja un registro draft vacío al cancelar el asistente; F-04 modelo acepta email duplicado mientras store lo rechaza; F-05 estado live no verificado porque catálogo está vacío y almacén/clave maestra VMess no existen.
+- Nuevos documentos: docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. No se modificó código de producción ni la documentación normativa. No se creó almacén/clave real ni se tocó runtime, firewall, puertos o servicio.
+- Estado: VMess IMPLEMENTADO en su base funcional, VERIFICADO PARCIALMENTE, DOCUMENTADO; aceptación pendiente y bloqueada por hallazgos. Etapa 2 ABIERTA. Se requiere autorización para corregir F-01/F-02/F-04 y decisión expresa sobre F-03.

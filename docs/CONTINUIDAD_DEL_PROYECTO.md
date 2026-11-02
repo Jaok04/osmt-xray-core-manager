@@ -1,5 +1,8 @@
 # Protocolo de continuidad — Xray Core Manager
 
+> **Estado vigente 2026-11-02:** Bloques 1–4 VMess están publicados/sincronizados. La auditoría integral actual detectó F-01–F-04 y F-05 live no verificado; VMess NO está aceptado y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. No iniciar Trojan. Los hitos históricos posteriores conservan su contexto y no sustituyen este estado vigente.
+
+
 ## 1. Objetivo
 
 Permitir que cualquier IA o desarrollador retome el proyecto desde su último estado válido aunque el chat original se haya perdido, borrado o sustituido. La fuente de continuidad es el repositorio y la evidencia de la VPS, no la memoria de una conversación.
@@ -223,7 +226,7 @@ El propietario aceptó las correcciones adicionales de seguridad. La etapa P4 de
 
 ## VMess — continuidad de implementación (2026-11-02)
 
-El diseño VMess y su implementación fueron autorizados por el propietario, incluyendo HTTPUpgrade-TLS. El trabajo local en `/opt/xray-manager` contiene modelo, adaptador Xray-core 26.10.31, asistente, preparación de configuración, almacén cifrado y pruebas. La matriz de 14 modalidades pasó `xray run -test`; suite completa `tests/*.sh`: 36/36 PASS. También pasaron `bash -n`, `py_compile`, ShellCheck a nivel warning, shfmt de archivos VMess nuevos, `install.sh --check` y `git diff --check`. Los cambios están publicados y sincronizados en la rama autorizada, pero no aceptados como módulo completo; consultar `docs/PUNTO_CONTROL_ACTUAL.md`.
+El diseño VMess y su implementación fueron autorizados por el propietario, incluyendo HTTPUpgrade-TLS. El trabajo local en `/opt/xray-manager` contiene modelo, adaptador Xray-core 26.10.31, asistente, preparación de configuración, almacén cifrado y pruebas. La matriz de 14 modalidades pasó `xray run -test`; suite completa histórica: 36/36 PASS (la reejecución actual del 2026-11-02 fue 38/38; ver informe vigente). También pasaron `bash -n`, `py_compile`, ShellCheck a nivel warning, shfmt de archivos VMess nuevos, `install.sh --check` y `git diff --check`. Los cambios están publicados y sincronizados en la rama autorizada, pero no aceptados como módulo completo; consultar `docs/PUNTO_CONTROL_ACTUAL.md`.
 
 ### Separación del almacenamiento VMess
 
@@ -239,7 +242,7 @@ La implementación VMess y el aislamiento fueron publicados tras autorización e
 
 ## Cierre técnico VMess — 2026-11-02
 
-La auditoría de cierre contrastó el módulo con la especificación funcional Etapa 2 revisión 1.3 y con el diseño aprobado en `docs/DISEÑO_TECNICO_VMESS.md`. El módulo VMess queda IMPLEMENTADO y VERIFICADO; la aceptación formal del propietario permanece pendiente.
+La auditoría de cierre contrastó el módulo con la especificación funcional Etapa 2 revisión 1.3 y con el diseño aprobado en `docs/DISEÑO_TECNICO_VMESS.md`. El módulo VMess quedó IMPLEMENTADO y VERIFICADO según la auditoría histórica de esa fecha. Este estado histórico fue revisado por la auditoría integral del 2026-11-02, que detectó F-01–F-04 y F-05 live no verificado; consultar la actualización vigente al final de este documento y los informes de auditoría.
 
 Evidencia de esta revisión:
 - Xray-core 26.10.31 (build `a4a3dff`): 14/14 modalidades aceptadas con `xray run -test`.
@@ -315,3 +318,12 @@ Se confirmó que `README.md` define `shfmt -d -i 4 -ci` para archivos Bash selec
 Cambios implementados y verificados: pruebas focales y suite completa 38/38 PASS; controles estáticos y shfmt baseline PASS. Auditoría integral de VMess pendiente. Cambios publicados y sincronizados en `9528f4b00f6b9654f7236050bbadfd8f9415bf69`.
 
 Publicación Bloque 4: commit `9528f4b00f6b9654f7236050bbadfd8f9415bf69`; HEAD local/remoto y árboles verificados idénticos. `main` no fue modificada.
+
+
+## Auditoría integral VMess — 2026-11-02
+
+El informe vigente y la matriz requisito→diseño→implementación→prueba→evidencia son docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. La suite actual pasó 38/38; Xray validó 14/14 y rechazó 10 casos negativos. Sintaxis Bash, AST Python, ShellCheck, install check, diff check y el gate shfmt definido en README pasaron.
+
+Hallazgos pendientes: F-01 la clave TLS root-owned 0644 se acepta; F-02 read/audit no detectan incoherencia de revisión/schema; F-03 cancelar el asistente deja el registro base draft creado previamente; F-04 el modelo acepta email duplicado que el almacén rechaza; F-05 el estado live no se ha inicializado (catálogo vacío, almacén VMess y master key ausentes). No se corrigió código. Solicitar autorización antes de modificar.
+
+Rama autorizada y VPS en df632aee5d8139c721b81a6d65f14d93f7676226; main no modificada. scripts/__pycache__/ permanece sin seguimiento y no se eliminó.

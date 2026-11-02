@@ -30,7 +30,7 @@ Decisiones principales:
 
 ## 3. Estado de implementación (actualización 2026-11-02)
 
-- El menú, modelo neutral, adaptador Xray 26.10.31, asistente, preparación de configuración y almacén VMess están implementados, verificados técnicamente, publicados y sincronizados en la rama autorizada. La aceptación formal del módulo VMess permanece pendiente.
+- El menú, modelo neutral, adaptador Xray 26.10.31, asistente, preparación de configuración y almacén VMess están implementados y publicados/sincronizados. La auditoría integral del 2026-11-02 confirmó 14/14 y 38/38 PASS, pero detectó F-01–F-04; F-05 live no está verificado. El módulo NO está aceptado. Ver el informe y la matriz de trazabilidad.
 - Las 14 combinaciones fueron aceptadas por `xray run -test`; la cobertura de navegación y los casos negativos están registrados en `docs/DISEÑO_TECNICO_VMESS.md` y `docs/PUNTO_CONTROL_ACTUAL.md`.
 - El almacén VMess se mantiene aislado en `/var/lib/xray-manager/vmess/{configurations,secrets}` y usa campos de catálogo `vmess_*` independientes.
 - VMess aún no está integrado con las asociaciones globales de identidad de Etapa 3; sus usuarios se capturan manualmente en el asistente.

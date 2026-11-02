@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-02
-**Tarea:** correcciones aprobadas para el cierre técnico VMess; Bloques 1, 2 y 3 ejecutados.
-**Estado:** Bloques 1 y 2 PUBLICADOS/SINCRONIZADOS; Bloque 3 de pruebas IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO. VMess continúa pendiente de aceptación formal.
+**Tarea:** auditoría integral del módulo VMess tras completar los Bloques 1–4.
+**Estado vigente:** Bloques 1–4 IMPLEMENTADOS, VERIFICADOS en sus pruebas focales, DOCUMENTADOS, PUBLICADOS y SINCRONIZADOS. La auditoría integral detectó F-01–F-04; F-05 live no está verificado. VMess NO está aceptado. Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -11,7 +11,7 @@
 - Repositorio: `Jaok04/xray-core-manager`.
 - Rama autorizada: `design/user-identity-association-v1`.
 - Proyecto VPS: `/opt/xray-manager`.
-- Commit de cierre técnico VMess: `ab76a57032faa9793a62348f865fba2c9a7d8f77`.
+- HEAD actual de la rama autorizada, VPS y remoto: df632aee5d8139c721b81a6d65f14d93f7676226.
 - Commit Bloque 1: `c890b5b5362e17e439f198b9b8bbbdbe0af0c653` (`fix(vless): preserve current VMess entries on restore`), publicado y sincronizado.
 - Remoto: `git@github.com-xray-core-manager:Jaok04/xray-core-manager.git`.
 - Deploy Key SSH dedicada con permiso de escritura configurado.
@@ -69,15 +69,15 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 
 | Estado | Resultado |
 |---|---|
-| IMPLEMENTADO | Sí — módulo VMess y Bloques 1, 2 y 3 del plan correctivo |
-| VERIFICADO | Sí — 14/14 modalidades Xray; suite completa 38/38 y controles estáticos PASS |
-| PUBLICADO | VMess base y Bloques 1, 2 y 3 publicados; Bloque 4 PUBLICADO/SINCRONIZADO en `9528f4b00f6b9654f7236050bbadfd8f9415bf69` |
+| IMPLEMENTADO | Sí — base del módulo VMess y Bloques 1–4; correcciones de F-01 a F-04 aún no implementadas |
+| VERIFICADO | Parcial — 14/14 y 38/38 PASS, pero auditoría integral detectó F-01 a F-04; F-05 live no verificado |
+| PUBLICADO | VMess base y Bloques 1–4 publicados; expediente de auditoría incluido en esta actualización documental. Bloque 4: `9528f4b00f6b9654f7236050bbadfd8f9415bf69` |
 | SINCRONIZADO | HEAD local/remoto verificado tras cada publicación anterior; Bloque 4 publicado y sincronizado en `9528f4b00f6b9654f7236050bbadfd8f9415bf69` |
-| ACEPTADO | Pendiente de confirmación formal del propietario |
+| ACEPTADO | NO — no solicitar aceptación hasta resolver hallazgos y validar lo que corresponda |
 
 ## 7. Siguiente acción
 
-Ejecutar la auditoría integral de cierre VMess: inventario requisito→diseño→implementación→prueba→evidencia; revisar todos los componentes, criterios positivos/negativos/límites/regresión/operativos y documentación; registrar estados individuales y brechas. Las etiquetas VMess-WS/VMess-TLS ya están corregidas, pero el Bloque 4 y la auditoría integral siguen pendientes de verificación y publicación. VMess continuará sin aceptación formal hasta revisión expresa del propietario.
+Bloques 1–4 están ejecutados. La auditoría integral actual está documentada en docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. Siguiente paso: obtener autorización expresa para corregir F-01, F-02 y F-04 y decisión del propietario sobre F-03. F-05 requiere una validación live autorizada. No aceptar VMess ni iniciar Trojan.
 
 No modificar `main`. No ampliar la corrección P4 más allá de la preservación VMess aprobada. No tocar runtime, firewall, puertos, certificados desplegados ni servicio.
 
@@ -95,7 +95,7 @@ No modificar `main`. No ampliar la corrección P4 más allá de la preservación
 
 ## 9. Siguiente acción permitida
 
-Continuar con el Bloque 4 aprobado: completar la documentación técnica, definir el criterio shfmt sin reformatear archivos y ejecutar la auditoría integral de cierre. Mantener VMess pendiente de aceptación formal hasta concluir el proceso y revisión del propietario.
+Presentar F-01 a F-04 al propietario para autorización de corrección y decisión sobre la semántica de cancelación. F-05 requiere autorización para una validación live en entorno controlado. No tocar código, almacén/clave real, runtime, firewall, puertos, certificados desplegados ni servicio hasta contar con autorización para el alcance concreto.
 
 
 ## 10. Bloque 2 — advertencias y resumen del asistente VMess
