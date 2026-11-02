@@ -343,3 +343,13 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Se retiró la conexión temporal y sus dos archivos versionados; catálogo vacío y auditoría posterior limpia. Se conservaron clave maestra compartida y directorios VMess vacíos como inicialización persistente intencional. Se eliminaron certificados/clave TLS y outputs temporales.
 - Xray permaneció inactivo; puerto de prueba sin escucha; sin cambios de runtime, firewall, puertos, servicios o certificados desplegados. F-05/VM-46 VERIFICADO LIVE. VM-47 conectividad cliente-servidor sigue NO VERIFICADA. VMess no aceptado formalmente; Etapa 2 abierta.
 - Informe: `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`.
+
+
+## 2026-11-02 — VM-47 conectividad cliente-servidor VMess
+
+- Se contrastó el requisito de `docs/DISEÑO_TECNICO_VMESS.md` §8: `xray run -test` no demuestra conectividad extremo a extremo y la prueba cliente-servidor debe registrarse por separado.
+- En VPS de desarrollo se generó la configuración del servidor mediante `vmess_model_build` y `vmess_xray_26_10_31_build`, modalidad `vmess_tcp_tls`, con `settings.users` del adaptador. Dos procesos Xray 26.10.31 establecieron túnel TLS/VMess sobre loopback.
+- El cliente SOCKS envió una solicitud HTTP al servidor; el servidor la recibió por VMess, abrió conexión al servicio local y éste respondió HTTP 200 con `VMESS-VM47-END-TO-END-OK`. Cliente y servidor pasaron `xray run -test`.
+- Se fijó la huella SHA-256 del certificado TLS efímero; no se usó `allowInsecure`. Se añadió sólo al JSON temporal una regla `freedom.finalRules` TCP/127.0.0.1/18080 para permitir el destino local.
+- Procesos y listeners temporales detenidos. Sin cambios en runtime, firewall, puertos públicos, catálogo o servicio Xray. Cliente externo/WAN no probado. Xray 26.10.31 emitió advertencia de deprecación de VMess; se documenta como advertencia del core, no como fallo de la prueba.
+- VM-47: VERIFICADO — loopback local. VMess sigue pendiente de aceptación formal; Etapa 2 permanece ABIERTA. Informe: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.

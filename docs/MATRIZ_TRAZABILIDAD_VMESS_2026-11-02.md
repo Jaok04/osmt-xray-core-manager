@@ -52,7 +52,7 @@
 | VM-44 | Carga de módulos y rutas | integración del manager | `bin/xray-manager`, `config/paths.sh` | revisión de integración, suite | VERIFICADO |
 | VM-45 | Desinstalación del almacén VMess | ciclo de vida del manager | `modules/uninstall.sh` | `tests/uninstall.sh` | VERIFICADO |
 | VM-46 | Estado live, clave maestra y almacenamiento real | validación operativa | VPS de desarrollo | primer store TLS, clave compartida, permisos, read/restore, auditoría, alteración GCM y limpieza | VERIFICADO LIVE (F-05) |
-| VM-47 | Conectividad cliente-servidor | diseño VMess §8 | fuera de pruebas ejecutadas | no ejecutada | NO VERIFICADO |
+| VM-47 | Conectividad cliente-servidor | diseño VMess §8 | modelo/adaptador real + Xray cliente/servidor | VMess-TLS loopback; solicitud HTTP a destino y respuesta exacta | VERIFICADO — loopback local; WAN/cliente externo no verificado |
 | VM-48 | Aceptación formal del propietario | regla de cierre | pendiente | no existe aceptación formal | PENDIENTE DE DECISIÓN |
 
 ## Notas de interpretación
@@ -61,7 +61,7 @@
 - La validación `xray run -test` no equivale a interoperabilidad ni conectividad extremo a extremo.
 - La limitación de rollback transaccional está documentada y no debe describirse como función implementada.
 - VM-42 y VM-43 permanecen fuera del alcance actual.
-- La Etapa 2 sigue ABIERTA; esta matriz sólo cubre VMess y sus integraciones directas. F-01 a F-04 están corregidos; VM-38/39/40 se verificaron con pruebas focales. F-05/VM-46 quedó VERIFICADO LIVE; VM-47 conectividad cliente-servidor permanece NO VERIFICADA; VM-48 requiere aceptación formal.
+- La Etapa 2 sigue ABIERTA; esta matriz sólo cubre VMess y sus integraciones directas. F-01 a F-05 están corregidos/verificados; VM-38/39/40 se verificaron con pruebas focales. VM-46 quedó VERIFICADO LIVE; VM-47 quedó VERIFICADO en loopback local (sin cliente externo/WAN); VM-48 requiere aceptación formal.
 
 
 ## Revalidación controlada en VPS de desarrollo — 2026-11-02
@@ -72,3 +72,8 @@ Se agregó `tests/vmess_navigation_edge_cases.sh`: VM-38 lista vacía y `[0]`; V
 ## Validación live F-05 — 2026-11-02
 
 Primer guardado TLS real, clave maestra compartida, permisos, lectura/descifrado, recuperador asistido, validación Xray, detección de alteración GCM y auditoría antes/después de limpieza: PASS. El catálogo quedó vacío y sólo permanecen la clave maestra `root:root 0600` y los directorios VMess vacíos `root:root 0700`. VM-47 conectividad cliente-servidor sigue NO VERIFICADA. Evidencia detallada: `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`.
+
+
+## Validación cliente-servidor VM-47 — 2026-11-02
+
+VM-47 se verificó con dos procesos Xray 26.10.31 en loopback. El modelo y adaptador reales generaron el servidor `vmess_tcp_tls` (`settings.users`); el cliente SOCKS estableció VMess-TLS y una solicitud HTTP llegó al servicio destino, que respondió HTTP 200 con el marcador exacto `VMESS-VM47-END-TO-END-OK`. Configuraciones cliente/servidor pasaron `xray run -test`. Los procesos y listeners temporales fueron detenidos. No se tocó servicio, firewall, runtime, puertos públicos ni catálogo. Alcance limitado a loopback: cliente externo/WAN no probado. Informe: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.

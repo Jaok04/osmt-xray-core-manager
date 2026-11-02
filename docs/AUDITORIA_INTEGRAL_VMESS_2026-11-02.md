@@ -4,7 +4,7 @@
 **Proyecto:** Xray Core Manager
 **Etapa:** 2 — Gestión de protocolos y conexiones
 **Alcance de esta revisión:** módulo VMess y sus integraciones directas. Esta auditoría no certifica la Etapa 2 completa.
-**Resultado actualizado:** **NO APTO PARA ACEPTACIÓN FORMAL** — F-01 a F-05 resueltos/verificados en su alcance; VM-38/39/40 verificados; VM-47 conectividad cliente-servidor sigue no verificada. La aceptación formal de VMess permanece pendiente.
+**Resultado actualizado:** **NO APTO PARA ACEPTACIÓN FORMAL** — F-01 a F-05 resueltos/verificados; VM-38/39/40 verificados; VM-47 verificado en loopback local. No se ha probado cliente externo/WAN. La aceptación formal de VMess permanece pendiente.
 
 ## 1. Línea base y autoridad
 
@@ -130,8 +130,8 @@ Estas pruebas demuestran validación de configuración, no conectividad extremo 
 **Estado inicial de auditoría:** NO VERIFICADO. **Estado vigente tras autorización y prueba del 2026-11-02:** RESUELTO — VERIFICADO LIVE.
 **Evidencia vigente:** primer guardado real de `vmess_tcp_tls` con clave TLS temporal, inicialización de la clave maestra compartida y almacén VMess, permisos `root:root 0600/0700`, lectura/descifrado autenticado, recuperación con el asistente y validación Xray 26.10.31. La auditoría no encontró referencias rotas, huérfanos ni entradas inseguras. Alterar el ciphertext GCM hizo fallar la lectura sin producir plaintext.
 **Limpieza:** el borrador y sus dos archivos versionados fueron retirados; el catálogo volvió a quedar vacío. Se conservaron la clave maestra compartida y los directorios VMess vacíos como estado inicial persistente intencional.
-**Límites:** no se activó runtime ni se desplegaron certificados; VM-47 conectividad cliente-servidor permanece NO VERIFICADA. Evidencia detallada en `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`.
-**Siguiente validación:** decidir si se requiere VM-47 conectividad cliente-servidor y completar la aceptación formal del propietario.
+**Límites:** no se activó runtime ni se desplegaron certificados. VM-47 se verificó posteriormente en loopback local; no se ha probado cliente externo/WAN. Evidencias en `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md` y `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.
+**Siguiente validación:** revisión de evidencias y aceptación formal del propietario; cliente externo/WAN sólo si se decide ampliar el alcance.
 
 ## 6. Elementos conformes y límites explícitos
 
@@ -147,7 +147,7 @@ Estas pruebas demuestran validación de configuración, no conectividad extremo 
 - No se activa runtime, no se abren puertos ni se modifica firewall/servicio.
 - Usuarios VMess manuales e integración con identidades globales pertenecen a Etapa 3.
 - Backup/restore VMess independiente está fuera del alcance aprobado y requiere diseño/autorización separados.
-- No hubo conectividad cliente-servidor real.
+- La conectividad cliente-servidor VMess-TLS se verificó en loopback local; cliente externo/WAN no probado.
 
 ## 2026-11-02 — Bloque correctivo autorizado F-01 a F-04
 
@@ -170,17 +170,17 @@ No se creó almacén/clave maestra live; no se modificó runtime, firewall, puer
 | Código base | IMPLEMENTADO |
 | Compatibilidad estática Xray | VERIFICADA 14/14 |
 | Suite de regresión | VERIFICADA 40/40 (revalidación controlada 2026-11-02) |
-| Auditoría integral del módulo | F-01 a F-05 RESUELTOS/VERIFICADOS; VM-47 conectividad cliente-servidor NO VERIFICADA; otros límites en matriz |
+| Auditoría integral del módulo | F-01 a F-05 RESUELTOS/VERIFICADOS; VM-47 VERIFICADO en loopback; cliente externo/WAN pendiente; otros límites en matriz |
 | Documentación de auditoría | DOCUMENTADA en este expediente y matriz |
 | Publicación | Bloque correctivo, prueba de navegación y validación live documentados en la rama autorizada; sincronización de este expediente en el commit que lo contiene |
 | Sincronización | VPS/local/remoto en rama `design/user-identity-association-v1`; esta actualización se publica junto con el expediente |
 | Aceptación formal del propietario | PENDIENTE |
 
-**Conclusión vigente:** F-01 a F-05 están resueltos/verificados en sus alcances; VM-38/39/40 pasaron pruebas focales y la suite completa pasó 40/40. VMess todavía NO está ACEPTADO formalmente: VM-47 conectividad cliente-servidor no se ejecutó y falta la aceptación expresa del propietario. La Etapa 2 continúa ABIERTA por VMess y por los demás protocolos y opciones aún no implementados/auditados.
+**Conclusión vigente:** F-01 a F-05 están resueltos/verificados; VM-38/39/40 pasaron pruebas focales y la suite completa pasó 40/40; VM-47 demostró tráfico cliente-servidor VMess-TLS real en loopback usando el modelo y adaptador del proyecto. No se probó un cliente en otra máquina ni conectividad WAN. VMess todavía NO está ACEPTADO formalmente: falta la aceptación expresa del propietario. La Etapa 2 continúa ABIERTA por VMess y por los demás protocolos y opciones aún no implementados/auditados.
 
 ## 8. Siguiente paso permitido
 
-F-05 live está verificado; el siguiente paso es revisar la evidencia y decidir si se requiere una prueba de conectividad cliente-servidor (VM-47) antes de solicitar aceptación formal. No activar runtime, tocar puertos/firewall/servicio ni iniciar Trojan sin autorización específica y aceptación formal de VMess.
+F-05/VM-46 y VM-47 (loopback local) están verificados. Revisar `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md` y decidir si el alcance local es suficiente para la aceptación formal o si se requiere una prueba adicional desde un cliente externo. Esa prueba externa requeriría autorización y preparación de red separadas. No activar runtime, tocar puertos/firewall/servicio ni iniciar Trojan sin autorización específica y aceptación formal de VMess.
 
 
 ## 2026-11-02 — Revalidación controlada en VPS de desarrollo
@@ -195,3 +195,8 @@ No se inicializó `/etc/xray-manager/keys/master.key`, no se creó `/var/lib/xra
 ## Revalidación live F-05 — 2026-11-02
 
 La prueba live autorizada quedó completada. Se creó y conservó la clave maestra compartida y el almacén VMess; se guardó un borrador TLS real de prueba, se recuperó y descifró, el asistente lo reconstruyó y Xray 26.10.31 lo validó. Auditoría limpia; ciphertext GCM alterado rechazado sin plaintext. El borrador y sus archivos versionados se retiraron, el catálogo volvió a quedar vacío y se conservaron únicamente clave maestra y directorios VMess vacíos. Servicio Xray inactivo, puerto de prueba sin escucha, sin cambios de runtime/firewall/puertos/servicios. F-05/VM-46: VERIFICADO LIVE. VM-47 conectividad cliente-servidor: NO VERIFICADO. Ver `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`.
+
+
+## Validación cliente-servidor VM-47 — 2026-11-02
+
+VM-47 quedó VERIFICADO en loopback local. El modelo y adaptador reales generaron el servidor VMess-TLS (`settings.users`); dos procesos Xray 26.10.31 establecieron el túnel TLS/VMess y transportaron una solicitud HTTP desde el SOCKS cliente hasta el servicio destino. El destino respondió HTTP 200 con el marcador exacto esperado. Ambos `xray run -test` pasaron. La prueba usó listeners sólo en `127.0.0.1`, un certificado efímero fijado por SHA-256 y una excepción `freedom.finalRules` temporal restringida a TCP/127.0.0.1/18080. Los procesos se detuvieron y los listeners se cerraron. No se modificaron runtime, firewall, puertos públicos, catálogo ni servicio del sistema. No se probó cliente externo/WAN. Informe reproducible: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.

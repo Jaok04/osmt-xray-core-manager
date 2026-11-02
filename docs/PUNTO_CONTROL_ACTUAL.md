@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-02
-**Tarea:** revalidación controlada VMess en VPS de desarrollo; cobertura VM-38/39/40.
-**Estado vigente:** F-01 a F-05 CORREGIDOS/VERIFICADOS; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS. VM-47 conectividad cliente-servidor NO VERIFICADA. VMess NO está aceptado formalmente; Etapa 2 ABIERTA.
+**Tarea:** revalidación controlada VMess; cobertura VM-38/39/40, F-05/VM-46 y VM-47 en loopback.
+**Estado vigente:** F-01 a F-05 CORREGIDOS/VERIFICADOS; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado. VMess NO está aceptado formalmente; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -70,14 +70,14 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 | Estado | Resultado |
 |---|---|
 | IMPLEMENTADO | Sí — base VMess y correcciones F-01 a F-05 implementadas/verificadas |
-| VERIFICADO | Suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-38/39/40 focal PASS; F-05 live PASS. VM-47 conectividad cliente-servidor pendiente |
+| VERIFICADO | Suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-38/39/40 focal PASS; F-05 live PASS; VM-47 loopback PASS. Cliente externo/WAN pendiente |
 | PUBLICADO | Base y pruebas anteriores publicadas; este informe y la validación live se incluyen en la actualización de la rama autorizada |
 | SINCRONIZADO | Actualización live documentada y sincronizada en `design/user-identity-association-v1`; `main` intacta |
-| ACEPTADO | NO — pendiente aceptación formal del propietario; VM-47 no verificada |
+| ACEPTADO | NO — pendiente aceptación formal del propietario; cliente externo/WAN no probado |
 
 ## 7. Siguiente acción
 
-F-05 live está verificado. Siguiente paso: revisar la evidencia y decidir si se requiere conectividad cliente-servidor (VM-47) antes de la aceptación formal. No iniciar Trojan.
+F-05/VM-46 y VM-47 loopback están verificados. Revisar el informe VM-47 y decidir si el alcance local es suficiente o si se requiere una prueba desde otra máquina. No iniciar Trojan.
 
 No modificar `main`. No ampliar la corrección P4 más allá de la preservación VMess aprobada. No tocar runtime, firewall, puertos, certificados desplegados ni servicio.
 
@@ -145,3 +145,8 @@ Preflight live de la VPS de desarrollo: `/etc/xray-manager/keys/master.key` y `/
 Autorización del propietario ejecutada en la VPS de desarrollo. Preflight: catálogo vacío, sin entradas/datos VLESS persistidos y sin clave maestra previa; servicio Xray inactivo. Se creó un borrador `vmess_tcp_tls` temporal mediante el flujo real; Xray 26.10.31 aceptó el borrador. Store generó clave maestra compartida (32 bytes, `root:root 0600`) y almacén VMess (directorios `root:root 0700`), persistió config y secreto AES-256-GCM. Read recuperó el secreto byte a byte; el recuperador real reconstruyó la configuración y Xray volvió a validarla. Audit live limpio. El ciphertext alterado fue rechazado sin producir plaintext.
 
 Se eliminó el borrador temporal y sus dos archivos versionados; auditoría posterior limpia y catálogo vacío. Se conservaron intencionalmente la clave maestra compartida y los directorios VMess vacíos. Certificado/clave temporal y outputs de prueba se retiraron. Servicio Xray continuó `inactive`; puerto de prueba sin escucha; runtime/firewall/puertos/servicios intactos. F-05/VM-46: VERIFICADO LIVE. VM-47 conectividad cliente-servidor: NO VERIFICADO. Evidencia completa: `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`.
+
+
+## 14. Validación cliente-servidor VM-47 — 2026-11-02
+
+VM-47: PASS en loopback local con dos procesos Xray 26.10.31. El modelo y adaptador reales generaron el servidor VMess-TLS; el cliente SOCKS estableció el túnel, el servidor aceptó el usuario sintético y el destino HTTP respondió 200 con el marcador esperado. Configuraciones cliente/servidor pasaron `xray run -test`. Listeners y procesos temporales detenidos. Sin cambios en runtime, firewall, puertos públicos, catálogo o servicio. No se probó cliente externo/WAN. Evidencia: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.

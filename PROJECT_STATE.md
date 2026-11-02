@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02 — F-01–F-05 corregidos/verificados; VM-38/39/40 verificados; suite 40/40; VM-47 conectividad cliente-servidor pendiente; VMess no aceptado formalmente
+**Corte de estado:** 2026-11-02 — F-01–F-05 corregidos/verificados; VM-38/39/40 verificados; suite 40/40; VM-47 VMess-TLS loopback verificado; cliente externo/WAN pendiente; VMess no aceptado formalmente
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -128,7 +128,7 @@ Se documentan resultados PASS para navegación, administración de borradores, V
 ## 7. Pendientes principales de Etapa 2
 
 - Resolver y formalizar las discrepancias normativas indicadas.
-- VMess: base implementada/publicada; estado vigente en `docs/PUNTO_CONTROL_ACTUAL.md`, `docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md`, `docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md` y `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`. Suite 40/40; VM-38/39/40 PASS; F-05/VM-46 VERIFICADO LIVE; VM-47 conectividad cliente-servidor NO VERIFICADA. No solicitar aceptación hasta revisión y aceptación formal.
+- VMess: base implementada/publicada; estado vigente en `docs/PUNTO_CONTROL_ACTUAL.md`, `docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md`, `docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md`, `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md` y `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`. Suite 40/40; VM-38/39/40 PASS; F-05/VM-46 PASS; VM-47 VMess-TLS loopback PASS. Cliente externo/WAN no probado. VMess pendiente de aceptación formal.
 - La restauración VLESS conserva las entradas VMess vigentes y su almacén aislado; el backup/restore VMess independiente requiere diseño y aprobación separados.
 - Integrar usuarios VMess con asociaciones globales de Etapa 3 solo cuando se aborde esa integración conforme a su especificación.
 - Definir e implementar modelos, generadores y validadores para Trojan, Shadowsocks e Hysteria2.
@@ -282,3 +282,8 @@ F-05 live no se ejecutó: no se creó `/etc/xray-manager/keys/master.key`, almac
 ## Validación live F-05 — 2026-11-02
 
 F-05/VM-46 VERIFICADO LIVE en VPS de desarrollo: clave maestra compartida creada (32 bytes, root:root 0600), almacén VMess inicializado (directorios root:root 0700), primer store VMess-TLS, lectura/descifrado byte a byte, recuperación por asistente y validación Xray 26.10.31. Audit limpio; GCM alterado rechazado sin plaintext. Conexión temporal y archivos versionados retirados; catálogo vacío. Clave y directorios vacíos conservados. Sin runtime/firewall/puertos/servicios; Xray inactivo. VM-47 conectividad cliente-servidor NO VERIFICADA. VMess no aceptado; Etapa 2 abierta. Evidencia: `docs/VALIDACION_LIVE_VMESS_F05_2026-11-02.md`.
+
+
+## Validación cliente-servidor VM-47 — 2026-11-02
+
+VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servidor VMess-TLS; cliente Xray SOCKS conectó mediante TLS/VMess y transportó una solicitud HTTP hasta un servicio destino, que respondió 200 con el marcador esperado. Ambos `xray run -test` pasaron. Procesos/listeners temporales detenidos; sin cambios de runtime, firewall, puertos públicos, catálogo o servicio. Cliente externo/WAN no probado. VMess no aceptado formalmente; Etapa 2 abierta. Informe: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.
