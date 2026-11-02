@@ -34,6 +34,7 @@ El menú principal, opción [5] Gestión del servicio Xray-core, abre el submen�
 11. El módulo no crea ni modifica `config.json`, no cambia firewall, SSH ni red.
 12. Las consultas de journal limitan el volumen entre 1 y 200 líneas.
 13. El modo de prefijo alternativo solo admite operaciones de control cuando se activa explícitamente el doble indicador de pruebas; nunca alcanza el systemd del host.
+14. Las acciones mutantes de servicio adquieren el lock compartido de ciclo de vida antes de validar y llamar a systemd; así no compiten con instalación/desinstalación del Manager.
 
 ## Archivos
 
