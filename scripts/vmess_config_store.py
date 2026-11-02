@@ -143,6 +143,30 @@ def validate(config,entry,secret_ref):
  elif sec=="reality":
   if set(s)!={"target","server_names","short_ids","secret_ref"} or not isinstance(s["target"],str) or not re.fullmatch(r".+:[0-9]{1,5}",s["target"]) or not 1<=int(s["target"].rsplit(":",1)[1])<=65535 or not isinstance(s["server_names"],list) or not s["server_names"] or not all(isinstance(x,str) and x for x in s["server_names"]) or not isinstance(s["short_ids"],list) or not s["short_ids"] or not all(isinstance(x,str) and re.fullmatch(r"[0-9a-fA-F]{0,16}",x) for x in s["short_ids"]) or s["secret_ref"]!=secret_ref or not isinstance(secret_ref,str): raise StoreError("referencia REALITY inválida")
  elif s or secret_ref is not None: raise StoreError("modalidad sin secreto contiene referencia")
+def validate_catalog_metadata(entry, config_ref, config=None, secret_ref=None):
+ cid=safe_id(entry.get("id"))
+ match=re.fullmatch(rf"configurations/{re.escape(cid)}\.r([0-9]{{6}})\.json",config_ref if isinstance(config_ref,str) else "")
+ if not match: raise StoreError("referencia de configuración inválida")
+ ref_revision=int(match.group(1))
+ catalog_revision=entry.get("vmess_configuration_revision")
+ catalog_schema=entry.get("vmess_configuration_schema_version")
+ if isinstance(catalog_revision,bool) or not isinstance(catalog_revision,int) or catalog_revision!=ref_revision:
+  raise StoreError("revisión del catálogo no coincide con la referencia")
+ if isinstance(catalog_schema,bool) or not isinstance(catalog_schema,int) or catalog_schema!=1:
+  raise StoreError("versión de esquema del catálogo inválida")
+ if config is not None:
+  schema=config.get("schema_version") if isinstance(config,dict) else None
+  if isinstance(schema,bool) or not isinstance(schema,int) or schema!=catalog_schema:
+   raise StoreError("versión de esquema del documento no coincide con el catálogo")
+  mode=config.get("mode_id")
+  security=MODES.get(mode,(None,None))[1]
+  if security in ("tls","reality"):
+   sm=re.fullmatch(rf"secrets/{re.escape(cid)}\.r([0-9]{{6}})\.bin",secret_ref if isinstance(secret_ref,str) else "")
+   if not sm or int(sm.group(1))!=ref_revision:
+    raise StoreError("revisión de referencia de secreto no coincide")
+  elif secret_ref is not None:
+   raise StoreError("modalidad sin secreto contiene referencia")
+ return ref_revision
 def run(a):
  if os.geteuid()!=0: raise StoreError("el almacén requiere root")
  base=Path(a.base).absolute(); cat=Path(a.catalog).absolute(); lock=Path(a.lock).absolute(); conf=base/"configurations"; secdir=Path(a.secrets_dir).absolute()
@@ -161,8 +185,20 @@ def run(a):
    if len(matches)!=1: raise StoreError("conexión no existe")
    entry=matches[0]
    if entry.get("state")!="draft" or entry.get("runtime_applied") is not False: raise StoreError("solo se guardan borradores no aplicados")
-   config=json.loads(read_regular(Path(a.input),MAX_CONFIG)); current=entry.get("vmess_configuration_revision",0)
-   if isinstance(current,bool) or not isinstance(current,int) or current<0: raise StoreError("revisión inválida")
+   config=json.loads(read_regular(Path(a.input),MAX_CONFIG))
+   existing_ref=entry.get("vmess_configuration_ref")
+   metadata_keys=("vmess_configuration_ref","vmess_configuration_revision","vmess_configuration_schema_version","vmess_secret_ref")
+   if existing_ref is None:
+    if any(k in entry for k in metadata_keys): raise StoreError("metadatos VMess parciales sin referencia de configuración")
+    current=0
+   else:
+    existing_match=re.fullmatch(rf"configurations/{re.escape(cid)}\.r([0-9]{{6}})\.json",existing_ref if isinstance(existing_ref,str) else "")
+    if not existing_match: raise StoreError("referencia de configuración previa inválida")
+    current=validate_catalog_metadata(entry,existing_ref)
+    previous=json.loads(read_regular(conf/f"{cid}.r{current:06d}.json",MAX_CONFIG))
+    previous_secret=entry.get("vmess_secret_ref")
+    validate_catalog_metadata(entry,existing_ref,previous,previous_secret)
+    validate(previous,entry,previous_secret)
    revision=current+1; cfgname=f"{cid}.r{revision:06d}.json"; cfgpath=conf/cfgname
    secret_ref=None; secret_path=secdir/f"{cid}.r{revision:06d}.bin"
    security=MODES.get(config.get("mode_id"),(None,None))[1]; plain=None
@@ -187,10 +223,12 @@ def run(a):
    cid=safe_id(a.connection_id); matches=[e for e in catalog if e.get("id")==cid]
    if len(matches)!=1: raise StoreError("conexión no existe")
    entry=matches[0]; ref=entry.get("vmess_configuration_ref")
-   m=re.fullmatch(rf"configurations/{re.escape(cid)}\.r([0-9]{{6}})\.json",ref or "")
+   m=re.fullmatch(rf"configurations/{re.escape(cid)}\.r([0-9]{{6}})\.json",ref if isinstance(ref,str) else "")
    if not m: raise StoreError("referencia de configuración inválida")
    config=json.loads(read_regular(conf/f"{cid}.r{int(m.group(1)):06d}.json",MAX_CONFIG))
-   secret_ref=entry.get("vmess_secret_ref"); validate(config,entry,secret_ref); written=False
+   secret_ref=entry.get("vmess_secret_ref")
+   validate_catalog_metadata(entry,ref,config,secret_ref)
+   validate(config,entry,secret_ref); written=False
    if secret_ref is not None:
     sm=re.fullmatch(rf"secrets/{re.escape(cid)}\.r([0-9]{{6}})\.bin",secret_ref)
     if not sm: raise StoreError("referencia de secreto inválida")
@@ -205,12 +243,17 @@ def run(a):
    referenced=set(); secret_refs=set(); broken=[]
    for entry in catalog:
     ref=entry.get("vmess_configuration_ref")
-    if ref is None: continue
+    metadata_keys=("vmess_configuration_ref","vmess_configuration_revision","vmess_configuration_schema_version","vmess_secret_ref")
+    if ref is None:
+     if any(k in entry for k in metadata_keys): broken.append({"id":entry.get("id"),"issue":"partial_catalog_metadata"})
+     continue
     cid=safe_id(entry.get("id")); m=re.fullmatch(rf"configurations/{re.escape(cid)}\.r([0-9]{{6}})\.json",ref if isinstance(ref,str) else "")
     if not m: broken.append({"id":cid,"issue":"invalid_reference"}); continue
     fn=f"{cid}.r{int(m.group(1)):06d}.json"; referenced.add(fn)
     try:
-     sr=entry.get("vmess_secret_ref"); config=json.loads(read_regular(conf/fn,MAX_CONFIG)); validate(config,entry,sr)
+     sr=entry.get("vmess_secret_ref"); config=json.loads(read_regular(conf/fn,MAX_CONFIG))
+     validate_catalog_metadata(entry,ref,config,sr)
+     validate(config,entry,sr)
      if sr:
       sm=re.fullmatch(rf"secrets/{re.escape(cid)}\.r([0-9]{{6}})\.bin",sr)
       if not sm: raise StoreError("referencia secreta inválida")

@@ -77,6 +77,53 @@ openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/other.key" -out "$TMP/ot
 jq -n --arg certificate_file "$TMP/tls.crt" --arg key_file "$TMP/other.key" '{certificate_file:$certificate_file,key_file:$key_file}' >"$TMP/tls-mismatched-pair.json"
 expect_adapter_reject tls_certificate_key_mismatch vmess_tcp_tls "$TMP/tls-mismatched-pair.json"
 
+# Private TLS keys must be root:root 0600, with no group/other access.
+for unsafe_mode in 644 640 400; do
+    chmod "$unsafe_mode" "$TMP/tls.key"
+    jq -n --arg certificate_file "$TMP/tls.crt" --arg key_file "$TMP/tls.key" '{certificate_file:$certificate_file,key_file:$key_file}' >"$TMP/tls-unsafe-mode.json"
+    expect_adapter_reject "tls_key_mode_$unsafe_mode" vmess_tcp_tls "$TMP/tls-unsafe-mode.json"
+done
+chmod 600 "$TMP/tls.key"
+if [[ "$(id -u)" -eq 0 ]] && chgrp 65534 "$TMP/tls.key" 2>/dev/null; then
+    jq -n --arg certificate_file "$TMP/tls.crt" --arg key_file "$TMP/tls.key" '{certificate_file:$certificate_file,key_file:$key_file}' >"$TMP/tls-nonroot-group.json"
+    expect_adapter_reject tls_key_nonroot_group vmess_tcp_tls "$TMP/tls-nonroot-group.json"
+    chgrp 0 "$TMP/tls.key"
+fi
+vmess_model_build prepare_tls_permissions vmess_tcp_tls 127.0.0.1 62003 "$TMP/users.json" >"$TMP/prepare-model.json"
+chmod 644 "$TMP/tls.key"
+if python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/tcp-tls.json" --output "$TMP/unsafe-prepared.json" --secret-output "$TMP/unsafe-secret.bin" >/dev/null 2>&1; then
+    echo 'ERROR: prepare_config aceptó una clave TLS 0644.' >&2
+    exit 1
+fi
+chmod 600 "$TMP/tls.key"
+if [[ "$(id -u)" -eq 0 ]] && chgrp 65534 "$TMP/tls.key" 2>/dev/null; then
+    if python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/tcp-tls.json" --output "$TMP/group-prepared.json" --secret-output "$TMP/group-secret.bin" >/dev/null 2>&1; then
+        echo 'ERROR: prepare_config aceptó una clave TLS cuyo grupo no es root.' >&2
+        exit 1
+    fi
+    chgrp 0 "$TMP/tls.key"
+fi
+ln "$TMP/tls.key" "$TMP/tls-hardlink.key"
+jq -n --arg certificate_file "$TMP/tls.crt" --arg key_file "$TMP/tls-hardlink.key" '{certificate_file:$certificate_file,key_file:$key_file}' >"$TMP/tls-hardlink-options.json"
+expect_adapter_reject tls_key_hardlink vmess_tcp_tls "$TMP/tls-hardlink-options.json"
+if python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/tls-hardlink-options.json" --output "$TMP/hardlink-prepared.json" --secret-output "$TMP/hardlink-secret.bin" >/dev/null 2>&1; then
+    echo 'ERROR: prepare_config aceptó una clave TLS con enlace duro adicional.' >&2
+    exit 1
+fi
+rm "$TMP/tls-hardlink.key"
+python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/tcp-tls.json" --output "$TMP/safe-prepared.json" --secret-output "$TMP/safe-secret.bin" >/dev/null
+[[ -s "$TMP/safe-prepared.json" && -s "$TMP/safe-secret.bin" ]]
+echo 'PASS rechazo de permisos TLS 0644/0640/0400 en adaptador y prepare_config; 0600 aceptado'
+
+# The adapter independently rejects duplicate emails even if a model file is supplied directly.
+vmess_model_build duplicate_email_adapter vmess_ws 127.0.0.1 62004 "$TMP/users.json" >"$TMP/duplicate-email-model.json"
+jq '.users[0].email="duplicate@example.test" | .users += [(.users[0] | .id="22222222-2222-4222-8222-222222222222")]' "$TMP/duplicate-email-model.json" >"$TMP/duplicate-email-model-bad.json"
+if vmess_xray_26_10_31_build "$TMP/duplicate-email-model-bad.json" "$TMP/ws.json" >/dev/null 2>&1; then
+    echo 'ERROR: el adaptador aceptó emails VMess duplicados.' >&2
+    exit 1
+fi
+echo 'PASS rechazo de email duplicado por el adaptador'
+
 # REALITY exige target, clave, server names y short IDs válidos.
 jq -n --arg target 'localhost:443' '{target:$target,server_names:["example.com"],short_ids:["0123456789abcdef"]}' >"$TMP/reality-missing-key.json"
 expect_adapter_reject reality_missing_key vmess_reality "$TMP/reality-missing-key.json"

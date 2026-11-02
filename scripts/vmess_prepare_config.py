@@ -43,7 +43,7 @@ def main():
   fd=os.open(key_path,os.O_RDONLY|getattr(os,"O_NOFOLLOW",0)|getattr(os,"O_CLOEXEC",0))
   try:
    st=os.fstat(fd)
-   if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_mode & 0o022: raise ValueError("la clave TLS debe ser archivo regular root y no permitir escritura a grupo/otros")
+   if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_gid!=0 or stat.S_IMODE(st.st_mode)!=0o600 or st.st_nlink!=1: raise ValueError("la clave TLS debe ser archivo regular root:root, modo 0600 y un solo enlace duro")
    with os.fdopen(fd,"rb") as stream:
     fd=-1; secret=stream.read(512*1024+1)
    if len(secret)>512*1024: raise ValueError("clave TLS supera el tamaño permitido")

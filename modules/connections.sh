@@ -404,8 +404,23 @@ connections_atomic_update() {
 		fi
 	fi
 }
+connections_remove_unconfigured_vmess_draft() {
+ local id="$1" fd
+ [[ -n "$id" ]] || return 2
+ connections_require_storage_tools || return 1
+ connections_lock fd || return 1
+ if ! jq -e --arg id "$id" 'any(.[]; .id==$id and (.protocol_id|startswith("vmess_")) and .state=="draft" and .runtime_applied==false and (has("vmess_configuration_ref")|not) and (has("vmess_secret_ref")|not) and (has("vmess_configuration_revision")|not) and (has("vmess_configuration_schema_version")|not))' "$CONNECTION_DATA_FILE" >/dev/null; then
+  connections_unlock "$fd"
+  return 1
+ fi
+ if ! connections_atomic_update "$fd" --arg id "$id" 'map(select(.id != $id))'; then
+  connections_unlock "$fd"
+  return 1
+ fi
+ connections_unlock "$fd"
+}
 connections_create_draft() {
-	local name protocol_id="${1:-}" port max_users id created_at fd
+	local name protocol_id="${1:-}" port max_users id created_at fd assistant_rc
 	ui_clear
 	ui_title "REGISTRAR CONEXIÓN - BORRADOR"
 	printf '\nEste registro no configura Xray ni abre puertos.\n\nNombre descriptivo: '
@@ -477,7 +492,25 @@ connections_create_draft() {
 	printf '\nNo se aplicó ningún cambio a Xray ni al sistema.\n'
 	case "$protocol_id" in
 		vless_*) if declare -F connections_vless_assistant >/dev/null 2>&1; then connections_vless_assistant "$id" "$protocol_id" || true; fi ;;
-		vmess_*) if declare -F connections_vmess_assistant >/dev/null 2>&1; then connections_vmess_assistant "$id" "$protocol_id" || true; fi ;;
+		vmess_*)
+			if declare -F connections_vmess_assistant >/dev/null 2>&1; then
+				if connections_vmess_assistant "$id" "$protocol_id"; then
+					assistant_rc=0
+				else
+					assistant_rc=$?
+				fi
+			else
+				assistant_rc=1
+				printf '\nEl asistente VMess no está disponible.\n'
+			fi
+			if ((assistant_rc != 0)); then
+				if connections_remove_unconfigured_vmess_draft "$id"; then
+					printf '\nCreación VMess cancelada o incompleta: se retiró el borrador base y el catálogo conserva las demás conexiones.\n'
+				else
+					printf '\nADVERTENCIA: no se pudo retirar el borrador base VMess; revisa el catálogo antes de continuar.\n' >&2
+				fi
+			fi
+			;;
 	esac
 	ui_pause
 }

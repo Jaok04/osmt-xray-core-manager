@@ -45,3 +45,7 @@ La creación VLESS se integra con el modelo neutral y el adaptador Xray-core v26
 ## 5. Límites que permanecen
 
 La implementación VMess aprobada se limita a borradores, validación, persistencia cifrada y recuperación temporal. No habilita certificados de producción, apertura de puertos, firewall, activación del servicio, reinicio de Xray ni rollback transaccional. El backup/restore VMess queda pendiente de diseño y aprobación separados.
+
+## 7. Resultado del bloque correctivo F-01 a F-04 — 2026-11-02
+
+F-01 a F-04 se implementaron y revalidaron dentro del alcance autorizado. La evidencia está en docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. Suite 39/39 PASS; Xray 14/14 modalidades y 16/16 casos negativos PASS. F-05 live continúa no verificado. No se autorizó ni ejecutó inicialización del almacén/clave maestra real, runtime, firewall, puertos, servicios, backup/restore VMess ni Etapa 3. VMess no está aceptado; Etapa 2 permanece abierta.

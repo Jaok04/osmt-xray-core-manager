@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-02
-**Tarea:** auditoría integral del módulo VMess tras completar los Bloques 1–4.
-**Estado vigente:** Bloques 1–4 IMPLEMENTADOS, VERIFICADOS en sus pruebas focales, DOCUMENTADOS, PUBLICADOS y SINCRONIZADOS. La auditoría integral detectó F-01–F-04; F-05 live no está verificado. VMess NO está aceptado. Etapa 2 ABIERTA.
+**Tarea:** bloque correctivo autorizado F-01 a F-04 y revalidación de VMess.
+**Estado vigente:** F-01 a F-04 CORREGIDOS y VERIFICADOS en fixtures; suite 39/39 PASS; Xray 14/14 y 16 negativos PASS. F-05 live NO VERIFICADO. VMess NO está aceptado; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -11,7 +11,7 @@
 - Repositorio: `Jaok04/xray-core-manager`.
 - Rama autorizada: `design/user-identity-association-v1`.
 - Proyecto VPS: `/opt/xray-manager`.
-- HEAD de partida de la auditoría: df632aee5d8139c721b81a6d65f14d93f7676226; informe/matriz publicados en 88f82f2f9d7d19833b814d9a810dedb4bc3edc8c; actualización de referencia de continuidad en 81f485ffb77d84afb0a46ccb3ed46fe29814a83d.
+- HEAD de partida de la auditoría: df632aee5d8139c721b81a6d65f14d93f7676226; expediente previo publicado en 88f82f2f9d7d19833b814d9a810dedb4bc3edc8c. El commit del bloque correctivo se registrará al publicar esta actualización.
 - Commit Bloque 1: `c890b5b5362e17e439f198b9b8bbbdbe0af0c653` (`fix(vless): preserve current VMess entries on restore`), publicado y sincronizado.
 - Remoto: `git@github.com-xray-core-manager:Jaok04/xray-core-manager.git`.
 - Deploy Key SSH dedicada con permiso de escritura configurado.
@@ -69,15 +69,15 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 
 | Estado | Resultado |
 |---|---|
-| IMPLEMENTADO | Sí — base del módulo VMess y Bloques 1–4; correcciones de F-01 a F-04 aún no implementadas |
-| VERIFICADO | Parcial — 14/14 y 38/38 PASS, pero auditoría integral detectó F-01 a F-04; F-05 live no verificado |
-| PUBLICADO | VMess base y Bloques 1–4 publicados; expediente de auditoría incluido en esta actualización documental. Bloque 4: `9528f4b00f6b9654f7236050bbadfd8f9415bf69` |
-| SINCRONIZADO | HEAD local/remoto verificado tras cada publicación anterior; Bloque 4 publicado y sincronizado en `9528f4b00f6b9654f7236050bbadfd8f9415bf69` |
-| ACEPTADO | NO — no solicitar aceptación hasta resolver hallazgos y validar lo que corresponda |
+| IMPLEMENTADO | Sí — base VMess y correcciones F-01 a F-04 implementadas |
+| VERIFICADO | Pruebas focales y suite 39/39 PASS; Xray 14/14 y 16 negativos PASS. F-05 live no verificado; VM-38 prueba específica pendiente y VM-39/40 cobertura parcial |
+| PUBLICADO | Base y Bloques 1–4 publicados; bloque correctivo y actualización documental pendientes de publicación |
+| SINCRONIZADO | Se verificará HEAD local/remoto después del commit correctivo |
+| ACEPTADO | NO — F-05 live y cobertura de auditoría restante pendientes |
 
 ## 7. Siguiente acción
 
-Bloques 1–4 están ejecutados. La auditoría integral actual está documentada en docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. Siguiente paso: obtener autorización expresa para corregir F-01, F-02 y F-04 y decisión del propietario sobre F-03. F-05 requiere una validación live autorizada. No aceptar VMess ni iniciar Trojan.
+F-01 a F-04 están corregidos y revalidados. Siguiente paso independiente: solicitar autorización para validar F-05 en un entorno live controlado y resolver cobertura pendiente de VM-38/39/40. No aceptar VMess ni iniciar Trojan.
 
 No modificar `main`. No ampliar la corrección P4 más allá de la preservación VMess aprobada. No tocar runtime, firewall, puertos, certificados desplegados ni servicio.
 

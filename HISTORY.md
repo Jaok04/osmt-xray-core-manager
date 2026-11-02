@@ -307,3 +307,14 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Publicación documental de auditoría y matriz: commit 88f82f2f9d7d19833b814d9a810dedb4bc3edc8c en design/user-identity-association-v1; push confirmado. main sin cambios.
 
 - Actualización de referencias del punto de control/estado para registrar la publicación del expediente: commit 81f485ffb77d84afb0a46ccb3ed46fe29814a83d; rama autorizada sincronizada, main intacta.
+
+
+## 2026-11-02 — Bloque correctivo autorizado VMess F-01 a F-04
+
+- Contraste previo repetido con reglas de gobernanza, Etapa 2 revisión 1.3 Markdown/YAML y diseño VMess; se implementó únicamente el alcance aprobado por el propietario.
+- F-01: adaptador y preparador exigen TLS key root:root, modo 0600, un solo hardlink; negativos de permisos/grupo/hardlink.
+- F-02: store/read/audit comprueban revisión de catálogo y referencia, schema catálogo/documento y revisión de secreto; detectan metadatos parciales y bloquean store sobre metadatos incoherentes.
+- F-03: cancelación devuelve estado no exitoso; flujo común retira bajo bloqueo sólo el draft VMess vacío/no aplicado. Tests prueban cancelación, error, preservación de otras entradas y de drafts ya configurados.
+- F-04: modelo, adaptador y almacén validan unicidad exacta de email; pruebas negativas antes de consentimiento y en adaptador.
+- Nueva prueba tests/vmess_creation_flow.sh; pruebas ampliadas de modelo, asistente, persistencia e integración Xray. Suite completa 39/39 PASS; Xray 14/14 y 16 negativos PASS; sintaxis, py_compile, ShellCheck de modificados, install check, shfmt README y diff check PASS. ShellCheck global mantiene warning preexistente SC2174 en prueba VLESS sin modificar.
+- F-01–F-04 RESUELTOS/VERIFICADOS EN FIXTURES. F-05 live no verificado; VM-38 test específico pendiente y VM-39/40 cobertura parcial. No se creó almacén/clave real, no se tocó runtime/firewall/puertos/servicio, main intacta. VMess no aceptado; Etapa 2 abierta.

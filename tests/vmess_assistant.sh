@@ -69,7 +69,13 @@ fi
 python3 "$ROOT/scripts/vmess_config_store.py" read --connection-id conn-vmess-hu-tls --base "$XRAY_MANAGER_VMESS_DIR" --catalog "$CONNECTION_DATA_FILE" --lock "$XRAY_MANAGER_INTEGRITY_LOCK" --secrets-dir "$XRAY_MANAGER_VMESS_SECRETS_DIR" --master-key "$XRAY_MANAGER_MASTER_KEY_FILE" --secret-output "$TMP/recovered.key" >/dev/null
 cmp "$TMP/tls.key" "$TMP/recovered.key"
 connections_vmess_assistant_restore conn-vmess-hu-tls vmess_httpupgrade_tls >/dev/null
-REALITY_OUTPUT="$(printf '127.0.0.1\n1\n\nreality@example.test\n\nreality.example.test:443\nDO-NOT-DISPLAY-REALITY-TEST-DATA\nreality.example.test,alt.example.test\naabbccdd\nn\n' | connections_vmess_assistant conn-vmess-reality vmess_reality 2>&1)"
+if REALITY_OUTPUT="$(printf '127.0.0.1\n1\n\nreality@example.test\n\nreality.example.test:443\nDO-NOT-DISPLAY-REALITY-TEST-DATA\nreality.example.test,alt.example.test\naabbccdd\nn\n' | connections_vmess_assistant conn-vmess-reality vmess_reality 2>&1)"; then
+    echo 'ERROR: cancelar el consentimiento REALITY debe devolver estado no exitoso.' >&2
+    exit 1
+else
+    reality_cancel_status=$?
+    [[ "$reality_cancel_status" -eq 3 ]]
+fi
 grep -F 'desfase no debe superar 120 segundos' <<<"$REALITY_OUTPUT" >/dev/null
 grep -F 'Target: reality.example.test:443' <<<"$REALITY_OUTPUT" >/dev/null
 grep -F 'Server names: reality.example.test,alt.example.test' <<<"$REALITY_OUTPUT" >/dev/null
@@ -95,11 +101,18 @@ assert_assistant_failure 'EOF al capturar UUID' conn-vmess-ws vmess_ws $'127.0.0
 assert_assistant_failure 'cantidad de usuarios cero' conn-vmess-ws vmess_ws $'127.0.0.1\n0\n'
 assert_assistant_failure 'UUID inválido' conn-vmess-ws vmess_ws $'127.0.0.1\n1\nnot-a-uuid\n'
 assert_assistant_failure 'UUID duplicado' conn-vmess-ws vmess_ws $'127.0.0.1\n2\n11111111-1111-4111-8111-111111111111\nfirst@example.test\n\n11111111-1111-4111-8111-111111111111\nsecond@example.test\n\n'
+assert_assistant_failure 'email duplicado' conn-vmess-ws vmess_ws $'127.0.0.1\n2\n11111111-1111-4111-8111-111111111111\nsame@example.test\n\n22222222-2222-4222-8222-222222222222\nsame@example.test\n\n'
 assert_assistant_failure 'EOF en path' conn-vmess-ws vmess_ws $'127.0.0.1\n1\n\npath-eof@example.test\n\n'
 assert_assistant_failure 'puerto fuera de rango' conn-vmess-bad-port vmess_ws $'127.0.0.1\n1\n\nbad-port@example.test\n\n/ws\n\n'
 assert_assistant_failure 'modalidad incompatible' conn-vmess-ws vmess_ws_reality $'127.0.0.1\n1\n\ninvalid-mode@example.test\n\n'
 # EOF en la confirmación equivale a cancelar y no guarda el borrador.
-SUMMARY_EOF_OUTPUT="$(printf '127.0.0.1\n1\n\nsummary-eof@example.test\n\n/ws\n\n' | connections_vmess_assistant conn-vmess-ws vmess_ws 2>&1)"
+if SUMMARY_EOF_OUTPUT="$(printf '127.0.0.1\n1\n\nsummary-eof@example.test\n\n/ws\n\n' | connections_vmess_assistant conn-vmess-ws vmess_ws 2>&1)"; then
+    echo 'ERROR: cancelar en el consentimiento final debe devolver estado no exitoso.' >&2
+    exit 1
+else
+    cancel_status=$?
+    [[ "$cancel_status" -eq 3 ]]
+fi
 grep -F 'RESUMEN DE LA CONEXIÓN VMESS' <<<"$SUMMARY_EOF_OUTPUT" >/dev/null
 grep -F 'No se guardó la configuración.' <<<"$SUMMARY_EOF_OUTPUT" >/dev/null
 cmp -s "$TMP/catalog-before-negative.json" "$CONNECTION_DATA_FILE"

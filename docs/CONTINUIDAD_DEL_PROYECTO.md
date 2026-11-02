@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Estado vigente 2026-11-02:** Bloques 1–4 VMess están publicados/sincronizados. La auditoría integral actual detectó F-01–F-04 y F-05 live no verificado; VMess NO está aceptado y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. No iniciar Trojan. Los hitos históricos posteriores conservan su contexto y no sustituyen este estado vigente.
+> **Estado vigente 2026-11-02:** bloque correctivo F-01–F-04 implementado y revalidado; suite 39/39 PASS; Xray 14/14 y 16 casos negativos PASS. F-05 live NO VERIFICADO; VMess NO está aceptado y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. No iniciar Trojan. Los hitos históricos posteriores conservan su contexto y no sustituyen este estado vigente.
 
 
 ## 1. Objetivo
@@ -320,10 +320,19 @@ Cambios implementados y verificados: pruebas focales y suite completa 38/38 PASS
 Publicación Bloque 4: commit `9528f4b00f6b9654f7236050bbadfd8f9415bf69`; HEAD local/remoto y árboles verificados idénticos. `main` no fue modificada.
 
 
-## Auditoría integral VMess — 2026-11-02
+## Auditoría integral VMess — 2026-11-02 (hallazgos iniciales; superados por el bloque correctivo posterior)
 
 El informe vigente y la matriz requisito→diseño→implementación→prueba→evidencia son docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md y docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md. La suite actual pasó 38/38; Xray validó 14/14 y rechazó 10 casos negativos. Sintaxis Bash, AST Python, ShellCheck, install check, diff check y el gate shfmt definido en README pasaron.
 
 Hallazgos pendientes: F-01 la clave TLS root-owned 0644 se acepta; F-02 read/audit no detectan incoherencia de revisión/schema; F-03 cancelar el asistente deja el registro base draft creado previamente; F-04 el modelo acepta email duplicado que el almacén rechaza; F-05 el estado live no se ha inicializado (catálogo vacío, almacén VMess y master key ausentes). No se corrigió código. Solicitar autorización antes de modificar.
 
 Auditoría y matriz publicadas/sincronizadas en commit 88f82f2f9d7d19833b814d9a810dedb4bc3edc8c de la rama autorizada; main no modificada. scripts/__pycache__/ permanece sin seguimiento y no se eliminó.
+
+
+## Bloque correctivo VMess F-01 a F-04 — 2026-11-02
+
+F-01 exige clave TLS root:root 0600 y un solo enlace duro en adaptador/preparador; negativos 0644/0640/0400, grupo no root y hardlink, positivo 0600. F-02 valida revisión de catálogo/referencia, schema catálogo/documento y revisión de referencia secreta en store/read/audit, y detecta metadatos parciales. F-03 cancela con estado no exitoso y el flujo común retira sólo el draft VMess vacío/no aplicado bajo bloqueo; preserva otras entradas y configuraciones ya publicadas. F-04 modelo/adaptador/almacén rechazan emails duplicados con comparación exacta consistente.
+
+Suite 39/39 PASS; Xray 14/14 modalidades y 16/16 negativos PASS. bash -n, py_compile, ShellCheck de archivos modificados, install.sh --check, gate shfmt README y git diff --check PASS. ShellCheck global informa warning preexistente SC2174 en tests/vless_backup_restore.sh:7, archivo VLESS sin cambios.
+
+F-05 live permanece NO VERIFICADO: catálogo vacío, almacén VMess y clave maestra no inicializados. No se tocó runtime, firewall, puertos ni servicio. VMess no está aceptado; Etapa 2 abierta. Requiere autorización separada validar live y completar VM-38/39/40.

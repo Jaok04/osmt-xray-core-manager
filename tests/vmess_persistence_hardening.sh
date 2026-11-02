@@ -54,6 +54,48 @@ assert r.returncode==0, r.stderr
 assert out.read_bytes()==plain and out.stat().st_mode & 0o777 == 0o600
 print('PASS: store/read TLS AES-256-GCM, AAD, permisos y recuperación del secreto')
 
+# Catalog revision/schema and versioned references must match the stored document.
+good_catalog=catalog.read_bytes()
+good_config=(conf/'vmess-tls.r000001.json').read_bytes()
+good_entry=json.loads(good_catalog)
+def entry_vm(data):
+    return next(e for e in data if e['id']=='vmess-tls')
+def assert_catalog_incoherence(label):
+    r=cli('read','vmess-tls')
+    assert r.returncode!=0, (label,r.stdout,r.stderr)
+    r=cli('audit')
+    assert r.returncode==0, (label,r.stderr)
+    report=json.loads(r.stdout)
+    assert any(x['id']=='vmess-tls' for x in report['broken_references']), (label,report)
+    print('PASS: read/audit rechazan incoherencia '+label)
+
+data=json.loads(good_catalog); entry_vm(data)['vmess_configuration_revision']=99
+write(catalog,json.dumps(data)+'\n'); assert_catalog_incoherence('revision catálogo/referencia')
+r=cli('store','vmess-tls',tls_input,plain_path,'tls_private_key')
+assert r.returncode!=0, 'store debe rechazar revisión previa inconsistente'
+write(catalog,good_catalog)
+
+data=json.loads(good_catalog); entry_vm(data)['vmess_configuration_schema_version']=99
+write(catalog,json.dumps(data)+'\n'); assert_catalog_incoherence('schema catálogo')
+write(catalog,good_catalog)
+
+doc=json.loads(good_config); doc['schema_version']=2
+write(conf/'vmess-tls.r000001.json',json.dumps(doc,separators=(',',':'))+'\n')
+assert_catalog_incoherence('schema documento/catálogo')
+write(conf/'vmess-tls.r000001.json',good_config)
+
+data=json.loads(good_catalog); entry_vm(data)['vmess_secret_ref']='secrets/vmess-tls.r000002.bin'
+write(catalog,json.dumps(data)+'\n'); assert_catalog_incoherence('revision referencia de secreto')
+write(catalog,good_catalog)
+
+data=json.loads(good_catalog)
+data.append({'id':'vmess-partialmeta','name':'partial','protocol_id':'vmess_ws','port':64007,'max_users':5,'state':'draft','runtime_applied':False,'vmess_configuration_revision':1})
+write(catalog,json.dumps(data)+'\n')
+r=cli('audit'); report=json.loads(r.stdout)
+assert any(x['id']=='vmess-partialmeta' and x['issue']=='partial_catalog_metadata' for x in report['broken_references'])
+write(catalog,good_catalog)
+print('PASS: audit detecta metadatos VMess parciales sin referencia')
+
 # Missing master key during read fails closed and is not regenerated.
 key_bytes=key.read_bytes(); key.unlink(); out_missing=tmp/'missing.recovered'
 r=cli('read','vmess-tls',secret_output=out_missing)

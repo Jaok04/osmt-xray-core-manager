@@ -32,4 +32,9 @@ for port in 0 65536 abc; do
 done
 printf '%s\n' '[{"id":"11111111-1111-4111-8111-111111111111","level":0,"email":"a"},{"id":"11111111-1111-4111-8111-111111111111","level":0,"email":"b"}]' >"$TMP/duplicate.json"
 if vmess_model_build conn-test vmess_ws 127.0.0.1 443 "$TMP/duplicate.json" >/dev/null 2>&1; then exit 1; fi
+printf '%s\n' '[{"id":"11111111-1111-4111-8111-111111111111","level":0,"email":"same@example.test"},{"id":"22222222-2222-4222-8222-222222222222","level":0,"email":"same@example.test"}]' >"$TMP/duplicate-email.json"
+if vmess_model_build conn-test vmess_ws 127.0.0.1 443 "$TMP/duplicate-email.json" >/dev/null 2>&1; then
+    echo 'ERROR: el modelo aceptó emails VMess duplicados.' >&2
+    exit 1
+fi
 echo 'OK: modelo VMess valida las 14 modalidades y rechaza UUID/puertos/modalidades inválidos.'

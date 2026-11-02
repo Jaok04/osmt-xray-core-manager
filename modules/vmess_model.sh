@@ -31,7 +31,8 @@ vmess_model_validate_users() {
 			(.id | type == "string" and test("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")) and
 			(.level | type == "number" and floor == . and . >= 0 and . <= 255) and
 			(.email | type == "string" and length >= 1 and length <= 255)
-		) and ([.[].id | ascii_downcase] | length == (unique | length))
+		) and ([.[].id | ascii_downcase] | length == (unique | length)) and
+		([.[].email] | length == (unique | length))
 	' "$1" >/dev/null
 }
 # Uso: vmess_model_build <connection_id> <mode_id> <listen_address> <listen_port> <users.json>

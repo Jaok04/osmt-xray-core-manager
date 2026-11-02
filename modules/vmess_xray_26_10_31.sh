@@ -10,13 +10,15 @@ from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
-def read_regular(path):
+def read_regular(path, private_key=False):
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
     fd = os.open(path, flags)
     try:
         st = os.fstat(fd)
         if not stat.S_ISREG(st.st_mode):
             raise ValueError("not a regular file")
+        if private_key and (st.st_uid != 0 or st.st_gid != 0 or stat.S_IMODE(st.st_mode) != 0o600 or st.st_nlink != 1):
+            raise ValueError("private key must be root:root mode 0600 with one hard link")
         with os.fdopen(fd, "rb") as stream:
             fd = -1
             return stream.read(4 * 1024 * 1024 + 1)
@@ -26,7 +28,7 @@ def read_regular(path):
 
 try:
     certificate_data = read_regular(sys.argv[1])
-    private_key_data = read_regular(sys.argv[2])
+    private_key_data = read_regular(sys.argv[2], private_key=True)
     if len(certificate_data) > 4 * 1024 * 1024 or len(private_key_data) > 4 * 1024 * 1024:
         raise ValueError("file too large")
     certificate = x509.load_pem_x509_certificate(certificate_data)
@@ -63,7 +65,7 @@ vmess_xray_26_10_31_build() {
         return 2
         ;;
     esac
-    jq -e '.users | type == "array" and length >= 1 and length <= 1000 and all(.[]; type == "object" and (keys - ["id","level","email"] | length) == 0 and (.id | type == "string" and test("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")) and (.level | type == "number" and floor == . and . >= 0 and . <= 255) and (.email | type == "string" and length >= 1 and length <= 255)) and ([.[].id | ascii_downcase] | length == (unique | length))' "$model_file" >/dev/null || {
+    jq -e '.users | type == "array" and length >= 1 and length <= 1000 and all(.[]; type == "object" and (keys - ["id","level","email"] | length) == 0 and (.id | type == "string" and test("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$")) and (.level | type == "number" and floor == . and . >= 0 and . <= 255) and (.email | type == "string" and length >= 1 and length <= 255)) and ([.[].id | ascii_downcase] | length == (unique | length)) and ([.[].email] | length == (unique | length))' "$model_file" >/dev/null || {
         printf 'Usuarios VMess inválidos.\n' >&2
         return 2
     }

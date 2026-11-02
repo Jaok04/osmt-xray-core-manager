@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02 — Bloques 1–4 y auditoría publicados en 88f82f2f9d7d19833b814d9a810dedb4bc3edc8c; hallazgos F-01–F-05; aceptación pendiente
+**Corte de estado:** 2026-11-02 — bloque correctivo F-01–F-04 implementado y probado; suite 39/39; F-05 live pendiente; VMess no aceptado
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -254,10 +254,19 @@ Criterio de formato: `README.md` documenta `shfmt -d -i 4 -ci` para archivos Bas
 Estado Bloque 4: etiquetas IMPLEMENTADAS, VERIFICADAS, PUBLICADAS y SINCRONIZADAS en `9528f4b00f6b9654f7236050bbadfd8f9415bf69`. Auditoría integral de VMess pendiente. No se cierra VMess ni Etapa 2.
 
 
-## 14. Auditoría integral VMess — 2026-11-02
+## 14. Auditoría integral VMess — 2026-11-02 (estado previo a correcciones; histórico)
 
 Se ejecutó auditoría con contraste directo de la línea base normativa Etapa 2 revisión 1.3 y del diseño complementario VMess. Suite completa 38/38 PASS; Xray 14/14 y 10 casos negativos PASS; sintaxis Bash, AST Python (7 archivos), ShellCheck, install.sh --check, git diff --check y el gate shfmt exacto del README PASS.
 
 Hallazgos bloqueantes: F-01 clave TLS root-owned 0644 aceptada; F-02 read/audit aceptan incoherencia entre revisión/schema del catálogo y referencia/archivo; F-03 cancelación del asistente deja registro base draft creado antes de invocarlo; F-04 modelo acepta emails duplicados mientras el almacén los rechaza. F-05 live no verificado: catálogo vacío, almacén VMess y clave maestra ausentes. Detalle y trazabilidad en los dos documentos de auditoría.
 
 Estado: VMess IMPLEMENTADO en su base funcional, VERIFICADO PARCIALMENTE, DOCUMENTADO, PUBLICADO y SINCRONIZADO; NO ACEPTADO. Etapa 2 ABIERTA. No se modificó código, no se creó almacén/clave real, no se tocó runtime/firewall/puertos/servicio y no se modificó main.
+
+
+## 15. Bloque correctivo VMess F-01 a F-04 — 2026-11-02
+
+Se implementó el alcance autorizado: clave TLS root:root 0600 y un solo hardlink en adaptador/preparador; validación de revisión/schema y referencias de secreto en store/read/audit; cancelación/fallo del asistente retira el draft base VMess vacío y no aplicado bajo bloqueo, preservando configuraciones publicadas; emails únicos en modelo/adaptador/almacén.
+
+Pruebas: suite completa 39/39 PASS; Xray 14/14 modalidades y 16 casos negativos PASS; pruebas focales VMess PASS. bash -n, py_compile, ShellCheck de todos los archivos modificados, install.sh --check, shfmt de los cuatro archivos definidos en README y git diff --check PASS. ShellCheck global conserva warning preexistente SC2174 en tests/vless_backup_restore.sh:7, fuera del alcance y sin cambios.
+
+F-01 a F-04 RESUELTOS y VERIFICADOS EN FIXTURES. F-05 NO VERIFICADO; VM-38 prueba específica pendiente y VM-39/VM-40 cobertura parcial. No hubo prueba cliente-servidor real. VMess NO ACEPTADO; Etapa 2 ABIERTA. No se creó almacén/clave real ni se tocó runtime/firewall/puertos/servicio; main intacta.

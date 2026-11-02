@@ -259,7 +259,7 @@ connections_vmess_assistant() (
         }
         printf '\nConfiguración VMess guardada como borrador. Runtime intacto.\n'
         ;;
-    *) printf '\nNo se guardó la configuración.\n' ;;
+    *) printf '\nNo se guardó la configuración.\n'; ui_pause; return 3 ;;
     esac
     ui_pause
 )
