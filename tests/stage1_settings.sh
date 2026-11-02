@@ -23,6 +23,8 @@ chmod 600 "$PREFS"
 MANAGER_PREFERENCES_FILE="$PREFS" bash -s -- "$ROOT" "$tmp" <<'BASH'
 	set -Eeuo pipefail
 	ROOT="$1"
+	XRAY_MANAGER_LIFECYCLE_LOCK="$2/lifecycle.lock"
+	export XRAY_MANAGER_LIFECYCLE_LOCK
 	source "$ROOT/config/manager.conf"
 	source "$ROOT/config/preferences.sh"
 	source "$ROOT/config/paths.sh"
@@ -89,6 +91,18 @@ MANAGER_PREFERENCES_FILE="$PREFS" bash -s -- "$ROOT" "$tmp" <<'BASH'
 	manager_settings_theme_menu >/dev/null
 	[[ "$APP_THEME" == green ]]
 	grep -Fxq "APP_THEME=green" "$MANAGER_PREFERENCES_FILE"
+	cp "$MANAGER_PREFERENCES_FILE" "$2/preferences-before-lock.conf"
+	exec {busy_fd}>"$XRAY_MANAGER_LIFECYCLE_LOCK"
+	flock -x "$busy_fd"
+	APP_THEME=magenta
+	if manager_settings_save; then
+		printf "ERROR: preferencias ignoró el bloqueo de ciclo de vida.\n" >&2
+		exit 1
+	fi
+	cmp -s "$MANAGER_PREFERENCES_FILE" "$2/preferences-before-lock.conf"
+	flock -u "$busy_fd"
+	exec {busy_fd}>&-
+	APP_THEME=green
 	# Un fallo de persistencia no debe dejar preferencias nuevas solo en memoria.
 	manager_settings_save() { return 1; }
 	command() {
