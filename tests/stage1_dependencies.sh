@@ -7,6 +7,8 @@ source "$ROOT/lib/ui.sh"
 source "$ROOT/modules/system_admin.sh"
 
 tmp="$(mktemp -d)"
+XRAY_MANAGER_LIFECYCLE_LOCK="$tmp/lifecycle.lock"
+export XRAY_MANAGER_LIFECYCLE_LOCK
 trap 'rm -rf -- "$tmp"' EXIT
 MANAGER_APT_GET="$tmp/apt-get"
 cat >"$MANAGER_APT_GET" <<'STUB'
@@ -55,6 +57,18 @@ manager_dependencies_installed_packages() { printf 'curl\njq\n'; }
 printf '\n' | manager_dependencies_update >"$tmp/update-cancel.out"
 grep -q 'Operación cancelada' "$tmp/update-cancel.out"
 [[ ! -s "$APT_CALL_LOG" ]]
+
+exec {busy_fd}>"$XRAY_MANAGER_LIFECYCLE_LOCK"
+flock -x "$busy_fd"
+ui_confirm() { return 0; }
+if printf '\n' | manager_dependencies_install_missing >"$tmp/install-lock-busy.out" 2>&1; then
+    printf 'ERROR: dependencias ignoró el bloqueo de ciclo de vida.\n' >&2
+    exit 1
+fi
+grep -q 'otra operación de ciclo de vida' "$tmp/install-lock-busy.out"
+[[ ! -s "$APT_CALL_LOG" ]]
+flock -u "$busy_fd"
+exec {busy_fd}>&-
 
 manager_dependencies_require_root() { :; }
 manager_dependencies_require_apt() { :; }
