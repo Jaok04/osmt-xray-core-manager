@@ -280,4 +280,6 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Nuevo `tests/vmess_persistence_hardening.sh`: clave maestra ausente/inválida, AES-256-GCM/ciphertext alterado, refs rotas, huérfanos, symlinks, permisos, fallo de publicación del catálogo y concurrencia sobre IDs distintos y misma conexión/revisiones.
 - El fallo inyectado entre escritura de configuración/secreto y publicación del catálogo deja huérfanos detectables, sin cambiar referencias; `audit` no borra automáticamente. Esto respeta la decisión de no ofrecer rollback transaccional VMess.
 - Suite completa: 38/38 scripts PASS. `py_compile`, `bash -n` de todos los scripts, `install.sh --check`, ShellCheck warning de archivos modificados y `git diff --check`: PASS.
-- No se modificó código de producción en este bloque. Estado: IMPLEMENTADO y VERIFICADO; PUBLICADO/SINCRONIZADO pendiente. VMess sigue pendiente de aceptación formal.
+- No se modificó código de producción en este bloque. Estado: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO en `08b2044dd820eb465afecbb6ec66fccefe6397a5`. VMess sigue pendiente de aceptación formal.
+
+- Publicación confirmada: HEAD local/remoto y árboles idénticos en `08b2044dd820eb465afecbb6ec66fccefe6397a5`; rama `main` no modificada.

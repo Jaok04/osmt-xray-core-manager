@@ -2,7 +2,7 @@
 
 **Fecha del corte:** 2026-11-02
 **Tarea:** correcciones aprobadas para el cierre técnico VMess; Bloques 1, 2 y 3 ejecutados.
-**Estado:** Bloques 1 y 2 PUBLICADOS/SINCRONIZADOS; Bloque 3 de pruebas IMPLEMENTADO y VERIFICADO, publicación pendiente. VMess continúa pendiente de aceptación formal.
+**Estado:** Bloques 1 y 2 PUBLICADOS/SINCRONIZADOS; Bloque 3 de pruebas IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO. VMess continúa pendiente de aceptación formal.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -113,7 +113,7 @@ Continuar con el Bloque 4 aprobado: completar la documentación técnica, defini
 
 ## 11. Bloque 3 — cobertura integral de pruebas VMess
 
-**Estado:** IMPLEMENTADO y VERIFICADO; pendiente publicación/sincronización.
+**Estado:** IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; commit `08b2044dd820eb465afecbb6ec66fccefe6397a5`.
 
 - `tests/vmess_assistant.sh`: añade EOF/cancelación en distintos puntos, slots inválidos, UUID inválido/duplicado, puerto fuera de rango, modalidad incompatible y EOF al confirmar; comprueba que los flujos fallidos/cancelados no cambian el catálogo.
 - `tests/vmess_persistence_hardening.sh`: clave maestra ausente/inválida, ciphertext/tag alterado, ausencia de plaintext ante error, refs de configuración/secreto rotas, huérfanos, symlinks, permisos, fallo de publicación del catálogo, detección de huérfanos sin borrado automático y concurrencia (IDs distintos y misma conexión r1/r2).
