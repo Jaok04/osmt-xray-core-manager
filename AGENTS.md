@@ -25,6 +25,23 @@ Orden para resolver discrepancias:
 
 Si una ampliación técnica contradice o amplía la especificación normativa, conserva la implementación existente sin extenderla y registra la discrepancia como pendiente de ratificación. No reescribas silenciosamente la especificación.
 
+## 2.1 Regla obligatoria: contrastar con la documentación preliminar aprobada
+
+Antes de implementar cualquier etapa, subetapa, módulo, protocolo, modalidad o funcionalidad, es obligatorio contrastar el alcance y el estado real del proyecto con la documentación preliminar aprobada ubicada en `/root/Xray_Manager_Documentacion_Final_2026-10-31`. Debe consultarse directamente en la VPS; no basta con recordar su contenido ni con revisar únicamente el código, el catálogo o los resúmenes de continuidad.
+
+Procedimiento vinculante:
+1. Identificar en la documentación preliminar la etapa, requisitos, alcance, decisiones, exclusiones, dependencias y criterios aplicables.
+2. Contrastar punto por punto esos elementos con el código, pruebas, configuración y documentación técnica existentes en la rama autorizada y en la VPS.
+3. Registrar qué está conforme, implementado, verificado, incompleto, ausente, divergente, no verificado o contradice la referencia. Una entrada de catálogo no equivale a una función implementada.
+4. Presentar el resultado del contraste antes de proponer cambios.
+5. Si se detectan mejoras, ampliaciones, correcciones de diseño o cambios respecto de lo aprobado, explicar motivo, impacto, alternativas y archivos/áreas afectados, y solicitar autorización expresa del propietario antes de incorporarlos.
+6. No implementar una mejora ni cambiar silenciosamente el alcance normativo. El silencio, una aprobación de otra tarea o la existencia de código no constituyen autorización para un cambio nuevo.
+7. Tras la autorización, actualizar primero el diseño/decisión correspondiente cuando proceda y luego implementar exclusivamente el alcance aprobado.
+
+La documentación preliminar aprobada es la línea base funcional. Las mejoras están permitidas, pero solo después del contraste y de la autorización expresa. Si el archivo o la ruta no están disponibles, hay contradicciones sin resolver o no puede determinarse qué versión fue aprobada, detener la implementación y pedir aclaración.
+
+Documento operativo: `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`.
+
 ## 3. Procedimiento obligatorio al iniciar una sesión
 
 Antes de implementar:
