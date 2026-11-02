@@ -11,7 +11,8 @@
 - Repositorio: `Jaok04/xray-core-manager`.
 - Rama autorizada: `design/user-identity-association-v1`.
 - Proyecto VPS: `/opt/xray-manager`.
-- Commit de cierre técnico VMess: `ab76a57032faa9793a62348f865fba2c9a7d8f77` (`fix(vmess): validate TLS pairs and complete coverage`).
+- Commit de cierre técnico VMess: `ab76a57032faa9793a62348f865fba2c9a7d8f77`.
+- Commit Bloque 1: `c890b5b5362e17e439f198b9b8bbbdbe0af0c653` (`fix(vless): preserve current VMess entries on restore`), publicado y sincronizado.
 - Remoto: `git@github.com-xray-core-manager:Jaok04/xray-core-manager.git`.
 - Deploy Key SSH dedicada con permiso de escritura configurado.
 - Documentación normativa: `/root/Xray_Manager_Documentacion_Final_2026-10-31`.
@@ -83,7 +84,7 @@ No modificar `main`. No ampliar la corrección P4 más allá de la preservación
 
 ## 8. Bloque 1 — protección VMess durante restauración VLESS
 
-**Estado:** IMPLEMENTADO y VERIFICADO; pendiente publicación/sincronización y aceptación formal específica.
+**Estado:** IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; aceptación formal específica pendiente. Commit `c890b5b5362e17e439f198b9b8bbbdbe0af0c653`.
 
 - `scripts/vless_backup.py`: antes de crear journal o publicar, el catálogo staging se combina con entradas VMess actuales. Se ignoran entradas VMess antiguas del snapshot, se conservan las actuales y sus refs `vmess_*`, se valida la estructura y existencia de archivos referenciados, se rechazan colisiones de IDs y protocolos no cubiertos y se verifica la escritura staging.
 - Los almacenes VMess (`vmess/configurations` y `vmess/secrets`) no se modifican ni se incorporan al backup VLESS.

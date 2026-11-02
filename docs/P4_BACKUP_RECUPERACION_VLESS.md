@@ -104,7 +104,7 @@ Prueba focal nueva: `tests/vless_backup_limits.sh` (límite agregado, traversal,
 
 ## 9. Corrección posterior: preservar VMess durante restauraciones VLESS — 2026-11-02
 
-**Estado del incremento:** IMPLEMENTADO y VERIFICADO; aceptación formal específica pendiente del propietario. Esta corrección posterior no amplía el contenido del backup VLESS ni modifica la aceptación histórica del alcance P4 original.
+**Estado del incremento:** IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; aceptación formal específica pendiente del propietario. Commit `c890b5b5362e17e439f198b9b8bbbdbe0af0c653`. Esta corrección posterior no amplía el contenido del backup VLESS ni modifica la aceptación histórica del alcance P4 original.
 
 ### 9.1 Comportamiento
 

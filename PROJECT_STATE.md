@@ -26,7 +26,8 @@
 
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: design/user-identity-association-v1.
-- Commit funcional de cierre VMess: `ab76a57032faa9793a62348f865fba2c9a7d8f77` (`fix(vmess): validate TLS pairs and complete coverage`). La documentación de cierre también se publicó después; consultar `git rev-parse HEAD` para el HEAD vigente.
+- Commit funcional de cierre VMess: `ab76a57032faa9793a62348f865fba2c9a7d8f77`.
+- Corrección posterior Bloque 1 (restore VLESS preserva VMess): `c890b5b5362e17e439f198b9b8bbbdbe0af0c653` (`fix(vless): preserve current VMess entries on restore`), publicado y sincronizado en la rama autorizada.
 - La rama main no se modificó.
 - Verificar siempre el HEAD remoto antes de nuevas tareas.
 
@@ -219,4 +220,4 @@ El propietario autorizó la protección de las entradas VMess actuales durante u
 
 Pruebas: nuevo `tests/vless_restore_preserves_vmess.sh` cubre VMess anteriores/posteriores al backup, referencias de configuración/secreto, integridad byte a byte del almacén, colisiones, catálogo corrupto, refs rotas y fallo de escritura. `tests/vless_backup_journal_crash_matrix.sh` conserva cobertura de 32 interrupciones con catálogo VMess válido. Suite completa: 37/37 scripts PASS. `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de pruebas modificadas y `git diff --check`: PASS.
 
-Estado del incremento: IMPLEMENTADO y VERIFICADO; PUBLICADO/SINCRONIZADO y aceptación formal específica pendientes. P4 conserva su aceptación histórica para el alcance original; esta corrección posterior se registra por separado. No se creó backup operativo ni se accedió a la clave maestra real. No se modificaron runtime, servicio, firewall, puertos, certificados desplegados ni documentación normativa preliminar.
+Estado del incremento: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; aceptación formal específica pendiente. Commit: `c890b5b5362e17e439f198b9b8bbbdbe0af0c653`. P4 conserva su aceptación histórica para el alcance original; esta corrección posterior se registra por separado. No se creó backup operativo ni se accedió a la clave maestra real. No se modificaron runtime, servicio, firewall, puertos, certificados desplegados ni documentación normativa preliminar.
