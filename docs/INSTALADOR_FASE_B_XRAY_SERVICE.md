@@ -44,7 +44,7 @@ La unidad ejecuta Xray como usuario no privilegiado xray:xray, incluye reinicio 
 - tests/install.sh: instalación aislada de Fase A+B, conservación de datos, permisos, estado y unidad.
 - tests/stage1_dependencies.sh: dependencias adicionales de systemd y cuentas de sistema.
 
-La instalación real, la validación de la unidad en systemd activo y la persistencia tras reinicio quedan pendientes en la VPS desechable. No se ejecuta instalación real en la VPS de desarrollo.
+La descarga/verificación/instalación real de Xray-core se validó en un prefijo temporal en la VPS desechable. La unidad real del host pasó `systemd-analyze verify` y permaneció inactive/disabled. La persistencia tras reinicio y la activación real de la unidad siguen pendientes de una prueba controlada; no se ejecutó instalación real en la VPS de desarrollo.
 
 ## Resultado de la prueba real
 
