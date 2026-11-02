@@ -1,3 +1,11 @@
+### Actualización de cierre del registro de continuidad
+
+Se actualizó el estado final de los documentos PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md para indicar que el conjunto fue publicado y verificado:
+- PROJECT_STATE.md: commit f2bb854e856e92f9294b2509935fad10f011a669.
+- docs/PUNTO_CONTROL_ACTUAL.md: commit 53326dda7e4d32433cee4c519c668df1940e4d1e.
+
+La verificación final de los cinco documentos se realizó después de estas actualizaciones y se registra en el resultado de cierre de la sesión.
+
 ## 2026-11-02 — Publicación y verificación del sistema de continuidad
 
 Se crearon los cinco documentos en /opt/xray-manager y se publicaron en la rama design/user-identity-association-v1 de GitHub.
