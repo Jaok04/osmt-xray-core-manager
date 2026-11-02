@@ -38,7 +38,7 @@
 | A07 | Configuración del administrador y preferencias | config/preferences.sh; modules/admin_settings.sh | tests/stage1_settings.sh | IMPLEMENTADO con almacenamiento temporal |
 | A08 | Información de instalación | menu_installation_information, menu_installation_paths, menu_installation_files, menu_installation_systemd | tests/stage1_menu.sh | IMPLEMENTADO |
 | A09 | Errores de submenús no deben cerrar el administrador | Enrutamiento de menu_system_admin con recuperación de errores | tests/stage1_menu.sh inyecta retorno de error en las cinco opciones del administrador y comprueba que el menú continúa | IMPLEMENTADO |
-| A10 | Todos los submenús usan [0] Volver y regresan al nivel anterior | Menús funcionales de conexiones, usuarios legacy/v2, Xray, dependencias y preferencias | tests/stage1_menu.sh verifica 11 rutas de retorno [0] y siete fallos de acciones inyectados | IMPLEMENTADO |
+| A10 | Todos los submenús usan [0] Volver y regresan al nivel anterior | Menús funcionales de conexiones, usuarios legacy/v2, Xray, dependencias y preferencias | tests/stage1_menu.sh verifica 11 rutas de retorno [0] y cinco fallos de acciones inyectados | IMPLEMENTADO |
 | A11 | Operaciones destructivas requieren confirmación | Instalación/reinstalación/reparación, cambios de dependencias y desinstalación | tests/stage1_menu.sh, tests/stage1_dependencies.sh, tests/xray_admin.sh, tests/uninstall.sh | PARCIAL: cobertura de confirmaciones por operación aún no exhaustiva |
 
 ## 4. Desinstalación única — opción [8] > [5]
@@ -89,7 +89,7 @@ Las pruebas actuales son fixtures/mocks. No se ejecutaron apt-get, instalación 
 Se incorporaron pruebas automatizadas adicionales:
 
 - `tests/stage1_header.sh`: fallo de consulta IP, binario Xray ausente/presente, unidad systemd no configurada, perfil ausente y renderizado completo del encabezado.
-- `tests/stage1_menu.sh`: refresco del encabezado al regresar desde las nueve entradas principales; matriz de 11 rutas internas `[0] Volver` y siete fallos de acciones inyectados en conexiones, usuarios legacy/v2, preferencias, dependencias, administración Xray y gestión del servicio.
+- `tests/stage1_menu.sh`: refresco del encabezado al regresar desde las nueve entradas principales; matriz de 11 rutas internas `[0] Volver` y cinco fallos de acciones inyectados en conexiones, usuarios legacy/v2, preferencias, dependencias, administración Xray y gestión del servicio.
 - `tests/uninstall.sh`: contención de locks, aviso/cancelación de certificados, prueba individual de nueve categorías y políticas keep/all/selected en los tres alcances, incluida la limpieza de respaldos.
 
 **Ejecución integral:** 19/19 scripts `tests/*.sh` aprobados; sintaxis Bash aprobada para bin, config, lib, modules, scripts y tests; compilación de `scripts/users_v2_cutover.py` aprobada con caché temporal fuera del repositorio.
