@@ -42,7 +42,7 @@ Este SHA es una referencia conocida, no una garantía de que siga siendo HEAD. C
 |---|---|---|
 | Etapa 1 | Menú principal y administración del sistema | ACEPTADA por el propietario |
 | Etapa 2 | Protocolos y conexiones | EN DESARROLLO; abierta |
-| Etapa 3 | Gestión de usuarios, identidades y asociaciones | Pendiente de implementación de su alcance completo |
+| Etapa 3 | Gestión de usuarios, identidades y asociaciones | Hay módulos y documentación existentes; el estado formal y la cobertura de la etapa requieren auditoría específica |
 | Etapas posteriores | Según documentación normativa | Pendientes |
 
 No confundir las etapas del proyecto con las fases A/B/C del instalador o de administración de Xray.
