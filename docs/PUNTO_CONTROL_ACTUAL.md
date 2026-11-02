@@ -9,7 +9,7 @@
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: design/user-identity-association-v1.
 - Proyecto VPS: /opt/xray-manager.
-- HEAD local y remoto al iniciar esta actualización: b249b3e5b005c2dae301dd1f9230712933f9f482.
+- HEAD remoto publicado tras la formalización inicial: 90ff83510691e8daef934ff8bbafd08cb576e03a. El cierre de sincronización documental posterior debe volver a verificar el SHA final.
 - Árbol de trabajo limpio antes de esta actualización.
 - Documentación normativa: /root/Xray_Manager_Documentacion_Final_2026-10-31.
 - Etapa 1: aceptada formalmente.

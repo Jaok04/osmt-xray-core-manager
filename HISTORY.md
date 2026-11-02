@@ -6,6 +6,7 @@
 - Se confirmó que el catálogo contiene vmess_httpupgrade_tls, pero el menú actual sólo permite seleccionar HTTPUpgrade sin TLS. No hay todavía modelo, adaptador, asistente ni persistencia VMess.
 - Se creó docs/DISEÑO_TECNICO_VMESS.md y se actualizaron docs/DECISIONES_ETAPA_2.md, PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md.
 - No se modificó código, catálogo, pruebas, runtime, firewall, puertos ni certificados. Esta actualización formaliza diseño; la implementación requiere un contraste previo específico y autorización expresa posterior.
+- Publicación inicial del diseño y las decisiones en la rama autorizada: commit 90ff83510691e8daef934ff8bbafd08cb576e03a. El árbol local/remoto coincidió en 0687ee1225e14790cd69a4f486a3cff8cc200845.
 - VMess permanece NO IMPLEMENTADO; HTTPUpgrade-TLS está APROBADO EN DISEÑO, NO IMPLEMENTADO y NO VERIFICADO. Etapa 2 permanece abierta.
 
 ### Precisión del estado de Etapa 3

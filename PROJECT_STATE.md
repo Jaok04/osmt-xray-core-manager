@@ -22,21 +22,20 @@
 
 ### GitHub
 
-Último commit de la rama registrado en la auditoría previa:
-- SHA: cd76e84a48974762f28b666e8d440de52062d6a8
-- Mensaje: docs: record stage two menu implementation
-- Fecha registrada: 2026-11-02 09:55:08 UTC.
-
-Este SHA es una referencia conocida, no una garantía de que siga siendo HEAD. Cada sesión debe consultar la referencia remota actual antes de trabajar.
+- Repositorio: Jaok04/xray-core-manager.
+- Rama autorizada: design/user-identity-association-v1.
+- HEAD verificado tras la formalización del diseño VMess: 90ff83510691e8daef934ff8bbafd08cb576e03a.
+- La rama main no se modificó.
+- Verificar siempre el HEAD remoto antes de nuevas tareas.
 
 ### VPS
 
-- Ruta: /opt/xray-manager
-- En la inspección del 2026-11-02 no existía /opt/xray-manager/.git.
-- Por ello no se puede establecer desde esa ruta branch, HEAD ni git status.
-- La VPS y GitHub deben compararse por contenido/hashes; no asumir equivalencia.
-- El sistema de continuidad de cinco archivos está creado en la VPS y publicado en la rama autorizada; la primera verificación encontró coincidencia exacta de texto entre ambos destinos.
-- En una auditoría previa, la mayoría de los archivos comparados coincidían. modules/main_menu.sh y docs/ETAPA_2_IMPLEMENTACION_MENU_2026-11-02.md mostraron SHA distintos pese a que el texto recuperado parecía igual. La causa no quedó determinada; mantenerlos como divergencia pendiente de reconciliación hasta volver a comparar bytes.
+- Ruta: /opt/xray-manager.
+- La ruta contiene un checkout Git válido.
+- El remoto origin apunta al repositorio oficial mediante el alias SSH dedicado.
+- La Deploy Key SSH configurada es de solo lectura; las publicaciones se realizan mediante el mecanismo GitHub API autorizado.
+- Tras la formalización VMess, el árbol local y el árbol remoto coinciden (tree 0687ee1225e14790cd69a4f486a3cff8cc200845) y el árbol de trabajo quedó limpio.
+- No se deben asumir estados históricos de sincronización: comprobar rama, HEAD, remoto, árbol y git status en cada sesión.
 
 ## 3. Etapas
 
