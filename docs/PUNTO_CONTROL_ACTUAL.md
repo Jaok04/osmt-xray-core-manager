@@ -8,7 +8,7 @@
 
 - Etapa 1: aceptada formalmente por el propietario.
 - Etapa 2: en desarrollo; no está completada.
-- Etapa 3: pendiente de desarrollo según la planificación normativa.
+- Etapa 3: existen módulos y documentación de usuarios/identidades/asociaciones en el árbol actual; su estado formal y cobertura requieren auditoría específica.
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: design/user-identity-association-v1.
 - VPS: /opt/xray-manager.
