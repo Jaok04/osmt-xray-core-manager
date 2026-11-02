@@ -5,6 +5,15 @@ UNINSTALL_LOCK="${XRAY_MANAGER_UNINSTALL_LOCK:-/run/lock/xray-manager-uninstall.
 UNINSTALL_DATA_LOCK="${XRAY_MANAGER_INTEGRITY_LOCK:-/run/xray-manager/integrity.lock}"
 UNINSTALL_XRAY_LOCK="${XRAY_ADMIN_LOCK:-/run/lock/xray-manager-xray-admin.lock}"
 UNINSTALL_BACKUP_STAGING_DIR="${UNINSTALL_BACKUP_STAGING_DIR:-/var/backups}"
+# shellcheck disable=SC1091
+. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../lib" && pwd)/operation_lock.sh"
+
+uninstall_release_operation_locks() {
+	manager_lock_release "$4"
+	manager_lock_release "$3"
+	manager_lock_release "$2"
+	manager_lock_release "$1"
+}
 
 uninstall_service_guard() {
 	local unit
@@ -77,7 +86,7 @@ uninstall_export_remote() {
 uninstall_menu_action() {
 	local scope policy category selected='' path backup_choice export_target export_status="No solicitada"
 	local backup_dir archive checksum certificate_deletion=0
-	local fd data_fd xray_fd
+	local lifecycle_fd fd data_fd xray_fd
 	local -a paths=() selected_categories=() existing=()
 	local -A seen_paths=()
 	if [[ "$EUID" -ne 0 ]]; then
@@ -236,6 +245,38 @@ uninstall_menu_action() {
 		return 0
 	fi
 
+	# Adquirir todos los bloqueos antes de crear el respaldo. Así el snapshot
+	# y la eliminación representan el mismo estado y no compiten con escrituras.
+	if ! manager_lock_acquire "${XRAY_MANAGER_LIFECYCLE_LOCK:-/run/lock/xray-manager-lifecycle.lock}" lifecycle_fd; then
+		printf 'Hay otra operación de ciclo de vida del Manager en curso.\n' >&2
+		ui_pause
+		return 1
+	fi
+	if ! manager_lock_acquire "$UNINSTALL_LOCK" fd; then
+		manager_lock_release "$lifecycle_fd"
+		printf 'Ya hay otra operación de desinstalación en curso.\n'
+		ui_pause
+		return 1
+	fi
+	if ! manager_lock_acquire "$UNINSTALL_DATA_LOCK" data_fd; then
+		uninstall_release_operation_locks "$lifecycle_fd" "$fd" '' ''
+		printf 'Hay una operación de usuarios o conexiones en curso. La desinstalación se cancela.\n'
+		ui_pause
+		return 1
+	fi
+	if ! manager_lock_acquire "$UNINSTALL_XRAY_LOCK" xray_fd; then
+		uninstall_release_operation_locks "$lifecycle_fd" "$fd" "$data_fd" ''
+		printf 'Hay una operación de administración de Xray-core en curso. La desinstalación se cancela.\n'
+		ui_pause
+		return 1
+	fi
+	trap 'uninstall_release_operation_locks "$lifecycle_fd" "$fd" "$data_fd" "$xray_fd"; trap - RETURN' RETURN
+	if ! uninstall_service_guard || ! uninstall_paths_are_allowed "${paths[@]}"; then
+		printf 'El estado del servicio o el inventario de rutas cambió; se cancela la desinstalación.\n' >&2
+		ui_pause
+		return 1
+	fi
+
 	if ((certificate_deletion)); then
 		printf '\nADVERTENCIA: la selección incluye certificados y claves privadas. Su eliminación es irreversible y puede afectar otros servicios que los utilicen.\n'
 		if ! ui_confirm "¿Confirmas que deseas eliminar también certificados y claves privadas?"; then
@@ -322,84 +363,7 @@ uninstall_menu_action() {
 		return 0
 	fi
 
-	if uninstall_path_has_symlink_component "$UNINSTALL_LOCK" ||
-		uninstall_path_has_symlink_component "$UNINSTALL_DATA_LOCK" ||
-		uninstall_path_has_symlink_component "$UNINSTALL_XRAY_LOCK"; then
-		printf 'Una ruta de bloqueo contiene un enlace simbólico o una ruta no válida. Se cancela.\n' >&2
-		rm -rf -- "$backup_dir"
-		ui_pause
-		return 1
-	fi
-	if ! mkdir -p "$(dirname "$UNINSTALL_LOCK")" "$(dirname "$UNINSTALL_DATA_LOCK")" "$(dirname "$UNINSTALL_XRAY_LOCK")"; then
-		printf 'No se pudieron preparar los directorios de bloqueo.\n' >&2
-		rm -rf -- "$backup_dir"
-		ui_pause
-		return 1
-	fi
-	if ! exec {fd}>>"$UNINSTALL_LOCK"; then
-		printf 'No se pudo abrir el bloqueo de desinstalación.\n' >&2
-		rm -rf -- "$backup_dir"
-		ui_pause
-		return 1
-	fi
-	if ! flock -n "$fd"; then
-		printf 'Ya hay otra operación de desinstalación en curso.\n'
-		exec {fd}>&-
-		rm -rf -- "$backup_dir"
-		ui_pause
-		return 1
-	fi
-	if ! exec {data_fd}>>"$UNINSTALL_DATA_LOCK"; then
-		printf 'No se pudo abrir el bloqueo de integridad de usuarios/conexiones.\n' >&2
-		flock -u "$fd" || true
-		exec {fd}>&-
-		rm -rf -- "$backup_dir"
-		ui_pause
-		return 1
-	fi
-	if ! flock -n "$data_fd"; then
-		printf 'Hay una operación de usuarios o conexiones en curso. La desinstalación se cancela.\n'
-		exec {data_fd}>&-
-		flock -u "$fd" || true
-		exec {fd}>&-
-		rm -rf -- "$backup_dir"
-		ui_pause
-		return 1
-	fi
-	if ! exec {xray_fd}>>"$UNINSTALL_XRAY_LOCK"; then
-		printf 'No se pudo abrir el bloqueo de administración de Xray-core.\n' >&2
-		flock -u "$data_fd" || true
-		exec {data_fd}>&-
-		flock -u "$fd" || true
-		exec {fd}>&-
-		rm -rf -- "$backup_dir"
-		ui_pause
-		return 1
-	fi
-	if ! flock -n "$xray_fd"; then
-		printf 'Hay una operación de administración de Xray-core en curso. La desinstalación se cancela.\n'
-		exec {xray_fd}>&-
-		flock -u "$data_fd" || true
-		exec {data_fd}>&-
-		flock -u "$fd" || true
-		exec {fd}>&-
-		rm -rf -- "$backup_dir"
-		ui_pause
-		return 1
-	fi
-	# Revalidar inventario y estado del servicio con todos los locks adquiridos.
-	if ! uninstall_service_guard || ! uninstall_paths_are_allowed "${paths[@]}"; then
-		flock -u "$xray_fd" || true
-		exec {xray_fd}>&-
-		flock -u "$data_fd" || true
-		exec {data_fd}>&-
-		flock -u "$fd" || true
-		exec {fd}>&-
-		rm -rf -- "$backup_dir"
-		ui_pause
-		return 1
-	fi
-
+	# Los bloqueos lifecycle/uninstall/data/Xray ya están adquiridos desde antes del respaldo.
 	local deletion_failed=0
 	for path in "${paths[@]}"; do
 		if [[ -e "$path" || -L "$path" ]]; then
@@ -410,12 +374,6 @@ uninstall_menu_action() {
 			fi
 		fi
 	done
-	flock -u "$xray_fd" || true
-	exec {xray_fd}>&-
-	flock -u "$data_fd" || true
-	exec {data_fd}>&-
-	flock -u "$fd" || true
-	exec {fd}>&-
 	if ((deletion_failed)); then
 		if [[ "$backup_choice" == y ]]; then
 			printf 'El respaldo se conserva para recuperación: %s\n' "$archive"
