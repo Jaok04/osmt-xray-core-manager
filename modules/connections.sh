@@ -36,7 +36,7 @@ connections_family_menu() {
 		case "$family" in
 			vless)
 				ui_title "ADMINISTRAR VLESS"
-				printf '\n  [1] VLESS-WS (Sin TLS)\n  [2] VLESS-TLS (RAW/TCP + TLS)\n  [3] VLESS-WS-TLS\n  [4] VLESS-REALITY (RAW/TCP + REALITY)\n  [5] VLESS-GRPC (TLS o REALITY)\n'
+				printf '\n  [1] VLESS-WS (Sin TLS)\n  [2] VLESS-TLS (RAW/TCP + TLS)\n  [3] VLESS-WS-TLS\n  [4] VLESS-REALITY (RAW/TCP + REALITY)\n  [5] VLESS-GRPC (TLS o REALITY)\n  [6] VLESS-XHTTP (Sin TLS)\n  [7] VLESS-XHTTP-TLS\n  [8] VLESS-XHTTP-REALITY\n'
 				;;
 			vmess)
 				ui_title "ADMINISTRAR VMESS"
@@ -65,6 +65,9 @@ connections_family_menu() {
 			vless:3) connections_manage_mode vless_ws_tls ;;
 			vless:4) connections_manage_mode vless_reality ;;
 			vless:5) connections_manage_mode vless_grpc ;;
+			vless:6) connections_manage_mode vless_xhttp ;;
+			vless:7) connections_manage_mode vless_xhttp_tls ;;
+			vless:8) connections_manage_mode vless_xhttp_reality ;;
 			vmess:1) connections_manage_mode vmess_ws ;;
 			vmess:2) connections_manage_mode vmess_tcp_tls ;;
 			vmess:3) connections_manage_mode vmess_ws_tls ;;
@@ -129,6 +132,9 @@ connections_mode_label() {
 		vless_grpc_tls) printf 'VLESS-GRPC-TLS' ;;
 		vless_grpc_reality) printf 'VLESS-GRPC-REALITY' ;;
 		vless_grpc) printf 'VLESS-GRPC' ;;
+		vless_xhttp) printf 'VLESS-XHTTP (Sin TLS)' ;;
+		vless_xhttp_tls) printf 'VLESS-XHTTP-TLS' ;;
+		vless_xhttp_reality) printf 'VLESS-XHTTP-REALITY' ;;
 		vmess_ws) printf 'VMess-WS' ;;
 		vmess_tcp_tls) printf 'VMess-TLS' ;;
 		vmess_ws_tls) printf 'VMess-WS-TLS' ;;
@@ -452,6 +458,9 @@ connections_create_draft() {
 	connections_unlock "$fd"
 	printf '\nConexión registrada como borrador.\nID: %s\nNombre: %s\nModalidad: %s\nPuerto: %s\nSlots: %s\n' "$id" "$name" "$protocol_id" "$port" "$max_users"
 	printf '\nNo se aplicó ningún cambio a Xray ni al sistema.\n'
+	if [[ "$protocol_id" == vless_* ]] && declare -F connections_vless_assistant >/dev/null 2>&1; then
+		connections_vless_assistant "$id" "$protocol_id" || true
+	fi
 	ui_pause
 }
 connections_list() {

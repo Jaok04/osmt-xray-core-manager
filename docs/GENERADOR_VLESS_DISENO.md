@@ -1,6 +1,6 @@
 # Diseño del generador VLESS
 
-**Estado:** diseño técnico previo a la implementación del serializador.  
+**Estado:** modelo y adaptador implementados; asistente integrado para previsualización y validación de borradores.
 **Proyecto:** Xray Core Manager 0.2.0-dev.
 
 ## 1. Objetivo y límites
@@ -191,3 +191,18 @@ La prueba de integración construye fixtures efímeros de XHTTP sin TLS, TLS y R
 **Advertencia:** la documentación oficial de Project X indica que XHTTP admite TLS y REALITY; REALITY se limita a RAW, XHTTP y gRPC. El binario v26.10.31 continúa advirtiendo que WebSocket y gRPC están obsoletos/no recomendados. Se conservan por decisión explícita de diseño, sin presentarlos como recomendación del proyecto Xray.
 
 **Límite actual de XHTTP:** se implementó el conjunto inicial de parámetros de servidor `path` y `mode`. No se han incorporado aún `host`, `headers`, `extra`, parámetros avanzados de multiplexación ni `downloadSettings`; no se generan ni se presuponen. La validación `xray run -test` confirma la sintaxis del inbound, no la conectividad extremo a extremo ni la interoperabilidad con clientes externos.
+
+
+## 13. Integración del asistente de creación VLESS
+
+**Implementado:** el módulo modules/vless_assistant.sh se integra al flujo de alta de borradores VLESS. Después de registrar la conexión, solicita dirección de escucha y los parámetros específicos de la modalidad; utiliza el modelo neutral, incorpora los usuarios VLESS en estado borrador cuando el módulo de usuarios está disponible y genera una configuración temporal mediante el adaptador v26.10.31.
+
+- El menú VLESS expone las nueve modalidades del catálogo, incluidas XHTTP sin TLS, TLS y REALITY.
+- WS solicita ruta; XHTTP solicita ruta y modo; gRPC solicita nombre de servicio; TLS solicita rutas existentes de certificado y clave; REALITY solicita target, clave privada, server names y short IDs.
+- El adaptador rechaza parámetros ausentes, adicionales o incompatibles.
+- Si existe el binario fijado en caché, ejecuta xray run -test sobre el JSON temporal.
+- Los JSON temporales y los secretos introducidos se eliminan al salir del asistente. No se persisten claves privadas ni certificados dentro del registro de conexiones.
+- El borrador permanece state=draft y runtime_applied=false. No se instala ni inicia Xray, no se abren puertos ni se modifica firewall.
+- El asistente no sustituye el almacenamiento seguro de secretos ni la futura aplicación transaccional; la configuración construida es una previsualización validada y temporal.
+
+**Límite deliberado:** esta integración no guarda una configuración reutilizable ni marca la conexión como activa. La persistencia segura de parámetros y secretos debe definirse antes de la aplicación de perfiles/runtime.

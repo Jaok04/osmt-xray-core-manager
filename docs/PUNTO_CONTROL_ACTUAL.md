@@ -1,70 +1,74 @@
 # Punto de control actual — Xray Core Manager
 
-**Fecha del corte:** 2026-11-02  
-**Tipo de trabajo:** creación del sistema de continuidad del proyecto.  
-**Estado de esta tarea:** cinco documentos creados, publicados en la rama autorizada y verificados por comparación exacta de texto entre GitHub y VPS.
+**Fecha del corte:** 2026-11-02
+**Tarea:** integración inicial del asistente de creación VLESS con el modelo neutral y el adaptador Xray-core 26.10.31.
+**Estado:** implementación y pruebas completadas; commit local creado; pendiente push y verificación remota.
 
-## 1. Punto exacto del proyecto
+## 1. Entorno
 
-- Etapa 1: aceptada formalmente por el propietario.
-- Etapa 2: en desarrollo; no está completada.
-- Etapa 3: existen módulos y documentación de usuarios/identidades/asociaciones en el árbol actual; su estado formal y cobertura requieren auditoría específica.
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: design/user-identity-association-v1.
-- VPS: /opt/xray-manager.
+- VPS/proyecto: /opt/xray-manager.
+- HEAD local de inicio: 8f23b0fbd3be8b61e370be74369ce1bcfd0e5ca0.
+- Árbol de trabajo estaba limpio al iniciar.
+- Commit local creado: faa2c45c67f24cd4e3faad4480ce8bc77ab70605 (feat: integrate VLESS draft configuration assistant).
 - Documentación normativa: /root/Xray_Manager_Documentacion_Final_2026-10-31.
+- Etapa 1: aceptada formalmente; no reabrir.
+- Etapa 2: en desarrollo y abierta.
+- Etapa 3: existen módulos/documentación; su cierre requiere auditoría independiente.
 
-## 2. Último commit conocido
+## 2. Decisiones complementarias aprobadas
 
-SHA registrado: cd76e84a48974762f28b666e8d440de52062d6a8  
-Mensaje: docs: record stage two menu implementation  
-Fecha: 2026-11-02 09:55:08 UTC.
+El propietario aprobó el 2026-11-02:
+- conservar las nueve modalidades VLESS del catálogo, incluidas las tres variantes XHTTP;
+- dejar VMess-HTTPUpgrade-TLS pendiente de validación, sin considerarlo modalidad funcionalmente aprobada;
+- continuar con la integración del asistente VLESS.
 
-Importante: verificar el HEAD remoto actual al reanudar. El SHA de este documento es un punto de referencia histórico, no una garantía de HEAD actual.
+La especificación normativa 1.3 no se reescribió. Ver docs/DECISIONES_ETAPA_2.md.
 
-## 3. Situación de la VPS al iniciar la creación de estos documentos
+## 3. Cambios implementados en este corte
 
-- /opt/xray-manager existe y contiene código, tests y documentación técnica.
-- No existía /opt/xray-manager/.git en la inspección del 02/11/2026.
-- Por tanto, no se puede atribuir branch ni commit a la copia de la VPS.
-- Antes de sincronizar, comparar el contenido con GitHub y preservar diferencias.
-- En una auditoría previa, modules/main_menu.sh y docs/ETAPA_2_IMPLEMENTACION_MENU_2026-11-02.md tuvieron SHA distinto frente a GitHub pese a que el texto recuperado parecía igual; causa no determinada.
+- Nuevo módulo modules/vless_assistant.sh.
+- Integración del módulo en bin/xray-manager.
+- El flujo de alta de borradores VLESS llama al asistente después de registrar el borrador.
+- Menú VLESS presenta las modalidades XHTTP sin TLS, TLS y REALITY.
+- El asistente solicita dirección de escucha y opciones por modalidad, construye modelo neutral y configuración temporal con el adaptador v26.10.31.
+- Solicita de forma oculta la clave privada REALITY.
+- Ejecuta xray run -test si el binario de validación fijado está disponible.
+- Los JSON temporales/secretos se eliminan al terminar. No se persisten secretos ni se guarda una configuración reutilizable.
+- El registro permanece state=draft y runtime_applied=false. No se inicia Xray, no se abren puertos ni se modifica firewall.
+- Documentación técnica y decisión complementaria: docs/GENERADOR_VLESS_DISENO.md y docs/DECISIONES_ETAPA_2.md.
+- Nueva prueba: tests/vless_assistant.sh.
 
-## 4. Estado de Etapa 2
+## 4. Verificación ejecutada en esta sesión
 
-La navegación inicial por familias, modalidades y protocolos opcionales está implementada. La gestión de conexiones permite crear borradores, listarlos, consultar detalles, editar borradores y eliminarlos con confirmación. El catálogo contiene 38 registros.
+- Todos los scripts tests/*.sh: PASS.
+- Incluye pruebas de concurrencia, integridad JSON, instalador, navegación, conexiones, usuarios legacy/v2, servicios y desinstalación.
+- tests/xray_vless_integration.sh: PASS para las nueve modalidades con Xray 26.10.31; también rechaza opciones XHTTP incompletas y modo desconocido.
+- tests/vless_assistant.sh: PASS; valida previsualización temporal, rechazo de ruta WS inválida y conservación del borrador.
+- bash -n: PASS para módulos modificados y punto de entrada.
+- ShellCheck: PASS para modules/vless_assistant.sh y modules/connections.sh.
+- shfmt aplicado al nuevo módulo.
+- git diff --check: PASS.
+- El binario Xray solo ejecutó modo -test sobre archivos temporales; no se inició servicio ni se abrió listener.
 
-VLESS dispone de modelo neutral de nueve modalidades y adaptador para Xray-core 26.10.31. La prueba de integración documentada validó las nueve modalidades con xray run -test en fixtures temporales. No es prueba de conectividad extremo a extremo.
+Advertencias observadas en Xray 26.10.31: WebSocket y gRPC están marcados como obsoletos/no recomendados; REALITY avisa sobre riesgo de bloqueo si escucha en puerto distinto de 443. No son fallos de configuración.
 
-Las conexiones siguen siendo borradores. No se aplica automáticamente configuración al runtime, no se abren puertos y no se modifica firewall desde este flujo.
+## 5. Límites y trabajo pendiente
 
-La Etapa 2 sigue abierta. Ver PROJECT_STATE.md y docs/ETAPA_2_CONEXIONES.md.
+- La configuración no se persiste: falta diseñar almacenamiento seguro de opciones/secretos y su ciclo de vida.
+- No se implementó aplicación transaccional, activación runtime, apertura de puertos, firewall ni rollback.
+- No se hizo prueba de conectividad extremo a extremo.
+- VMess-HTTPUpgrade-TLS sigue pendiente de validación.
+- Faltan modelos/asistentes/validadores para VMess, Trojan, Shadowsocks, Hysteria2 y protocolos opcionales.
+- Falta integrar asociaciones WireGuard con identidades/Etapa 3.
 
-## 5. Discrepancias que bloquean una continuación sin decisión
+## 6. Próxima acción
 
-1. La especificación funcional normativa Etapa 2 revisión 1.3 enumera cinco modalidades VLESS; el catálogo/modelo/adaptador actuales contienen nueve, incluyendo tres variantes XHTTP.
-2. VMess-HTTPUpgrade-TLS aparece en catálogo/código, pero no está expresamente definido como modalidad independiente en la especificación 1.3.
-3. La decisión propuesta fue conservar VLESS-XHTTP y dejar VMess-HTTPUpgrade-TLS pendiente de validación. En este corte no consta aprobación del propietario a esa propuesta.
-4. La copia VPS carece de .git y hay divergencias de hash previamente observadas que requieren reconciliación.
+1. Revisar diff completo y permisos.
+2. Actualizar continuidad (este documento, PROJECT_STATE.md, HISTORY.md y CONTINUIDAD_DEL_PROYECTO.md).
+3. Crear commit en design/user-identity-association-v1.
+4. Publicar el commit faa2c45c67f24cd4e3faad4480ce8bc77ab70605 en la rama autorizada.
+5. Verificar SHA remoto y que VPS/remoto quedan sincronizados.
 
-No modifiques la especificación ni elimines/retires modalidades sin decisión explícita.
-
-## 6. Siguiente acción recomendada
-
-1. Confirmar que estos cinco documentos están presentes en VPS y en la rama autorizada de GitHub.
-2. Verificar su contenido y hashes en ambos destinos.
-3. Resolver con el propietario la discrepancia normativa VLESS-XHTTP / VMess-HTTPUpgrade-TLS.
-4. Solo después, actualizar la especificación normativa si el propietario lo aprueba.
-5. Continuar con la integración del asistente VLESS con el modelo y adaptador existentes, una vez autorizado.
-
-No iniciar implementación adicional ni sincronización destructiva por iniciativa propia.
-
-## 7. Checklist para la próxima sesión
-
-- [ ] Leer AGENTS.md, PROJECT_STATE.md, docs/CONTINUIDAD_DEL_PROYECTO.md, este documento y HISTORY.md.
-- [ ] Consultar HEAD real de GitHub.
-- [ ] Comprobar si /opt/xray-manager tiene .git.
-- [ ] Leer documentación normativa pertinente.
-- [ ] Comparar GitHub y VPS sin sobrescribir.
-- [ ] Presentar estado y divergencias.
-- [ ] Obtener autorización para el siguiente cambio.
+No modificar main. No declarar Etapa 2 completada.

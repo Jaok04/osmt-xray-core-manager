@@ -97,7 +97,9 @@ La especificación funcional aprobada es revisión 1.3, aprobada el 30/10/2026. 
 - Las conexiones se guardan como draft; no equivalen a conexiones activas.
 - La creación/edición no aplica una configuración al runtime.
 - No se abren puertos ni se modifica firewall por el flujo de conexiones.
-- El adaptador VLESS no está integrado todavía en un flujo completo de usuarios reales, certificados de producción, persistencia transaccional y activación del servicio.
+- El asistente VLESS ya está integrado con el modelo/adaptador para construir una previsualización temporal; cuando está disponible, incorpora usuarios VLESS en estado borrador.
+- El asistente solicita opciones por modalidad y ejecuta xray run -test con el binario fijado si está disponible. Los secretos se introducen con entrada oculta y los archivos temporales se eliminan al terminar.
+- No hay persistencia segura de configuración ni secretos; no se aplica runtime ni se activa el servicio.
 - La validación xray run -test no prueba conectividad extremo a extremo.
 - La prueba documentada de nueve modalidades corresponde al entorno y binario Xray 26.10.31; no asumir que se reejecutó en cada sesión.
 
@@ -105,20 +107,16 @@ La especificación funcional aprobada es revisión 1.3, aprobada el 30/10/2026. 
 
 Se documentan resultados PASS para navegación, administración de borradores, VLESS, colisiones de puertos, carreras de concurrencia, persistencia JSON, sintaxis Bash, ShellCheck y shfmt. La auditoría del 02/11 no reejecutó todas esas pruebas; consulta los informes y repítelas cuando el cambio lo requiera.
 
-## 6. Discrepancias normativas pendientes
+## 6. Decisiones complementarias aprobadas el 2026-11-02
 
-No alterar la especificación aprobada sin decisión del propietario.
-
-1. VLESS-XHTTP: el catálogo y el modelo/adaptador incluyen XHTTP sin TLS, TLS y REALITY. La especificación funcional 1.3 enumera cinco modalidades VLESS originales y no refleja explícitamente estas tres ampliaciones.
-2. VMess-HTTPUpgrade-TLS: aparece en el catálogo/código, pero no está enumerado expresamente como modalidad independiente en la especificación 1.3.
-3. Se requiere decisión explícita del propietario sobre conservar/formalizar VLESS-XHTTP y sobre el estado de VMess-HTTPUpgrade-TLS.
-
-La propuesta de auditoría más reciente fue conservar VLESS-XHTTP y dejar VMess-HTTPUpgrade-TLS pendiente de validación. No hay respuesta de aprobación registrada en el punto de corte de este documento.
+- Se conservan las nueve modalidades VLESS del catálogo, incluidas XHTTP sin TLS, TLS y REALITY.
+- VMess-HTTPUpgrade-TLS queda pendiente de validación técnica/funcional; su presencia en catálogo/código no se considera aprobación funcional.
+- La especificación normativa 1.3 no se reescribió retroactivamente. La decisión queda registrada en docs/DECISIONES_ETAPA_2.md.
 
 ## 7. Pendientes principales de Etapa 2
 
 - Resolver y formalizar las discrepancias normativas indicadas.
-- Integrar el asistente de creación VLESS con el modelo/adaptador.
+- Completar la persistencia segura de opciones de configuración VLESS y el almacenamiento de secretos; actualmente el asistente genera y valida solo una previsualización temporal.
 - Definir e implementar modelos, generadores y validadores para VMess, Trojan, Shadowsocks e Hysteria2.
 - Implementar administradores específicos SOCKS, HTTP Proxy y WireGuard.
 - Integrar peers WireGuard con las identidades/asociaciones de Etapa 3.

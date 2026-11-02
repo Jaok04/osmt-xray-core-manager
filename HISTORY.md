@@ -94,3 +94,15 @@ Se documentaron pruebas de XHTTP sin TLS, TLS y REALITY con Xray-core 26.10.31. 
 ## 2026-10-30 — Aprobación de especificación funcional Etapa 2
 
 La especificación Etapa 2 revisión 1.3 quedó registrada como APROBADA. Define la clasificación funcional de protocolos, modalidades, flujos de creación/administración y reglas de navegación. La aprobación funcional no garantiza compatibilidad técnica anticipada; cada combinación debe validarse contra la versión objetivo y los componentes externos.
+## 2026-11-02 — Decisión complementaria e integración del asistente VLESS
+
+- El propietario aprobó conservar las nueve modalidades VLESS existentes, incluidas XHTTP sin TLS/TLS/REALITY.
+- VMess-HTTPUpgrade-TLS queda pendiente de validación; no se considera modalidad funcionalmente aprobada por su sola presencia en el catálogo.
+- Se añadió docs/DECISIONES_ETAPA_2.md sin reescribir la especificación normativa 1.3.
+- Se integró modules/vless_assistant.sh al alta de borradores VLESS y se añadió el acceso a las tres variantes XHTTP en el menú.
+- El asistente construye una previsualización temporal con el modelo neutral y el adaptador v26.10.31; solicita la clave REALITY con entrada oculta y ejecuta xray run -test cuando está disponible.
+- No persiste secretos/configuración ni activa runtime. Los registros permanecen draft y runtime_applied=false.
+- Se añadieron docs y tests/vless_assistant.sh.
+- Verificación actual: todos los tests/*.sh PASS; bash -n, ShellCheck de módulos modificados y git diff --check PASS; shfmt aplicado al nuevo módulo.
+- Commit local: faa2c45c67f24cd4e3faad4480ce8bc77ab70605 (feat: integrate VLESS draft configuration assistant).
+- Pendiente en el momento de redactar esta entrada: push y verificación remota.

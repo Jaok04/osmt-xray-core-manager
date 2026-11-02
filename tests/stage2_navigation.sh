@@ -18,6 +18,9 @@ connections_manage_existing() { printf 'EXISTING:%s\n' "$1" >>"$CALLS"; }
 printf '1\n1\n1\n0\n0\n0\n' | connections_menu >/dev/null
 grep -Fxq 'vless_ws' "$CALLS"
 : >"$CALLS"
+printf '1\n6\n1\n1\n0\n0\n0\n' | connections_menu >/dev/null
+grep -Fxq 'vless_xhttp' "$CALLS"
+: >"$CALLS"
 printf '1\n5\n2\n1\n0\n0\n0\n' | connections_menu >/dev/null
 grep -Fxq 'vless_grpc_reality' "$CALLS"
 : >"$CALLS"
