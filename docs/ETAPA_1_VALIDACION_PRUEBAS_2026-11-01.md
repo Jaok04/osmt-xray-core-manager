@@ -7,7 +7,7 @@
 
 ## Resultado
 
-- **20/20 suites** `tests/*.sh`: aprobadas.
+- **20/20 suites** `tests/*.sh`: aprobadas en la ejecución integral del 02/11/2026.
 - Sintaxis Bash de `bin`, `config`, `lib`, `modules`, `scripts` y `tests`: aprobada.
 - Compilación de `scripts/users_v2_cutover.py`: aprobada con `PYTHONPYCACHEPREFIX` temporal fuera del repositorio.
 
@@ -15,7 +15,7 @@
 
 ### Encabezado
 
-`tests/stage1_header.sh` verifica el fallback de IP pública cuando falla y respuesta válida de `curl`, Xray ausente y presente, servicio systemd no configurado/activo, autostart no configurado/habilitado, perfil ausente/presente y renderizado de fecha/hora sin impedir la pantalla.
+`tests/stage1_header.sh` verifica el fallback de IP pública cuando falla y respuesta válida de `curl`, Xray ausente y presente, servicio systemd no configurado/activo, autostart no configurado/habilitado/deshabilitado, perfil ausente/presente y renderizado de fecha/hora. También inyecta fallos independientes en IP, versión, estado del servicio, autostart, perfil y fecha/hora; luego falla todos simultáneamente y verifica que `menu_main` sigue mostrando las opciones [1] y [0].
 
 ### Navegación
 
@@ -43,7 +43,7 @@ La prueba de integración VLESS produjo advertencias de Xray sobre la deprecaci�
 
 ## Límites y pendientes
 
-No se ejecutaron `apt-get`, instalación/reinstalación real de Xray, modificación de systemd, firewall o SSH, ni desinstalación de componentes reales. No se migraron datos operativos. Siguen pendientes M04/M06 y la validación operativa en VPS desechable.
+No se ejecutaron `apt-get`, instalación/reinstalación real de Xray, modificación de systemd, firewall o SSH, ni desinstalación de componentes reales. No se migraron datos operativos. M04/M06 ya cuentan con cobertura automatizada y pasan a IMPLEMENTADO. Sigue pendiente la validación operativa en VPS desechable y el cotejo final del resto de la matriz.
 
 ## Actualización de desinstalación — 01/11/2026
 
@@ -61,3 +61,10 @@ Se incorporó `lib/operation_lock.sh` con locks no bloqueantes, permisos privado
 Las acciones mutantes de `xray.service` toman lifecycle. La desinstalación toma lifecycle, uninstall, integridad y Xray antes de crear el respaldo y los conserva durante toda la operación; esto evita que un `start` se cuele entre la comprobación de servicio detenido y el borrado. Pruebas de fixtures verifican contención de cada lock y cancelación de la confirmación irreversible sin borrado.
 
 La batería completa pasó 20/20. Bash syntax y ShellCheck pasaron en el proyecto; shfmt pasó en archivos de producción modificados y pruebas con estilo homogéneo. `tests/uninstall.sh` conserva formato histórico mixto. `./install.sh --check` pasó sin modificar el sistema. No se ejecutó instalación real ni desinstalación real.
+
+
+## Actualización — M04/M06 del encabezado (02/11/2026)
+
+- M04: `system_xray_autostart` distingue `Habilitado`, `Deshabilitado`, `Enmascarado`, `No aplica (...)`, `No configurado` y `No disponible`. La prueba cubre explícitamente el estado `disabled`, además de `enabled` y unidad ausente.
+- M06: se añaden fallbacks para fallos y salidas vacías de cada proveedor de encabezado. La prueba inyecta fallos uno por uno en seis proveedores (IP, versión, servicio, autostart, perfil y fecha/hora) y luego simultáneamente; confirma que el menú principal conserva sus opciones.
+- Resultado final del 02/11/2026: suite completa 20/20 PASS; `bash -n`, ShellCheck y shfmt PASS; `./install.sh --check` PASS sin modificaciones. `tests/port_collisions.sh` tuvo un fallo intermitente en una primera ejecución integral; pasó tres ejecuciones aisladas consecutivas y volvió a pasar en la suite completa. Xray permaneció inactive.
