@@ -113,6 +113,31 @@ if uninstall_service_guard >/dev/null 2>&1; then
 else
 	printf 'SKIP: protección de servicio bloqueó el flujo en este host (comportamiento conservador).\n'
 fi
+
+# La presencia de una unidad detenida permite retirar solo Manager, pero no Xray-core.
+systemctl() {
+	case "${1:-}" in
+	is-active) return 1 ;;
+	list-unit-files)
+		if [[ "${2:-}" == xray.service ]]; then printf 'xray.service disabled\n'; return 0; fi
+		return 1
+		;;
+	*) return 1 ;;
+	esac
+}
+uninstall_service_guard active
+uninstall_service_guard manager
+if uninstall_service_guard xray >/dev/null 2>&1 || uninstall_service_guard both >/dev/null 2>&1; then
+	printf 'ERROR: se permitió retirar Xray-core mientras la unidad seguía instalada.\n' >&2
+	exit 1
+fi
+systemctl() { [[ "${1:-}" == is-active ]]; }
+if uninstall_service_guard manager >/dev/null 2>&1; then
+	printf 'ERROR: se permitió retirar Manager mientras Xray estaba activo.\n' >&2
+	exit 1
+fi
+unset -f systemctl
+
 # Desinstalación real solo sobre fixtures temporales: manager + conservar datos.
 mkdir -p "$APP_ROOT"
 printf 'manager fixture\n' >"$APP_ROOT/marker.txt"
@@ -154,6 +179,39 @@ archive="$(find "$UNINSTALL_BACKUP_STAGING_DIR" -name pre-uninstall.tar.gz -type
 tar -tzf "$archive" | grep -Fq "${APP_ROOT#/}/marker.txt"
 grep -Fq 'Se conservan todos los datos persistentes' "$tmp/uninstall-flow.out"
 grep -Fq 'Exportación externa: No solicitada' "$tmp/uninstall-flow.out"
+
+# Manager-only can be removed while the inactive Xray unit remains installed.
+source "$ROOT/modules/uninstall.sh"
+systemctl() {
+	case "${1:-}" in
+	is-active) return 1 ;;
+	list-unit-files)
+		if [[ "${2:-}" == xray.service ]]; then printf 'xray.service disabled\n'; return 0; fi
+		return 1
+		;;
+	*) return 1 ;;
+	esac
+}
+mkdir -p "$APP_ROOT"
+printf 'manager-only fixture\n' >"$APP_ROOT/manager-only.marker"
+UNINSTALL_LOCK="$tmp/uninstall-manager-with-unit.lock"
+UNINSTALL_DATA_LOCK="$tmp/integrity-manager-with-unit.lock"
+UNINSTALL_XRAY_LOCK="$tmp/xray-manager-with-unit.lock"
+UNINSTALL_BACKUP_STAGING_DIR="$tmp/staging-manager-with-unit"
+confirm_count=0
+ui_confirm() { ((confirm_count += 1)); [[ "$confirm_count" -eq 2 ]]; }
+printf '2\n1\n' | uninstall_menu_action >"$tmp/uninstall-manager-with-unit.out"
+[[ ! -e "$APP_ROOT" ]]
+[[ "$(systemctl list-unit-files xray.service --no-legend)" == 'xray.service disabled' ]]
+# The Xray-only scope must remain blocked while the unit is present.
+mkdir -p "$XRAY_ADMIN_BIN"
+printf 'xray fixture remains\n' >"$XRAY_ADMIN_BIN/marker"
+if uninstall_menu_action xray >"$tmp/uninstall-xray-with-unit.out" 2>&1; then
+	printf 'ERROR: se permitió retirar Xray-core con la unidad instalada.\n' >&2
+	exit 1
+fi
+[[ -f "$XRAY_ADMIN_BIN/marker" ]]
+unset -f systemctl
 
 # Un instalador/gestor de dependencias activo bloquea el inicio de desinstalación.
 mkdir -p "$APP_ROOT"
@@ -265,6 +323,57 @@ grep -Fq "Registros técnicos y logs" "$tmp/uninstall-export-success.out"
 [[ ! -e "$APP_ROOT" ]]
 archive="$(find "$UNINSTALL_BACKUP_STAGING_DIR" -name pre-uninstall.tar.gz -type f -print -quit)"
 [[ -n "$archive" && -s "$archive" ]]
+
+# U11: verificar todos los campos del resumen antes de la confirmación irreversible.
+preview_root="$tmp/preview-complete"
+APP_ROOT="$preview_root/app"
+XRAY_ADMIN_BIN="$preview_root/xray/bin/xray"
+XRAY_ADMIN_DATA="$preview_root/xray/share"
+XRAY_MANAGER_USERS_DIR="$preview_root/manager-data/users"
+XRAY_MANAGER_LIFECYCLE_LOCK="$preview_root/lifecycle.lock"
+UNINSTALL_LOCK="$preview_root/uninstall.lock"
+UNINSTALL_DATA_LOCK="$preview_root/integrity.lock"
+UNINSTALL_XRAY_LOCK="$preview_root/xray.lock"
+UNINSTALL_BACKUP_STAGING_DIR="$preview_root/staging"
+mkdir -p "$APP_ROOT" "$XRAY_ADMIN_BIN" "$XRAY_ADMIN_DATA" "$XRAY_MANAGER_USERS_DIR" "$preview_root"
+printf 'app preview fixture\n' >"$APP_ROOT/marker"
+printf 'xray preview fixture\n' >"$XRAY_ADMIN_BIN/marker"
+printf 'geodata preview fixture\n' >"$XRAY_ADMIN_DATA/marker"
+printf 'user preview fixture\n' >"$XRAY_MANAGER_USERS_DIR/marker"
+uninstall_service_guard() { return 0; }
+uninstall_export_remote() { [[ -s "$1" && "$2" == 'backup-user@backup.example:/srv/backups' ]]; }
+confirm_count=0
+preview_confirm_log="$preview_root/confirm-prompts.log"
+ui_confirm() {
+    printf '%s\n' "$1" >>"$preview_confirm_log"
+    ((confirm_count += 1))
+    return 0
+}
+printf '3\n3\nusers\nbackup-user@backup.example:/srv/backups\n' | uninstall_menu_action >"$tmp/uninstall-preview-complete.out"
+preview_out="$tmp/uninstall-preview-complete.out"
+grep -Fq 'Alcance: both' "$preview_out"
+grep -Fq 'Política: selected' "$preview_out"
+grep -Fq 'Seleccionadas para eliminar: users' "$preview_out"
+grep -Fq 'Rutas que se eliminarán:' "$preview_out"
+grep -Fq "$APP_ROOT" "$preview_out"
+grep -Fq "$XRAY_ADMIN_BIN" "$preview_out"
+grep -Fq "$XRAY_ADMIN_DATA" "$preview_out"
+grep -Fq "$XRAY_MANAGER_USERS_DIR" "$preview_out"
+grep -Fq 'Respaldo temporal verificado:' "$preview_out"
+grep -Fq 'Exportación externa: Verificada por SHA-256 en backup-user@backup.example:/srv/backups' "$preview_out"
+grep -Fq 'Las unidades systemd no se eliminan ni modifican' "$preview_out"
+grep -Fq 'Historial de versiones/modificaciones de perfiles' "$preview_out"
+grep -Fq 'Historial de validaciones' "$preview_out"
+grep -Fq 'Informes de restauración' "$preview_out"
+grep -Fq 'Registros técnicos y logs' "$preview_out"
+grep -Fq '¿Deseas crear un respaldo previo de las rutas seleccionadas?' "$preview_confirm_log"
+grep -Fq '¿Deseas exportar el respaldo a otro servidor por SSH/SCP?' "$preview_confirm_log"
+grep -Fq 'CONFIRMACIÓN FINAL: ¿ejecutar esta operación irreversible?' "$preview_confirm_log"
+[[ "$(wc -l <"$preview_confirm_log")" -eq 3 ]]
+! grep -Fq '\n  - Historial' "$preview_out"
+[[ ! -e "$APP_ROOT" && ! -e "$XRAY_ADMIN_BIN" && ! -e "$XRAY_ADMIN_DATA" && ! -e "$XRAY_MANAGER_USERS_DIR" ]]
+preview_archive="$(find "$UNINSTALL_BACKUP_STAGING_DIR" -name pre-uninstall.tar.gz -type f -print -quit)"
+[[ -n "$preview_archive" && "$(stat -c %a "$preview_archive")" == 600 ]]
 
 # La desinstalación debe respetar el lock real de administración Xray.
 source "$ROOT/modules/uninstall.sh"
@@ -467,4 +576,4 @@ run_keep_scope() {
 run_keep_scope 1 xray
 run_keep_scope 3 both
 
-printf 'OK: cobertura individual de nueve categorías y política all en Xray-core, Manager y ambos.\n'
+printf 'OK: cobertura individual de nueve categorías, resumen U11 completo y política all en Xray-core, Manager y ambos.\n'
