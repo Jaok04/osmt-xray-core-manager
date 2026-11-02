@@ -205,7 +205,7 @@ El propietario aceptó las correcciones adicionales de seguridad. La etapa P4 de
 
 ## VMess — continuidad de implementación (2026-11-02)
 
-El diseño VMess y su implementación fueron autorizados por el propietario, incluyendo HTTPUpgrade-TLS. El trabajo local en `/opt/xray-manager` contiene modelo, adaptador Xray-core 26.10.31, asistente, preparación de configuración, almacén cifrado y pruebas. La matriz de 14 modalidades pasó `xray run -test`; suite completa `tests/*.sh`: 36/36 PASS. También pasaron `bash -n`, `py_compile`, ShellCheck a nivel warning, shfmt de archivos VMess nuevos, `install.sh --check` y `git diff --check`. Los cambios no están publicados ni aceptados como módulo completo; consultar `docs/PUNTO_CONTROL_ACTUAL.md`.
+El diseño VMess y su implementación fueron autorizados por el propietario, incluyendo HTTPUpgrade-TLS. El trabajo local en `/opt/xray-manager` contiene modelo, adaptador Xray-core 26.10.31, asistente, preparación de configuración, almacén cifrado y pruebas. La matriz de 14 modalidades pasó `xray run -test`; suite completa `tests/*.sh`: 36/36 PASS. También pasaron `bash -n`, `py_compile`, ShellCheck a nivel warning, shfmt de archivos VMess nuevos, `install.sh --check` y `git diff --check`. Los cambios están publicados y sincronizados en la rama autorizada, pero no aceptados como módulo completo; consultar `docs/PUNTO_CONTROL_ACTUAL.md`.
 
 ### Separación del almacenamiento VMess
 
@@ -217,4 +217,4 @@ Los usuarios VMess todavía se introducen manualmente; la asociación con identi
 
 ### Estado de publicación
 
-Los cambios VMess y de aislamiento siguen locales y no publicados. No hacer commit/push ni sincronización hasta la autorización posterior solicitada al propietario. No tocar runtime, firewall, puertos ni servicio. La Etapa 2 continúa abierta.
+La implementación VMess y el aislamiento fueron publicados tras autorización expresa: commit `c20277c04b9417f2e22b285891fb3f348ea8e8f4` en `design/user-identity-association-v1`. La Deploy Key SSH de la VPS es de solo lectura; la publicación se efectuó mediante GitHub API y luego la VPS hizo fetch/reset para igualar HEAD local/remoto. No se modificó la rama `main`. No tocar runtime, firewall, puertos ni servicio. La Etapa 2 continúa abierta.

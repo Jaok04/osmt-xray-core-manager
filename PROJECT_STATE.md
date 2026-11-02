@@ -24,7 +24,7 @@
 
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: design/user-identity-association-v1.
-- HEAD remoto verificado el 2026-11-02: 402a74174b7a0d97aca41de54dab6564886088df.
+- HEAD remoto publicado el 2026-11-02: c20277c04b9417f2e22b285891fb3f348ea8e8f4.
 - La rama main no se modificó.
 - Verificar siempre el HEAD remoto antes de nuevas tareas.
 
@@ -34,7 +34,7 @@
 - La ruta contiene un checkout Git válido.
 - El remoto origin apunta al repositorio oficial mediante el alias SSH dedicado.
 - La Deploy Key SSH configurada es de solo lectura; las publicaciones se realizan mediante el mecanismo GitHub API autorizado.
-- En el corte actual, HEAD local y remoto coinciden en 402a74174b7a0d97aca41de54dab6564886088df; el árbol de trabajo contiene la implementación VMess y actualizaciones documentales locales sin publicar.
+- En el corte actual, HEAD local y remoto coinciden en c20277c04b9417f2e22b285891fb3f348ea8e8f4; el árbol de trabajo está sincronizado y limpio.
 - No se deben asumir estados históricos de sincronización: comprobar rama, HEAD, remoto, árbol y git status en cada sesión.
 
 ## 3. Etapas
@@ -190,7 +190,7 @@ El propietario respondió afirmativamente a la solicitud de aceptación de las c
 
 ## 10. VMess — implementación local en curso (2026-11-02)
 
-El propietario aprobó el diseño VMess y autorizó su implementación, incluida VMess-HTTPUpgrade-TLS. En la VPS existen modelo neutral, adaptador Xray 26.10.31, asistente, preparación segura, almacén versionado aislado y pruebas. Las 14 combinaciones pasaron `xray run -test`; suite completa `tests/*.sh`: 36/36 PASS. `bash -n`, `py_compile`, ShellCheck (nivel warning), shfmt, `install.sh --check` y `git diff --check`: PASS. Estos cambios siguen locales, no publicados ni aceptados como módulo completo.
+El propietario aprobó el diseño VMess y autorizó su implementación, incluida VMess-HTTPUpgrade-TLS. En la VPS existen modelo neutral, adaptador Xray 26.10.31, asistente, preparación segura, almacén versionado aislado y pruebas. Las 14 combinaciones pasaron `xray run -test`; suite completa `tests/*.sh`: 36/36 PASS. `bash -n`, `py_compile`, ShellCheck (nivel warning), shfmt, `install.sh --check` y `git diff --check`: PASS. Los cambios están publicados y sincronizados en la rama autorizada; no se han aceptado como módulo completo.
 
 El almacén VMess está separado en `/var/lib/xray-manager/vmess/configurations/` y `/var/lib/xray-manager/vmess/secrets/`. El catálogo común usa `vmess_configuration_ref`, `vmess_secret_ref`, `vmess_configuration_revision` y `vmess_configuration_schema_version`; no usa los campos VLESS. P4 VLESS permanece intacta y no incluye el almacén VMess. Restaurar un backup VLESS antiguo puede revertir el catálogo compartido y quitar entradas VMess, aunque no modifica sus archivos aislados; el almacén podría quedar con huérfanos. Backup/restore VMess requiere diseño posterior.
 

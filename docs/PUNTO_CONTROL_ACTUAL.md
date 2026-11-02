@@ -9,8 +9,8 @@
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: `design/user-identity-association-v1`.
 - Proyecto VPS: `/opt/xray-manager`.
-- HEAD local y remoto comprobados: `402a74174b7a0d97aca41de54dab6564886088df`.
-- El árbol de trabajo contiene cambios VMess locales y no publicados.
+- HEAD local y remoto comprobados: `c20277c04b9417f2e22b285891fb3f348ea8e8f4`.
+- El árbol de trabajo está limpio y sincronizado con GitHub.
 - Documentación normativa: `/root/Xray_Manager_Documentacion_Final_2026-10-31`.
 - Etapa 1: aceptada formalmente.
 - Etapa 2: en desarrollo y abierta.
@@ -63,7 +63,15 @@ La persistencia usa `vmess_configuration_ref`, `vmess_secret_ref`, `vmess_config
 - `tests/uninstall.sh`: PASS tras añadir el directorio VMess a la categoría de datos de conexiones.
 - `bash -n` de scripts Bash, `py_compile scripts/*.py`, ShellCheck a nivel warning de archivos afectados, shfmt de archivos VMess nuevos, `install.sh --check` y `git diff --check`: PASS.
 
-## 6. Siguiente paso
+## 6. Publicación confirmada
+
+- Commit: `c20277c04b9417f2e22b285891fb3f348ea8e8f4` (`feat(vmess): implement isolated connection management`).
+- Repositorio: `Jaok04/xray-core-manager`.
+- Rama: `design/user-identity-association-v1`.
+- GitHub API confirmó el commit y la actualización de la referencia; la VPS hizo fetch y reset al mismo SHA.
+- HEAD local/remoto coinciden y `git status` está limpio.
+
+## 7. Siguiente paso
 
 1. Completar revisión integral del diff y verificar que no haya cambios fuera del alcance autorizado.
 2. Confirmar que el árbol local no contiene artefactos temporales generados por las pruebas.
