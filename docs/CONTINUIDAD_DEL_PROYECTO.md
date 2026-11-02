@@ -135,3 +135,10 @@ No se cierra la tarea mientras falte la actualización documental o la sincroniz
 ## 8. Regla de recuperación
 
 Si los archivos de continuidad contradicen el código o la documentación normativa, no elijas una versión por intuición. Informa la contradicción, conserva ambas evidencias y pide una decisión cuando afecte requisitos o comportamiento.
+
+
+## Diseño de persistencia segura VLESS — 2026-11-02
+
+La propuesta arquitectónica está en docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md. No se ha implementado ni se ha generado clave maestra. El diseño propone AES-256-GCM, clave local root-only, separación de opciones/secretos, referencias externas para claves TLS y recuperación fail-closed. Requiere aprobación expresa antes de implementar.
+
+Hallazgo de seguridad: el asistente actual entrega la clave privada REALITY a jq mediante --arg; corregir esa exposición a argumentos de proceso será requisito de la fase de implementación.

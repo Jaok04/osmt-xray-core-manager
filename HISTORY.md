@@ -106,3 +106,11 @@ La especificación Etapa 2 revisión 1.3 quedó registrada como APROBADA. Define
 - Verificación actual: todos los tests/*.sh PASS; bash -n, ShellCheck de módulos modificados y git diff --check PASS; shfmt aplicado al nuevo módulo.
 - Commit publicado: 29459ce3abd6961238182631a28738633b7cc8d0 (feat: integrate VLESS draft configuration assistant).
 - Push confirmado en design/user-identity-association-v1; SHA local/remoto idénticos y árbol de trabajo limpio.
+
+
+## 2026-11-02 — Diseño de persistencia segura VLESS
+
+- Se auditó el almacenamiento actual: directorios root-only 0700, JSON 0600, bloqueo compartido y json_store_commit atómico.
+- Se detectó que el asistente VLESS actual pasa la clave privada REALITY a jq mediante --arg, con posible exposición temporal en argumentos del proceso.
+- Se creó docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md con propuesta AES-256-GCM, separación de datos, clave maestra local, flujos atómicos, recuperación fail-closed, pruebas y fases P1–P4.
+- Diseño pendiente de aprobación; no se modificó el código ni se generó clave maestra/secretos persistentes.

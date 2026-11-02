@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-02
-**Tarea:** integración inicial del asistente de creación VLESS con el modelo neutral y el adaptador Xray-core 26.10.31.
-**Estado:** implementación, pruebas, publicación y sincronización verificadas.
+**Tarea:** diseño de persistencia segura para configuraciones VLESS y secretos.
+**Estado:** diseño técnico documentado; pendiente aprobación antes de implementar.
 
 ## 1. Entorno
 
@@ -56,19 +56,21 @@ Advertencias observadas en Xray 26.10.31: WebSocket y gRPC están marcados como 
 
 ## 5. Límites y trabajo pendiente
 
-- La configuración no se persiste: falta diseñar almacenamiento seguro de opciones/secretos y su ciclo de vida.
+- La configuración no se persiste: el diseño de almacenamiento seguro está documentado y pendiente de aprobación.
 - No se implementó aplicación transaccional, activación runtime, apertura de puertos, firewall ni rollback.
 - No se hizo prueba de conectividad extremo a extremo.
 - VMess-HTTPUpgrade-TLS sigue pendiente de validación.
 - Faltan modelos/asistentes/validadores para VMess, Trojan, Shadowsocks, Hysteria2 y protocolos opcionales.
 - Falta integrar asociaciones WireGuard con identidades/Etapa 3.
 
-## 6. Próxima acción
+## 6. Diseño de persistencia segura
 
-1. Revisar diff completo y permisos.
-2. Actualizar continuidad (este documento, PROJECT_STATE.md, HISTORY.md y CONTINUIDAD_DEL_PROYECTO.md).
-3. Crear commit en design/user-identity-association-v1.
-4. Commit 29459ce3abd6961238182631a28738633b7cc8d0 publicado en la rama autorizada.
-5. SHA local y remoto coinciden; árbol de trabajo limpio.
+Se documentó la propuesta en docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md: AES-256-GCM mediante python3-cryptography, clave maestra local root-only, separación de datos, referencias TLS externas, escritura atómica, bloqueo compartido, material descifrado solo bajo /run y recuperación fail-closed. La implementación se divide en P1 infraestructura criptográfica, P2 almacén, P3 integración del asistente y P4 backup/restore.
+
+Hallazgo de seguridad: la clave privada REALITY se pasa actualmente a jq por --arg; debe eliminarse antes de persistir secretos. No se ha instalado dependencia, creado clave maestra ni cambiado el asistente durante este corte.
+
+## 7. Próxima acción
+
+Solicitar aprobación de las cinco decisiones del apartado 11 de docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md. Solo después implementar P1–P4 por incrementos, manteniendo borradores y sin activar runtime.
 
 No modificar main. No declarar Etapa 2 completada.

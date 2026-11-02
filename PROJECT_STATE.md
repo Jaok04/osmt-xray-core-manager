@@ -98,8 +98,10 @@ La especificación funcional aprobada es revisión 1.3, aprobada el 30/10/2026. 
 - La creación/edición no aplica una configuración al runtime.
 - No se abren puertos ni se modifica firewall por el flujo de conexiones.
 - El asistente VLESS ya está integrado con el modelo/adaptador para construir una previsualización temporal; cuando está disponible, incorpora usuarios VLESS en estado borrador.
-- El asistente solicita opciones por modalidad y ejecuta xray run -test con el binario fijado si está disponible. Los secretos se introducen con entrada oculta y los archivos temporales se eliminan al terminar.
+- El asistente solicita opciones por modalidad y ejecuta xray run -test con el binario fijado si está disponible. Los archivos temporales se eliminan al terminar.
+- Hallazgo de seguridad pendiente de corregir: la clave privada REALITY se pasa a jq mediante --arg; la implementación de persistencia debe eliminar esa exposición en argumentos de proceso.
 - No hay persistencia segura de configuración ni secretos; no se aplica runtime ni se activa el servicio.
+- Diseño propuesto de persistencia: docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md. Pendiente de aprobación; no se ha instalado ninguna dependencia ni generado clave maestra.
 - La validación xray run -test no prueba conectividad extremo a extremo.
 - La prueba documentada de nueve modalidades corresponde al entorno y binario Xray 26.10.31; no asumir que se reejecutó en cada sesión.
 
@@ -116,7 +118,7 @@ Se documentan resultados PASS para navegación, administración de borradores, V
 ## 7. Pendientes principales de Etapa 2
 
 - Resolver y formalizar las discrepancias normativas indicadas.
-- Completar la persistencia segura de opciones de configuración VLESS y el almacenamiento de secretos; actualmente el asistente genera y valida solo una previsualización temporal.
+- Diseñar y aprobar persistencia segura de opciones VLESS y secretos. Propuesta documentada en docs/DISEÑO_PERSISTENCIA_SEGURA_VLESS.md; aún no implementada.
 - Definir e implementar modelos, generadores y validadores para VMess, Trojan, Shadowsocks e Hysteria2.
 - Implementar administradores específicos SOCKS, HTTP Proxy y WireGuard.
 - Integrar peers WireGuard con las identidades/asociaciones de Etapa 3.
