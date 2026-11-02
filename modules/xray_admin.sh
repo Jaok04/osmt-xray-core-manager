@@ -8,7 +8,9 @@ XRAY_ADMIN_RELEASE_BASE="https://github.com/XTLS/Xray-core/releases/download"
 : "${XRAY_ADMIN_DATA:=${XRAY_DATA_DIR:-/usr/local/share/xray}}"
 XRAY_ADMIN_CACHE="${XRAY_MANAGER_CACHE_DIR:-/var/cache/xray-manager}/releases"
 XRAY_ADMIN_BACKUPS="${XRAY_MANAGER_BACKUP_DIR:-/var/backups/xray-manager}/xray-core"
-XRAY_ADMIN_LOCK="/run/lock/xray-manager-xray-admin.lock"
+XRAY_ADMIN_LOCK="${XRAY_ADMIN_LOCK:-/run/lock/xray-manager-xray-admin.lock}"
+# shellcheck disable=SC1091
+. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../lib" && pwd)/operation_lock.sh"
 
 xray_admin_require_root() {
 	if [[ "${EUID}" -ne 0 ]]; then
@@ -55,8 +57,12 @@ xray_admin_release_asset_name() {
 }
 
 xray_admin_lock() {
-	install -d -m 700 /run/lock || return 1
-	if [[ -L "$XRAY_ADMIN_LOCK" || -d "$XRAY_ADMIN_LOCK" || -L "$(dirname "$XRAY_ADMIN_LOCK")" ]]; then
+	local lock_dir
+	lock_dir="$(dirname "$XRAY_ADMIN_LOCK")"
+	if [[ ! -d "$lock_dir" ]]; then
+		install -d -o root -g root -m 700 "$lock_dir" || return 1
+	fi
+	if [[ ! -d "$lock_dir" || -L "$lock_dir" || -L "$XRAY_ADMIN_LOCK" || -d "$XRAY_ADMIN_LOCK" ]]; then
 		printf 'La ruta del bloqueo de Xray-core no es segura.
 ' >&2
 		return 1
@@ -80,6 +86,10 @@ xray_admin_unlock() {
 		flock -u "$XRAY_ADMIN_LOCK_FD" 2>/dev/null || true
 		exec {XRAY_ADMIN_LOCK_FD}>&-
 		unset XRAY_ADMIN_LOCK_FD
+	fi
+	if [[ "${XRAY_ADMIN_LIFECYCLE_FD:-}" =~ ^[0-9]+$ ]]; then
+		manager_lock_release "$XRAY_ADMIN_LIFECYCLE_FD"
+		unset XRAY_ADMIN_LIFECYCLE_FD
 	fi
 }
 
@@ -251,7 +261,19 @@ xray_admin_install_version() {
 		;;
 	esac
 	case "$mode" in install | update | reinstall | repair) ;; *) return 2 ;; esac
-	xray_admin_lock || return 1
+	if [[ "${XRAY_MANAGER_LIFECYCLE_LOCK_HELD:-0}" != 1 ]]; then
+		if ! manager_lock_acquire "${XRAY_MANAGER_LIFECYCLE_LOCK:-/run/lock/xray-manager-lifecycle.lock}" XRAY_ADMIN_LIFECYCLE_FD; then
+			printf 'Hay otra operación de ciclo de vida del Manager en curso.\n' >&2
+			return 1
+		fi
+	fi
+	if ! xray_admin_lock; then
+		if [[ "${XRAY_ADMIN_LIFECYCLE_FD:-}" =~ ^[0-9]+$ ]]; then
+			manager_lock_release "$XRAY_ADMIN_LIFECYCLE_FD"
+			unset XRAY_ADMIN_LIFECYCLE_FD
+		fi
+		return 1
+	fi
 
 	if [[ -e "$XRAY_ADMIN_BIN" || -L "$XRAY_ADMIN_BIN" ]]; then
 		if [[ -L "$XRAY_ADMIN_BIN" ]]; then
