@@ -1,3 +1,9 @@
+### Precisión del estado de Etapa 3
+
+Durante la revisión final se ajustaron PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md para no describir Etapa 3 como inexistente: el árbol contiene módulos, pruebas y documentación de usuarios/identidades/asociaciones (incluidos users_v2). Su estado formal y cobertura requieren una auditoría específica.
+- PROJECT_STATE.md: commits 716d833c25041d4f82da16196baa8317e60522f1 y afeb9a9e84ce82685ad3cf0a08fadfd278245142.
+- docs/PUNTO_CONTROL_ACTUAL.md: commit a482f1759695c1468dcac61dd102df9b50d81e82.
+
 ### Actualización de cierre del registro de continuidad
 
 Se actualizó el estado final de los documentos PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md para indicar que el conjunto fue publicado y verificado:
