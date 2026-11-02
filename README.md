@@ -15,7 +15,7 @@ La implementación incluye menú principal, catálogo de modalidades, gestión l
 - Catálogo de modalidades de conexión y registro local de conexiones en estado `draft`.
 - Gestión de identidades y asociaciones de usuarios.
 - Persistencia JSON atómica, bloqueo compartido, protección de asociaciones y pruebas de concurrencia.
-- Bloqueo compartido de ciclo de vida para coordinar instalador, administración Xray, dependencias, preferencias y desinstalación; esta última protege respaldo y borrado con locks de integridad y Xray.
+- Bloqueo compartido de ciclo de vida para coordinar instalador, administración Xray, dependencias, preferencias, acciones de systemd y desinstalación; esta última protege respaldo y borrado con locks de integridad y Xray.
 - Instalación/actualización de Xray-core desde releases oficiales fijados, con verificación SHA-256 y rollback.
 - Preparación del usuario/grupo de sistema `xray`, rutas, permisos y unidad `xray.service` endurecida.
 - Consulta del estado, diagnóstico y registros de systemd.
