@@ -23,6 +23,20 @@ No instala ni inicia Xray-core. Tampoco abre puertos ni modifica firewall, SSH o
 - `docs/`: documentación de arquitectura y decisiones.
 - `tests/`: pruebas automatizadas.
 
+## Instalación inicial del Manager
+
+En Ubuntu/Debian, desde el directorio del proyecto:
+
+```bash
+sudo ./install.sh --check
+sudo ./install.sh --install
+/opt/xray-manager/bin/xray-manager
+```
+
+El instalador instala únicamente dependencias faltantes (sin ejecutar apt upgrade), despliega el código en /opt/xray-manager, prepara las rutas persistentes y aplica permisos restrictivos. Instala Xray-core desde el release oficial fijado, verifica SHA-256 y prepara el usuario/grupo de sistema xray y la unidad xray.service. Conserva datos/preferencias existentes y se niega a sobrescribir destinos de código o unidades ajenas.
+
+La unidad incluye validación de configuración previa al arranque y endurecimiento de systemd. La instalación no habilita ni inicia el servicio: queda detenido y deshabilitado hasta que se genere y valide una configuración. El registro de usuarios tampoco se inicializa ni migra automáticamente.
+
 ## Uso
 
 Como root:
