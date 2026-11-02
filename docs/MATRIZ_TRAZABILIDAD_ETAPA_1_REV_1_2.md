@@ -19,9 +19,9 @@
 | M01 | Opciones [1]–[9] y [0] con etiquetas aprobadas | modules/main_menu.sh: menu_main | tests/stage1_menu.sh | IMPLEMENTADO |
 | M02 | Encabezado con IP pública si disponible | lib/system.sh: system_public_ip, system_show_header | tests/stage1_header.sh simula fallo de curl y verifica el fallback No disponible | IMPLEMENTADO |
 | M03 | Encabezado con versión Xray y estado de servicio | lib/system.sh: system_xray_version, system_xray_service_state, system_show_header | tests/stage1_menu.sh y pruebas de información | IMPLEMENTADO |
-| M04 | Encabezado con autostart y perfil activo | lib/system.sh: system_xray_autostart, system_active_profile, system_show_header | tests/stage1_header.sh cubre perfil ausente/presente y servicio no configurado/habilitado; falta el estado explícito deshabilitado | PARCIAL |
+| M04 | Encabezado con autostart y perfil activo | lib/system.sh: system_xray_autostart, system_active_profile, system_show_header | tests/stage1_header.sh verifica unidad no configurada, autostart habilitado/deshabilitado y perfil ausente/presente; clasifica masked y estados static/indirect/generated/transient | IMPLEMENTADO |
 | M05 | Fecha/hora local | lib/system.sh: system_show_header; preferencias APP_TIMEZONE/APP_DATE_FORMAT/APP_TIME_FORMAT | tests/stage1_settings.sh | IMPLEMENTADO |
-| M06 | Datos no disponibles no deben impedir mostrar el menú | Funciones system_* con fallback y menú desacoplado de los datos | Falta prueba de fallo independiente para cada proveedor de datos | PARCIAL |
+| M06 | Datos no disponibles no deben impedir mostrar el menú | system_show_header aísla fallos y salidas vacías de IP, versión, estado, autostart, perfil y fecha/hora con fallback No disponible | tests/stage1_header.sh inyecta fallo independiente en cada proveedor y falla todos simultáneamente al entrar a menu_main; verifica que [1] y [0] siguen visibles | IMPLEMENTADO |
 | M07 | Al volver al menú principal, actualizar el encabezado | system_show_header se ejecuta dentro del bucle de menu_main | tests/stage1_menu.sh verifica el renderizado inicial y los retornos desde las nueve entradas principales | IMPLEMENTADO |
 | M08 | Salir requiere confirmación | menu_main, opción 0 | tests/stage1_menu.sh | IMPLEMENTADO |
 
@@ -78,7 +78,7 @@
 Bloqueos para certificación:
 
 1. Validar instalación Xray, dependencias, preferencias y desinstalación en un VPS desechable.
-2. Resolver las discrepancias pendientes de encabezado (M04/M06) y cotejar el resto de la matriz contra la especificación aprobada.
+2. Cotejar el resto de la matriz contra la especificación aprobada y resolver cualquier discrepancia restante.
 
 Las pruebas actuales son fixtures/mocks. No se ejecutaron apt-get, instalación real de Xray, desinstalación real, cambios de systemd, firewall, SSH ni migraciones de datos reales.
 
@@ -87,7 +87,7 @@ Las pruebas actuales son fixtures/mocks. No se ejecutaron apt-get, instalación 
 
 Se incorporaron pruebas automatizadas adicionales:
 
-- `tests/stage1_header.sh`: fallo de consulta IP, binario Xray ausente/presente, unidad systemd no configurada, perfil ausente y renderizado completo del encabezado.
+- `tests/stage1_header.sh`: fallo de consulta IP, binario Xray ausente/presente, unidad systemd no configurada, autostart habilitado/deshabilitado, perfil ausente/presente, fallo independiente de seis proveedores y fallo simultáneo de todos al entrar al menú principal.
 - `tests/stage1_menu.sh`: refresco del encabezado al regresar desde las nueve entradas principales; matriz de 11 rutas internas `[0] Volver` y cinco fallos de acciones inyectados en conexiones, usuarios legacy/v2, preferencias, dependencias, administración Xray y gestión del servicio.
 - `tests/uninstall.sh`: contención de locks, aviso/cancelación de certificados y cancelación de la confirmación final; prueba individual de nueve categorías y políticas keep/all/selected en los tres alcances, incluida la limpieza de respaldos.
 - `lib/operation_lock.sh`: bloqueo exclusivo no bloqueante, permisos 600, liberación y rechazo de componentes simbólicos.
@@ -108,4 +108,12 @@ La desinstalación adquiere, antes de crear el respaldo, los bloqueos de ciclo d
 
 Se añadieron pruebas de contención para instalador, dependencias, preferencias, administración Xray y desinstalación, además de cancelaciones explícitas en el menú Xray y en la confirmación irreversible final. `A11`, `U14` y `N03` pasan a IMPLEMENTADO dentro del alcance de operaciones internas del Manager.
 
-La Etapa 1 permanece PARCIAL: continúan pendientes M04/M06 y las validaciones operativas reales de instalación, dependencias, preferencias y desinstalación en VPS desechable.
+M04 y M06 pasan a IMPLEMENTADO con cobertura automatizada de estados y fallos independientes. La Etapa 1 permanece PARCIAL por las validaciones operativas reales de instalación, dependencias, preferencias y desinstalación en VPS desechable y el cotejo final del resto de la matriz.
+
+
+## Actualización — encabezado M04/M06 (02/11/2026)
+
+- M04: `system_xray_autostart` distingue expresamente `enabled`/`enabled-runtime`, `disabled`, `masked`/`masked-runtime` y estados no aplicables (`static`, `indirect`, `generated`, `transient`). La prueba cubre los estados no configurado, habilitado y deshabilitado.
+- M06: `system_show_header` aísla el fallo o salida vacía de cada proveedor: IP pública, versión Xray, estado del servicio, autostart, perfil y fecha/hora. Cada campo adopta `No disponible` sin cancelar el resto del encabezado.
+- La prueba provoca cada fallo por separado y después todos simultáneamente; confirma que `menu_main` sigue mostrando sus opciones y permite salir normalmente.
+- M04 y M06 pasan a IMPLEMENTADO. La Etapa 1 sigue PARCIAL por las validaciones operativas reales y el cotejo final de los demás requisitos.
