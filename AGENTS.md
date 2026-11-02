@@ -49,8 +49,9 @@ No uses pull, checkout, reset, clean, rebase, push ni sincronizaciones destructi
 - No inventes parámetros, credenciales, rutas, certificados, claves, valores predeterminados ni compatibilidades.
 - Conserva los cambios locales y remotos no reconciliados. Ante una divergencia, detente y presenta opciones.
 - Ejecuta las pruebas pertinentes después de cada cambio.
-- Actualiza documentación técnica y continuidad cuando cambie el estado.
-- Publica únicamente en la rama autorizada y verifica el SHA/archivos remotos resultantes.
+- Todo cambio implementado y aprobado debe cerrar con la actualización de los documentos de continuidad afectados y la sincronización del repositorio con GitHub. Esta es una regla permanente, no una tarea opcional ni dependiente de que el usuario vuelva a recordarla.
+- La aprobación del alcance autoriza a completar ese ciclo de documentación, commit y publicación en la rama autorizada; si el usuario limita expresamente la publicación, respeta esa limitación y deja constancia de lo pendiente.
+- Publica únicamente en la rama autorizada y verifica el SHA y los archivos remotos resultantes.
 - No declares sincronizada la VPS si no se ha comparado el contenido real.
 - No realices cambios de firewall, SSH, red, systemd o runtime sin autorización explícita y validación del alcance.
 
@@ -64,15 +65,14 @@ No uses pull, checkout, reset, clean, rebase, push ni sincronizaciones destructi
 
 Una prueba histórica documentada no equivale a una prueba ejecutada en la sesión actual. Indica fecha y evidencia. No llames completada o aceptada una etapa por inferencia.
 
-## 6. Particularidad de la VPS
+## 6. Estado y tratamiento de Git en la VPS
 
-La ruta /opt/xray-manager puede ser una copia de trabajo sin metadatos Git. En el estado registrado el 02/11/2026 no tenía directorio .git. Si continúa así:
-- trata la VPS como árbol de archivos, no como checkout;
-- no ejecutes comandos Git dentro de ella;
-- no atribuyas branch/commit a sus archivos;
-- compara archivos mediante hashes y contenido con GitHub;
-- preserva cualquier archivo que difiera;
-- documenta exactamente cómo se transfirieron y verificaron los cambios.
+Al 02/11/2026, /opt/xray-manager ya contiene metadatos Git y está configurado como checkout del repositorio oficial:
+- remoto: git@github.com:Jaok04/xray-core-manager.git;
+- rama autorizada: design/user-identity-association-v1;
+- último HEAD verificado: 0c58f4adb95513fdd5e9a7d849bc2f34e896160b.
+
+Este SHA es una referencia histórica, no una verdad permanente. En cada sesión consulta el estado real. Si .git existe, inspecciona branch, status, remotos, HEAD y divergencia antes de operar. Si no existe, trata la ruta como árbol de archivos sin identidad Git verificable y aplica el procedimiento de comparación por contenido y SHA-256. Nunca presupongas que el checkout está limpio ni reemplaces cambios divergentes sin resolverlos.
 
 ## 7. Reglas técnicas
 
@@ -85,19 +85,21 @@ La ruta /opt/xray-manager puede ser una copia de trabajo sin metadatos Git. En e
 - Conserva los límites y advertencias de las pruebas, incluidos mocks, fixtures y entornos desechables.
 - No expongas secretos en logs, informes o commits.
 
-## 8. Protocolo de cierre de cada trabajo
+## 8. Protocolo obligatorio de cierre de cada cambio aprobado
 
-Al terminar una tarea autorizada:
-1. Actualiza PROJECT_STATE.md con el estado real.
-2. Actualiza docs/PUNTO_CONTROL_ACTUAL.md con el punto exacto de reanudación.
-3. Registra hitos, decisiones y publicaciones en HISTORY.md.
-4. Actualiza docs/CONTINUIDAD_DEL_PROYECTO.md si cambia el procedimiento.
-5. Actualiza la documentación técnica afectada.
-6. Ejecuta y registra las pruebas aplicables.
-7. Publica en la rama autorizada, si el usuario autorizó la publicación.
-8. Verifica el commit y los archivos de GitHub.
-9. Compara la VPS y deja constancia de su sincronización o divergencia.
-10. Indica qué se implementó, verificó, publicó, sincronizó y qué queda pendiente.
+Todo cambio implementado y aprobado debe completar este ciclo antes de considerarse cerrado:
+1. Ejecuta y registra las pruebas pertinentes; identifica expresamente las no ejecutadas y sus motivos.
+2. Actualiza PROJECT_STATE.md con el estado real cuando el cambio afecte el estado, alcance o avance del proyecto.
+3. Actualiza docs/PUNTO_CONTROL_ACTUAL.md para que indique el punto exacto de reanudación y la siguiente acción permitida.
+4. Añade a HISTORY.md una entrada cronológica con el cambio, la decisión/aprobación pertinente, las verificaciones y el commit resultante. Nunca borres el historial anterior.
+5. Actualiza docs/CONTINUIDAD_DEL_PROYECTO.md si cambia el procedimiento de recuperación, trabajo o publicación.
+6. Actualiza AGENTS.md solo cuando cambie una regla permanente aprobada.
+7. Actualiza la documentación técnica afectada para que describa el comportamiento real. No modifiques la documentación normativa salvo aprobación expresa.
+8. Revisa el diff completo y ejecuta controles de formato/sintaxis pertinentes.
+9. Crea un commit descriptivo y publica los cambios aprobados en design/user-identity-association-v1. No publiques en main. Si el usuario ha impuesto una restricción explícita de publicación, no la ignores: documenta el pendiente.
+10. Verifica el SHA remoto, los archivos publicados y que la rama no tenga divergencias inesperadas.
+11. Comprueba que el checkout de /opt/xray-manager corresponde al estado publicado y queda limpio; si no coincide, resuelve o documenta la divergencia sin sobrescribirla.
+12. Informa por separado qué quedó IMPLEMENTADO, VERIFICADO, ACEPTADO, PUBLICADO y SINCRONIZADO.
 
 No marques una tarea como cerrada si falta un criterio de aceptación.
 

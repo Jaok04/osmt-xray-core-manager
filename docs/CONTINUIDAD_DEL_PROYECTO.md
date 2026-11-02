@@ -107,16 +107,30 @@ La VPS puede no ser un checkout Git. En ese caso, la sincronización debe hacers
 
 Si la VPS tiene .git en una sesión futura, no asumir que está limpia. Inspeccionar branch, status, remotos y commits antes de cualquier operación.
 
-## 7. Actualización de continuidad
+## 7. Actualización obligatoria tras cada cambio aprobado
 
-Al cerrar una implementación, auditoría o decisión:
-- PROJECT_STATE.md: actualizar la fotografía global.
-- docs/PUNTO_CONTROL_ACTUAL.md: actualizar la ubicación exacta del trabajo, estado y siguiente acción autorizada.
-- HISTORY.md: añadir un registro cronológico, sin borrar entradas anteriores.
-- AGENTS.md: cambiar solo cuando se apruebe una regla permanente nueva.
-- Este documento: cambiar solo si cambia el procedimiento de continuidad.
+Todo cambio que se implemente y sea aprobado debe cerrar con la actualización de la continuidad y la sincronización del repositorio con GitHub. Es una regla permanente: no debe depender de que el propietario vuelva a solicitarla en cada tarea. La aprobación del alcance incluye completar el ciclo de documentación, commit y publicación en la rama autorizada, salvo que el propietario indique expresamente una restricción distinta.
 
-La documentación normativa solo se modifica mediante decisión/aprobación del propietario. La documentación técnica debe reflejar lo que realmente hace el código.
+Al cerrar cada cambio aprobado:
+- **PROJECT_STATE.md:** actualizar la fotografía global cuando cambie el estado, alcance o avance del proyecto.
+- **docs/PUNTO_CONTROL_ACTUAL.md:** actualizar el punto exacto de reanudación, lo completado, lo pendiente y la siguiente acción permitida.
+- **HISTORY.md:** añadir una entrada cronológica con el cambio, la aprobación/decisión, pruebas y commit; nunca borrar entradas anteriores.
+- **AGENTS.md:** actualizar únicamente cuando se apruebe o cambie una regla permanente para agentes.
+- **Este documento:** actualizar únicamente cuando cambie el procedimiento de continuidad, recuperación o sincronización.
+- **Documentación técnica afectada:** mantenerla alineada con el comportamiento real del código.
+- **Documentación normativa:** no modificarla sin aprobación expresa del propietario.
+
+### 7.1 Verificación y publicación
+
+1. Ejecutar las pruebas pertinentes y registrar resultados reales. Anotar las pruebas no ejecutadas y el motivo; nunca presentar pruebas históricas como recién ejecutadas.
+2. Revisar el diff completo y validar formato, sintaxis y consistencia de los documentos.
+3. Crear un commit descriptivo con los cambios aprobados.
+4. Publicar en `design/user-identity-association-v1`; nunca en `main`.
+5. Verificar el SHA remoto y los archivos publicados.
+6. Verificar que `/opt/xray-manager` coincide con el estado publicado y queda limpio. Si hay divergencias, detener la sincronización destructiva, preservar los cambios y documentar el bloqueo.
+7. Informar por separado los estados IMPLEMENTADO, VERIFICADO, ACEPTADO, PUBLICADO y SINCRONIZADO.
+
+No se cierra la tarea mientras falte la actualización documental o la sincronización, excepto cuando exista una restricción explícita o un bloqueo técnico; en ese caso, el pendiente debe quedar claramente registrado.
 
 ## 8. Regla de recuperación
 
