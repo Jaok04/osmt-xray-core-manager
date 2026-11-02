@@ -1,6 +1,6 @@
 # P4 — Backup y recuperación segura de persistencia VLESS
 
-**Estado del incremento:** implementación inicial en desarrollo; no declarar P4 completada hasta cerrar los pendientes de esta página.
+**Estado del incremento:** corrección del journal implementada y verificada; P4 continúa abierta hasta completar la auditoría de límites/permisos y recibir aceptación formal.
 **Fecha:** 2026-11-02
 **Rama autorizada:** `design/user-identity-association-v1`
 
@@ -58,7 +58,7 @@ El paquete debe copiarse fuera de la VPS. La contraseña debe ser independiente 
 - conserva los directorios previos con nombres `.vless-*-before-*` como respaldo preventivo;
 - no aplica runtime ni modifica firewall/puertos.
 
-Los dos directorios no pueden sustituirse con una única operación atómica global. Se escribe `RESTORE_IN_PROGRESS.json` antes de los renombrados. Si el proceso recibe una excepción ordinaria, intenta rollback; si hay una interrupción abrupta del proceso/host, el journal permanece y las siguientes restauraciones fallan de forma cerrada. La opción `recover-restore` permite resolver el journal con rollback conservador: devuelve los directorios previos a sus rutas y conserva los artefactos parciales/staging en cuarentena, sin borrarlos. Si las rutas no concuerdan o el estado es ambiguo, falla sin modificar datos y exige intervención manual.
+Los dos directorios no pueden sustituirse con una única operación atómica global. Se escribe `RESTORE_IN_PROGRESS.json` antes de los renombrados. El journal nuevo registra `had_connections` y `had_secrets`, es decir, si cada directorio existía antes de iniciar. Cada renombrado de publicación/respaldo fuerza (`fsync`) el directorio padre antes de avanzar la fase del journal. Si el proceso recibe una excepción ordinaria, intenta rollback; si hay una interrupción abrupta del proceso/host, el journal permanece y las siguientes restauraciones fallan de forma cerrada. La opción `recover-restore` resuelve el journal con rollback conservador: devuelve los directorios previos a sus rutas y conserva los artefactos parciales/staging en cuarentena, sin borrarlos. También admite journals anteriores que no contenían `had_*`, infiriendo la existencia previa a partir de los nombres `old`, `stage` y `live`. Si las rutas no concuerdan, faltan respaldos requeridos o el estado es ambiguo, falla sin eliminar el journal y exige intervención manual.
 
 `recover-key` valida el paquete, exige la contraseña, comprueba que el backup de datos emparejado existe y autentica todos sus blobs con la clave recuperada. Solo instala la clave si no existe una clave local; nunca sobrescribe una clave existente. Después se debe ejecutar la restauración de datos asociada.
 
@@ -69,21 +69,20 @@ El menú de conexiones incorpora `Backup y recuperación VLESS`, con opciones pa
 ## 6. Pruebas ejecutadas
 
 - `tests/vless_backup.sh`: backup aislado, manifiesto, hash y rechazo de manipulación.
-- `tests/vless_backup_restore.sh`: restauración aislada de un catálogo de prueba, confirmación y conservación de los datos previos.
-- `tests/vless_backup_recovery.sh`: creación del paquete scrypt/AES-GCM, asociación por `backup_id`, rechazo de contraseña incorrecta y recuperación autenticada de la clave en un directorio temporal.
-- `tests/vless_backup_journal.sh`: rollback conservador de un journal interrumpido y preservación de artefactos parciales en cuarentena.
-- `tests/vless_backup_restore_secrets.sh`: restore end-to-end de blobs cifrados REALITY/TLS, autenticación AES-GCM y verificación de la dependencia TLS externa declarada; PASS el 2026-11-02.
-- Suite completa `tests/*.sh`: 30/30 PASS el 2026-11-02.
-- `install.sh --check`, `bash -n`, ShellCheck, `py_compile` y `git diff --check`: PASS.
+- `tests/vless_backup_restore.sh`: restauración aislada de catálogo, confirmación y conservación de datos previos.
+- `tests/vless_backup_recovery.sh`: paquete scrypt/AES-GCM, asociación por `backup_id`, contraseña incorrecta/correcta y recuperación autenticada en directorio temporal.
+- `tests/vless_backup_journal.sh`: rollback de journal nuevo y legacy, destino originalmente ausente, preservación de originales y cuarentena.
+- `tests/vless_backup_journal_crash_matrix.sh`: 32 interrupciones abruptas con `os._exit`, cubriendo las escrituras de fases del journal, renombrados de originales, publicación de ambos directorios y las cuatro combinaciones de existencia previa de `connections/` y `secrets/`.
+- `tests/vless_backup_restore_secrets.sh`: restore end-to-end de blobs REALITY/TLS, autenticación AES-GCM y certificado TLS externo referenciado pero ausente; la restauración conserva la dependencia, no la incorpora al backup y no activa runtime.
+- Suite completa final `tests/*.sh`: 31/31 PASS (2026-11-02, después de la corrección del journal).
+- `install.sh --check`, `bash -n` de todos los `.sh`, `py_compile`, ShellCheck y `shfmt` de las pruebas modificadas, y `git diff --check`: PASS en la revisión final.
 
-La recuperación scrypt/AES-GCM con contraseña incorrecta/correcta pasa en un entorno temporal. La restauración integral de blobs TLS/REALITY ya tiene una prueba end-to-end PASS; aún debe probarse el comportamiento cuando falta el certificado externo referenciado. No se ha creado ni leído la clave maestra real de esta VPS; tampoco se ha creado un backup operativo.
+No se creó ni leyó la clave maestra real de esta VPS; tampoco se creó un backup operativo. Todas las pruebas de restauración se ejecutaron en directorios temporales.
 
 ## 7. Pendientes antes de aceptación
 
-1. Probar cortes abruptos simulados en cada frontera de renombrado y journal, incluidas combinaciones sin directorio previo de secretos.
-2. Completar la prueba del comportamiento ante certificado TLS externo ausente; la restauración end-to-end de blobs REALITY/TLS ya está cubierta por `tests/vless_backup_restore_secrets.sh`.
-3. Auditar límites de extracción/compresión y todos los permisos de staging/publicación.
-4. Ejecutar suite completa tras la revisión final y `install.sh --check`.
-5. Actualizar documentación de continuidad y registrar evidencia exacta.
+1. Auditar límites agregados de extracción/descompresión, memoria, número/tamaño total de archivos y rutas de staging/publicación; ajustar límites si la auditoría lo requiere.
+2. Revisar el diff completo y repetir la suite completa después de la revisión final.
+3. Obtener aceptación formal del propietario.
 
 **No forma parte de P4:** activar conexiones, aplicar configuración Xray, iniciar/reiniciar Xray, abrir puertos, cambiar firewall, ni desplegar certificados externos.

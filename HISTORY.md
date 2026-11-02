@@ -27,6 +27,15 @@ Verificación posterior: los cinco archivos se recuperaron desde GitHub y se com
 
 # Historial de hitos — Xray Core Manager
 
+## 2026-11-02 — Corrección de recuperación P4 y pruebas de interrupción
+
+Se corrigió el journal de `scripts/vless_backup.py` para registrar si existían los directorios de conexiones y secretos antes de la restauración. Se añadieron `fsync` de directorios padres después de los renombrados y recuperación conservadora compatible con journals legacy sin esos campos.
+
+Evidencia focal: 32 interrupciones abruptas simuladas cubriendo fases/renombrados y las cuatro combinaciones de existencia previa; pruebas de journal legacy/nuevo; restauración TLS/REALITY con certificado externo referenciado pero ausente. Todas PASS. Suite completa final tras la última edición: 31/31 PASS; `install.sh --check`, sintaxis Bash, `py_compile`, ShellCheck, shfmt y `git diff --check`: PASS.
+
+P4 continúa ABIERTA: resta auditar límites agregados de extracción/descompresión, memoria, rutas y permisos de staging/publicación, y recibir aceptación formal. No se creó backup operativo ni se accedió a la clave maestra real.
+
+
 Este archivo registra hitos, decisiones y publicaciones relevantes. Es cronológico: añade entradas nuevas al principio y no borres el historial anterior. Para el estado actual consulta PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md.
 
 ## 2026-11-02 — Creación del sistema de continuidad

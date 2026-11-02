@@ -38,6 +38,10 @@ finally:
     sys.stdin=old_stdin; builtins.input=old_input
 assert result['status']=='restored' and result['connections']==2
 assert len(result['external_tls_dependencies'])==1
+external_cert=pathlib.Path(result['external_tls_dependencies'][0]['certificate_path'])
+assert result['external_tls_dependencies'][0]['included'] is False
+assert not external_cert.exists(), 'la prueba requiere que el certificado TLS externo esté ausente'
+assert result['runtime_activated'] is False, 'la restauración no debe activar Xray'
 for cid,plain in plaintexts.items():
     blob=(secret_dir/f'{cid}.r000001.bin').read_bytes()
     assert vless_crypto.decrypt_secret(blob,key,cid,1)==plain

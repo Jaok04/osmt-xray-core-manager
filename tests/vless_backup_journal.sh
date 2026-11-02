@@ -24,5 +24,25 @@ assert (base/'connections.json').read_text()=='ORIGINAL\n'
 assert not (backup/'RESTORE_IN_PROGRESS.json').exists()
 assert list(root.glob('.vless-connections-interrupted-*'))
 assert list(root.glob('.vless-connections-stage-interrupted-*'))
-print('PASS: journal de restauración interrumpida, rollback conservador y cuarentena preservada')
+assert secrets.is_dir(), 'el directorio de secretos original que aún no se había renombrado debe conservarse'
+
+# Compatibilidad con un journal antiguo sin had_connections/had_secrets cuando
+# ninguno de los dos directorios existía antes y la interrupción fue temprana.
+legacy_root=root/'legacy-absent'; legacy_root.mkdir(mode=0o700)
+legacy_backup=legacy_root/'backups'; legacy_backup.mkdir(mode=0o700)
+legacy_base=legacy_root/'connections'; legacy_secrets=legacy_root/'secrets'
+legacy_stage_base=legacy_root/'.vless-restore-connections.legacy'
+legacy_stage_secrets=legacy_root/'.vless-restore-secrets.legacy'
+legacy_stage_base.mkdir(mode=0o700); legacy_stage_secrets.mkdir(mode=0o700)
+legacy_old_base=legacy_root/'.vless-connections-before-legacy'
+legacy_old_secrets=legacy_root/'.vless-secrets-before-legacy'
+legacy_record={'format':'xray-manager-restore-journal','backup_id':'legacy-backup','stage_connections':str(legacy_stage_base),'stage_secrets':str(legacy_stage_secrets),'live_connections':str(legacy_base),'live_secrets':str(legacy_secrets),'old_connections':str(legacy_old_base),'old_secrets':str(legacy_old_secrets),'phase':'connections_saved'}
+mod.atomic_file(legacy_backup/'RESTORE_IN_PROGRESS.json',(json.dumps(legacy_record)+'\n').encode())
+mod.LIFECYCLE=legacy_root/'lifecycle.lock'; mod.INTEGRITY=legacy_root/'integrity.lock'
+legacy_result=mod.recover_interrupted_restore(types.SimpleNamespace(backups=str(legacy_backup),base=str(legacy_base),secrets_dir=str(legacy_secrets)))
+assert legacy_result['status']=='rolled_back'
+assert not legacy_base.exists() and not legacy_secrets.exists()
+assert not (legacy_backup/'RESTORE_IN_PROGRESS.json').exists()
+assert list(legacy_root.glob('.vless-connections-stage-interrupted-*'))
+print('PASS: journal legacy/nuevo, rollback conservador, destino originalmente ausente y cuarentena preservada')
 PY

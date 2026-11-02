@@ -158,15 +158,13 @@ P2: `tests/*.sh` 25/25 PASS; pruebas específicas incluyen interrupción antes d
 
 Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM de claves privadas TLS/REALITY, referencias versionadas en catálogo/configuración y recuperación temporal para validación. Nuevo `scripts/vless_prepare_config.py`; `vless_config_store.py` ahora admite secretos cifrados y auditoría de blobs. El asistente deja de pasar la clave REALITY como `jq --arg` y usa `--rawfile`. Pruebas focales REALITY/TLS/recuperación PASS. Borradores no se activan. Suite completa `tests/*.sh` 25/25 PASS; `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt y `git diff --check` PASS. Clave maestra real de VPS no generada. P3 aún no publicada en GitHub.
 
-### P4 — backup y recuperación segura VLESS (implementación inicial)
+### P4 — backup y recuperación segura VLESS (corrección del journal implementada; aceptación pendiente)
 
-Se añadieron `scripts/vless_backup.py`, `modules/vless_backup.sh`, `tests/vless_backup.sh`, `tests/vless_backup_restore.sh`, `tests/vless_backup_recovery.sh`, `tests/vless_backup_journal.sh` y `docs/P4_BACKUP_RECUPERACION_VLESS.md`. El menú de conexiones ahora expone Backup y recuperación VLESS.
+El subsistema incluye backup de datos/manifiesto/SHA256SUMS, paquete de recuperación scrypt + AES-256-GCM, verificación, restauración confirmada y menú. La corrección registra `had_connections`/`had_secrets`, fuerza `fsync` de los directorios padres tras renombrados y recupera journals nuevos y legacy de forma conservadora.
 
-El backup de datos separa blobs cifrados y clave maestra; genera manifiesto y SHA256SUMS; verifica rutas, tipos, tamaños y hashes. El paquete de recuperación cifra la clave con scrypt + AES-256-GCM, contraseña interactiva y asociación por backup_id. La restauración exige confirmación, autentica blobs con la clave, prepara staging, conserva directorios previos y usa un journal y ofrece `recover-restore` para rollback conservador tras una interrupción abrupta, preservando artefactos parciales en cuarentena.
+`tests/vless_backup_journal_crash_matrix.sh` cubre 32 interrupciones abruptas en fases y renombrados, con las cuatro combinaciones de existencia previa de ambos directorios. `tests/vless_backup_journal.sh` cubre journal legacy y destino originalmente ausente. `tests/vless_backup_restore_secrets.sh` comprueba restore de blobs REALITY/TLS con el certificado TLS externo ausente, dependencia declarada y runtime inactivo. La suite completa final tras esta revisión registró 31/31 PASS; `install.sh --check`, sintaxis Bash, `py_compile`, ShellCheck, shfmt y `git diff --check` PASS. No se creó backup operativo ni se accedió a la clave maestra real.
 
-Pruebas focales de backup/verificación/manipulación, restauración aislada sin secretos, recuperación de clave scrypt/AES-GCM y rollback de journal PASS. Suite completa `tests/*.sh`: 29/29 PASS en la revisión previa a la última incorporación de journal; repetir tras el cierre de esta revisión. Sintaxis, ShellCheck de módulos, py_compile y diff PASS. No se creó backup operativo ni se accedió a la clave maestra real.
-
-**P4 no está completada ni aceptada:** la prueba end-to-end `tests/vless_backup_restore_secrets.sh` ya existe y se ejecutó PASS el 2026-11-02 para blobs REALITY/TLS, autenticación AES-GCM y dependencia TLS externa documentada. Sigue pendiente la matriz de cortes abruptos en todas las fronteras del journal y la aceptación integral. La recuperación scrypt/AES-GCM con contraseña incorrecta/correcta también tiene prueba aislada. Ver `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
+**P4 sigue ABIERTA:** queda auditar límites agregados de extracción/descompresión, memoria, rutas y permisos de staging/publicación, además de la aceptación formal. Ver `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
 
 
 ## Incidente de pruebas — EOF en menús y crecimiento de /tmp (2026-11-02)

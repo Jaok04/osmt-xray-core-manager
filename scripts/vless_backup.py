@@ -77,6 +77,11 @@ def unlock_pair(fds):
     for fd in reversed(fds):
         fcntl.flock(fd, fcntl.LOCK_UN); os.close(fd)
 
+def fsync_dir(path: Path):
+    fd=os.open(path,os.O_RDONLY|getattr(os,'O_DIRECTORY',0))
+    try: os.fsync(fd)
+    finally: os.close(fd)
+
 def utc_now():
     return datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
 
@@ -381,17 +386,22 @@ def restore_data(args):
         print(f"Se restaurarán {manifest['connection_count']} conexiones desde {manifest['backup_id']}.")
         answer=input('Esto reemplazará el almacén VLESS actual. Escribe RESTAURAR para continuar: ')
         if answer!='RESTAURAR': raise BackupError('restauración cancelada')
+        if base.exists(): safe_dir(base)
+        if secrets_dir.exists(): safe_dir(secrets_dir)
+        had_connections=base.exists(); had_secrets=secrets_dir.exists()
         stamp=utc_now(); old_base=base_parent/f'.vless-connections-before-{stamp}'; old_secrets=secrets_parent/f'.vless-secrets-before-{stamp}'
         journal=root/'RESTORE_IN_PROGRESS.json'
-        journal_data={'format':'xray-manager-restore-journal','backup_id':manifest['backup_id'],'stage_connections':str(stage_base),'stage_secrets':str(stage_secrets),'live_connections':str(base),'live_secrets':str(secrets_dir),'old_connections':str(old_base),'old_secrets':str(old_secrets),'phase':'prepared'}
+        journal_data={'format':'xray-manager-restore-journal','backup_id':manifest['backup_id'],'stage_connections':str(stage_base),'stage_secrets':str(stage_secrets),'live_connections':str(base),'live_secrets':str(secrets_dir),'old_connections':str(old_base),'old_secrets':str(old_secrets),'had_connections':had_connections,'had_secrets':had_secrets,'phase':'prepared'}
         atomic_file(journal,(json.dumps(journal_data,sort_keys=True,indent=2)+'\n').encode())
-        if base.exists(): os.replace(base,old_base); swapped.append(('old_base',old_base,base))
+        if had_connections:
+            os.replace(base,old_base); fsync_dir(base_parent); swapped.append(('old_base',old_base,base))
         journal_data['phase']='connections_saved'; atomic_file(journal,(json.dumps(journal_data,sort_keys=True,indent=2)+'\n').encode())
-        if secrets_dir.exists(): os.replace(secrets_dir,old_secrets); swapped.append(('old_secrets',old_secrets,secrets_dir))
+        if had_secrets:
+            os.replace(secrets_dir,old_secrets); fsync_dir(secrets_parent); swapped.append(('old_secrets',old_secrets,secrets_dir))
         journal_data['phase']='old_data_saved'; atomic_file(journal,(json.dumps(journal_data,sort_keys=True,indent=2)+'\n').encode())
-        os.replace(stage_base,base); stage_base=None; swapped.append(('new_base',base,None))
+        os.replace(stage_base,base); stage_base=None; fsync_dir(base_parent); swapped.append(('new_base',base,None))
         journal_data['phase']='connections_published'; atomic_file(journal,(json.dumps(journal_data,sort_keys=True,indent=2)+'\n').encode())
-        os.replace(stage_secrets,secrets_dir); stage_secrets=None; swapped.append(('new_secrets',secrets_dir,None))
+        os.replace(stage_secrets,secrets_dir); stage_secrets=None; fsync_dir(secrets_parent); swapped.append(('new_secrets',secrets_dir,None))
         journal_data['phase']='published'; atomic_file(journal,(json.dumps(journal_data,sort_keys=True,indent=2)+'\n').encode())
         # Validación final de referencias y autenticación sobre rutas publicadas.
         _,revs,certs=inspect_catalog(base)
@@ -420,7 +430,9 @@ def restore_data(args):
                 os.replace(old_secrets,secrets_dir)
             elif secrets_dir.exists() and root.joinpath('RESTORE_IN_PROGRESS.json').exists():
                 failed=secrets_parent/f'.vless-secrets-failed-{utc_now()}'; os.replace(secrets_dir,failed)
-            if root.joinpath('RESTORE_IN_PROGRESS.json').exists(): root.joinpath('RESTORE_IN_PROGRESS.json').unlink()
+            if root.joinpath('RESTORE_IN_PROGRESS.json').exists():
+                fsync_dir(base_parent); fsync_dir(secrets_parent)
+                root.joinpath('RESTORE_IN_PROGRESS.json').unlink(); fsync_dir(root)
         except Exception:
             pass
         raise
@@ -441,13 +453,17 @@ def recover_interrupted_restore(args):
     try:
         safe_regular(journal,64*1024)
         record=json.loads(journal.read_text(encoding='utf-8'))
-        required={'format','backup_id','stage_connections','stage_secrets','live_connections','live_secrets','old_connections','old_secrets','phase'}
-        if not isinstance(record,dict) or set(record)!=required or record.get('format')!='xray-manager-restore-journal':
+        required={'format','backup_id','stage_connections','stage_secrets','live_connections','live_secrets','old_connections','old_secrets','had_connections','had_secrets','phase'}
+        legacy_required=required-{'had_connections','had_secrets'}
+        if not isinstance(record,dict) or set(record) not in (required,legacy_required) or record.get('format')!='xray-manager-restore-journal':
             raise BackupError('journal de restauración inválido; no se modificó ningún dato')
+        legacy=set(record)==legacy_required
         if record['live_connections']!=str(base) or record['live_secrets']!=str(secrets_dir):
             raise BackupError('journal no corresponde a las rutas actuales; requiere intervención manual')
         if record['phase'] not in ('prepared','connections_saved','old_data_saved','connections_published','published'):
             raise BackupError('fase del journal desconocida; requiere intervención manual')
+        if not legacy and (type(record['had_connections']) is not bool or type(record['had_secrets']) is not bool):
+            raise BackupError('indicadores de estado previo inválidos; journal conservado')
         base_parent=base.parent; secrets_parent=secrets_dir.parent
         old_base=Path(record['old_connections']); old_secrets=Path(record['old_secrets'])
         stage_base=Path(record['stage_connections']); stage_secrets=Path(record['stage_secrets'])
@@ -459,31 +475,46 @@ def recover_interrupted_restore(args):
             raise BackupError('ruta staging de conexiones no permitida')
         if stage_secrets.parent!=secrets_parent or not stage_secrets.name.startswith('.vless-restore-secrets.'):
             raise BackupError('ruta staging de secretos no permitida')
-        # Todas las rutas existentes deben ser directorios reales root-only.
         for path in (base,secrets_dir,old_base,old_secrets,stage_base,stage_secrets):
             if path.exists() or path.is_symlink(): safe_dir(path)
-        # Si existe el original renombrado, el live actual es el candidato nuevo:
-        # se conserva en cuarentena y se devuelve el original a su ubicación.
-        for live,old,label in ((base,old_base,'connections'),(secrets_dir,old_secrets,'secrets')):
+        # Journals antiguos no registraban had_*; se infiere conservadoramente
+        # usando los nombres staging/old y el destino, cuyo estado refleja cada rename.
+        if legacy:
+            had_connections = old_base.exists() or (stage_base.exists() and base.exists())
+            had_secrets = old_secrets.exists() or (stage_secrets.exists() and secrets_dir.exists())
+        else:
+            had_connections = record['had_connections']; had_secrets = record['had_secrets']
+        for live,old,stage,label,had_original in (
+                (base,old_base,stage_base,'connections',had_connections),
+                (secrets_dir,old_secrets,stage_secrets,'secrets',had_secrets),
+        ):
             if old.exists():
+                if not had_original:
+                    raise BackupError(f'existe respaldo previo inesperado para {label}; journal conservado')
                 if live.exists():
-                    failed=live.parent/f'.vless-{label}-interrupted-{utc_now()}'
-                    os.replace(live,failed)
+                    failed=live.parent/f'.vless-{label}-interrupted-{utc_now()}'; os.replace(live,failed)
                 os.replace(old,live)
-            elif live.exists() and record['phase'] in ('connections_published','published'):
-                # No había directorio previo (p. ej. secrets); el directorio nuevo
-                # se conserva en cuarentena en lugar de borrarlo.
-                failed=live.parent/f'.vless-{label}-interrupted-{utc_now()}'
-                os.replace(live,failed)
-            elif not live.exists() and record['phase']!='prepared':
-                raise BackupError(f'falta el directorio {label} y no existe copia previa; journal conservado')
+            elif had_original:
+                # Si el staging ya se publicó, el original debería seguir en
+                # old. Si el staging sigue allí, el original debe seguir live.
+                if not live.exists() or not stage.exists():
+                    raise BackupError(f'falta el respaldo previo de {label}; journal conservado')
+            else:
+                if live.exists() and stage.exists():
+                    raise BackupError(f'estado ambiguo para {label}; journal conservado')
+                if not live.exists() and not stage.exists():
+                    raise BackupError(f'falta el directorio nuevo y su staging de {label}; journal conservado')
+                if live.exists():
+                    failed=live.parent/f'.vless-{label}-interrupted-{utc_now()}'; os.replace(live,failed)
+        fsync_dir(base_parent); fsync_dir(secrets_parent)
         # El staging no publicado se conserva en cuarentena para inspección.
         for stage,label in ((stage_base,'connections-stage'),(stage_secrets,'secrets-stage')):
             if stage.exists():
                 quarantine=stage.parent/f'.vless-{label}-interrupted-{utc_now()}'
                 os.replace(stage,quarantine)
+        fsync_dir(base_parent); fsync_dir(secrets_parent)
         journal.unlink()
-        dfd=os.open(root,os.O_RDONLY|getattr(os,'O_DIRECTORY',0)); os.fsync(dfd); os.close(dfd)
+        fsync_dir(root)
         return {'status':'rolled_back','backup_id':record['backup_id'],'journal_removed':True,'quarantined_artifacts_preserved':True,'runtime_activated':False}
     finally: unlock_pair(fds)
 

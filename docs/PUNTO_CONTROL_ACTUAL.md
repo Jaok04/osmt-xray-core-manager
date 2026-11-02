@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-02
-**Tarea:** P1 infraestructura criptográfica para persistencia segura VLESS.
-**Estado:** P1 implementada y verificada; P2 pendiente.
+**Tarea actual:** Etapa 2 — P4, backup y recuperación segura VLESS.
+**Estado actual:** corrección del journal implementada y verificada; suite completa 31/31 PASS; P4 abierta por auditoría de límites/permisos y aceptación formal.
 
 ## 1. Entorno
 
@@ -118,3 +118,14 @@ Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM 
 ## 2026-11-02 — autenticación SSH y reconciliación de referencias
 
 Se creó una clave SSH Ed25519 dedicada a este repositorio y se registró en GitHub como Deploy Key de solo lectura (sin permiso de escritura). La VPS autentica correctamente mediante el alias `github.com-xray-core-manager`; la URL `origin` de este checkout usa ese alias y los demás repositorios/configuraciones SSH no se modificaron. `git fetch` se completó correctamente. Se verificó que el árbol local anterior y el árbol remoto eran idénticos (`b6ed32ae1ff32dc4c8c6953a2d1eec48159b1d08`), por lo que se movió únicamente la referencia local de la rama con comprobación del SHA anterior, sin resetear ni sobrescribir archivos. Estado final: `design/user-identity-association-v1` y `origin/design/user-identity-association-v1` apuntan a `5ade7feda328ff4a4f6796fd7ab263237b40dbfa`; working tree limpio y sin divergencia. Las notas anteriores sobre falta de autenticación y refs obsoletas quedan superadas por esta verificación. La clave SSH anterior se conservó intacta. La Deploy Key nueva es de solo lectura; las publicaciones futuras deberán seguir usando el mecanismo autorizado de GitHub API u otro acceso de escritura expresamente configurado.
+
+
+## Punto de control actualizado — P4 journal/restore (2026-11-02)
+
+- Se corrigió `scripts/vless_backup.py`: el journal registra la existencia previa de `connections/` y `secrets/`; cada rename relevante fuerza `fsync` del directorio padre antes de avanzar la fase. `recover-restore` acepta journals nuevos y legacy y preserva los artefactos parciales en cuarentena.
+- `tests/vless_backup_journal_crash_matrix.sh`: 32 interrupciones abruptas simuladas mediante `os._exit`, con cobertura de fases, renombrados, publicación y las cuatro combinaciones de existencia previa. PASS.
+- `tests/vless_backup_journal.sh`: rollback de journal legacy/nuevo y destino originalmente ausente. PASS.
+- `tests/vless_backup_restore.sh` y `tests/vless_backup_restore_secrets.sh`: PASS; el último prueba el certificado TLS externo referenciado pero ausente, sin impedir la restauración ni activar runtime.
+- Suite completa final `tests/*.sh`: 31/31 PASS. `install.sh --check`, sintaxis Bash de todos los scripts, `py_compile`, ShellCheck/shfmt de pruebas modificadas y `git diff --check`: PASS.
+- No se creó backup operativo ni se accedió a la clave maestra real. No se modificaron runtime, firewall ni certificados.
+- **Pendiente:** auditar límites agregados de extracción/descompresión, memoria, rutas y permisos de staging/publicación; repetir suite final; obtener aceptación formal. P4 NO está aceptada ni completada.
