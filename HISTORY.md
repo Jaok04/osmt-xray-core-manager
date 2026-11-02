@@ -220,3 +220,17 @@ La regla quedó desarrollada en `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.m
 - P4 VLESS y `scripts/vless_backup.py` permanecen sin cambios. El backup VLESS no incluye los archivos VMess; como el catálogo es compartido, restaurar una instantánea VLESS antigua puede revertir registros VMess, dejando sus archivos aislados huérfanos. Se documenta como limitación; backup/restore VMess queda pendiente de diseño.
 - Usuarios VMess aún se introducen manualmente; integración con identidades globales queda para Etapa 3. No se tocó runtime, firewall, puertos ni servicio.
 - Los cambios fueron publicados y sincronizados tras autorización expresa: commit `c20277c04b9417f2e22b285891fb3f348ea8e8f4` en `design/user-identity-association-v1`. La escritura remota se realizó mediante GitHub API porque la Deploy Key SSH de la VPS es de solo lectura. La VPS hizo fetch/reset y quedó con HEAD idéntico al remoto.
+
+## 2026-11-02 — Auditoría final y endurecimiento VMess antes de Trojan
+
+- Por instrucción del propietario se completó el trabajo necesario para cerrar técnicamente VMess antes de avanzar a Trojan.
+- La auditoría contrastó la especificación normativa Etapa 2 revisión 1.3 y el diseño VMess aprobado. No se modificó la documentación normativa ni la matriz aprobada.
+- Se detectó una brecha en pruebas negativas TLS: Xray-core 26.10.31 acepta el archivo de configuración con `xray run -test` aunque el certificado PEM esté malformado. El adaptador VMess ahora valida el certificado PEM y la clave privada PEM, compara sus claves públicas con `cryptography`, rechaza archivos no regulares y symlinks, y falla de forma cerrada sin imprimir material sensible. No se añadió dependencia nueva: `python3-cryptography` ya es requisito del proyecto.
+- `tests/xray_vmess_integration.sh` ahora cubre 14/14 combinaciones positivas y rechazos de TLS ausente, symlink, PEM inválido, par certificado/clave no coincidente, REALITY incompleto, short ID y clave inválidos, campos incompatibles y combinación modelo/seguridad incorrecta.
+- `tests/stage2_navigation.sh` recorre individualmente las 14 combinaciones VMess y las selecciones de seguridad de gRPC, HTTPUpgrade, XHTTP y mKCP.
+- PASS: suite completa `tests/*.sh` 36/36 scripts; `bash -n`; `python3 -m py_compile scripts/*.py`; `./install.sh --check`; ShellCheck (`-S warning`); shfmt; `git diff --check`.
+- Xray-core verificado: v26.10.31, build `a4a3dff`. Las 14 combinaciones pasan `xray run -test`; esto no equivale a conectividad extremo a extremo.
+- No se modificaron P4 VLESS ni `scripts/vless_backup.py`; tampoco runtime, servicio, firewall, puertos ni certificados desplegados. Las pruebas usan temporales.
+- VMess queda IMPLEMENTADO y VERIFICADO. La aceptación formal del propietario sigue pendiente. Backup/restore VMess continúa como diseño separado; identidad global continúa en Etapa 3.
+- Se actualizaron `docs/DISEÑO_TECNICO_VMESS.md`, `PROJECT_STATE.md`, `docs/PUNTO_CONTROL_ACTUAL.md` y este documento de continuidad.
+- La publicación de este cierre se realizará únicamente en `design/user-identity-association-v1`; `main` permanece protegida.

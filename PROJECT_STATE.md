@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02
+**Corte de estado:** 2026-11-02 — cierre técnico VMess, aceptación pendiente
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -24,7 +24,7 @@
 
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: design/user-identity-association-v1.
-- HEAD remoto publicado el 2026-11-02: c20277c04b9417f2e22b285891fb3f348ea8e8f4.
+- HEAD remoto previo a la auditoría final VMess: `fd96e214f0f916c01a2f1bc547991d53495a82b3`. El cierre técnico y sus pruebas se publican en un commit posterior; consultar el punto de control para el SHA vigente.
 - La rama main no se modificó.
 - Verificar siempre el HEAD remoto antes de nuevas tareas.
 
@@ -33,8 +33,8 @@
 - Ruta: /opt/xray-manager.
 - La ruta contiene un checkout Git válido.
 - El remoto origin apunta al repositorio oficial mediante el alias SSH dedicado.
-- La Deploy Key SSH configurada es de solo lectura; las publicaciones se realizan mediante el mecanismo GitHub API autorizado.
-- En el corte actual, HEAD local y remoto coinciden en c20277c04b9417f2e22b285891fb3f348ea8e8f4; el árbol de trabajo está sincronizado y limpio.
+- La VPS tiene una Deploy Key SSH dedicada con `Allow write access`; el alias `github.com-xray-core-manager` se usa para fetch/push de este repositorio.
+- En el corte previo a este cierre, HEAD local y remoto coincidían en `fd96e214f0f916c01a2f1bc547991d53495a82b3`; tras la publicación, verificar el SHA vigente con `git rev-parse HEAD` y `git rev-parse origin/design/user-identity-association-v1`.
 - No se deben asumir estados históricos de sincronización: comprobar rama, HEAD, remoto, árbol y git status en cada sesión.
 
 ## 3. Etapas
@@ -89,9 +89,10 @@ La especificación funcional aprobada es revisión 1.3, aprobada el 30/10/2026. 
 - Registro y administración inicial de conexiones como borradores.
 - Listado, consulta de detalles, edición y eliminación confirmada de borradores.
 - Catálogo config/protocols.tsv con 38 registros.
-- Modelo neutral VLESS de nueve modalidades.
-- Adaptador VLESS específico para Xray-core 26.10.31.
-- Prueba de integración documentada para las nueve modalidades VLESS mediante xray run -test.
+- Modelo neutral VLESS de nueve modalidades y adaptador Xray-core 26.10.31.
+- VMess: modelo neutral, adaptador Xray-core 26.10.31, asistente, preparación segura, persistencia versionada cifrada y almacén aislado.
+- VMess: 14 modalidades integradas en el catálogo, asistente y navegación; validación positiva y negativa.
+- Prueba de integración VLESS para nueve modalidades y VMess para 14 modalidades.
 
 ### Límites importantes
 
@@ -115,14 +116,16 @@ Se documentan resultados PASS para navegación, administración de borradores, V
 
 - Se conservan las nueve modalidades VLESS del catálogo, incluidas XHTTP sin TLS, TLS y REALITY.
 - El propietario aprobó el diseño técnico VMess y confirmó que VMess-HTTPUpgrade-TLS se implementará.
-- La matriz VMess aprobada incluye HTTPUpgrade sin TLS y HTTPUpgrade-TLS. Ambas están integradas en el menú/asistente local; la matriz de 14 combinaciones pasó `xray run -test` en la sesión actual.
+- La matriz VMess aprobada incluye 14 combinaciones, entre ellas HTTPUpgrade sin TLS y HTTPUpgrade-TLS. Las 14 pasan `xray run -test` con Xray-core 26.10.31.
+- El adaptador VMess valida certificados y claves TLS PEM, verifica que correspondan criptográficamente y rechaza symlinks/archivos inválidos. Esta comprobación se añade porque `xray run -test` por sí solo no detecta un certificado PEM malformado.
+- Las pruebas de navegación recorren las 14 combinaciones y las opciones de seguridad correspondientes.
 - La especificación normativa 1.3 no se reescribió retroactivamente. Las decisiones y el diseño se registran en docs/DECISIONES_ETAPA_2.md y docs/DISEÑO_TECNICO_VMESS.md.
 - El propietario autorizó expresamente la implementación VMess y, después, el aislamiento del almacén para mantener intacto P4 VLESS.
 
 ## 7. Pendientes principales de Etapa 2
 
 - Resolver y formalizar las discrepancias normativas indicadas.
-- Completar auditoría y pruebas de regresión de VMess, cuyo código local aún no está publicado.
+- VMess: auditoría técnica y pruebas de regresión completadas; pendiente aceptación formal del propietario.
 - Mantener VMess aislado de P4 VLESS; diseñar y aprobar backup/restore VMess en una tarea posterior.
 - Integrar usuarios VMess con asociaciones globales de Etapa 3 solo cuando se aborde esa integración conforme a su especificación.
 - Definir e implementar modelos, generadores y validadores para Trojan, Shadowsocks e Hysteria2.
@@ -138,7 +141,7 @@ Usa siempre IMPLEMENTADO, VERIFICADO, PUBLICADO, SINCRONIZADO y ACEPTADO como es
 
 ## 9. Siguiente punto de control
 
-Consultar docs/PUNTO_CONTROL_ACTUAL.md. No iniciar una nueva implementación de Etapa 2 hasta recuperar GitHub/VPS, resolver las discrepancias y obtener autorización explícita para la siguiente tarea.
+Consultar `docs/PUNTO_CONTROL_ACTUAL.md`. El cierre técnico de VMess está publicado y sincronizado; esperar aceptación formal del propietario antes de declarar el módulo ACEPTADO o iniciar Trojan.
 ## Hito P1 — Persistencia segura VLESS (2026-11-02)
 
 - P1 IMPLEMENTADO: primitivas AES-256-GCM, clave maestra idempotente y fail-closed, AAD, blobs versionados, escritura atómica y controles de permisos.
@@ -188,10 +191,21 @@ Se corrigieron los dos hallazgos adicionales de auditoría. `scripts/vless_backu
 El propietario respondió afirmativamente a la solicitud de aceptación de las correcciones adicionales de límites agregados y TOCTOU. **P4 BACKUP/RECUPERACIÓN VLESS: COMPLETADA Y ACEPTADA.** Cierre respaldado por suite completa 32/32 PASS, `install.sh --check`, sintaxis Bash, `py_compile`, ShellCheck, shfmt y `git diff --check` satisfactorios; commit publicado y VPS sincronizada. El alcance excluye activar conexiones/runtime, reiniciar Xray, abrir puertos, cambiar firewall o desplegar certificados externos. No se creó backup operativo ni se leyó la clave maestra real durante estas pruebas.
 
 
-## 10. VMess — implementación local en curso (2026-11-02)
+## 10. VMess — cierre técnico y aceptación pendiente (2026-11-02)
 
-El propietario aprobó el diseño VMess y autorizó su implementación, incluida VMess-HTTPUpgrade-TLS. En la VPS existen modelo neutral, adaptador Xray 26.10.31, asistente, preparación segura, almacén versionado aislado y pruebas. Las 14 combinaciones pasaron `xray run -test`; suite completa `tests/*.sh`: 36/36 PASS. `bash -n`, `py_compile`, ShellCheck (nivel warning), shfmt, `install.sh --check` y `git diff --check`: PASS. Los cambios están publicados y sincronizados en la rama autorizada; no se han aceptado como módulo completo.
+El módulo VMess está IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO en la rama autorizada. La aceptación formal del propietario sigue pendiente.
 
-El almacén VMess está separado en `/var/lib/xray-manager/vmess/configurations/` y `/var/lib/xray-manager/vmess/secrets/`. El catálogo común usa `vmess_configuration_ref`, `vmess_secret_ref`, `vmess_configuration_revision` y `vmess_configuration_schema_version`; no usa los campos VLESS. P4 VLESS permanece intacta y no incluye el almacén VMess. Restaurar un backup VLESS antiguo puede revertir el catálogo compartido y quitar entradas VMess, aunque no modifica sus archivos aislados; el almacén podría quedar con huérfanos. Backup/restore VMess requiere diseño posterior.
+- Matriz aprobada: 14/14 combinaciones.
+- Xray-core 26.10.31: 14/14 configuraciones aceptadas mediante `xray run -test`.
+- Navegación: prueba individual de las 14 combinaciones, incluidos los selectores de seguridad de gRPC, HTTPUpgrade, XHTTP y mKCP.
+- Pruebas negativas: TLS ausente, symlink, PEM inválido, certificado/clave no coincidentes, campos de seguridad incompatibles, REALITY incompleto, short ID inválido y clave REALITY inválida.
+- TLS: el adaptador valida PEM de certificado y clave privada, y compara sus claves públicas con la biblioteca `cryptography`. Xray `run -test` no basta para detectar por sí solo PEM inválido.
+- Suite completa: 36/36 scripts PASS en la auditoría final.
+- Estáticos: `bash -n`, `python3 -m py_compile scripts/*.py`, `install.sh --check`, ShellCheck warning, shfmt y `git diff --check`: PASS.
+- Persistencia aislada: `/var/lib/xray-manager/vmess/configurations/` y `/var/lib/xray-manager/vmess/secrets/`; referencias `vmess_*`, sin reutilizar campos VLESS.
+- P4 VLESS y sus archivos de implementación permanecen sin cambios.
+- Backup/restore VMess queda como diseño independiente posterior; no bloquea el cierre técnico de este módulo salvo que la especificación normativa disponga lo contrario.
+- Los usuarios VMess siguen siendo introducidos manualmente; la integración con identidades globales pertenece a Etapa 3.
+- No se tocó runtime, firewall, puertos, certificados desplegados ni servicio. No se probó conectividad cliente-servidor.
 
-Los usuarios VMess aún se introducen manualmente; no se ha implementado la asociación con identidades globales de Etapa 3. No se modificó runtime, firewall, puertos ni servicio. Etapa 2 continúa abierta.
+Consultar `docs/DISEÑO_TECNICO_VMESS.md` y `docs/PUNTO_CONTROL_ACTUAL.md` para el detalle y el siguiente paso. Etapa 2 permanece abierta porque faltan Trojan, Shadowsocks, Hysteria2 y protocolos opcionales.

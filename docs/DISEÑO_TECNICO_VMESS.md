@@ -64,7 +64,7 @@ El adaptador fijado a Xray-core v26.10.31 traducirá el modelo neutral a la conf
 1. Construir el inbound VMess y sus `settings.users`.
 2. Mapear exactamente transporte, parámetros y seguridad permitidos.
 3. Rechazar combinaciones no soportadas o campos incompatibles.
-4. Resolver certificados y secretos mediante mecanismos privados/temporales.
+4. Resolver certificados y secretos mediante mecanismos privados/temporales. Para TLS, validar el certificado PEM, la clave privada PEM y la correspondencia de sus claves públicas antes de generar la configuración; rechazar enlaces simbólicos y archivos no regulares.
 5. Producir JSON temporal para revisión y `xray run -test`.
 6. No escribir en la configuración activa ni reiniciar servicios.
 
@@ -103,6 +103,7 @@ El almacén VMess usa la clave maestra local compartida con VLESS, pero AES-256-
 - No registrar UUIDs privados, claves, material TLS/REALITY ni configuración sensible en logs.
 - No pasar claves privadas por argumentos visibles de procesos.
 - Validar permisos y rutas de archivos secretos; usar almacenamiento privado y temporal con limpieza garantizada.
+- Para TLS, validar el certificado y la clave con `cryptography` (dependencia ya requerida por el proyecto), comparar las claves públicas y fallar de forma cerrada ante PEM inválido, clave cifrada no admitida o par que no corresponde. No exponer el contenido en argumentos ni mensajes.
 - Mantener borradores separados de configuración activa.
 - No inventar certificados ni generar secretos persistentes durante pruebas.
 - Rechazar datos incompletos, UUID inválidos, puertos fuera de rango y parámetros ajenos a la modalidad.
@@ -121,11 +122,11 @@ El almacén VMess usa la clave maestra local compartida con VLESS, pero AES-256-
 ### Integración Xray
 - Ejecutar `xray run -test` sobre fixtures temporales para cada combinación de la matriz.
 - Registrar versión/binario exacto y resultado por modalidad.
-- Incluir prueba positiva específica de VMess-HTTPUpgrade-TLS y negativas de certificados/campos ausentes o inválidos.
+- Incluir prueba positiva específica de VMess-HTTPUpgrade-TLS y negativas de certificado/clave ausentes, PEM inválido, par TLS no coincidente, enlaces simbólicos, campos ausentes/incompatibles y clave/short ID REALITY inválidos.
 - `xray run -test` valida estructura/configuración; no demuestra conectividad extremo a extremo. La interoperabilidad cliente-servidor debe registrarse como prueba separada.
 
 ### Asistente y persistencia
-- Recorrer cada opción del menú, incluida la elección HTTPUpgrade sin TLS/TLS.
+- Recorrer individualmente las 14 combinaciones en la navegación, incluida cada elección de seguridad de gRPC, HTTPUpgrade, XHTTP y mKCP.
 - Verificar cancelación, EOF, entradas inválidas y resumen antes de guardar.
 - Confirmar que el guardado requiere consentimiento explícito.
 - Confirmar cifrado/aislamiento de secretos y que los borradores no activan runtime.
@@ -146,4 +147,4 @@ En la auditoría técnica anterior se ejecutaron pruebas temporales correctas de
 4. Implementar sólo después de esa autorización.
 5. Ejecutar pruebas, actualizar continuidad e historial y sincronizar VPS/GitHub.
 
-**Estado de implementación local (2026-11-02):** modelo, adaptador, asistente, persistencia VMess aislada y pruebas focales están implementados en la VPS, aún sin publicar. La matriz de 14 combinaciones pasó `xray run -test`. No declarar el módulo completo hasta cerrar la suite de regresión, auditoría final y publicación/sincronización. Usuarios VMess aún manuales, pendientes de integración con asociaciones de identidad de Etapa 3. HTTPUpgrade-TLS está incluido y verificado por la matriz.
+**Estado de implementación (2026-11-02):** modelo, adaptador, asistente, persistencia VMess aislada y pruebas están implementados y publicados en la rama autorizada. Xray-core 26.10.31 aceptó las 14 combinaciones. La navegación recorre las 14 combinaciones; las pruebas negativas rechazan certificados/clave TLS ausentes, PEM inválido, par no coincidente, enlaces simbólicos, parámetros incompatibles y errores REALITY. La suite completa y los controles estáticos se ejecutaron y pasaron en la auditoría final. El módulo queda pendiente únicamente de aceptación formal del propietario. Usuarios VMess aún manuales, pendientes de integración con asociaciones de identidad de Etapa 3. Backup/restore VMess no forma parte del cierre actual y requiere diseño independiente. No se probó conectividad extremo a extremo ni se activó runtime.

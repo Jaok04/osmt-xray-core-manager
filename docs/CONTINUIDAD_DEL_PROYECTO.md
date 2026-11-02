@@ -218,3 +218,34 @@ Los usuarios VMess todavía se introducen manualmente; la asociación con identi
 ### Estado de publicación
 
 La implementación VMess y el aislamiento fueron publicados tras autorización expresa: commit `c20277c04b9417f2e22b285891fb3f348ea8e8f4` en `design/user-identity-association-v1`. La Deploy Key SSH de la VPS es de solo lectura; la publicación se efectuó mediante GitHub API y luego la VPS hizo fetch/reset para igualar HEAD local/remoto. No se modificó la rama `main`. No tocar runtime, firewall, puertos ni servicio. La Etapa 2 continúa abierta.
+
+## Cierre técnico VMess — 2026-11-02
+
+La auditoría de cierre contrastó el módulo con la especificación funcional Etapa 2 revisión 1.3 y con el diseño aprobado en `docs/DISEÑO_TECNICO_VMESS.md`. El módulo VMess queda IMPLEMENTADO y VERIFICADO; la aceptación formal del propietario permanece pendiente.
+
+Evidencia de esta revisión:
+- Xray-core 26.10.31 (build `a4a3dff`): 14/14 modalidades aceptadas con `xray run -test`.
+- Navegación del menú: las 14 combinaciones recorridas individualmente.
+- Pruebas negativas: certificado/clave TLS ausentes, symlink, PEM inválido, par certificado-clave no coincidente, REALITY incompleto/short ID inválido/clave inválida, campos incompatibles y combinación modelo-seguridad inválida.
+- Se endureció el adaptador VMess para validar PEM y correspondencia criptográfica de certificado y clave privada con la biblioteca `cryptography`. La prueba detectó que `xray run -test` no rechaza por sí solo un certificado PEM malformado; por eso la validación se realiza antes de generar el JSON.
+- Suite completa `tests/*.sh`: 36/36 scripts PASS.
+- `bash -n`, `python3 -m py_compile scripts/*.py`, `./install.sh --check`, ShellCheck warning, shfmt y `git diff --check`: PASS.
+
+Cambios de esta revisión:
+- `modules/vmess_xray_26_10_31.sh`
+- `tests/xray_vmess_integration.sh`
+- `tests/stage2_navigation.sh`
+- `docs/DISEÑO_TECNICO_VMESS.md`
+- `PROJECT_STATE.md`
+- `docs/PUNTO_CONTROL_ACTUAL.md`
+
+Límites conservados:
+- No se probó conectividad extremo a extremo ni se activaron borradores.
+- No se tocó runtime, servicio, firewall, puertos, certificados desplegados ni P4 VLESS.
+- Backup/restore VMess requiere diseño independiente.
+- Integración con identidades globales pertenece a Etapa 3.
+- Etapa 2 sigue abierta; completar VMess no implica completar Trojan, Shadowsocks, Hysteria2 ni protocolos opcionales.
+
+**Estado de acceso Git vigente:** la Deploy Key SSH de este repositorio tiene actualmente permiso de escritura y el alias `github.com-xray-core-manager` está configurado en la VPS. Las notas históricas anteriores que la describen como solo lectura quedan superadas por esta configuración posterior.
+
+El punto de reanudación exacto está en `docs/PUNTO_CONTROL_ACTUAL.md`. No iniciar Trojan hasta recibir la aceptación formal de VMess y efectuar el contraste específico de Trojan.

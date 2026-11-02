@@ -1,5 +1,45 @@
 #!/usr/bin/env bash
 # Adaptador estricto VMess -> Xray-core v26.10.31.
+vmess_xray_26_10_31_validate_tls_pair() {
+    [[ $# -eq 2 ]] || return 2
+    python3 - "$1" "$2" <<'PY'
+import os
+import stat
+import sys
+from cryptography import x509
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+
+def read_regular(path):
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_CLOEXEC", 0)
+    fd = os.open(path, flags)
+    try:
+        st = os.fstat(fd)
+        if not stat.S_ISREG(st.st_mode):
+            raise ValueError("not a regular file")
+        with os.fdopen(fd, "rb") as stream:
+            fd = -1
+            return stream.read(4 * 1024 * 1024 + 1)
+    finally:
+        if fd >= 0:
+            os.close(fd)
+
+try:
+    certificate_data = read_regular(sys.argv[1])
+    private_key_data = read_regular(sys.argv[2])
+    if len(certificate_data) > 4 * 1024 * 1024 or len(private_key_data) > 4 * 1024 * 1024:
+        raise ValueError("file too large")
+    certificate = x509.load_pem_x509_certificate(certificate_data)
+    private_key = serialization.load_pem_private_key(private_key_data, password=None)
+    cert_public = certificate.public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
+    key_public = private_key.public_key().public_bytes(Encoding.DER, PublicFormat.SubjectPublicKeyInfo)
+    if cert_public != key_public:
+        raise ValueError("certificate and private key do not match")
+except Exception:
+    raise SystemExit(1)
+PY
+}
+
 vmess_xray_26_10_31_build() {
     [[ $# -eq 2 ]] || {
         printf 'Uso: vmess_xray_26_10_31_build <modelo.json> <opciones.json>\n' >&2
@@ -66,6 +106,10 @@ vmess_xray_26_10_31_build() {
         key="$(jq -r '.key_file' "$options_file")"
         [[ -f "$cert" && -r "$cert" && ! -L "$cert" && -f "$key" && -r "$key" && ! -L "$key" ]] || {
             printf 'Certificado/clave TLS no legibles o no regulares.\n' >&2
+            return 2
+        }
+        vmess_xray_26_10_31_validate_tls_pair "$cert" "$key" >/dev/null 2>&1 || {
+            printf 'Certificado TLS o clave privada PEM inválidos, o no corresponden entre sí.\n' >&2
             return 2
         }
         ;;
