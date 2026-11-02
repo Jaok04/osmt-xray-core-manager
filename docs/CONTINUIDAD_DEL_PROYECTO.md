@@ -160,10 +160,10 @@ Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM 
 
 ### P4 — backup y recuperación segura VLESS (implementación inicial)
 
-Se añadieron `scripts/vless_backup.py`, `modules/vless_backup.sh`, `tests/vless_backup.sh`, `tests/vless_backup_restore.sh` y `docs/P4_BACKUP_RECUPERACION_VLESS.md`. El menú de conexiones ahora expone Backup y recuperación VLESS.
+Se añadieron `scripts/vless_backup.py`, `modules/vless_backup.sh`, `tests/vless_backup.sh`, `tests/vless_backup_restore.sh`, `tests/vless_backup_recovery.sh`, `tests/vless_backup_journal.sh` y `docs/P4_BACKUP_RECUPERACION_VLESS.md`. El menú de conexiones ahora expone Backup y recuperación VLESS.
 
-El backup de datos separa blobs cifrados y clave maestra; genera manifiesto y SHA256SUMS; verifica rutas, tipos, tamaños y hashes. El paquete de recuperación cifra la clave con scrypt + AES-256-GCM, contraseña interactiva y asociación por backup_id. La restauración exige confirmación, autentica blobs con la clave, prepara staging, conserva directorios previos y usa un journal para fallar cerrado ante interrupción abrupta.
+El backup de datos separa blobs cifrados y clave maestra; genera manifiesto y SHA256SUMS; verifica rutas, tipos, tamaños y hashes. El paquete de recuperación cifra la clave con scrypt + AES-256-GCM, contraseña interactiva y asociación por backup_id. La restauración exige confirmación, autentica blobs con la clave, prepara staging, conserva directorios previos y usa un journal y ofrece `recover-restore` para rollback conservador tras una interrupción abrupta, preservando artefactos parciales en cuarentena.
 
-Pruebas iniciales: backup/verificación/manipulación y restauración aislada sin secretos PASS. Suite completa `tests/*.sh`: 28/28 PASS antes de las últimas correcciones menores del script. Sintaxis, ShellCheck de módulos, py_compile y diff PASS. No se creó backup operativo ni se accedió a la clave maestra real.
+Pruebas focales de backup/verificación/manipulación, restauración aislada sin secretos, recuperación de clave scrypt/AES-GCM y rollback de journal PASS. Suite completa `tests/*.sh`: 29/29 PASS en la revisión previa a la última incorporación de journal; repetir tras el cierre de esta revisión. Sintaxis, ShellCheck de módulos, py_compile y diff PASS. No se creó backup operativo ni se accedió a la clave maestra real.
 
-**P4 no está completada ni aceptada:** falta recuperación automática/controlada del journal tras corte abrupto y pruebas end-to-end de restore de secretos TLS/REALITY. La recuperación scrypt/AES-GCM con contraseña incorrecta/correcta ya tiene prueba aislada. Ver `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
+**P4 no está completada ni aceptada:** faltan pruebas de corte abrupto en todas las fronteras del journal y pruebas end-to-end de restore de secretos TLS/REALITY. La recuperación scrypt/AES-GCM con contraseña incorrecta/correcta ya tiene prueba aislada. Ver `docs/P4_BACKUP_RECUPERACION_VLESS.md`.

@@ -58,7 +58,7 @@ El paquete debe copiarse fuera de la VPS. La contraseña debe ser independiente 
 - conserva los directorios previos con nombres `.vless-*-before-*` como respaldo preventivo;
 - no aplica runtime ni modifica firewall/puertos.
 
-Los dos directorios no pueden sustituirse con una única operación atómica global. Se escribe `RESTORE_IN_PROGRESS.json` antes de los renombrados. Si el proceso recibe una excepción ordinaria, intenta rollback; si hay una interrupción abrupta del proceso/host, el journal permanece y las siguientes restauraciones fallan de forma cerrada. La resolución automatizada del journal tras un corte abrupto sigue pendiente; hasta implementarla, requiere inspección y recuperación manual controlada.
+Los dos directorios no pueden sustituirse con una única operación atómica global. Se escribe `RESTORE_IN_PROGRESS.json` antes de los renombrados. Si el proceso recibe una excepción ordinaria, intenta rollback; si hay una interrupción abrupta del proceso/host, el journal permanece y las siguientes restauraciones fallan de forma cerrada. La opción `recover-restore` permite resolver el journal con rollback conservador: devuelve los directorios previos a sus rutas y conserva los artefactos parciales/staging en cuarentena, sin borrarlos. Si las rutas no concuerdan o el estado es ambiguo, falla sin modificar datos y exige intervención manual.
 
 `recover-key` valida el paquete, exige la contraseña, comprueba que el backup de datos emparejado existe y autentica todos sus blobs con la clave recuperada. Solo instala la clave si no existe una clave local; nunca sobrescribe una clave existente. Después se debe ejecutar la restauración de datos asociada.
 
@@ -71,18 +71,18 @@ El menú de conexiones incorpora `Backup y recuperación VLESS`, con opciones pa
 - `tests/vless_backup.sh`: backup aislado, manifiesto, hash y rechazo de manipulación.
 - `tests/vless_backup_restore.sh`: restauración aislada de un catálogo de prueba, confirmación y conservación de los datos previos.
 - `tests/vless_backup_recovery.sh`: creación del paquete scrypt/AES-GCM, asociación por `backup_id`, rechazo de contraseña incorrecta y recuperación autenticada de la clave en un directorio temporal.
-- Suite completa `tests/*.sh`: 28/28 PASS en la revisión inicial de integración.
+- `tests/vless_backup_journal.sh`: rollback conservador de un journal interrumpido y preservación de artefactos parciales en cuarentena.
+- Suite completa `tests/*.sh`: 29/29 PASS en la revisión inicial de integración.
 - `bash -n`, ShellCheck en módulos nuevos/modificados, `py_compile` y `git diff --check`: PASS.
 
 La prueba de recuperación scrypt/AES-GCM y contraseña incorrecta/correcta pasa en un entorno temporal. La restauración integral de backups con blobs TLS/REALITY y el comportamiento ante certificado externo ausente deben ampliarse antes de cerrar P4. No se ha creado ni leído la clave maestra real de esta VPS; tampoco se ha creado un backup operativo.
 
 ## 7. Pendientes antes de aceptación
 
-1. Añadir resolución segura y probada del journal tras interrupción abrupta, incluyendo pruebas de corte entre cada renombrado.
-2. Añadir pruebas end-to-end de creación/validación de paquete de recuperación y recuperación de clave con contraseña incorrecta/correcta.
-3. Probar restauración de backup con blobs REALITY y TLS y comprobar el comportamiento ante certificado externo ausente.
-4. Auditar límites de extracción/compresión y todos los permisos de staging/publicación.
-5. Ejecutar suite completa tras la revisión final y `install.sh --check`.
-6. Actualizar documentación de continuidad y registrar evidencia exacta.
+1. Probar cortes abruptos simulados en cada frontera de renombrado y journal, incluidas combinaciones sin directorio previo de secretos.
+2. Probar restauración de backup con blobs REALITY y TLS y comprobar el comportamiento ante certificado externo ausente.
+3. Auditar límites de extracción/compresión y todos los permisos de staging/publicación.
+4. Ejecutar suite completa tras la revisión final y `install.sh --check`.
+5. Actualizar documentación de continuidad y registrar evidencia exacta.
 
 **No forma parte de P4:** activar conexiones, aplicar configuración Xray, iniciar/reiniciar Xray, abrir puertos, cambiar firewall, ni desplegar certificados externos.

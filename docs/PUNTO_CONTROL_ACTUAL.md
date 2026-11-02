@@ -91,6 +91,6 @@ Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM 
 - HEAD inicial: `46c3e52b2a59f6ca69ea2de9013cf3cda0e0331a`, rama autorizada limpia.
 - Aprobado por el usuario el contrato técnico de P4.
 - Añadidos backup de datos y manifiesto verificable, paquete de recuperación scrypt/AES-256-GCM, verificación y restauración con staging/journal; menú de acceso integrado.
-- Pruebas focales backup, restore aislado y recuperación scrypt/AES-GCM PASS; suite completa 28/28 PASS en primera revisión. Se añadieron correcciones posteriores y pruebas focales repetidas.
+- Pruebas focales backup, restore aislado y recuperación scrypt/AES-GCM PASS; suite completa 29/29 PASS en primera revisión. Se añadieron correcciones posteriores y pruebas focales repetidas.
 - No se tocó `/var/backups/xray-manager` histórico, la clave maestra real, datos operativos, firewall ni runtime.
-- P4 sigue ABIERTA: falta resolver journal tras interrupción abrupta y completar pruebas end-to-end de restauración de blobs cifrados TLS/REALITY. Detalle en `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
+- P4 sigue ABIERTA: falta probar cortes abruptos en todas las fronteras del journal y completar pruebas end-to-end de restauración de blobs cifrados TLS/REALITY. Detalle en `docs/P4_BACKUP_RECUPERACION_VLESS.md`.

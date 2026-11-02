@@ -8,7 +8,7 @@ vless_backup_menu() {
     while true; do
         ui_clear
         ui_title "BACKUP Y RECUPERACIÓN VLESS"
-        printf '\n  [1] Crear backup de datos\n  [2] Restaurar backup de datos\n  [3] Crear backup de recuperación de clave\n  [4] Recuperar clave maestra\n  [5] Ver backups disponibles\n  [6] Verificar integridad de un backup\n  [0] Volver\n\n'
+        printf '\n  [1] Crear backup de datos\n  [2] Restaurar backup de datos\n  [3] Crear backup de recuperación de clave\n  [4] Recuperar clave maestra\n  [5] Ver backups disponibles\n  [6] Verificar integridad de un backup\n  [7] Resolver restauración interrumpida (rollback)\n  [0] Volver\n\n'
         ui_read_option "Selecciona una opción: " option
         case "$option" in
         1)
@@ -67,6 +67,10 @@ vless_backup_menu() {
                 continue
             fi
             python3 "$VLESS_BACKUP_SCRIPT" verify-data --backup-dir "$VLESS_BACKUP_ROOT/data/$backup_id" || true
+            ui_pause
+            ;;
+        7)
+            python3 "$VLESS_BACKUP_SCRIPT" recover-restore || true
             ui_pause
             ;;
         0) return 0 ;;

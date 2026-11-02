@@ -431,6 +431,62 @@ def restore_data(args):
             import shutil; shutil.rmtree(stage_secrets)
         unlock_pair(fds)
 
+def recover_interrupted_restore(args):
+    """Revierte de forma conservadora un restore cuyo journal quedó pendiente."""
+    require_root(); root=Path(args.backups).absolute(); base=Path(args.base).absolute(); secrets_dir=Path(args.secrets_dir).absolute()
+    safe_dir(root)
+    journal=root/'RESTORE_IN_PROGRESS.json'
+    if not journal.exists(): raise BackupError('no hay una restauración interrumpida')
+    fds=lock_pair()
+    try:
+        safe_regular(journal,64*1024)
+        record=json.loads(journal.read_text(encoding='utf-8'))
+        required={'format','backup_id','stage_connections','stage_secrets','live_connections','live_secrets','old_connections','old_secrets','phase'}
+        if not isinstance(record,dict) or set(record)!=required or record.get('format')!='xray-manager-restore-journal':
+            raise BackupError('journal de restauración inválido; no se modificó ningún dato')
+        if record['live_connections']!=str(base) or record['live_secrets']!=str(secrets_dir):
+            raise BackupError('journal no corresponde a las rutas actuales; requiere intervención manual')
+        if record['phase'] not in ('prepared','connections_saved','old_data_saved','connections_published','published'):
+            raise BackupError('fase del journal desconocida; requiere intervención manual')
+        base_parent=base.parent; secrets_parent=secrets_dir.parent
+        old_base=Path(record['old_connections']); old_secrets=Path(record['old_secrets'])
+        stage_base=Path(record['stage_connections']); stage_secrets=Path(record['stage_secrets'])
+        if old_base.parent!=base_parent or not old_base.name.startswith('.vless-connections-before-'):
+            raise BackupError('ruta de respaldo previo en journal no permitida')
+        if old_secrets.parent!=secrets_parent or not old_secrets.name.startswith('.vless-secrets-before-'):
+            raise BackupError('ruta de secretos previos en journal no permitida')
+        if stage_base.parent!=base_parent or not stage_base.name.startswith('.vless-restore-connections.'):
+            raise BackupError('ruta staging de conexiones no permitida')
+        if stage_secrets.parent!=secrets_parent or not stage_secrets.name.startswith('.vless-restore-secrets.'):
+            raise BackupError('ruta staging de secretos no permitida')
+        # Todas las rutas existentes deben ser directorios reales root-only.
+        for path in (base,secrets_dir,old_base,old_secrets,stage_base,stage_secrets):
+            if path.exists() or path.is_symlink(): safe_dir(path)
+        # Si existe el original renombrado, el live actual es el candidato nuevo:
+        # se conserva en cuarentena y se devuelve el original a su ubicación.
+        for live,old,label in ((base,old_base,'connections'),(secrets_dir,old_secrets,'secrets')):
+            if old.exists():
+                if live.exists():
+                    failed=live.parent/f'.vless-{label}-interrupted-{utc_now()}'
+                    os.replace(live,failed)
+                os.replace(old,live)
+            elif live.exists() and record['phase'] in ('connections_published','published'):
+                # No había directorio previo (p. ej. secrets); el directorio nuevo
+                # se conserva en cuarentena en lugar de borrarlo.
+                failed=live.parent/f'.vless-{label}-interrupted-{utc_now()}'
+                os.replace(live,failed)
+            elif not live.exists() and record['phase']!='prepared':
+                raise BackupError(f'falta el directorio {label} y no existe copia previa; journal conservado')
+        # El staging no publicado se conserva en cuarentena para inspección.
+        for stage,label in ((stage_base,'connections-stage'),(stage_secrets,'secrets-stage')):
+            if stage.exists():
+                quarantine=stage.parent/f'.vless-{label}-interrupted-{utc_now()}'
+                os.replace(stage,quarantine)
+        journal.unlink()
+        dfd=os.open(root,os.O_RDONLY|getattr(os,'O_DIRECTORY',0)); os.fsync(dfd); os.close(dfd)
+        return {'status':'rolled_back','backup_id':record['backup_id'],'journal_removed':True,'quarantined_artifacts_preserved':True,'runtime_activated':False}
+    finally: unlock_pair(fds)
+
 def validate_payload_no_secrets(archive: bytes, manifest: dict):
     if manifest.get('encrypted_secret_blob_count',0): raise BackupError('se requiere clave maestra para autenticar secretos')
     # Misma validación estructural y de catálogo; sin blobs que descifrar.
@@ -488,17 +544,21 @@ def list_backups(args):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('action',choices=('backup-data','restore-data','create-recovery','recover-key','list','verify-data','verify-recovery'))
-    p.add_argument('--base',default=str(DEFAULT_BASE)); p.add_argument('--secrets-dir',default=str(DEFAULT_SECRETS)); p.add_argument('--master-key',default=str(DEFAULT_KEY)); p.add_argument('--backups',default=str(DEFAULT_BACKUPS)); p.add_argument('--backup-dir')
+    p.add_argument('action',choices=('backup-data','restore-data','recover-restore','create-recovery','recover-key','list','verify-data','verify-recovery'))
+    p.add_argument('--base',default=str(DEFAULT_BASE)); p.add_argument('--secrets-dir',default=str(DEFAULT_SECRETS)); p.add_argument('--master-key',default=str(DEFAULT_KEY)); p.add_argument('--backups',default=str(DEFAULT_BACKUPS)); p.add_argument('--backup-dir'); p.add_argument('--recovery-dir')
     a=p.parse_args()
     try:
         if a.action=='backup-data': result=create_data(a)
         elif a.action=='restore-data': result=restore_data(a)
+        elif a.action=='recover-restore': result=recover_interrupted_restore(a)
         elif a.action=='create-recovery': result=create_recovery(a)
         elif a.action=='recover-key': result=recover_key(a)
         elif a.action=='list': result=list_backups(a)
         elif a.action=='verify-data': result={'status':'verified','manifest':verify_data_dir(Path(a.backup_dir))}
-        else: result={'status':'verified','backup_id':verify_recovery(Path(a.backup_dir))['header']['backup_id']}
+        else:
+            recovery_dir=a.recovery_dir or a.backup_dir
+            if not recovery_dir: raise BackupError('--recovery-dir requerido')
+            result={'status':'verified','backup_id':verify_recovery(Path(recovery_dir))['header']['backup_id']}
         print(json.dumps(result,ensure_ascii=False,separators=(',',':'))); return 0
     except (BackupError,OSError,ValueError,KeyError,tarfile.TarError,json.JSONDecodeError) as exc:
         print(f'ERROR: {exc}',file=sys.stderr); return 1
