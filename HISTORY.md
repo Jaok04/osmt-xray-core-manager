@@ -183,3 +183,8 @@ Se creó una clave SSH Ed25519 dedicada a este repositorio y se registró en Git
 Se añadió límite total de 512 MiB descomprimidos, aplicado durante recolección, creación, verificación y extracción. El lector común valida autónomamente rutas, tipos, enlaces, duplicados, cantidad, límites por miembro/agregados y hashes del manifiesto. La restauración realiza la verificación, lectura de clave y extracción bajo `lifecycle.lock` + `integrity.lock`; elimina el uso de contenido extraído antes de adquirir locks y vuelve a comprobar el hash de los bytes usados.
 
 Nueva prueba `tests/vless_backup_limits.sh`: PASS. Suite completa posterior: 32/32 PASS. P4 sigue abierta hasta revisión final y aceptación formal. No se generó backup operativo ni se leyó la clave maestra real.
+
+
+## 2026-11-02 — Aceptación formal y cierre de P4
+
+El propietario aceptó formalmente las correcciones adicionales de seguridad (límite agregado de 512 MiB descomprimidos, validación autónoma de miembros y rutas, y lectura/verificación/extracción bajo locks para cerrar TOCTOU). Con la suite completa 32/32 PASS y las verificaciones estáticas satisfactorias, **P4 BACKUP/RECUPERACIÓN VLESS queda COMPLETADA Y ACEPTADA**. No se creó backup operativo ni se accedió a la clave maestra real. La activación de conexiones/runtime, reinicio de Xray, puertos, firewall y despliegue de certificados externos permanecen fuera del alcance de P4.

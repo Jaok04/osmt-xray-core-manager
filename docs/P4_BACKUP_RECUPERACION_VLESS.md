@@ -1,6 +1,6 @@
 # P4 — Backup y recuperación segura de persistencia VLESS
 
-**Estado del incremento:** journal, límites agregados y validación bajo locks implementados; P4 continúa abierta únicamente hasta revisión/aceptación formal y cualquier observación adicional.
+**Estado del incremento:** IMPLEMENTADO, VERIFICADO Y ACEPTADO por el propietario el 2026-11-02. P4 se considera COMPLETADA dentro del alcance definido en este documento.
 **Fecha:** 2026-11-02
 **Rama autorizada:** `design/user-identity-association-v1`
 
@@ -84,10 +84,11 @@ Publicación en GitHub: commit `90766d4cb8000ed1f94fb808b80f18483d5778cb` en `de
 
 No se creó ni leyó la clave maestra real de esta VPS; tampoco se creó un backup operativo. Todas las pruebas de restauración se ejecutaron en directorios temporales.
 
-## 7. Pendientes antes de aceptación
+## 7. Cierre y aceptación formal
 
-1. Revisar el diff completo de esta corrección y cualquier observación de seguridad adicional.
-2. Obtener aceptación formal del propietario.
+El propietario aceptó formalmente las correcciones de seguridad adicionales el 2026-11-02. Con la suite completa en 32/32 PASS, las verificaciones estáticas satisfactorias y la publicación sincronizada, **P4 queda COMPLETADA** para el alcance de backup, verificación, recuperación de clave y restauración segura de datos VLESS descrito aquí.
+
+Quedan fuera del alcance de P4 la activación de conexiones, aplicación de configuración Xray, inicio/reinicio de Xray, apertura de puertos, cambios de firewall y despliegue de certificados externos. Cualquier ampliación futura deberá tratarse como una nueva etapa/cambio, no como una condición pendiente de esta aceptación.
 
 **No forma parte de P4:** activar conexiones, aplicar configuración Xray, iniciar/reiniciar Xray, abrir puertos, cambiar firewall, ni desplegar certificados externos.
 
@@ -98,4 +99,4 @@ Se añadió `MAX_TOTAL_UNCOMPRESSED = 512 MiB`. El límite se aplica al recolect
 
 La restauración ahora adquiere ambos locks antes de verificar y leer el backup, comprobar la clave y extraer el contenido. El lector común valida por sí mismo nombres de ruta, traversal, tipos, symlinks/hardlinks, duplicados, cantidad, tamaños y hashes del manifiesto, incluso si se invoca sin una validación estructural previa. El hash del archivo se vuelve a comprobar sobre los mismos bytes que se entregan al lector.
 
-Prueba focal nueva: `tests/vless_backup_limits.sh` (límite agregado, traversal, symlink y caso positivo). Suite completa posterior: 32/32 PASS. P4 continúa abierta hasta revisión y aceptación formal.
+Prueba focal nueva: `tests/vless_backup_limits.sh` (límite agregado, traversal, symlink y caso positivo). Suite completa posterior: 32/32 PASS. El propietario aceptó formalmente estas correcciones el 2026-11-02; P4 queda COMPLETADA.

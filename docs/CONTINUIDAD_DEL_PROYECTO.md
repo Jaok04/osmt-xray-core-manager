@@ -158,14 +158,14 @@ P2: `tests/*.sh` 25/25 PASS; pruebas específicas incluyen interrupción antes d
 
 Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM de claves privadas TLS/REALITY, referencias versionadas en catálogo/configuración y recuperación temporal para validación. Nuevo `scripts/vless_prepare_config.py`; `vless_config_store.py` ahora admite secretos cifrados y auditoría de blobs. El asistente deja de pasar la clave REALITY como `jq --arg` y usa `--rawfile`. Pruebas focales REALITY/TLS/recuperación PASS. Borradores no se activan. Suite completa `tests/*.sh` 25/25 PASS; `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt y `git diff --check` PASS. Clave maestra real de VPS no generada. P3 aún no publicada en GitHub.
 
-### P4 — backup y recuperación segura VLESS (corrección del journal implementada; aceptación pendiente)
+### P4 — backup y recuperación segura VLESS (COMPLETADA Y ACEPTADA el 2026-11-02)
 
 El subsistema incluye backup de datos/manifiesto/SHA256SUMS, paquete de recuperación scrypt + AES-256-GCM, verificación, restauración confirmada y menú. La corrección registra `had_connections`/`had_secrets`, fuerza `fsync` de los directorios padres tras renombrados y recupera journals nuevos y legacy de forma conservadora.
 
 `tests/vless_backup_journal_crash_matrix.sh` cubre 32 interrupciones abruptas en fases y renombrados, con las cuatro combinaciones de existencia previa de ambos directorios. `tests/vless_backup_journal.sh` cubre journal legacy y destino originalmente ausente. `tests/vless_backup_restore_secrets.sh` comprueba restore de blobs REALITY/TLS con el certificado TLS externo ausente, dependencia declarada y runtime inactivo. La suite completa final tras esta revisión registró 31/31 PASS; `install.sh --check`, sintaxis Bash, `py_compile`, ShellCheck, shfmt y `git diff --check` PASS. No se creó backup operativo ni se accedió a la clave maestra real.
 Publicación GitHub: `90766d4cb8000ed1f94fb808b80f18483d5778cb`; árbol `cfdb26fd7716f622127ba5d7784884df58799b4c`; VPS sincronizada con `origin`.
 
-**P4 sigue ABIERTA:** queda auditar límites agregados de extracción/descompresión, memoria, rutas y permisos de staging/publicación, además de la aceptación formal. Ver `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
+**P4 COMPLETADA:** journal robusto, límites agregados, validación autónoma del payload y cierre TOCTOU implementados; suite 32/32 PASS y aceptación formal del propietario el 2026-11-02. Ver `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
 
 
 ## Incidente de pruebas — EOF en menús y crecimiento de /tmp (2026-11-02)
@@ -187,4 +187,9 @@ Se creó una clave SSH Ed25519 dedicada a este repositorio y se registró en Git
 
 ### Actualización P4 — auditoría de límites y TOCTOU (2026-11-02)
 
-Se implementó límite agregado de 512 MiB sin comprimir en recolección, creación, verificación y extracción. El lector de payload valida independientemente rutas, traversal, tipos regulares, enlaces, duplicados, cantidad, tamaños y hashes. La restauración verifica y lee el backup y la clave, y extrae el payload únicamente después de adquirir `lifecycle.lock` e `integrity.lock`; el hash se vuelve a comprobar sobre los bytes usados. Nueva prueba `tests/vless_backup_limits.sh` PASS; suite completa posterior 32/32 PASS. P4 sigue abierta hasta revisión y aceptación formal. No se creó backup operativo ni se accedió a la clave maestra real.
+Se implementó límite agregado de 512 MiB sin comprimir en recolección, creación, verificación y extracción. El lector de payload valida independientemente rutas, traversal, tipos regulares, enlaces, duplicados, cantidad, tamaños y hashes. La restauración verifica y lee el backup y la clave, y extrae el payload únicamente después de adquirir `lifecycle.lock` e `integrity.lock`; el hash se vuelve a comprobar sobre los bytes usados. Nueva prueba `tests/vless_backup_limits.sh` PASS; suite completa posterior 32/32 PASS. P4 quedó COMPLETADA tras la aceptación formal del propietario el 2026-11-02. No se creó backup operativo ni se accedió a la clave maestra real.
+
+
+### Cierre formal P4 — 2026-11-02
+
+El propietario aceptó las correcciones adicionales de seguridad. La etapa P4 de backup y recuperación segura VLESS queda **COMPLETADA Y ACEPTADA**. Verificación final: suite `tests/*.sh` 32/32 PASS; `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt y `git diff --check` PASS. El commit de implementación está publicado y sincronizado en la rama del proyecto. El alcance no incluye activar runtime, reiniciar Xray, abrir puertos, cambiar firewall ni desplegar certificados externos.

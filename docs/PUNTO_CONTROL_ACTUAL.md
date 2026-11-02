@@ -2,7 +2,7 @@
 
 **Fecha del corte:** 2026-11-02
 **Tarea actual:** Etapa 2 — P4, backup y recuperación segura VLESS.
-**Estado actual:** journal, límite agregado y validación bajo locks implementados; suite completa posterior 32/32 PASS; P4 abierta hasta revisión y aceptación formal.
+**Estado actual:** P4 BACKUP/RECUPERACIÓN VLESS COMPLETADA Y ACEPTADA el 2026-11-02; suite completa 32/32 PASS; commit de implementación y documentación sincronizados.
 
 ## 1. Entorno
 
@@ -139,4 +139,9 @@ Se creó una clave SSH Ed25519 dedicada a este repositorio y se registró en Git
 - La restauración adquiere `lifecycle.lock` e `integrity.lock` antes de verificar/leer el backup y la clave y antes de extraer. No usa un diccionario extraído previamente al lock. Recomprueba el hash sobre los bytes que procesa.
 - Nueva prueba `tests/vless_backup_limits.sh`: PASS. Suite completa posterior: 32/32 PASS.
 - No se creó backup operativo, no se leyó la clave maestra real, y no se modificó runtime, firewall ni certificados.
-- **Pendiente:** revisión final del diff y aceptación formal. P4 no se declara completada.
+- **Cerrado:** propietario aceptó formalmente las correcciones el 2026-11-02. P4 COMPLETADA.
+
+
+## Aceptación formal de P4 — 2026-11-02
+
+El propietario confirmó la aceptación de las correcciones de límites agregados y TOCTOU. P4 BACKUP/RECUPERACIÓN VLESS queda **COMPLETADA Y ACEPTADA**. Suite completa `tests/*.sh`: 32/32 PASS. `install.sh --check`, sintaxis Bash, `py_compile`, ShellCheck, shfmt y `git diff --check`: PASS. No se creó backup operativo ni se accedió a la clave maestra real. No se modificaron runtime, firewall ni certificados. Las actividades de activación de conexiones/runtime, reinicio de Xray, apertura de puertos, cambios de firewall y despliegue de certificados externos están expresamente fuera del alcance de P4.
