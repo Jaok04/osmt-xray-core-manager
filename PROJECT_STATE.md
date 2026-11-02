@@ -47,6 +47,8 @@ Este SHA es una referencia conocida, no una garantía de que siga siendo HEAD. C
 
 No confundir las etapas del proyecto con las fases A/B/C del instalador o de administración de Xray.
 
+La carpeta de desarrollo ya contiene módulos y pruebas de usuarios/identidades/asociaciones (incluidos users_v2); no se debe tratar Etapa 3 como inexistente. Su alcance, cobertura y criterios de cierre deben auditarse por separado antes de declararla completada.
+
 ## 4. Etapa 1 — resultado aceptado
 
 El propietario aceptó expresamente la Etapa 1 como completada.
