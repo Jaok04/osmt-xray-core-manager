@@ -1,3 +1,16 @@
+## 2026-11-02 — Publicación y verificación del sistema de continuidad
+
+Se crearon los cinco documentos en /opt/xray-manager y se publicaron en la rama design/user-identity-association-v1 de GitHub.
+
+Commits de creación (en orden):
+- AGENTS.md: 9eb906515a287658b9d5b2e93bfc7b20ff8ea63e
+- PROJECT_STATE.md: 8faa3486ce78574504bd296127280408e277090e
+- docs/CONTINUIDAD_DEL_PROYECTO.md: 689fbd55a1fa29ac45928a1dcc71b54e741ab187
+- docs/PUNTO_CONTROL_ACTUAL.md: de5f9368ff5776827213e6f8f6b49c4132b6438f
+- HISTORY.md: e1aa2c75716195871b5c7450ef80a7e73a4a3ea8
+
+Verificación posterior: los cinco archivos se recuperaron desde GitHub y se compararon con la lectura SFTP de la VPS; los contenidos de texto coincidieron exactamente y sus longitudes fueron iguales. La VPS continúa sin .git; por tanto, se verificó igualdad de contenido de estos cinco archivos, no un checkout Git ni la sincronización del proyecto completo.
+
 # Historial de hitos — Xray Core Manager
 
 Este archivo registra hitos, decisiones y publicaciones relevantes. Es cronológico: añade entradas nuevas al principio y no borres el historial anterior. Para el estado actual consulta PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md.
