@@ -20,9 +20,9 @@ xray_admin_latest_release() { printf '26.10.31\n'; }
 xray_admin_compatible_versions() { printf '26.10.31\n'; }
 system_xray_version() { printf 'Xray 26.10.31 (test)\n'; }
 uninstall_menu_action() {
-	local target=default
-	[[ "$#" -gt 0 ]] && target="$1"
-	printf 'uninstall-action:%s\n' "$target" >>"$CALLS"
+    local target=default
+    [[ "$#" -gt 0 ]] && target="$1"
+    printf 'uninstall-action:%s\n' "$target" >>"$CALLS"
 }
 
 printf '1\n2\n3\n\n4\n\n5\n6\n0\n' | menu_xray_admin >"$tmp/xray-menu.out"
@@ -31,14 +31,14 @@ grep -Fxq 'install-action:update' "$CALLS"
 grep -Fxq 'install-action:reinstall' "$CALLS"
 grep -Fxq 'install-action:repair' "$CALLS"
 if grep -q '^uninstall-action:' "$CALLS"; then
-	printf 'ERROR: se encontró una opción de desinstalación duplicada.\\n' >&2
-	exit 1
+    printf 'ERROR: se encontró una opción de desinstalación duplicada.\\n' >&2
+    exit 1
 fi
 grep -q '\[5\] Reinstalar Xray-core' "$tmp/xray-menu.out"
 grep -q '\[6\] Reparar instalación' "$tmp/xray-menu.out"
 if grep -q 'Desinstalar Xray-core' "$tmp/xray-menu.out"; then
-	printf 'ERROR: el menú Xray contiene una opción de desinstalación duplicada.\\n' >&2
-	exit 1
+    printf 'ERROR: el menú Xray contiene una opción de desinstalación duplicada.\\n' >&2
+    exit 1
 fi
 grep -q 'Última versión estable publicada: 26.10.31' "$tmp/xray-menu.out"
 grep -q 'Compatibilidad local: disponible' "$tmp/xray-menu.out"
@@ -53,35 +53,35 @@ grep -q 'Esta pantalla es de solo lectura' "$tmp/install-info.out"
 system_show_header() { :; }
 printf '0\ns\n' | menu_main >"$tmp/main-menu.out"
 for label in 'ADMINISTRACIÓN' 'CONFIGURACIÓN' 'SISTEMA' 'INFORMACIÓN' \
-	'Gestión de protocolos y conexiones' 'Gestión de usuarios' \
-	'Certificados SSL/TLS y dominios' 'Configuraciones, perfiles y respaldos' \
-	'Gestión del servicio Xray-core' 'Diagnóstico y registros' \
-	'Seguridad, red y mantenimiento' 'Configuración del sistema y administrador' \
-	'Información y ayuda' 'Salir'; do
-	grep -Fq "$label" "$tmp/main-menu.out"
+    'Gestión de protocolos y conexiones' 'Gestión de usuarios' \
+    'Certificados SSL/TLS y dominios' 'Configuraciones, perfiles y respaldos' \
+    'Gestión del servicio Xray-core' 'Diagnóstico y registros' \
+    'Seguridad, red y mantenimiento' 'Configuración del sistema y administrador' \
+    'Información y ayuda' 'Salir'; do
+    grep -Fq "$label" "$tmp/main-menu.out"
 done
 grep -Fq '¿Deseas salir de Xray Core Manager?' "$tmp/main-menu.out"
 
 # El submenú de sistema expone y enruta las cuatro áreas de Etapa 1.
 menu_xray_admin() {
-	printf 'xray-admin\n' >>"$CALLS"
-	return 1
+    printf 'xray-admin\n' >>"$CALLS"
+    return 1
 }
 manager_dependencies_menu() {
-	printf 'dependencies\n' >>"$CALLS"
-	return 1
+    printf 'dependencies\n' >>"$CALLS"
+    return 1
 }
 manager_settings_menu() {
-	printf 'settings\n' >>"$CALLS"
-	return 1
+    printf 'settings\n' >>"$CALLS"
+    return 1
 }
 menu_installation_information() {
-	printf 'information\n' >>"$CALLS"
-	return 1
+    printf 'information\n' >>"$CALLS"
+    return 1
 }
 uninstall_menu_action() {
-	printf 'uninstall:%s\n' "${1:-default}" >>"$CALLS"
-	return 1
+    printf 'uninstall:%s\n' "${1:-default}" >>"$CALLS"
+    return 1
 }
 printf '1\n2\n3\n4\n5\n0\n' | menu_system_admin >/dev/null
 grep -Fxq 'xray-admin' "$CALLS"
@@ -111,11 +111,30 @@ printf 'OK: navegación, recuperación de errores, retorno al menú principal y 
 TOP_LEVEL_CALLS="$tmp/top-level-calls"
 HEADER_CALLS="$tmp/all-header-calls"
 system_show_header() { printf 'header\n' >>"$HEADER_CALLS"; }
-connections_menu() { echo connections >>"$TOP_LEVEL_CALLS"; return 1; }
-users_menu_dispatch() { echo users >>"$TOP_LEVEL_CALLS"; return 1; }
-menu_placeholder() { echo placeholder >>"$TOP_LEVEL_CALLS"; return 1; }
-menu_system_admin() { echo system-admin >>"$TOP_LEVEL_CALLS"; return 1; }
-menu_information() { echo information >>"$TOP_LEVEL_CALLS"; return 1; }
+connections_menu() {
+    echo connections >>"$TOP_LEVEL_CALLS"
+    return 1
+}
+users_menu_dispatch() {
+    echo users >>"$TOP_LEVEL_CALLS"
+    return 1
+}
+menu_placeholder() {
+    echo placeholder >>"$TOP_LEVEL_CALLS"
+    return 1
+}
+menu_xray_service() {
+    echo xray-service >>"$TOP_LEVEL_CALLS"
+    return 1
+}
+menu_system_admin() {
+    echo system-admin >>"$TOP_LEVEL_CALLS"
+    return 1
+}
+menu_information() {
+    echo information >>"$TOP_LEVEL_CALLS"
+    return 1
+}
 ui_confirm() { return 0; }
 printf '1\n2\n3\n4\n5\n6\n7\n8\n9\n0\n' | menu_main >"$tmp/all-main-returns.out"
 [[ "$(wc -l <"$TOP_LEVEL_CALLS")" -eq 9 ]]

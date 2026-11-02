@@ -355,3 +355,271 @@ xray_service_prepare() {
 
     printf 'Unidad %s preparada. El servicio permanece detenido y no se habilitó.\n' "$XRAY_SERVICE_UNIT_NAME"
 }
+
+# ---------------------------------------------------------------------------
+# Ciclo de vida controlado del servicio. Estas funciones son independientes
+# de la preparación de la unidad y nunca crean ni modifican config.json.
+# ---------------------------------------------------------------------------
+
+xray_service_systemctl() {
+    command systemctl "$@"
+}
+
+xray_service_journalctl() {
+    command journalctl "$@"
+}
+
+xray_service_run_as_user() {
+    command runuser -u "$XRAY_SERVICE_USER" -- "$@"
+}
+
+xray_service_control_require_root() {
+    if [[ "$XRAY_SERVICE_ROOT" == "/" ]]; then
+        [[ "$EUID" -eq 0 ]] || {
+            xray_service_fail "la administración del servicio requiere root"
+            return 1
+        }
+    elif [[ "${XRAY_SERVICE_TEST_MODE:-0}" != 1 || "${XRAY_SERVICE_TEST_ALLOW_CONTROL:-0}" != 1 ]]; then
+        xray_service_fail "el control de servicios está bloqueado fuera del sistema real o de pruebas aisladas"
+        return 1
+    fi
+    command -v systemctl >/dev/null 2>&1 || {
+        xray_service_fail "systemctl no está disponible"
+        return 1
+    }
+}
+
+xray_service_managed_unit_check() {
+    local unit_file existing
+    unit_file="$(xray_service_path "/etc/systemd/system/$XRAY_SERVICE_UNIT_NAME")"
+    xray_service_check_path_components "$unit_file" || return 1
+    [[ -f "$unit_file" && ! -L "$unit_file" ]] || {
+        xray_service_fail "no existe una unidad regular administrada en $unit_file"
+        return 1
+    }
+    if [[ "$XRAY_SERVICE_ROOT" == "/" ]]; then
+        [[ "$(stat -c '%U:%G:%a' "$unit_file")" == "root:root:644" ]] || {
+            xray_service_fail "la unidad systemd no conserva propietario root:root y modo 644"
+            return 1
+        }
+    fi
+    existing="$(cat "$unit_file")" || return 1
+    [[ "$existing" == "$(xray_service_unit_content)" ]] || {
+        xray_service_fail "la unidad instalada no coincide con la unidad administrada; se bloquea la operación"
+        return 1
+    }
+    xray_service_systemctl cat "$XRAY_SERVICE_UNIT_NAME" >/dev/null 2>&1 || {
+        xray_service_fail "systemd no reconoce la unidad $XRAY_SERVICE_UNIT_NAME; ejecuta daemon-reload o repara la instalación"
+        return 1
+    }
+}
+
+xray_service_validate_runtime_config() {
+    local binary config_dir config_file group mode owner passwd_entry group_entry uid home shell gid
+    [[ "${XRAY_ADMIN_BIN:-${XRAY_BIN_PATH:-/usr/local/bin/xray}}" == /usr/local/bin/xray &&
+        "${XRAY_CONFIG_DIR:-/etc/xray}" == /etc/xray &&
+        "${XRAY_CONFIG_FILE:-/etc/xray/config.json}" == /etc/xray/config.json ]] || {
+        xray_service_fail "las rutas configuradas no coinciden con las rutas fijadas en xray.service; no se ejecutará una configuración distinta de la unidad"
+        return 1
+    }
+    binary="$(xray_service_path /usr/local/bin/xray)"
+    config_dir="$(xray_service_path /etc/xray)"
+    config_file="$(xray_service_path /etc/xray/config.json)"
+
+    for path in "$config_dir" "$config_file" "$binary"; do
+        xray_service_check_path_components "$path" || return 1
+    done
+    [[ -x "$binary" && -f "$binary" ]] || {
+        xray_service_fail "el binario Xray no existe o no es ejecutable: $binary"
+        return 1
+    }
+    [[ -d "$config_dir" && ! -L "$config_dir" ]] || {
+        xray_service_fail "no existe el directorio de configuración Xray"
+        return 1
+    }
+    [[ -f "$config_file" && ! -L "$config_file" ]] || {
+        xray_service_fail "no existe una configuración regular en $config_file"
+        return 1
+    }
+
+    if [[ "$XRAY_SERVICE_ROOT" == "/" ]]; then
+        owner="$(stat -c '%U' "$config_file")"
+        group="$(stat -c '%G' "$config_file")"
+        mode="$(stat -c '%a' "$config_file")"
+        [[ "$owner" == root && "$group" == "$XRAY_SERVICE_GROUP" && "$mode" == 640 ]] || {
+            xray_service_fail "permisos inseguros en config.json; se requiere root:$XRAY_SERVICE_GROUP y modo 640"
+            return 1
+        }
+        owner="$(stat -c '%U' "$config_dir")"
+        group="$(stat -c '%G' "$config_dir")"
+        mode="$(stat -c '%a' "$config_dir")"
+        [[ "$owner" == root && "$group" == "$XRAY_SERVICE_GROUP" && "$mode" == 750 ]] || {
+            xray_service_fail "permisos inseguros en $config_dir; se requiere root:$XRAY_SERVICE_GROUP y modo 750"
+            return 1
+        }
+        passwd_entry="$(getent passwd "$XRAY_SERVICE_USER" 2>/dev/null || true)"
+        group_entry="$(getent group "$XRAY_SERVICE_GROUP" 2>/dev/null || true)"
+        [[ -n "$passwd_entry" && -n "$group_entry" ]] || {
+            xray_service_fail "no existe la cuenta o el grupo de servicio $XRAY_SERVICE_USER:$XRAY_SERVICE_GROUP"
+            return 1
+        }
+        uid="$(cut -d: -f3 <<<"$passwd_entry")"
+        home="$(cut -d: -f6 <<<"$passwd_entry")"
+        shell="$(cut -d: -f7 <<<"$passwd_entry")"
+        gid="$(cut -d: -f3 <<<"$group_entry")"
+        [[ "$uid" =~ ^[0-9]+$ && "$uid" -lt 1000 &&
+            "$gid" =~ ^[0-9]+$ && "$gid" -lt 1000 &&
+            "$home" == /var/lib/xray && "$shell" == /usr/sbin/nologin ]] || {
+            xray_service_fail "la identidad de servicio no conserva UID/GID de sistema, home o shell esperados"
+            return 1
+        }
+        id -gn "$XRAY_SERVICE_USER" 2>/dev/null | grep -Fxq "$XRAY_SERVICE_GROUP" || {
+            xray_service_fail "la cuenta $XRAY_SERVICE_USER no tiene el grupo primario esperado"
+            return 1
+        }
+        xray_service_run_as_user "$binary" run -test -config "$config_file" || {
+            xray_service_fail "config.json no supera la validación de Xray como usuario $XRAY_SERVICE_USER; no se tocará el servicio"
+            return 1
+        }
+    else
+        "$binary" run -test -config "$config_file" || {
+            xray_service_fail "config.json no supera la validación de Xray en el entorno aislado"
+            return 1
+        }
+    fi
+}
+
+xray_service_status() {
+    local active enabled load sub result code since
+    xray_service_control_require_root || return 1
+    if ! xray_service_managed_unit_check; then
+        printf 'Unidad: no disponible o no administrada
+'
+        return 1
+    fi
+    active="$(xray_service_systemctl is-active "$XRAY_SERVICE_UNIT_NAME" 2>/dev/null || true)"
+    enabled="$(xray_service_systemctl is-enabled "$XRAY_SERVICE_UNIT_NAME" 2>/dev/null || true)"
+    load="$(xray_service_systemctl show "$XRAY_SERVICE_UNIT_NAME" --property=LoadState --value 2>/dev/null || true)"
+    sub="$(xray_service_systemctl show "$XRAY_SERVICE_UNIT_NAME" --property=SubState --value 2>/dev/null || true)"
+    result="$(xray_service_systemctl show "$XRAY_SERVICE_UNIT_NAME" --property=Result --value 2>/dev/null || true)"
+    code="$(xray_service_systemctl show "$XRAY_SERVICE_UNIT_NAME" --property=ExecMainStatus --value 2>/dev/null || true)"
+    since="$(xray_service_systemctl show "$XRAY_SERVICE_UNIT_NAME" --property=ActiveEnterTimestamp --value 2>/dev/null || true)"
+    printf 'Unidad:              %s
+' "${load:-desconocida}"
+    printf 'Estado:              %s
+' "${active:-desconocido}"
+    printf 'Subestado:           %s
+' "${sub:-desconocido}"
+    printf 'Inicio automático:   %s
+' "${enabled:-desconocido}"
+    printf 'Resultado último:    %s
+' "${result:-no disponible}"
+    printf 'Código de salida:    %s
+' "${code:-no disponible}"
+    printf 'Activo desde:        %s
+' "${since:-no disponible}"
+    if [[ -f "$(xray_service_path /etc/xray/config.json)" ]]; then
+        if xray_service_validate_runtime_config; then
+            printf 'Configuración:       válida para el usuario de servicio\n'
+        else
+            printf 'Configuración:       INVÁLIDA o inaccesible; no iniciar/reiniciar Xray\n'
+        fi
+    else
+        printf 'Configuración:       ausente; no iniciar/reiniciar Xray\n'
+    fi
+}
+
+xray_service_show_logs() {
+    local lines="${1:-50}"
+    if [[ ! "$lines" =~ ^[0-9]+$ ]] || ((lines < 1 || lines > 200)); then
+        xray_service_fail "el número de líneas debe estar entre 1 y 200"
+        return 1
+    fi
+    xray_service_control_require_root || return 1
+    xray_service_managed_unit_check || return 1
+    command -v journalctl >/dev/null 2>&1 || {
+        xray_service_fail "journalctl no está disponible"
+        return 1
+    }
+    xray_service_journalctl -u "$XRAY_SERVICE_UNIT_NAME" -n "$lines" --no-pager -o short-iso
+}
+
+xray_service_action() {
+    local action="$1"
+    xray_service_control_require_root || return 1
+    xray_service_managed_unit_check || return 1
+
+    case "$action" in
+        start | restart | enable)
+            xray_service_validate_runtime_config || return 1
+            ;;
+        stop | disable) ;;
+        *)
+            xray_service_fail "operación de servicio desconocida: $action"
+            return 1
+            ;;
+    esac
+
+    case "$action" in
+        start)
+            xray_service_systemctl start "$XRAY_SERVICE_UNIT_NAME" || {
+                xray_service_fail "systemd no pudo iniciar Xray"
+                return 1
+            }
+            xray_service_systemctl is-active --quiet "$XRAY_SERVICE_UNIT_NAME" || {
+                xray_service_fail "systemd no confirmó que Xray quedó activo"
+                return 1
+            }
+            printf 'Xray quedó iniciado y activo. El inicio automático no fue modificado.
+'
+            ;;
+        stop)
+            xray_service_systemctl stop "$XRAY_SERVICE_UNIT_NAME" || {
+                xray_service_fail "systemd no pudo detener Xray"
+                return 1
+            }
+            if xray_service_systemctl is-active --quiet "$XRAY_SERVICE_UNIT_NAME"; then
+                xray_service_fail "systemd no confirmó la detención de Xray"
+                return 1
+            fi
+            printf 'Xray quedó detenido. El inicio automático no fue modificado.
+'
+            ;;
+        restart)
+            xray_service_systemctl restart "$XRAY_SERVICE_UNIT_NAME" || {
+                xray_service_fail "systemd no pudo reiniciar Xray"
+                return 1
+            }
+            xray_service_systemctl is-active --quiet "$XRAY_SERVICE_UNIT_NAME" || {
+                xray_service_fail "Xray no quedó activo después del reinicio"
+                return 1
+            }
+            printf 'Xray fue reiniciado y quedó activo.
+'
+            ;;
+        enable)
+            xray_service_systemctl enable "$XRAY_SERVICE_UNIT_NAME" || {
+                xray_service_fail "no se pudo habilitar el inicio automático"
+                return 1
+            }
+            xray_service_systemctl is-enabled --quiet "$XRAY_SERVICE_UNIT_NAME" || {
+                xray_service_fail "systemd no confirmó el inicio automático"
+                return 1
+            }
+            printf 'Inicio automático habilitado. Xray no fue iniciado por esta operación.
+'
+            ;;
+        disable)
+            xray_service_systemctl disable "$XRAY_SERVICE_UNIT_NAME" || {
+                xray_service_fail "no se pudo deshabilitar el inicio automático"
+                return 1
+            }
+            if xray_service_systemctl is-enabled --quiet "$XRAY_SERVICE_UNIT_NAME"; then
+                xray_service_fail "systemd no confirmó la deshabilitación del inicio automático"
+                return 1
+            fi
+            printf 'Inicio automático deshabilitado. El estado actual del servicio no fue modificado.
+'
+            ;;
+    esac
+}
