@@ -140,7 +140,7 @@ En cada cierre de incremento se informará:
 - Qué queda pendiente.
 - Si el estado de una etapa cambia o permanece igual.
 
-**Conclusión vigente:** Etapa 1 sigue PARCIAL y no certificada. La coordinación interna de concurrencia y las confirmaciones destructivas están implementadas y probadas; siguen pendientes M04/M06 y las validaciones operativas aisladas de instalación, dependencias, preferencias y desinstalación. No se debe avanzar de etapa ni declarar cierre por el solo hecho de que los menús y pruebas aisladas existan.
+**Conclusión vigente (actualizada 02/11/2026):** Etapa 1 sigue PARCIAL y no certificada. La coordinación interna de concurrencia, las confirmaciones destructivas y los requisitos M04/M06 del encabezado están implementados y probados. Siguen pendientes las validaciones operativas aisladas de instalación, dependencias, preferencias y desinstalación, además del cotejo final del resto de la matriz. No se debe declarar cierre por el solo hecho de que los menús y pruebas aisladas existan.
 
 
 ## 7. Actualización de contraste y pruebas — 2026-11-01
@@ -175,4 +175,12 @@ Informe detallado: docs/CONTRASTE_GITHUB_DESIGN_USER_IDENTITY_ASSOCIATION_V1_202
 - Desinstalación: adquiere lifecycle, uninstall, integridad y Xray antes de crear el respaldo; mantiene los locks durante respaldo, exportación, confirmación final y borrado.
 - `A11`, `U14` y `N03` pasan a IMPLEMENTADO para las operaciones internas cubiertas por estos locks.
 - Validación final de esta ronda: 20/20 pruebas, Bash syntax, ShellCheck y shfmt en archivos de producción modificados y pruebas con estilo homogéneo; `tests/uninstall.sh` conserva formato histórico mixto. `./install.sh --check` PASS. Xray permaneció inactivo; no se ejecutaron apt, instalación/desinstalación real, migraciones ni cambios de firewall/SSH.
-- La Etapa 1 continúa PARCIAL por M04/M06 y las validaciones operativas reales pendientes.
+- M04/M06 se cierran como IMPLEMENTADO en la actualización del 02/11/2026. La Etapa 1 continúa PARCIAL por las validaciones operativas reales y el cotejo del resto de la matriz.
+
+
+## 9. Actualización — M04/M06 (02/11/2026)
+
+- M04: se añadió la cobertura explícita del autostart `disabled`; ahora se distinguen unidad no configurada, habilitada, deshabilitada, enmascarada y estados no aplicables.
+- M06: `system_show_header` aísla fallos de cada fuente y conserva el menú principal. Las pruebas fallan independientemente IP, versión Xray, estado del servicio, autostart, perfil y fecha/hora, y luego todas simultáneamente.
+- Validación final: 20/20 scripts, Bash syntax, ShellCheck, shfmt y `./install.sh --check` PASS. `tests/port_collisions.sh` falló intermitentemente una vez, pasó tres ejecuciones aisladas consecutivas y pasó en la suite completa repetida. Xray permanece inactive.
+- M04/M06 pasan a IMPLEMENTADO. Etapa 1 continúa PARCIAL por las validaciones operativas reales y el cotejo final de los demás requisitos.
