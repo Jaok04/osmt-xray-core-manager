@@ -272,3 +272,12 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Estado: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO en `9d03d4b4e77e1a160b94ee2c2f3c74487977e362`. La suite completa posterior se ejecutará en Bloque 3; VMess sigue pendiente de aceptación formal.
 
 - Publicación verificada: HEAD local/remoto y árboles idénticos en `9d03d4b4e77e1a160b94ee2c2f3c74487977e362`; sólo rama `design/user-identity-association-v1`.
+
+
+## 2026-11-02 — Bloque 3: cobertura de pruebas VMess
+
+- `tests/vmess_assistant.sh` ahora prueba EOF/cancelación en varios puntos, slots inválidos, UUID inválido/duplicado, puerto inválido, modalidad incompatible y EOF al confirmar; comprueba que el catálogo no cambia en flujos fallidos/cancelados.
+- Nuevo `tests/vmess_persistence_hardening.sh`: clave maestra ausente/inválida, AES-256-GCM/ciphertext alterado, refs rotas, huérfanos, symlinks, permisos, fallo de publicación del catálogo y concurrencia sobre IDs distintos y misma conexión/revisiones.
+- El fallo inyectado entre escritura de configuración/secreto y publicación del catálogo deja huérfanos detectables, sin cambiar referencias; `audit` no borra automáticamente. Esto respeta la decisión de no ofrecer rollback transaccional VMess.
+- Suite completa: 38/38 scripts PASS. `py_compile`, `bash -n` de todos los scripts, `install.sh --check`, ShellCheck warning de archivos modificados y `git diff --check`: PASS.
+- No se modificó código de producción en este bloque. Estado: IMPLEMENTADO y VERIFICADO; PUBLICADO/SINCRONIZADO pendiente. VMess sigue pendiente de aceptación formal.

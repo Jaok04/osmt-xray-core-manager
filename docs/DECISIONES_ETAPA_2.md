@@ -35,6 +35,7 @@ Decisiones principales:
 - VMess aún no está integrado con las asociaciones globales de identidad de Etapa 3; sus usuarios se capturan manualmente en el asistente.
 - El backup/restore P4 sigue siendo exclusivamente VLESS y no incluye configuraciones ni secretos VMess. La restauración VLESS ahora combina las entradas VLESS del backup con las entradas VMess vigentes, valida sus referencias y conserva el almacén VMess sin modificarlo. El detalle y la evidencia de esta corrección se registran en la sección 9 de `docs/P4_BACKUP_RECUPERACION_VLESS.md`; su aceptación formal específica está pendiente.
 - Backup/restore VMess independiente sigue fuera del alcance y requiere diseño/autorización separados.
+- La persistencia VMess no implementa rollback transaccional: una interrupción después de escribir archivos y antes de publicar el catálogo puede dejar artefactos huérfanos; `audit` debe detectarlos y nunca eliminarlos automáticamente.
 
 ## 4. Alcance de integración VLESS aprobado
 

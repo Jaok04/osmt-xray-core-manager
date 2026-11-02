@@ -293,3 +293,14 @@ Después de `xray run -test` y antes del consentimiento de guardado, se presenta
 Durante la prueba REALITY se detectó una colisión de nombre en las funciones `connections_vmess_read*`: el parámetro local `target` ocultaba el destino del llamador al intentar capturar el target REALITY. Se renombró el parámetro local a `target_name` en las funciones de lectura; la captura REALITY y el resumen quedaron verificados.
 
 `tests/vmess_assistant.sh` cubre avisos, campos del resumen, orden previo al guardado y ausencia de material secreto TLS/REALITY. Pruebas focales `tests/vmess_assistant.sh`, `tests/vmess_model.sh`, `tests/xray_vmess_integration.sh` (14/14 y negativos) y `tests/stage2_navigation.sh` (14/14): PASS. `bash -n` y ShellCheck warning de archivos modificados: PASS. Estado Bloque 2: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO en `9d03d4b4e77e1a160b94ee2c2f3c74487977e362`. Suite completa se repetirá en Bloque 3.
+
+
+## 2026-11-02 — Bloque 3: cobertura de pruebas VMess
+
+Se amplió `tests/vmess_assistant.sh` para probar cancelación y EOF en dirección/UUID/path/confirmación, slots inválidos, UUID inválido/duplicado, puerto inválido y modalidad incompatible. Se verifica que las entradas fallidas y la cancelación después del resumen no alteran el catálogo.
+
+Se creó `tests/vmess_persistence_hardening.sh`: store/read TLS AES-256-GCM y AAD; permisos; clave maestra ausente sin regeneración en read; clave inválida en read/store; ciphertext/tag alterado sin plaintext; referencias de configuración y secreto rotas; huérfanos; symlinks; fallos antes de publicar el catálogo; y concurrencia de escritores con IDs distintos y misma conexión/revisiones r1-r2.
+
+La prueba de fallo inyectado confirma que una interrupción después de escribir archivos y antes de publicar el catálogo deja huérfanos detectables, mientras el catálogo permanece intacto. No hay rollback transaccional VMess en el diseño aprobado; `audit` detecta los huérfanos y no los borra automáticamente. No se modificó código de producción en este bloque.
+
+Suite completa `tests/*.sh`: 38/38 PASS. También PASS: `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de los archivos modificados y `git diff --check`. Estado Bloque 3: IMPLEMENTADO y VERIFICADO; PUBLICADO/SINCRONIZADO pendiente.

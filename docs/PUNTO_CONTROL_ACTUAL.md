@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-02
-**Tarea:** correcciones aprobadas para el cierre técnico VMess; Bloques 1 y 2 ejecutados.
-**Estado:** Bloque 1 PUBLICADO/SINCRONIZADO; Bloque 2 del asistente VMess IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO. VMess continúa pendiente de aceptación formal.
+**Tarea:** correcciones aprobadas para el cierre técnico VMess; Bloques 1, 2 y 3 ejecutados.
+**Estado:** Bloques 1 y 2 PUBLICADOS/SINCRONIZADOS; Bloque 3 de pruebas IMPLEMENTADO y VERIFICADO, publicación pendiente. VMess continúa pendiente de aceptación formal.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -44,8 +44,8 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 - Adaptador TLS reforzado: valida certificado PEM, clave privada PEM y correspondencia de claves públicas mediante `cryptography`; rechaza symlinks y archivos no regulares.
 - Casos negativos: TLS sin clave, symlink de clave, PEM inválido, certificado/clave no coincidentes, REALITY sin clave, short ID inválido, clave REALITY inválida, campos TLS en modalidad sin TLS, campos de transporte desconocidos y modelo/seguridad inconsistentes: PASS.
 - Navegación: 14/14 combinaciones VMess resueltas individualmente por el menú.
-- Suite completa anterior de VMess: 36/36 scripts PASS. Tras el Bloque 1: 37/37 scripts PASS. Tras el Bloque 2 se ejecutaron las pruebas focales del asistente, modelo, integración Xray y navegación: PASS; la suite completa se repetirá en el Bloque 3.
-- Controles estáticos tras Bloque 1: `bash -n` de todos los scripts Bash, `python3 -m py_compile scripts/*.py`, `./install.sh --check`, ShellCheck (`-S warning`) sobre las pruebas modificadas y `git diff --check`: PASS. shfmt no se reformateó; el criterio sigue pendiente del Bloque 4.
+- Suite completa anterior de VMess: 36/36 scripts PASS. Tras el Bloque 1: 37/37 scripts PASS. Tras el Bloque 3: suite completa `tests/*.sh` 38/38 PASS, incluyendo las pruebas ampliadas de asistente y persistencia.
+- Controles estáticos tras Bloque 3: `bash -n` de todos los scripts Bash, `python3 -m py_compile scripts/*.py`, `./install.sh --check`, ShellCheck (`-S warning`) sobre los archivos modificados y `git diff --check`: PASS. shfmt no se reformateó; el criterio sigue pendiente del Bloque 4.
 
 ## 4. Límites que no bloquean el cierre de VMess
 
@@ -69,10 +69,10 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 
 | Estado | Resultado |
 |---|---|
-| IMPLEMENTADO | Sí |
-| VERIFICADO | VMess: 36/36 en auditoría anterior; Bloque 1: suite completa 37/37 y controles estáticos PASS |
-| PUBLICADO | Sí — `ab76a57032faa9793a62348f865fba2c9a7d8f77` en la rama autorizada |
-| SINCRONIZADO | Sí — verificación posterior a los commits de código y documentación; obtener SHA vigente con `git rev-parse HEAD` |
+| IMPLEMENTADO | Sí — módulo VMess y Bloques 1, 2 y 3 del plan correctivo |
+| VERIFICADO | Sí — 14/14 modalidades Xray; suite completa 38/38 y controles estáticos PASS |
+| PUBLICADO | VMess base, Bloques 1 y 2 publicados; Bloque 3 pendiente de publicación |
+| SINCRONIZADO | HEAD local/remoto verificado tras cada publicación anterior; Bloque 3 pendiente |
 | ACEPTADO | Pendiente de confirmación formal del propietario |
 
 ## 7. Siguiente acción
@@ -95,7 +95,7 @@ No modificar `main`. No ampliar la corrección P4 más allá de la preservación
 
 ## 9. Siguiente acción permitida
 
-Continuar con el Bloque 3 aprobado: ampliar las pruebas de cancelación, EOF, entradas inválidas, resumen, almacenamiento, claves, ciphertext, referencias, huérfanos, symlinks y concurrencia. Después ejecutar el Bloque 4 de documentación/criterio shfmt y la auditoría integral. Mantener VMess pendiente de aceptación formal hasta concluir el proceso y revisión del propietario.
+Continuar con el Bloque 4 aprobado: completar la documentación técnica, definir el criterio shfmt sin reformatear archivos y ejecutar la auditoría integral de cierre. Mantener VMess pendiente de aceptación formal hasta concluir el proceso y revisión del propietario.
 
 
 ## 10. Bloque 2 — advertencias y resumen del asistente VMess
@@ -109,3 +109,14 @@ Continuar con el Bloque 3 aprobado: ampliar las pruebas de cancelación, EOF, en
 - Se corrigió la asignación de `target` REALITY: el parámetro local de las funciones de lectura ya no oculta la variable destino del llamador.
 - `tests/vmess_assistant.sh` valida los avisos, los campos del resumen, el orden resumen→consentimiento y que no se revele material TLS/REALITY. `tests/vmess_assistant.sh`, `tests/vmess_model.sh`, `tests/xray_vmess_integration.sh` y `tests/stage2_navigation.sh`: PASS.
 - `bash -n` y ShellCheck warning de los dos archivos modificados: PASS. Suite completa posterior se ejecutará en Bloque 3.
+
+
+## 11. Bloque 3 — cobertura integral de pruebas VMess
+
+**Estado:** IMPLEMENTADO y VERIFICADO; pendiente publicación/sincronización.
+
+- `tests/vmess_assistant.sh`: añade EOF/cancelación en distintos puntos, slots inválidos, UUID inválido/duplicado, puerto fuera de rango, modalidad incompatible y EOF al confirmar; comprueba que los flujos fallidos/cancelados no cambian el catálogo.
+- `tests/vmess_persistence_hardening.sh`: clave maestra ausente/inválida, ciphertext/tag alterado, ausencia de plaintext ante error, refs de configuración/secreto rotas, huérfanos, symlinks, permisos, fallo de publicación del catálogo, detección de huérfanos sin borrado automático y concurrencia (IDs distintos y misma conexión r1/r2).
+- El fallo inyectado entre escritura de archivos y publicación de catálogo deja huérfanos detectables, sin cambiar el catálogo. Es el comportamiento previsto: VMess no ofrece rollback transaccional y la auditoría no borra automáticamente.
+- Suite completa: 38/38 scripts PASS. `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de los archivos modificados y `git diff --check`: PASS.
+- No se modificó código de producción en este bloque. No se accedió a la clave maestra real ni se tocó runtime.

@@ -134,6 +134,8 @@ El almacén VMess usa la clave maestra local compartida con VLESS, pero AES-256-
 - Confirmar los avisos de reloj (120 segundos), WebSocket y HTTPUpgrade.
 - Confirmar que el resumen no revela material secreto TLS/REALITY.
 - Confirmar cifrado/aislamiento de secretos y que los borradores no activan runtime.
+- Probar clave maestra ausente o inválida, ciphertext AES-GCM alterado, referencias de configuración/secreto rotas, huérfanos, symlinks y escritores concurrentes.
+- Probar fallo de publicación del catálogo después de escribir archivos: el catálogo no debe apuntar a la revisión incompleta y la auditoría debe detectar los archivos huérfanos sin borrarlos automáticamente. El almacén VMess no promete rollback transaccional.
 - Suite completa, sintaxis, ShellCheck, formato y `git diff --check`.
 
 ### Cierre

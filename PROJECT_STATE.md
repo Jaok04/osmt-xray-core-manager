@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02 — Bloques 1 y 2 de correcciones VMess implementados y verificados; publicación del Bloque 2 pendiente
+**Corte de estado:** 2026-11-02 — Bloques 1, 2 y 3 implementados y verificados; publicación del Bloque 3 pendiente
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -230,3 +230,14 @@ Estado del incremento: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; acept
 Se corrigió además una colisión de nombre local en las funciones de lectura de parámetros que impedía asignar correctamente el target REALITY. La prueba `tests/vmess_assistant.sh` ahora verifica advertencias, resumen, orden resumen-antes-de-guardar y ausencia de material secreto TLS/REALITY en la salida.
 
 Verificación focal: `tests/vmess_assistant.sh`, `tests/vmess_model.sh`, `tests/xray_vmess_integration.sh` (14/14 combinaciones y negativos) y `tests/stage2_navigation.sh` (14/14): PASS. `bash -n` y ShellCheck warning de archivos modificados: PASS. Suite completa posterior al Bloque 2 queda pendiente del Bloque 3. Estado: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; commit `9d03d4b4e77e1a160b94ee2c2f3c74487977e362`. VMess sigue sin aceptación formal.
+
+
+## 12. Bloque 3 — cobertura de pruebas VMess — 2026-11-02
+
+Se amplió `tests/vmess_assistant.sh` para comprobar cancelación/EOF en dirección, UUID y path; slots inválidos; UUID inválido y duplicado; puerto fuera de rango; modalidad incompatible; y EOF en el consentimiento después del resumen. Los intentos inválidos o cancelados no deben modificar el catálogo. Se conservan las comprobaciones de resumen previo al consentimiento y ocultamiento de material TLS/REALITY.
+
+Se creó `tests/vmess_persistence_hardening.sh`, que cubre store/read TLS AES-256-GCM, AAD, permisos, clave maestra ausente (read no la regenera), clave inválida (read/store fallan antes de publicar), ciphertext/tag alterado (sin plaintext), referencias de configuración/secreto rotas, archivos huérfanos, symlinks, fallo después de escribir archivos y antes de publicar catálogo, auditoría sin borrado automático, dos escritores concurrentes sobre IDs distintos y dos escrituras concurrentes sobre el mismo ID con revisiones r1/r2.
+
+El fallo inyectado en la publicación del catálogo deja los archivos de configuración/secreto como huérfanos detectables; el catálogo permanece intacto. Esto es coherente con el diseño aprobado, que no ofrece rollback transaccional para VMess y exige detección sin borrado automático. No se cambió producción en este bloque; sólo cobertura de pruebas.
+
+Verificación integral posterior: `tests/*.sh` 38/38 PASS; `python3 -m py_compile scripts/*.py`; `bash -n` de todos los scripts Bash; `install.sh --check`; ShellCheck (`-S warning`) sobre archivos modificados; `git diff --check`: PASS. Estado: IMPLEMENTADO y VERIFICADO; PUBLICADO/SINCRONIZADO pendiente. VMess sigue pendiente de aceptación formal.

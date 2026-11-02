@@ -8,7 +8,8 @@ cat >"$TMP/catalog.json" <<'JSON'
 [
  {"id":"conn-vmess-ws","name":"VMess WS","protocol_id":"vmess_ws","port":62101,"max_users":5,"state":"draft","runtime_applied":false,"created_at":"2026-11-02T00:00:00Z"},
  {"id":"conn-vmess-hu-tls","name":"VMess HTTPUpgrade TLS","protocol_id":"vmess_httpupgrade_tls","port":62102,"max_users":5,"state":"draft","runtime_applied":false,"created_at":"2026-11-02T00:00:00Z"},
- {"id":"conn-vmess-reality","name":"VMess REALITY","protocol_id":"vmess_reality","port":62103,"max_users":5,"state":"draft","runtime_applied":false,"created_at":"2026-11-02T00:00:00Z"}
+ {"id":"conn-vmess-reality","name":"VMess REALITY","protocol_id":"vmess_reality","port":62103,"max_users":5,"state":"draft","runtime_applied":false,"created_at":"2026-11-02T00:00:00Z"},
+ {"id":"conn-vmess-bad-port","name":"VMess invalid port","protocol_id":"vmess_ws","port":70000,"max_users":5,"state":"draft","runtime_applied":false,"created_at":"2026-11-02T00:00:00Z"}
 ]
 JSON
 chmod 600 "$TMP/catalog.json"
@@ -76,6 +77,32 @@ grep -F 'Short IDs: aabbccdd' <<<"$REALITY_OUTPUT" >/dev/null
 grep -F 'Clave privada: presente (contenido oculto; si guardas el borrador, se almacenará cifrado).' <<<"$REALITY_OUTPUT" >/dev/null
 if grep -F 'DO-NOT-DISPLAY-REALITY-TEST-DATA' <<<"$REALITY_OUTPUT"; then echo 'ERROR: material REALITY visible en el resumen.' >&2; exit 1; fi
 jq -e 'all(.[] | select(.id=="conn-vmess-reality"); (has("vmess_configuration_ref")|not))' "$CONNECTION_DATA_FILE" >/dev/null
+# Cancelaciones, EOF y entradas inválidas: ningún intento fallido debe alterar el catálogo.
+cp "$CONNECTION_DATA_FILE" "$TMP/catalog-before-negative.json"
+assert_assistant_failure() {
+    local label="$1" cid="$2" mode="$3" input="$4"
+    if printf '%s' "$input" | connections_vmess_assistant "$cid" "$mode" >/dev/null 2>&1; then
+        echo "ERROR: se aceptó un flujo inválido: $label" >&2
+        exit 1
+    fi
+    cmp -s "$TMP/catalog-before-negative.json" "$CONNECTION_DATA_FILE" || {
+        echo "ERROR: el catálogo cambió durante el flujo inválido: $label" >&2
+        exit 1
+    }
+}
+assert_assistant_failure 'EOF en dirección' conn-vmess-ws vmess_ws ''
+assert_assistant_failure 'EOF al capturar UUID' conn-vmess-ws vmess_ws $'127.0.0.1\n1\n'
+assert_assistant_failure 'cantidad de usuarios cero' conn-vmess-ws vmess_ws $'127.0.0.1\n0\n'
+assert_assistant_failure 'UUID inválido' conn-vmess-ws vmess_ws $'127.0.0.1\n1\nnot-a-uuid\n'
+assert_assistant_failure 'UUID duplicado' conn-vmess-ws vmess_ws $'127.0.0.1\n2\n11111111-1111-4111-8111-111111111111\nfirst@example.test\n\n11111111-1111-4111-8111-111111111111\nsecond@example.test\n\n'
+assert_assistant_failure 'EOF en path' conn-vmess-ws vmess_ws $'127.0.0.1\n1\n\npath-eof@example.test\n\n'
+assert_assistant_failure 'puerto fuera de rango' conn-vmess-bad-port vmess_ws $'127.0.0.1\n1\n\nbad-port@example.test\n\n/ws\n\n'
+assert_assistant_failure 'modalidad incompatible' conn-vmess-ws vmess_ws_reality $'127.0.0.1\n1\n\ninvalid-mode@example.test\n\n'
+# EOF en la confirmación equivale a cancelar y no guarda el borrador.
+SUMMARY_EOF_OUTPUT="$(printf '127.0.0.1\n1\n\nsummary-eof@example.test\n\n/ws\n\n' | connections_vmess_assistant conn-vmess-ws vmess_ws 2>&1)"
+grep -F 'RESUMEN DE LA CONEXIÓN VMESS' <<<"$SUMMARY_EOF_OUTPUT" >/dev/null
+grep -F 'No se guardó la configuración.' <<<"$SUMMARY_EOF_OUTPUT" >/dev/null
+cmp -s "$TMP/catalog-before-negative.json" "$CONNECTION_DATA_FILE"
 python3 "$ROOT/scripts/vmess_config_store.py" audit --base "$XRAY_MANAGER_VMESS_DIR" --catalog "$CONNECTION_DATA_FILE" --lock "$XRAY_MANAGER_INTEGRITY_LOCK" --secrets-dir "$XRAY_MANAGER_VMESS_SECRETS_DIR" --master-key "$XRAY_MANAGER_MASTER_KEY_FILE" >"$TMP/audit.json"
 jq -e '.broken_references==[] and .orphan_files==[] and .orphan_secret_files==[] and .unsafe_entries==[] and .automatic_deletion==false' "$TMP/audit.json" >/dev/null
 # Un enlace simbólico no debe pasar inadvertido en la auditoría.
@@ -83,4 +110,4 @@ ln -s "$TMP/vmess/configurations/conn-vmess-hu-tls.r000001.json" "$TMP/vmess/con
 python3 "$ROOT/scripts/vmess_config_store.py" audit --base "$XRAY_MANAGER_VMESS_DIR" --catalog "$CONNECTION_DATA_FILE" --lock "$XRAY_MANAGER_INTEGRITY_LOCK" --secrets-dir "$XRAY_MANAGER_VMESS_SECRETS_DIR" --master-key "$XRAY_MANAGER_MASTER_KEY_FILE" >"$TMP/audit-symlink.json"
 jq -e '.unsafe_entries==["configurations/rogue.json"]' "$TMP/audit-symlink.json" >/dev/null
 
-echo 'OK: VMess muestra aviso horario, advertencias WS/HTTPUpgrade y resumen completo; oculta material TLS/REALITY, persiste borradores y recupera/audita HTTPUpgrade-TLS.'
+echo 'OK: VMess cubre avisos, resumen/consentimiento, ocultamiento de secretos, cancelación, EOF, UUID, slots, puertos y modalidades inválidas; persiste y recupera borradores.'
