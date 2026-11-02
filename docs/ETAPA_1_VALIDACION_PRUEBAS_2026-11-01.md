@@ -58,6 +58,6 @@ Las pruebas usan exclusivamente fixtures temporales. No se ejecutó la desinstal
 
 Se incorporó `lib/operation_lock.sh` con locks no bloqueantes, permisos privados y rechazo de rutas simbólicas. El bloqueo `/run/lock/xray-manager-lifecycle.lock` coordina instalador, administración Xray, dependencias y guardado de preferencias. El instalador coordina además el lock de integridad de datos.
 
-La desinstalación toma lifecycle, uninstall, integridad y Xray antes de crear el respaldo y los conserva durante toda la operación. Pruebas de fixtures verifican contención de cada lock y cancelación de la confirmación irreversible sin borrado.
+Las acciones mutantes de `xray.service` toman lifecycle. La desinstalación toma lifecycle, uninstall, integridad y Xray antes de crear el respaldo y los conserva durante toda la operación; esto evita que un `start` se cuele entre la comprobación de servicio detenido y el borrado. Pruebas de fixtures verifican contención de cada lock y cancelación de la confirmación irreversible sin borrado.
 
 La batería completa pasó 20/20. Bash syntax y ShellCheck pasaron en el proyecto; shfmt pasó en archivos de producción modificados y pruebas con estilo homogéneo. `tests/uninstall.sh` conserva formato histórico mixto. `./install.sh --check` pasó sin modificar el sistema. No se ejecutó instalación real ni desinstalación real.
