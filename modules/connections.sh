@@ -41,7 +41,7 @@ connections_family_menu() {
 				;;
 			vmess)
 				ui_title "ADMINISTRAR VMESS"
-				printf '\n  PRINCIPALES\n  [1] VMess-WS\n  [2] VMess-TLS\n  [3] VMess-WS-TLS\n  [4] VMess-REALITY\n  [5] VMess-GRPC\n  ADICIONALES\n  [6] VMess-HTTPUpgrade\n  [7] VMess-XHTTP\n  [8] VMess-mKCP\n'
+				printf '\n  PRINCIPALES\n  [1] VMess-WS\n  [2] VMess-TLS\n  [3] VMess-WS-TLS\n  [4] VMess-REALITY\n  [5] VMess-GRPC\n  ADICIONALES\n  [6] VMess-HTTPUpgrade (sin TLS / TLS)\n  [7] VMess-XHTTP\n  [8] VMess-mKCP\n'
 				;;
 			trojan)
 				ui_title "ADMINISTRAR TROJAN"
@@ -193,6 +193,11 @@ connections_resolve_mode() {
 			ui_read_option "Selecciona seguridad: " option || return 1
 			case "$option" in 1) result_ref=vmess_mkcp ;; 2) result_ref=vmess_mkcp_tls ;; *) return 1 ;; esac
 			;;
+		vmess_httpupgrade)
+			printf '\nSeguridad VMess-HTTPUpgrade:\n  [1] Sin TLS\n  [2] TLS\n  [0] Cancelar\n'
+			ui_read_option "Selecciona seguridad: " option || return 1
+			case "$option" in 1) result_ref=vmess_httpupgrade ;; 2) result_ref=vmess_httpupgrade_tls ;; *) return 1 ;; esac
+			;;
 		*) result_ref="$mode_key" ;;
 	esac
 }
@@ -269,7 +274,7 @@ connections_existing_menu() {
 		name="$(jq -r --arg id "$id" '.[] | select(.id == $id) | .name' "$CONNECTION_DATA_FILE")"
 		protocol_id="$(jq -r --arg id "$id" '.[] | select(.id == $id) | .protocol_id' "$CONNECTION_DATA_FILE")"
 		port="$(jq -r --arg id "$id" '.[] | select(.id == $id) | .port' "$CONNECTION_DATA_FILE")"
-		has_configuration="$(jq -r --arg id "$id" 'any(.[]; .id == $id and (.configuration_ref | type == "string"))' "$CONNECTION_DATA_FILE")"
+		has_configuration="$(jq -r --arg id "$id" --arg protocol "$protocol_id" 'any(.[]; .id == $id and (if ($protocol | startswith("vmess_")) then (.vmess_configuration_ref | type == "string") else (.configuration_ref | type == "string") end))' "$CONNECTION_DATA_FILE")"
 		connections_unlock "$fd"
 		ui_clear
 		ui_title "ADMINISTRAR CONEXIÓN"
@@ -290,10 +295,14 @@ connections_existing_menu() {
 				if [[ "$state" == draft ]]; then connections_delete_draft "$id" || true; else printf '\nOperación no disponible.\n'; ui_pause; fi
 				return 0
 				;;
-			4)
-				if [[ "$state" == draft && "$has_configuration" == true ]] && declare -F connections_vless_assistant_restore >/dev/null 2>&1; then
-					connections_vless_assistant_restore "$id" "$protocol_id" || true
-				else printf '\nNo hay una configuración VLESS recuperable.\n'; ui_pause; fi
+				4)
+				if [[ "$state" == draft && "$has_configuration" == true ]]; then
+					case "$protocol_id" in
+						vless_*) if declare -F connections_vless_assistant_restore >/dev/null 2>&1; then connections_vless_assistant_restore "$id" "$protocol_id" || true; else printf '\nAsistente VLESS no cargado.\n'; ui_pause; fi ;;
+						vmess_*) if declare -F connections_vmess_assistant_restore >/dev/null 2>&1; then connections_vmess_assistant_restore "$id" "$protocol_id" || true; else printf '\nAsistente VMess no cargado.\n'; ui_pause; fi ;;
+						*) printf '\nNo hay recuperador implementado para esta familia.\n'; ui_pause ;;
+					esac
+				else printf '\nNo hay una configuración recuperable.\n'; ui_pause; fi
 				;;
 			0) return 0 ;;
 			*) printf '\nOpción no válida.\n'; ui_pause ;;
@@ -307,7 +316,7 @@ connections_show_existing_detail() {
 		ui_pause
 		return 1
 	fi
-	jq -r --arg id "$id" '.[] | select(.id == $id) | "Nombre: \(.name)\nID: \(.id)\nModalidad: \(.protocol_id)\nPuerto: \(.port)\nSlots: \(.max_users)\nEstado: \(.state)\nAplicada a runtime: \(.runtime_applied)\nRevisión guardada: \(.configuration_revision // "ninguna")\nReferencia de configuración: \(.configuration_ref // "ninguna")\nReferencia de secreto: \(.secret_ref // "ninguna")\nCreada: \(.created_at)"' "$CONNECTION_DATA_FILE"
+	jq -r --arg id "$id" '.[] | select(.id == $id) | "Nombre: \(.name)\nID: \(.id)\nModalidad: \(.protocol_id)\nPuerto: \(.port)\nSlots: \(.max_users)\nEstado: \(.state)\nAplicada a runtime: \(.runtime_applied)\nRevisión VLESS: \(.configuration_revision // "ninguna")\nReferencia VLESS: \(.configuration_ref // "ninguna")\nSecreto VLESS: \(.secret_ref // "ninguna")\nRevisión VMess: \(.vmess_configuration_revision // "ninguna")\nReferencia VMess: \(.vmess_configuration_ref // "ninguna")\nSecreto VMess: \(.vmess_secret_ref // "ninguna")\nCreada: \(.created_at)"' "$CONNECTION_DATA_FILE"
 	connections_unlock "$fd"
 	ui_pause
 }
@@ -466,9 +475,10 @@ connections_create_draft() {
 	connections_unlock "$fd"
 	printf '\nConexión registrada como borrador.\nID: %s\nNombre: %s\nModalidad: %s\nPuerto: %s\nSlots: %s\n' "$id" "$name" "$protocol_id" "$port" "$max_users"
 	printf '\nNo se aplicó ningún cambio a Xray ni al sistema.\n'
-	if [[ "$protocol_id" == vless_* ]] && declare -F connections_vless_assistant >/dev/null 2>&1; then
-		connections_vless_assistant "$id" "$protocol_id" || true
-	fi
+	case "$protocol_id" in
+		vless_*) if declare -F connections_vless_assistant >/dev/null 2>&1; then connections_vless_assistant "$id" "$protocol_id" || true; fi ;;
+		vmess_*) if declare -F connections_vmess_assistant >/dev/null 2>&1; then connections_vmess_assistant "$id" "$protocol_id" || true; fi ;;
+	esac
 	ui_pause
 }
 connections_list() {

@@ -190,7 +190,7 @@ uninstall_menu_action() {
 					ui_pause
 					return 1
 				}
-				paths+=("$XRAY_MANAGER_CONNECTIONS_DIR")
+				paths+=("$XRAY_MANAGER_CONNECTIONS_DIR" "$XRAY_MANAGER_VMESS_DIR")
 				;;
 			backups)
 				if [[ "$scope" == xray ]]; then
@@ -426,7 +426,7 @@ uninstall_path_is_allowed() {
 	case "$path" in
 	"$XRAY_ADMIN_BIN" | "$XRAY_ADMIN_DATA" | "$XRAY_CONFIG_DIR" | \
 		"$XRAY_MANAGER_CONFIG_DIR" | "$APP_ROOT" | "$XRAY_MANAGER_DATA_DIR" | \
-		"$XRAY_MANAGER_USERS_DIR" | "$XRAY_MANAGER_CONNECTIONS_DIR" | \
+		"$XRAY_MANAGER_USERS_DIR" | "$XRAY_MANAGER_CONNECTIONS_DIR" | "$XRAY_MANAGER_VMESS_DIR" | \
 		"$XRAY_MANAGER_PROFILES_DIR" | "$XRAY_MANAGER_DOMAINS_DIR" | \
 		"$XRAY_MANAGER_CERTIFICATES_DIR" | "$XRAY_MANAGER_HISTORY_DIR" | \
 		"$XRAY_MANAGER_STATE_DIR" | "$XRAY_MANAGER_LOG_DIR" | \

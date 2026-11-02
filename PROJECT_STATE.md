@@ -24,7 +24,7 @@
 
 - Repositorio: Jaok04/xray-core-manager.
 - Rama autorizada: design/user-identity-association-v1.
-- HEAD verificado tras la formalización del diseño VMess: 90ff83510691e8daef934ff8bbafd08cb576e03a.
+- HEAD remoto verificado el 2026-11-02: 402a74174b7a0d97aca41de54dab6564886088df.
 - La rama main no se modificó.
 - Verificar siempre el HEAD remoto antes de nuevas tareas.
 
@@ -34,7 +34,7 @@
 - La ruta contiene un checkout Git válido.
 - El remoto origin apunta al repositorio oficial mediante el alias SSH dedicado.
 - La Deploy Key SSH configurada es de solo lectura; las publicaciones se realizan mediante el mecanismo GitHub API autorizado.
-- Tras la formalización VMess, el árbol local y el árbol remoto coinciden (tree 0687ee1225e14790cd69a4f486a3cff8cc200845) y el árbol de trabajo quedó limpio.
+- En el corte actual, HEAD local y remoto coinciden en 402a74174b7a0d97aca41de54dab6564886088df; el árbol de trabajo contiene la implementación VMess y actualizaciones documentales locales sin publicar.
 - No se deben asumir estados históricos de sincronización: comprobar rama, HEAD, remoto, árbol y git status en cada sesión.
 
 ## 3. Etapas
@@ -115,15 +115,16 @@ Se documentan resultados PASS para navegación, administración de borradores, V
 
 - Se conservan las nueve modalidades VLESS del catálogo, incluidas XHTTP sin TLS, TLS y REALITY.
 - El propietario aprobó el diseño técnico VMess y confirmó que VMess-HTTPUpgrade-TLS se implementará.
-- La matriz VMess aprobada incluye HTTPUpgrade sin TLS y HTTPUpgrade-TLS. Esta última aún no está disponible desde el menú ni implementada/verificada.
+- La matriz VMess aprobada incluye HTTPUpgrade sin TLS y HTTPUpgrade-TLS. Ambas están integradas en el menú/asistente local; la matriz de 14 combinaciones pasó `xray run -test` en la sesión actual.
 - La especificación normativa 1.3 no se reescribió retroactivamente. Las decisiones y el diseño se registran en docs/DECISIONES_ETAPA_2.md y docs/DISEÑO_TECNICO_VMESS.md.
-- La aprobación del diseño no autoriza por sí sola cambios de código; antes de implementar se hará el contraste específico y se solicitará autorización expresa.
+- El propietario autorizó expresamente la implementación VMess y, después, el aislamiento del almacén para mantener intacto P4 VLESS.
 
 ## 7. Pendientes principales de Etapa 2
 
 - Resolver y formalizar las discrepancias normativas indicadas.
-- Extender el patrón de persistencia segura a VMess conforme al diseño aprobado, después del contraste previo y autorización expresa de implementación.
-- Implementar VMess conforme al diseño aprobado en docs/DISEÑO_TECNICO_VMESS.md, incluida la opción HTTPUpgrade-TLS; falta autorización expresa de implementación tras el contraste previo.
+- Completar auditoría y pruebas de regresión de VMess, cuyo código local aún no está publicado.
+- Mantener VMess aislado de P4 VLESS; diseñar y aprobar backup/restore VMess en una tarea posterior.
+- Integrar usuarios VMess con asociaciones globales de Etapa 3 solo cuando se aborde esa integración conforme a su especificación.
 - Definir e implementar modelos, generadores y validadores para Trojan, Shadowsocks e Hysteria2.
 - Implementar administradores específicos SOCKS, HTTP Proxy y WireGuard.
 - Integrar peers WireGuard con las identidades/asociaciones de Etapa 3.
@@ -187,6 +188,10 @@ Se corrigieron los dos hallazgos adicionales de auditoría. `scripts/vless_backu
 El propietario respondió afirmativamente a la solicitud de aceptación de las correcciones adicionales de límites agregados y TOCTOU. **P4 BACKUP/RECUPERACIÓN VLESS: COMPLETADA Y ACEPTADA.** Cierre respaldado por suite completa 32/32 PASS, `install.sh --check`, sintaxis Bash, `py_compile`, ShellCheck, shfmt y `git diff --check` satisfactorios; commit publicado y VPS sincronizada. El alcance excluye activar conexiones/runtime, reiniciar Xray, abrir puertos, cambiar firewall o desplegar certificados externos. No se creó backup operativo ni se leyó la clave maestra real durante estas pruebas.
 
 
-## 10. Diseño técnico VMess aprobado — 2026-11-02
+## 10. VMess — implementación local en curso (2026-11-02)
 
-docs/DISEÑO_TECNICO_VMESS.md formaliza el diseño aprobado para VMess sobre Xray-core v26.10.31. Incluye 14 identificadores de modalidad del catálogo, settings.users, UUID, validación de combinaciones, asistente, persistencia y pruebas. HTTPUpgrade-TLS está expresamente dentro del alcance aprobado, pero no implementado ni verificado. El siguiente paso es un contraste previo específico de implementación y la solicitud de autorización de código. Etapa 2 continúa abierta.
+El propietario aprobó el diseño VMess y autorizó su implementación, incluida VMess-HTTPUpgrade-TLS. En la VPS existen modelo neutral, adaptador Xray 26.10.31, asistente, preparación segura, almacén versionado aislado y pruebas. Las 14 combinaciones pasaron `xray run -test`; suite completa `tests/*.sh`: 36/36 PASS. `bash -n`, `py_compile`, ShellCheck (nivel warning), shfmt, `install.sh --check` y `git diff --check`: PASS. Estos cambios siguen locales, no publicados ni aceptados como módulo completo.
+
+El almacén VMess está separado en `/var/lib/xray-manager/vmess/configurations/` y `/var/lib/xray-manager/vmess/secrets/`. El catálogo común usa `vmess_configuration_ref`, `vmess_secret_ref`, `vmess_configuration_revision` y `vmess_configuration_schema_version`; no usa los campos VLESS. P4 VLESS permanece intacta y no incluye el almacén VMess. Restaurar un backup VLESS antiguo puede revertir el catálogo compartido y quitar entradas VMess, aunque no modifica sus archivos aislados; el almacén podría quedar con huérfanos. Backup/restore VMess requiere diseño posterior.
+
+Los usuarios VMess aún se introducen manualmente; no se ha implementado la asociación con identidades globales de Etapa 3. No se modificó runtime, firewall, puertos ni servicio. Etapa 2 continúa abierta.

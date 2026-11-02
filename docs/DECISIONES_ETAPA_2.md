@@ -9,7 +9,7 @@
 - Se conservan las nueve modalidades VLESS existentes en el catálogo, incluidas XHTTP sin TLS/TLS/REALITY.
 - VLESS-XHTTP sin TLS, VLESS-XHTTP-TLS y VLESS-XHTTP-REALITY permanecen disponibles en menú y modelo/adaptador.
 - El propietario aprobó el diseño técnico VMess y confirmó expresamente que **VMess-HTTPUpgrade-TLS también será implementado**.
-- La matriz VMess aprobada incluye HTTPUpgrade sin TLS y HTTPUpgrade-TLS. La variante TLS ya existe en config/protocols.tsv como vmess_httpupgrade_tls, pero todavía no está seleccionable desde el menú ni implementada por un asistente VMess.
+- La matriz VMess aprobada incluye HTTPUpgrade sin TLS y HTTPUpgrade-TLS. La variante TLS existe en config/protocols.tsv como vmess_httpupgrade_tls y está integrada en el menú y asistente VMess en la implementación local en curso.
 - La aprobación de HTTPUpgrade-TLS es una decisión de alcance/diseño. No equivale a validación funcional, prueba de interoperabilidad ni implementación.
 - No se modifica retroactivamente la especificación normativa 1.3; este archivo registra las decisiones complementarias autorizadas.
 
@@ -28,11 +28,13 @@ Decisiones principales:
 
 ## 3. Estado de implementación
 
-- La navegación actual ofrece HTTPUpgrade sin TLS, pero no permite elegir TLS desde el menú.
-- El catálogo contiene vmess_httpupgrade_tls.
-- No existen todavía modelo, adaptador Xray, asistente ni persistencia específicos VMess.
-- Las pruebas temporales anteriores cubrieron sólo cuatro combinaciones VMess; HTTPUpgrade-TLS sigue pendiente de prueba específica.
-- El diseño está aprobado y documentado; la implementación requiere una autorización expresa posterior, tras el contraste obligatorio previo al código.
+- El menú, modelo neutral, adaptador Xray 26.10.31 y asistente VMess existen en la VPS como cambios locales aún no publicados.
+- Las 14 combinaciones fueron aceptadas por `xray run -test` en la prueba de integración VMess ejecutada previamente en esta sesión.
+- El asistente guarda borradores y recupera configuraciones; HTTPUpgrade-TLS está incluido.
+- El almacén VMess se mantiene aislado en `/var/lib/xray-manager/vmess/{configurations,secrets}` y usa campos de catálogo `vmess_*` independientes.
+- VMess aún no está integrado con las asociaciones globales de identidad de Etapa 3; sus usuarios se capturan manualmente en el asistente.
+- El backup/restore P4 sigue siendo exclusivamente VLESS. No incluye configuraciones ni secretos VMess. Como el catálogo es compartido, restaurar un backup VLESS antiguo puede revertir entradas VMess del catálogo; el almacén VMess separado no se modifica y puede quedar con archivos huérfanos.
+- La implementación local permanece en revisión y no está publicada ni aceptada como módulo completo.
 
 ## 4. Alcance de integración VLESS aprobado
 
@@ -40,4 +42,4 @@ La creación VLESS se integra con el modelo neutral y el adaptador Xray-core v26
 
 ## 5. Límites que permanecen
 
-La aprobación del diseño VMess no habilita por sí sola persistencia nueva, certificados de producción, apertura de puertos, firewall, activación del servicio, reinicio de Xray ni rollback transaccional. Esas operaciones requieren sus diseños, contrastes y autorizaciones correspondientes.
+La implementación VMess aprobada se limita a borradores, validación, persistencia cifrada y recuperación temporal. No habilita certificados de producción, apertura de puertos, firewall, activación del servicio, reinicio de Xray ni rollback transaccional. El backup/restore VMess queda pendiente de diseño y aprobación separados.

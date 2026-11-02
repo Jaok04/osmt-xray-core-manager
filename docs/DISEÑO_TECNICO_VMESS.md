@@ -83,6 +83,21 @@ La configuración VMess requiere sincronización horaria: el desfase de reloj cl
 
 Los nombres son el diseño aprobado; durante la implementación se podrán proponer ajustes sólo si se justifican y se obtiene autorización antes de alterar el alcance.
 
+### 6.1 Persistencia VMess aislada (decisión aprobada durante la implementación)
+
+Para preservar sin cambios el contrato P4 de VLESS, el almacén VMess usa rutas separadas:
+
+- Base VMess: `/var/lib/xray-manager/vmess/`.
+- Configuraciones versionadas: `/var/lib/xray-manager/vmess/configurations/`.
+- Secretos cifrados: `/var/lib/xray-manager/vmess/secrets/`.
+- Catálogo común: `/var/lib/xray-manager/connections/connections.json`, con referencias VMess independientes: `vmess_configuration_ref`, `vmess_secret_ref`, `vmess_configuration_revision` y `vmess_configuration_schema_version`.
+
+VMess no escribe ni interpreta `configuration_ref`, `secret_ref`, `configuration_revision` o `configuration_schema_version`, reservados al flujo VLESS. El bloqueo de integridad compartido se conserva para serializar cambios al catálogo.
+
+P4 VLESS no se modifica y no incluye los archivos del almacén VMess. Advertencia: el backup VLESS conserva una copia del catálogo común. Restaurar una copia antigua puede revertir/eliminar registros VMess del catálogo aunque no toque los archivos del almacén VMess; en ese caso podrían quedar archivos VMess huérfanos. No existe todavía backup/restore VMess; requiere diseño y autorización independientes.
+
+El almacén VMess usa la clave maestra local compartida con VLESS, pero AES-256-GCM mantiene AAD específico `xray-manager:vmess-secret:v1:<connection_id>` para separar criptográficamente el contexto.
+
 ## 7. Seguridad y consideraciones operativas
 
 - No registrar UUIDs privados, claves, material TLS/REALITY ni configuración sensible en logs.
@@ -131,4 +146,4 @@ En la auditoría técnica anterior se ejecutaron pruebas temporales correctas de
 4. Implementar sólo después de esa autorización.
 5. Ejecutar pruebas, actualizar continuidad e historial y sincronizar VPS/GitHub.
 
-**Estado actual:** diseño aprobado y documentado; VMess NO implementado; HTTPUpgrade-TLS aprobado para implementación, aún no verificado ni implementado.
+**Estado de implementación local (2026-11-02):** modelo, adaptador, asistente, persistencia VMess aislada y pruebas focales están implementados en la VPS, aún sin publicar. La matriz de 14 combinaciones pasó `xray run -test`. No declarar el módulo completo hasta cerrar la suite de regresión, auditoría final y publicación/sincronización. Usuarios VMess aún manuales, pendientes de integración con asociaciones de identidad de Etapa 3. HTTPUpgrade-TLS está incluido y verificado por la matriz.

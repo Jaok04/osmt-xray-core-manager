@@ -208,3 +208,15 @@ Por instrucción expresa del propietario, se estableció como regla obligatoria 
 Las mejoras siguen permitidas, pero deben justificarse y presentarse al propietario; requieren autorización expresa previa antes de modificar diseño, alcance o código. Se prohíben las modificaciones silenciosas y completar vacíos mediante suposiciones. Si la referencia no está disponible o hay contradicciones relevantes, se detiene el trabajo y se solicita aclaración.
 
 La regla quedó desarrollada en `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md` y referenciada en `AGENTS.md`, `PROJECT_STATE.md`, `docs/CONTINUIDAD_DEL_PROYECTO.md` y `docs/PUNTO_CONTROL_ACTUAL.md`. Aplicable a todas las etapas y a cualquier IA o colaborador que retome el proyecto.
+
+
+## 2026-11-02 — Implementación VMess y aislamiento de persistencia (en curso)
+
+- El propietario autorizó implementar el diseño VMess aprobado, incluida la modalidad HTTPUpgrade-TLS, y posteriormente autorizó separar el almacenamiento VMess para preservar P4 VLESS.
+- Se añadieron modelo neutral, adaptador Xray-core 26.10.31, asistente, preparación segura, almacén versionado cifrado y pruebas VMess. La matriz de 14 combinaciones pasó `xray run -test` en esta sesión.
+- Se aisló el almacenamiento en `/var/lib/xray-manager/vmess/configurations/` y `/var/lib/xray-manager/vmess/secrets/`. El catálogo utiliza `vmess_configuration_ref`, `vmess_secret_ref`, `vmess_configuration_revision` y `vmess_configuration_schema_version`; no se escriben campos de persistencia VLESS.
+- Se adaptaron menú, recuperación, detalle, rutas centrales y categoría de desinstalación para el almacén VMess. Se añadió prueba `tests/vmess_vless_backup_isolation.sh`.
+- PASS focales tras aislamiento: `tests/vmess_assistant.sh`, `tests/vmess_vless_backup_isolation.sh`, `tests/uninstall.sh`. La suite completa `tests/*.sh` cerró 36/36 PASS. También PASS: `bash -n`, `py_compile scripts/*.py`, ShellCheck a nivel warning de archivos afectados, shfmt de archivos VMess nuevos, `install.sh --check` y `git diff --check`.
+- P4 VLESS y `scripts/vless_backup.py` permanecen sin cambios. El backup VLESS no incluye los archivos VMess; como el catálogo es compartido, restaurar una instantánea VLESS antigua puede revertir registros VMess, dejando sus archivos aislados huérfanos. Se documenta como limitación; backup/restore VMess queda pendiente de diseño.
+- Usuarios VMess aún se introducen manualmente; integración con identidades globales queda para Etapa 3. No se tocó runtime, firewall, puertos ni servicio.
+- Los cambios están locales y sin publicar. Se requiere autorización posterior antes de commit/push.

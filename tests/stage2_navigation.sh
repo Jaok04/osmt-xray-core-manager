@@ -27,6 +27,12 @@ grep -Fxq 'vless_grpc_reality' "$CALLS"
 printf '2\n5\n2\n1\n0\n0\n0\n' | connections_menu >/dev/null
 grep -Fxq 'vmess_grpc_tls' "$CALLS"
 : >"$CALLS"
+printf '2\n6\n2\n1\n0\n0\n0\n' | connections_menu >/dev/null
+grep -Fxq 'vmess_httpupgrade_tls' "$CALLS"
+: >"$CALLS"
+printf '2\n6\n1\n1\n0\n0\n0\n' | connections_menu >/dev/null
+grep -Fxq 'vmess_httpupgrade' "$CALLS"
+: >"$CALLS"
 printf '3\n1\n1\n0\n0\n0\n' | connections_menu >/dev/null
 grep -Fxq 'trojan_tcp_tls' "$CALLS"
 : >"$CALLS"

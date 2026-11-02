@@ -201,3 +201,20 @@ Se implementó límite agregado de 512 MiB sin comprimir en recolección, creaci
 ### Cierre formal P4 — 2026-11-02
 
 El propietario aceptó las correcciones adicionales de seguridad. La etapa P4 de backup y recuperación segura VLESS queda **COMPLETADA Y ACEPTADA**. Verificación final: suite `tests/*.sh` 32/32 PASS; `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt y `git diff --check` PASS. El commit de implementación está publicado y sincronizado en la rama del proyecto. El alcance no incluye activar runtime, reiniciar Xray, abrir puertos, cambiar firewall ni desplegar certificados externos.
+
+
+## VMess — continuidad de implementación (2026-11-02)
+
+El diseño VMess y su implementación fueron autorizados por el propietario, incluyendo HTTPUpgrade-TLS. El trabajo local en `/opt/xray-manager` contiene modelo, adaptador Xray-core 26.10.31, asistente, preparación de configuración, almacén cifrado y pruebas. La matriz de 14 modalidades pasó `xray run -test`; suite completa `tests/*.sh`: 36/36 PASS. También pasaron `bash -n`, `py_compile`, ShellCheck a nivel warning, shfmt de archivos VMess nuevos, `install.sh --check` y `git diff --check`. Los cambios no están publicados ni aceptados como módulo completo; consultar `docs/PUNTO_CONTROL_ACTUAL.md`.
+
+### Separación del almacenamiento VMess
+
+La persistencia VMess se ubica en `/var/lib/xray-manager/vmess/`, con `configurations/` y `secrets/` privados. El catálogo común continúa en `/var/lib/xray-manager/connections/connections.json`, pero VMess solo usa `vmess_configuration_ref`, `vmess_secret_ref`, `vmess_configuration_revision` y `vmess_configuration_schema_version`. No cambiar los campos VLESS ni `scripts/vless_backup.py` como parte de esta tarea. El bloqueo de integridad continúa compartido para serializar escrituras del catálogo.
+
+P4 VLESS no incluye el almacén VMess separado. Advertencia de compatibilidad: el backup VLESS sí contiene una instantánea del catálogo compartido; restaurar un backup antiguo puede revertir o eliminar entradas VMess del catálogo aunque no modifique los archivos VMess. Los archivos pueden quedar huérfanos. Backup/restore VMess debe diseñarse y aprobarse por separado.
+
+Los usuarios VMess todavía se introducen manualmente; la asociación con identidades globales pertenece a Etapa 3 y no debe implementarse dentro de esta tarea sin su definición/autorización.
+
+### Estado de publicación
+
+Los cambios VMess y de aislamiento siguen locales y no publicados. No hacer commit/push ni sincronización hasta la autorización posterior solicitada al propietario. No tocar runtime, firewall, puertos ni servicio. La Etapa 2 continúa abierta.
