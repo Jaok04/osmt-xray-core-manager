@@ -61,7 +61,7 @@ La suite de control del servicio comprueba, entre otros escenarios:
 
 Las pruebas usan prefijos temporales y dobles de prueba. No ejecutan operaciones de control sobre el systemd real del host.
 
-En la validación de integración del proyecto, la suite completa registró **19/19 pruebas aprobadas y 0 fallos**, incluyendo `xray_service_control`. También pasaron `bash -n`, ShellCheck con nivel `warning`, formato `shfmt` en los archivos modificados y `./install.sh --check`.
+En la validación de integración del proyecto, la suite completa registró **20/20 pruebas aprobadas y 0 fallos**, incluyendo `xray_service_control`. También pasaron `bash -n`, ShellCheck con nivel `warning`, formato `shfmt` en los archivos modificados y `./install.sh --check`.
 
 ## Validación operativa real en VPS desechable
 
@@ -115,4 +115,4 @@ La VPS de desarrollo no fue modificada durante la prueba operativa.
 
 La Fase C cuenta con pruebas automatizadas y validación operativa real de `start`, `restart` y `stop`. Las operaciones `enable` y `disable` están cubiertas por pruebas automatizadas aisladas, pero siguen pendientes de validación operativa real.
 
-La instalación inicial sigue sin habilitar ni iniciar el servicio automáticamente. La Fase C no certifica por sí sola la Fase 1 del proyecto: sus pendientes de navegación, concurrencia, escenarios destructivos, pruebas de instalación/desinstalación y cotejo con la especificación aprobada deben resolverse por separado.
+La instalación inicial sigue sin habilitar ni iniciar el servicio automáticamente. La Fase C no certifica por sí sola la Fase 1 del proyecto. La coordinación interna de concurrencia y la cobertura de confirmaciones destructivas se han implementado y probado; siguen pendientes M04/M06 del encabezado y la validación operativa real de instalación, dependencias, preferencias y desinstalación en VPS desechable.
