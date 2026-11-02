@@ -60,17 +60,17 @@ manager_settings_save() {
 
 manager_settings_path_input() {
 	local prompt="$1" current="$2" destination="$3" path_answer
-	ui_read_option "$prompt [$current]: " path_answer
+	ui_read_option "$prompt [$current]: " path_answer || return 1
 	[[ -n "$path_answer" ]] || path_answer="$current"
 	printf -v "$destination" '%s' "$path_answer"
 }
 
 manager_settings_paths_menu() {
 	local new_bin new_data new_config_dir new_config_file
-	manager_settings_path_input "Ruta del binario Xray" "$XRAY_BIN_PATH" new_bin
-	manager_settings_path_input "Directorio de datos Xray" "$XRAY_DATA_DIR" new_data
-	manager_settings_path_input "Directorio de configuración Xray" "$XRAY_CONFIG_DIR" new_config_dir
-	manager_settings_path_input "Archivo principal de configuración" "$XRAY_CONFIG_FILE" new_config_file
+	manager_settings_path_input "Ruta del binario Xray" "$XRAY_BIN_PATH" new_bin || return 0
+	manager_settings_path_input "Directorio de datos Xray" "$XRAY_DATA_DIR" new_data || return 0
+	manager_settings_path_input "Directorio de configuración Xray" "$XRAY_CONFIG_DIR" new_config_dir || return 0
+	manager_settings_path_input "Archivo principal de configuración" "$XRAY_CONFIG_FILE" new_config_file || return 0
 	if ! manager_preferences_valid_xray_bin "$new_bin" ||
 		! manager_preferences_valid_xray_data "$new_data" ||
 		! manager_preferences_valid_xray_config_dir "$new_config_dir" ||
@@ -142,7 +142,7 @@ manager_settings_editor_menu() {
 		((index += 1))
 	done
 	printf '  [0] Volver\n'
-	ui_read_option "Selecciona el editor: " option
+	ui_read_option "Selecciona el editor: " option || return 0
 	[[ "$option" =~ ^[0-9]+$ ]] || {
 		printf 'Selección no válida.\n'
 		ui_pause
@@ -172,7 +172,7 @@ manager_settings_theme_menu() {
 	ui_title "COLORES DEL MENÚ"
 	printf 'Tema actual: %s\n\n' "$APP_THEME"
 	printf '  [1] Cian\n  [2] Verde\n  [3] Azul\n  [4] Magenta\n  [5] Sin color\n  [0] Volver\n'
-	ui_read_option "Selecciona el tema: " option
+	ui_read_option "Selecciona el tema: " option || return 0
 	case "$option" in
 	1) theme=cyan ;;
 	2) theme=green ;;
@@ -211,7 +211,7 @@ manager_settings_language_date_menu() {
 		printf '  [3] Formato de fecha\n'
 		printf '  [4] Formato de hora\n'
 		printf '  [0] Volver\n\n'
-		ui_read_option "Selecciona una opción: " option
+		ui_read_option "Selecciona una opción: " option || return 0
 		case "$option" in
 		1)
 			local previous="$APP_LANGUAGE"
@@ -225,7 +225,7 @@ manager_settings_language_date_menu() {
 			ui_pause
 			;;
 		2)
-			ui_read_option "Zona horaria IANA [$APP_TIMEZONE]: " timezone
+			ui_read_option "Zona horaria IANA [$APP_TIMEZONE]: " timezone || return 0
 			[[ -n "$timezone" ]] || timezone="$APP_TIMEZONE"
 			if [[ "$timezone" == *".."* || ! -f "/usr/share/zoneinfo/$timezone" ]]; then
 				printf 'Zona horaria no válida o no instalada.\n'
@@ -238,7 +238,7 @@ manager_settings_language_date_menu() {
 			;;
 		3)
 			printf '  [1] DD/MM/AAAA\n  [2] AAAA-MM-DD\n'
-			ui_read_option "Formato: " answer
+			ui_read_option "Formato: " answer || return 0
 			case "$answer" in 1) date_format=dmy ;; 2) date_format=ymd ;; *) date_format='' ;; esac
 			if [[ -n "$date_format" ]]; then
 				local previous="$APP_DATE_FORMAT"
@@ -251,7 +251,7 @@ manager_settings_language_date_menu() {
 			;;
 		4)
 			printf '  [1] 24 horas\n  [2] 12 horas\n'
-			ui_read_option "Formato: " answer
+			ui_read_option "Formato: " answer || return 0
 			case "$answer" in 1) time_format=24h ;; 2) time_format=12h ;; *) time_format='' ;; esac
 			if [[ -n "$time_format" ]]; then
 				local previous="$APP_TIME_FORMAT"
@@ -283,10 +283,10 @@ manager_settings_backup_menu() {
 		printf '  [2] Cambiar retención\n'
 		printf '  [3] Seleccionar compresión\n'
 		printf '  [0] Volver\n\n'
-		ui_read_option "Selecciona una opción: " option
+		ui_read_option "Selecciona una opción: " option || return 0
 		case "$option" in
 		1)
-			manager_settings_path_input "Directorio de respaldos" "$XRAY_MANAGER_BACKUP_DIR" new_dir
+			manager_settings_path_input "Directorio de respaldos" "$XRAY_MANAGER_BACKUP_DIR" new_dir || return 0
 			if ! manager_preferences_valid_backup_dir "$new_dir" ||
 				manager_preferences_path_has_symlink_component "$new_dir"; then
 				printf 'Ruta inválida o con componentes simbólicos. Usa una ubicación dedicada y segura.\n'
@@ -306,7 +306,7 @@ manager_settings_backup_menu() {
 			ui_pause
 			;;
 		2)
-			ui_read_option "Retención (1-100) [$BACKUP_RETENTION]: " retention
+			ui_read_option "Retención (1-100) [$BACKUP_RETENTION]: " retention || return 0
 			[[ -n "$retention" ]] || retention="$BACKUP_RETENTION"
 			if [[ "$retention" =~ ^([1-9]|[1-9][0-9]|100)$ ]]; then
 				local previous="$BACKUP_RETENTION"
@@ -319,7 +319,7 @@ manager_settings_backup_menu() {
 			;;
 		3)
 			printf 'Compresión disponible: gzip\n'
-			ui_read_option "Selecciona gzip [1] o volver [0]: " compression
+			ui_read_option "Selecciona gzip [1] o volver [0]: " compression || return 0
 			case "$compression" in
 			1)
 				local previous="$BACKUP_COMPRESSION"
@@ -356,7 +356,7 @@ manager_settings_menu() {
 		printf '  [4] Configurar idioma y fecha\n'
 		printf '  [5] Preferencias de respaldos\n'
 		printf '  [0] Volver\n\n'
-		ui_read_option "Selecciona una opción: " option
+		ui_read_option "Selecciona una opción: " option || return 0
 		case "$option" in
 		1) manager_settings_paths_menu ;;
 		2) manager_settings_editor_menu ;;

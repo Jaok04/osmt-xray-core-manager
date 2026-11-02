@@ -72,15 +72,16 @@ El menú de conexiones incorpora `Backup y recuperación VLESS`, con opciones pa
 - `tests/vless_backup_restore.sh`: restauración aislada de un catálogo de prueba, confirmación y conservación de los datos previos.
 - `tests/vless_backup_recovery.sh`: creación del paquete scrypt/AES-GCM, asociación por `backup_id`, rechazo de contraseña incorrecta y recuperación autenticada de la clave en un directorio temporal.
 - `tests/vless_backup_journal.sh`: rollback conservador de un journal interrumpido y preservación de artefactos parciales en cuarentena.
-- Suite completa `tests/*.sh`: 29/29 PASS en la revisión inicial de integración.
-- `bash -n`, ShellCheck en módulos nuevos/modificados, `py_compile` y `git diff --check`: PASS.
+- `tests/vless_backup_restore_secrets.sh`: restore end-to-end de blobs cifrados REALITY/TLS, autenticación AES-GCM y verificación de la dependencia TLS externa declarada; PASS el 2026-11-02.
+- Suite completa `tests/*.sh`: 30/30 PASS el 2026-11-02.
+- `install.sh --check`, `bash -n`, ShellCheck, `py_compile` y `git diff --check`: PASS.
 
-La prueba de recuperación scrypt/AES-GCM y contraseña incorrecta/correcta pasa en un entorno temporal. La restauración integral de backups con blobs TLS/REALITY y el comportamiento ante certificado externo ausente deben ampliarse antes de cerrar P4. No se ha creado ni leído la clave maestra real de esta VPS; tampoco se ha creado un backup operativo.
+La recuperación scrypt/AES-GCM con contraseña incorrecta/correcta pasa en un entorno temporal. La restauración integral de blobs TLS/REALITY ya tiene una prueba end-to-end PASS; aún debe probarse el comportamiento cuando falta el certificado externo referenciado. No se ha creado ni leído la clave maestra real de esta VPS; tampoco se ha creado un backup operativo.
 
 ## 7. Pendientes antes de aceptación
 
 1. Probar cortes abruptos simulados en cada frontera de renombrado y journal, incluidas combinaciones sin directorio previo de secretos.
-2. Probar restauración de backup con blobs REALITY y TLS y comprobar el comportamiento ante certificado externo ausente.
+2. Completar la prueba del comportamiento ante certificado TLS externo ausente; la restauración end-to-end de blobs REALITY/TLS ya está cubierta por `tests/vless_backup_restore_secrets.sh`.
 3. Auditar límites de extracción/compresión y todos los permisos de staging/publicación.
 4. Ejecutar suite completa tras la revisión final y `install.sh --check`.
 5. Actualizar documentación de continuidad y registrar evidencia exacta.

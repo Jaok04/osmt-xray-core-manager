@@ -166,4 +166,17 @@ El backup de datos separa blobs cifrados y clave maestra; genera manifiesto y SH
 
 Pruebas focales de backup/verificación/manipulación, restauración aislada sin secretos, recuperación de clave scrypt/AES-GCM y rollback de journal PASS. Suite completa `tests/*.sh`: 29/29 PASS en la revisión previa a la última incorporación de journal; repetir tras el cierre de esta revisión. Sintaxis, ShellCheck de módulos, py_compile y diff PASS. No se creó backup operativo ni se accedió a la clave maestra real.
 
-**P4 no está completada ni aceptada:** faltan pruebas de corte abrupto en todas las fronteras del journal y pruebas end-to-end de restore de secretos TLS/REALITY. La recuperación scrypt/AES-GCM con contraseña incorrecta/correcta ya tiene prueba aislada. Ver `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
+**P4 no está completada ni aceptada:** la prueba end-to-end `tests/vless_backup_restore_secrets.sh` ya existe y se ejecutó PASS el 2026-11-02 para blobs REALITY/TLS, autenticación AES-GCM y dependencia TLS externa documentada. Sigue pendiente la matriz de cortes abruptos en todas las fronteras del journal y la aceptación integral. La recuperación scrypt/AES-GCM con contraseña incorrecta/correcta también tiene prueba aislada. Ver `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
+
+
+## Incidente de pruebas — EOF en menús y crecimiento de /tmp (2026-11-02)
+
+Se investigó una alerta real de disco al 95–99.9%. La auditoría de la VPS encontró un archivo de salida de 20,465,770,496 bytes dentro de `/tmp/tmp.oaFf5wTZwt/connections-action-error.out` y un proceso huérfano que mantenía abierto otro archivo ya eliminado de aproximadamente 925 MB. El proceso se detuvo de forma ordenada y se eliminó únicamente ese directorio temporal, después de verificar que no había handles abiertos. El disco quedó en 3.7 GB usados, 71 GB libres (5%). No se modificaron datos persistentes, configuraciones ni runtime.
+
+Causa técnica confirmada: `ui_read_option()` convertía EOF en una cadena vacía y devolvía éxito. Los menús dentro de `while true` interpretaban esa cadena como opción inválida y volvían a imprimir el menú indefinidamente. Se corrigió el contrato para devolver estado 1 en EOF, limpiar la variable destino y hacer que los consumidores abandonen el menú/flujo actual de forma ordenada. También se protegieron los prompts de identificador del menú de backup VLESS.
+
+La regresión quedó cubierta en `tests/stage1_menu.sh`: EOF directo en menús principales y secundarios, EOF anidado al navegar conexiones, y límite de salida de 1 MiB para que una regresión no vuelva a llenar el disco. La prueba `tests/vless_backup_restore_secrets.sh`, que ya estaba en la VPS sin seguimiento Git, se revisó y ejecutó PASS; se incorpora al repositorio en este cierre.
+
+Resultados ejecutados: suite completa `tests/*.sh` 30/30 PASS; `install.sh --check`, `bash -n` de todos los `.sh`, ShellCheck de módulos y pruebas modificados, `shfmt -d -i 4 tests/stage1_menu.sh` y `git diff --check`: PASS. Los directorios `/tmp/tmp.u7Vq57eHNx` (282 MB) y `/tmp/tmp.EsxO527Ihe` (47 MB) se inspeccionaron; contienen salidas históricas de pruebas de menú V2 con repetición por EOF, pero se conservaron y no se borraron.
+
+El cambio de EOF queda implementado y verificado localmente; el estado PUBLICADO/SINCRONIZADO se completará únicamente después del commit, push y comprobación remota de este cierre.

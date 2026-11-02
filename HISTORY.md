@@ -142,3 +142,15 @@ Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM 
 - Pruebas focales de backup/manipulación, restauración aislada y recuperación scrypt/AES-GCM con rechazo de contraseña incorrecta PASS; suite completa 29/29 PASS.
 - P4 permanece abierta por resolución del journal tras interrupción abrupta y pruebas end-to-end de recuperación/restore de secretos TLS/REALITY.
 - No se creó backup operativo ni se accedió a la clave maestra real.
+
+
+## 2026-11-02 — Corrección de EOF en menús y recuperación de espacio en disco
+
+- Se investigó alerta Termalin de disco al 95–99.9%; se localizó `/tmp/tmp.oaFf5wTZwt/connections-action-error.out` con 20,465,770,496 bytes y un proceso huérfano que retenía otro archivo borrado de ~925 MB.
+- Se detuvo el proceso huérfano PID 36728 de forma ordenada y se eliminó únicamente el directorio temporal afectado tras verificar ausencia de handles abiertos. Resultado: 3.7 GB usados, 71 GB libres, 5% de uso. No se tocaron datos persistentes, configuraciones, claves, firewall ni runtime.
+- Causa raíz: `ui_read_option()` convertía EOF en cadena vacía y éxito; los menús repetían el mensaje de opción inválida dentro de bucles infinitos.
+- Se cambió el contrato del lector y se actualizaron sus consumidores para salir al recibir EOF; se protegieron también los prompts de identificador del menú de backup VLESS.
+- Se añadieron pruebas de EOF directo/anidado con límite de salida de 1 MiB en `tests/stage1_menu.sh`.
+- Se revisó y ejecutó PASS `tests/vless_backup_restore_secrets.sh`, que existía localmente sin seguimiento Git; se incluye en el cierre de sincronización.
+- PASS: pruebas `stage1_menu`, `users_v2_menu`, `stage1_settings`, restore end-to-end de secretos TLS/REALITY, `bash -n` de scripts shell, ShellCheck de archivos modificados y `git diff --check`. Suite completa `tests/*.sh`: 30/30 PASS; `install.sh --check`, `bash -n` de todos los scripts shell, ShellCheck, shfmt del test nuevo y `git diff --check`: PASS.
+- Se conservaron sin borrar los directorios `/tmp/tmp.u7Vq57eHNx` (282 MB) y `/tmp/tmp.EsxO527Ihe` (47 MB), con salidas históricas repetitivas de pruebas V2.

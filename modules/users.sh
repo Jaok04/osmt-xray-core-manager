@@ -85,7 +85,7 @@ users_menu() {
 		ui_clear
 		ui_title "GESTIÓN DE USUARIOS VLESS"
 		printf '\n  [1] Crear usuario VLESS (borrador)\n  [2] Consultar usuarios registrados\n  [3] Cambiar etiqueta de usuario\n  [4] Eliminar usuario (borrador)\n  [0] Volver al menú principal\n\n'
-		ui_read_option "Selecciona una opción: " option
+		ui_read_option "Selecciona una opción: " option || return 0
 		case "$option" in
 		1) users_create ;;
 		2)

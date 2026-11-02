@@ -94,3 +94,23 @@ Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM 
 - Pruebas focales backup, restore aislado y recuperación scrypt/AES-GCM PASS; suite completa 29/29 PASS en primera revisión. Se añadieron correcciones posteriores y pruebas focales repetidas.
 - No se tocó `/var/backups/xray-manager` histórico, la clave maestra real, datos operativos, firewall ni runtime.
 - P4 sigue ABIERTA: falta probar cortes abruptos en todas las fronteras del journal y completar pruebas end-to-end de restauración de blobs cifrados TLS/REALITY. Detalle en `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
+
+
+## Actualización de punto de control — EOF en menús y auditoría de disco (2026-11-02)
+
+**Tarea actual:** corregir el tratamiento de EOF que provocó bucles de menús y crecimiento ilimitado de archivos de salida durante pruebas.
+
+**Entorno verificado al iniciar:** rama `design/user-identity-association-v1`, HEAD `4ecd898ab9034ae0a499f2a2b5dac74c7b35ad71`, remoto `origin` en el mismo commit. `/opt/xray-manager` tiene `.git`; el árbol tenía dos artefactos locales sin seguimiento: `scripts/__pycache__/` y `tests/vless_backup_restore_secrets.sh`.
+
+**Cambios implementados:**
+- `ui_read_option()` ahora devuelve estado 1 al detectar EOF y limpia la variable destino.
+- Los menús principales/secundarios y los prompts de selección salen de forma ordenada al recibir EOF.
+- Los prompts de identificador del menú de backup VLESS también abortan al recibir EOF.
+- `tests/stage1_menu.sh` incluye pruebas EOF para navegación directa/anidada y limita a 1 MiB la salida de cada caso de regresión.
+- Se incorpora `tests/vless_backup_restore_secrets.sh`, preexistente en la VPS, después de revisar su aislamiento y ejecutar PASS.
+
+**Verificación ejecutada:** `tests/stage1_menu.sh`, `tests/users_v2_menu.sh`, `tests/stage1_settings.sh` y `tests/vless_backup_restore_secrets.sh`: PASS. `bash -n` para todos los scripts `.sh`, ShellCheck para archivos modificados y `git diff --check`: PASS. Suite completa `tests/*.sh`: 30/30 PASS; `install.sh --check`, `bash -n` de todos los scripts shell, ShellCheck, shfmt del test nuevo y `git diff --check`: PASS.
+
+**Incidente de disco:** se eliminó únicamente `/tmp/tmp.oaFf5wTZwt` tras detener PID 36728 y confirmar que no había handles abiertos. Se liberaron el archivo de 20.46 GB y el archivo borrado de ~925 MB que el proceso retenía. Estado posterior: 3.7 GB usados, 71 GB libres, 5%. Los directorios `/tmp/tmp.u7Vq57eHNx` (282 MB) y `/tmp/tmp.EsxO527Ihe` (47 MB) se inspeccionaron y se dejaron intactos; son salidas históricas de pruebas de menú V2.
+
+**Pendiente:** revisión final de diff; después commit/push en la rama autorizada y comprobar HEAD remoto y estado limpio. P4 sigue abierta: aunque el restore end-to-end TLS/REALITY ya tiene prueba PASS, faltan pruebas de corte abrupto en todas las fronteras del journal, comportamiento ante certificado TLS externo ausente y aceptación formal.

@@ -9,7 +9,7 @@ vless_backup_menu() {
         ui_clear
         ui_title "BACKUP Y RECUPERACIÓN VLESS"
         printf '\n  [1] Crear backup de datos\n  [2] Restaurar backup de datos\n  [3] Crear backup de recuperación de clave\n  [4] Recuperar clave maestra\n  [5] Ver backups disponibles\n  [6] Verificar integridad de un backup\n  [7] Resolver restauración interrumpida (rollback)\n  [0] Volver\n\n'
-        ui_read_option "Selecciona una opción: " option
+        ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
         1)
             if output="$(python3 "$VLESS_BACKUP_SCRIPT" backup-data 2>&1)"; then printf '\n%s\n' "$output"; else printf '\nFalló la creación del backup:\n%s\n' "$output"; fi
@@ -19,7 +19,7 @@ vless_backup_menu() {
             printf '\nBackups de datos disponibles:\n'
             python3 "$VLESS_BACKUP_SCRIPT" list || true
             printf '\nIntroduce el identificador exacto del backup: '
-            IFS= read -r backup_id
+            IFS= read -r backup_id || return 0
             backup_path="$VLESS_BACKUP_ROOT/data/$backup_id"
             if [[ ! "$backup_id" =~ ^[0-9]{8}T[0-9]{6}\.[0-9]{6}Z$ ]]; then
                 printf 'Identificador no válido.\n'
@@ -33,7 +33,7 @@ vless_backup_menu() {
             printf '\nBackups de datos disponibles:\n'
             python3 "$VLESS_BACKUP_SCRIPT" list || true
             printf '\nIntroduce el identificador exacto del backup asociado: '
-            IFS= read -r backup_id
+            IFS= read -r backup_id || return 0
             if [[ ! "$backup_id" =~ ^[0-9]{8}T[0-9]{6}\.[0-9]{6}Z$ ]]; then
                 printf 'Identificador no válido.\n'
                 ui_pause
@@ -44,7 +44,7 @@ vless_backup_menu() {
             ;;
         4)
             printf '\nIntroduce el identificador exacto del paquete de recuperación: '
-            IFS= read -r backup_id
+            IFS= read -r backup_id || return 0
             if [[ ! "$backup_id" =~ ^[0-9]{8}T[0-9]{6}\.[0-9]{6}Z$ ]]; then
                 printf 'Identificador no válido.\n'
                 ui_pause
@@ -60,7 +60,7 @@ vless_backup_menu() {
             ;;
         6)
             printf '\nIntroduce el identificador exacto del backup de datos: '
-            IFS= read -r backup_id
+            IFS= read -r backup_id || return 0
             if [[ ! "$backup_id" =~ ^[0-9]{8}T[0-9]{6}\.[0-9]{6}Z$ ]]; then
                 printf 'Identificador no válido.\n'
                 ui_pause

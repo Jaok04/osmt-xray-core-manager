@@ -55,7 +55,7 @@ users_v2_menu() {
 		printf '  [10] Eliminar asociación individual\n'
 		printf '  [11] Eliminar identidad y todas sus asociaciones\n'
 		printf '  [0] Volver al menú principal\n\n'
-		ui_read_option "Selecciona una opción: " option
+		ui_read_option "Selecciona una opción: " option || return 0
 		case "$option" in
 		1)
 			users_v2_menu_list

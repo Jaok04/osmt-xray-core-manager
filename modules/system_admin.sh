@@ -200,7 +200,7 @@ manager_dependencies_menu() {
         printf '  [2] Instalar dependencias faltantes\n'
         printf '  [3] Actualizar dependencias del administrador\n'
         printf '  [0] Volver\n\n'
-        ui_read_option "Selecciona una opción: " option
+        ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
             1) manager_dependencies_report ;;
             2) manager_dependencies_install_missing ;;

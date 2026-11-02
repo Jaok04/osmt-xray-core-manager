@@ -154,4 +154,15 @@ Se integró guardado bajo confirmación desde el asistente, cifrado AES-256-GCM 
 
 ## 2026-11-02 — P4 backup/recuperación VLESS (en desarrollo)
 
-Se añadió un primer subsistema específico para backups de datos VLESS, manifiesto/hashes, paquete de recuperación de clave scrypt + AES-256-GCM, verificación, restauración confirmada y menú. Pruebas focales de backup, restore aislado y recuperación de clave PASS; suite completa 29/29 PASS en la primera revisión. P4 no se cierra: faltan pruebas de corte abrupto en todas las fronteras del journal y pruebas end-to-end de restauración de secretos TLS/REALITY. El comando `recover-restore` ya permite rollback conservador del journal, preservando artefactos en cuarentena. No se creó backup operativo ni se tocó la clave maestra real. Consultar `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
+Se añadió un primer subsistema específico para backups de datos VLESS, manifiesto/hashes, paquete de recuperación de clave scrypt + AES-256-GCM, verificación, restauración confirmada y menú. Pruebas focales de backup, restore aislado y recuperación de clave PASS; suite completa 29/29 PASS en la primera revisión. La prueba end-to-end `tests/vless_backup_restore_secrets.sh` PASS el 2026-11-02 para restore de blobs REALITY/TLS con autenticación AES-GCM y dependencia TLS externa documentada. P4 no se cierra: faltan pruebas de corte abrupto en todas las fronteras del journal y aceptación integral. El comando `recover-restore` ya permite rollback conservador del journal, preservando artefactos en cuarentena. No se creó backup operativo ni se tocó la clave maestra real. Consultar `docs/P4_BACKUP_RECUPERACION_VLESS.md`.
+
+
+## Incidente de pruebas por EOF — 2026-11-02
+
+- Se confirmó que la alerta de disco correspondió a un episodio real: `/tmp/tmp.oaFf5wTZwt/connections-action-error.out` alcanzó 20,465,770,496 bytes. Un proceso huérfano conservaba además un archivo borrado de aproximadamente 925 MB abierto.
+- Se detuvo el proceso huérfano y se eliminó solo `/tmp/tmp.oaFf5wTZwt`; el filesystem quedó en 3.7 GB usados, 71 GB libres y 5% de uso. No se tocaron datos persistentes ni runtime.
+- Causa: `ui_read_option()` ocultaba EOF como respuesta vacía; los menús con bucles repetían indefinidamente el mensaje de opción inválida. Se corrigió la propagación de EOF en los consumidores de menús y prompts.
+- `tests/stage1_menu.sh` ahora verifica EOF en menús anidados y limita la salida de regresión a 1 MiB. Pruebas de menú Etapa 1, usuarios V2, preferencias, restore end-to-end TLS/REALITY, sintaxis Bash, ShellCheck y diff check: PASS.
+- Se conservan sin borrar `/tmp/tmp.u7Vq57eHNx` (282 MB) y `/tmp/tmp.EsxO527Ihe` (47 MB), artefactos históricos de pruebas V2 con salida repetitiva por EOF.
+- `tests/vless_backup_restore_secrets.sh` era un archivo local sin seguimiento Git; se revisó, ejecutó PASS y se incorpora al control de versiones.
+- Estado de publicación: pendiente de commit/push y verificación remota en el cierre de este cambio.

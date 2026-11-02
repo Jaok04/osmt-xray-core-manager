@@ -44,9 +44,11 @@ ui_read_option() {
 	local answer
 	printf '%s' "$prompt"
 	if ! IFS= read -r answer; then
-		answer=''
+		printf -v "$destination" '%s' ''
+		return 1
 	fi
 	printf -v "$destination" '%s' "$answer"
+	return 0
 }
 
 ui_confirm() {

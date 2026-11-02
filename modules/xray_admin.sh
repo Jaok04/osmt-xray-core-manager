@@ -433,7 +433,7 @@ xray_admin_install_menu_action() {
 		((i += 1))
 	done
 	printf '  [0] Volver\n\n'
-	ui_read_option "Selecciona la versión: " choice
+	ui_read_option "Selecciona la versión: " choice || return 0
 	[[ "$choice" =~ ^[0-9]+$ ]] || {
 		printf 'Selección no válida.\n'
 		ui_pause

@@ -121,7 +121,7 @@ uninstall_menu_action() {
 		ui_clear
 		ui_title "DESINSTALACIÓN DE COMPONENTES"
 		printf '\n  [1] Solo Xray-core\n  [2] Solo Xray Manager\n  [3] Ambos componentes\n  [0] Cancelar\n'
-		ui_read_option "Alcance: " scope
+		ui_read_option "Alcance: " scope || return 0
 		case "$scope" in
 		1) scope=xray ;;
 		2) scope=manager ;;
@@ -140,7 +140,7 @@ uninstall_menu_action() {
 	fi
 
 	printf '\n  [1] Conservar todos los datos\n  [2] Eliminar todos los datos\n  [3] Seleccionar categorías\n'
-	ui_read_option "Política de datos: " policy
+	ui_read_option "Política de datos: " policy || return 0
 	case "$policy" in
 	1) policy=keep ;;
 	2) policy=all ;;

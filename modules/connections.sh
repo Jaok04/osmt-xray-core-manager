@@ -16,7 +16,7 @@ connections_menu() {
 		ui_title "GESTIÓN DE PROTOCOLOS Y CONEXIONES"
 		printf '\n  PROTOCOLOS PRINCIPALES\n  [1] VLESS\n  [2] VMess\n  [3] Trojan\n  [4] Shadowsocks\n  [5] Hysteria2\n'
 		printf '\n  PROTOCOLOS OPCIONALES\n  [6] Protocolos opcionales\n  [7] Backup y recuperación VLESS\n  [0] Volver al menú principal\n\n'
-		ui_read_option "Selecciona una opción: " option
+		ui_read_option "Selecciona una opción: " option || return 0
 		case "$option" in
 			1) connections_family_menu vless ;;
 			2) connections_family_menu vmess ;;
@@ -58,7 +58,7 @@ connections_family_menu() {
 			*) printf '\nFamilia desconocida.\n'; return 1 ;;
 		esac
 		printf '  [0] Volver\n\n'
-		ui_read_option "Selecciona una modalidad: " option
+		ui_read_option "Selecciona una modalidad: " option || return 0
 		[[ "$option" == 0 ]] && return 0
 		case "$family:$option" in
 			vless:1) connections_manage_mode vless_ws ;;
@@ -98,7 +98,7 @@ connections_shadowsocks_obfs_menu() {
 		ui_clear
 		ui_title "SHADOWSOCKS - OBFS"
 		printf '\n  [1] OBFS-HTTP (plugin externo)\n  [2] OBFS-TLS (plugin externo)\n  [0] Volver\n\n'
-		ui_read_option "Selecciona una opción: " option
+		ui_read_option "Selecciona una opción: " option || return 0
 		case "$option" in
 			1) connections_manage_mode shadowsocks_obfs_http ;;
 			2) connections_manage_mode shadowsocks_obfs_tls ;;
@@ -114,7 +114,7 @@ connections_optional_menu() {
 		ui_title "PROTOCOLOS OPCIONALES"
 		printf '\n  PROXIES AUXILIARES\n  [1] SOCKS\n  [2] HTTP Proxy\n'
 		printf '\n  TÚNELES Y REDES\n  [3] WireGuard\n  [0] Volver\n\n'
-		ui_read_option "Selecciona un protocolo: " option
+		ui_read_option "Selecciona un protocolo: " option || return 0
 		case "$option" in
 			1) connections_manage_mode socks_tcp ;;
 			2) connections_manage_mode http_tcp ;;
@@ -175,22 +175,22 @@ connections_resolve_mode() {
 	case "$mode_key" in
 		vless_grpc)
 			printf '\nSeguridad VLESS-GRPC:\n  [1] TLS\n  [2] REALITY\n  [0] Cancelar\n'
-			ui_read_option "Selecciona seguridad: " option
+			ui_read_option "Selecciona seguridad: " option || return 1
 			case "$option" in 1) result_ref=vless_grpc_tls ;; 2) result_ref=vless_grpc_reality ;; *) return 1 ;; esac
 			;;
 		vmess_grpc)
 			printf '\nSeguridad VMess-GRPC:\n  [1] Sin TLS\n  [2] TLS\n  [3] REALITY\n  [0] Cancelar\n'
-			ui_read_option "Selecciona seguridad: " option
+			ui_read_option "Selecciona seguridad: " option || return 1
 			case "$option" in 1) result_ref=vmess_grpc ;; 2) result_ref=vmess_grpc_tls ;; 3) result_ref=vmess_grpc_reality ;; *) return 1 ;; esac
 			;;
 		vmess_xhttp)
 			printf '\nSeguridad VMess-XHTTP:\n  [1] Sin TLS\n  [2] TLS\n  [3] REALITY\n  [0] Cancelar\n'
-			ui_read_option "Selecciona seguridad: " option
+			ui_read_option "Selecciona seguridad: " option || return 1
 			case "$option" in 1) result_ref=vmess_xhttp ;; 2) result_ref=vmess_xhttp_tls ;; 3) result_ref=vmess_xhttp_reality ;; *) return 1 ;; esac
 			;;
 		vmess_mkcp)
 			printf '\nSeguridad VMess-mKCP:\n  [1] Sin TLS\n  [2] TLS\n  [0] Cancelar\n'
-			ui_read_option "Selecciona seguridad: " option
+			ui_read_option "Selecciona seguridad: " option || return 1
 			case "$option" in 1) result_ref=vmess_mkcp ;; 2) result_ref=vmess_mkcp_tls ;; *) return 1 ;; esac
 			;;
 		*) result_ref="$mode_key" ;;
@@ -203,7 +203,7 @@ connections_manage_mode() {
 		ui_clear
 		ui_title "ADMINISTRAR $(connections_mode_label "$resolved")"
 		printf '\n  [1] Crear una configuración nueva\n  [2] Administrar configuraciones existentes\n  [0] Volver\n\n'
-		ui_read_option "Selecciona una opción: " option
+		ui_read_option "Selecciona una opción: " option || return 0
 		case "$option" in
 			1) connections_create_draft "$resolved" || true ;;
 			2) connections_manage_existing "$resolved" || true ;;
@@ -232,7 +232,7 @@ connections_manage_existing() {
 		ui_title "CONEXIONES $(connections_mode_label "$protocol_id")"
 		jq -r 'to_entries[] | "[\(.key + 1)] \(.value.name) - puerto \(.value.port) [\(.value.state)]"' <<<"$list_json"
 		printf '\n[0] Volver\n'
-		ui_read_option "Selecciona una conexión: " option
+		ui_read_option "Selecciona una conexión: " option || return 0
 		if [[ "$option" == 0 ]]; then return 0; fi
 		if [[ ! "$option" =~ ^[0-9]+$ ]] || ((10#$option < 1 || 10#$option > $(jq 'length' <<<"$list_json"))); then
 			printf '\nSelección no válida.\n'
@@ -280,7 +280,7 @@ connections_existing_menu() {
 			if [[ "$has_configuration" == true ]]; then printf '  [4] Recuperar y validar configuración guardada\n'; fi
 		fi
 		printf '  [0] Volver\n\n'
-		ui_read_option "Selecciona una opción: " option
+		ui_read_option "Selecciona una opción: " option || return 0
 		case "$option" in
 			1) connections_show_existing_detail "$id" ;;
 			2)

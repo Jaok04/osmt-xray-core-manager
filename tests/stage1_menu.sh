@@ -15,6 +15,7 @@ source "$ROOT/modules/admin_settings.sh"
 source "$ROOT/modules/connections.sh"
 source "$ROOT/modules/users.sh"
 source "$ROOT/modules/users_v2_menu.sh"
+source "$ROOT/modules/vless_backup.sh"
 source "$ROOT/modules/xray_service.sh"
 source "$ROOT/modules/main_menu.sh"
 
@@ -233,3 +234,67 @@ grep -Fxq dependencies-report "$ACTION_CALLS"
 [[ "$(grep -c 'DEPENDENCIAS DEL SISTEMA' "$tmp/dependencies-action-error.out")" -ge 2 ]]
 
 printf 'OK: matriz de [0] Volver en submenús funcionales y recuperación tras fallos inyectados.\n'
+source "$ROOT/modules/admin_settings.sh"
+
+# EOF no es una opción vacía: debe propagarse y cerrar los menús sin bucles.
+choice=valor_anterior
+if ui_read_option 'EOF: ' choice </dev/null; then
+    printf 'ERROR: ui_read_option aceptó EOF como una opción válida.\n' >&2
+    exit 1
+fi
+[[ -z "$choice" ]]
+
+run_eof_case() {
+    local output="$1"
+    shift
+    # Limita cualquier regresión de salida a 1 MiB incluso si reaparece un bucle.
+    (
+        ulimit -f 2048
+        "$@" </dev/null >"$output"
+    )
+}
+
+run_eof_case "$tmp/connections-eof.out" connections_menu
+run_eof_case "$tmp/users-eof.out" users_menu
+run_eof_case "$tmp/users-v2-eof.out" users_v2_menu
+run_eof_case "$tmp/main-eof.out" menu_main
+run_eof_case "$tmp/system-eof.out" manager_dependencies_menu
+run_eof_case "$tmp/settings-eof.out" manager_settings_menu
+run_eof_case "$tmp/settings-language-eof.out" manager_settings_language_date_menu
+run_eof_case "$tmp/settings-backup-eof.out" manager_settings_backup_menu
+run_eof_case "$tmp/settings-paths-eof.out" manager_settings_paths_menu
+run_eof_case "$tmp/xray-service-eof.out" menu_xray_service
+run_eof_case "$tmp/xray-admin-eof.out" menu_xray_admin
+run_eof_case "$tmp/install-info-eof.out" menu_installation_information
+run_eof_case "$tmp/vless-backup-eof.out" vless_backup_menu
+run_eof_case "$tmp/connections-family-eof.out" connections_family_menu vless
+run_eof_case "$tmp/connections-grpc-security-eof.out" connections_manage_mode vless_grpc
+run_eof_case "$tmp/connections-optional-eof.out" connections_optional_menu
+run_eof_case "$tmp/connections-obfs-eof.out" connections_shadowsocks_obfs_menu
+run_eof_case "$tmp/xray-version-eof.out" xray_admin_install_menu_action install
+
+connections_nested_eof_case() {
+    printf '1\n1\n1\n' | connections_menu
+}
+run_eof_case "$tmp/connections-nested-eof.out" connections_nested_eof_case
+
+settings_paths_nested_eof_case() {
+    printf '\n' | manager_settings_paths_menu
+}
+run_eof_case "$tmp/settings-paths-nested-eof.out" settings_paths_nested_eof_case
+
+settings_backup_path_eof_case() {
+    printf '1\n' | manager_settings_backup_menu
+}
+run_eof_case "$tmp/settings-backup-path-eof.out" settings_backup_path_eof_case
+
+vless_backup_id_eof_case() {
+    printf '2\n' | vless_backup_menu
+}
+run_eof_case "$tmp/vless-backup-id-eof.out" vless_backup_id_eof_case
+
+grep -q 'GESTIÓN DE PROTOCOLOS Y CONEXIONES' "$tmp/connections-eof.out"
+grep -q 'GESTIÓN DE IDENTIDADES Y ASOCIACIONES (V2)' "$tmp/users-v2-eof.out"
+grep -q 'MENÚ PRINCIPAL' "$tmp/main-eof.out"
+grep -q 'ADMINISTRAR VLESS' "$tmp/connections-nested-eof.out"
+printf 'OK: EOF cierra los menús y se propaga por submenús sin ciclos ni salida ilimitada.\n'

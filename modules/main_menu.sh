@@ -21,7 +21,7 @@ menu_main() {
         printf '\n  INFORMACIÓN\n'
         printf '  [9] Información y ayuda\n'
         printf '  [0] Salir\n\n'
-        ui_read_option "Selecciona una opción: " option
+        ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
             1) connections_menu || true ;;
             2) users_menu_dispatch || true ;;
@@ -61,7 +61,7 @@ menu_xray_service() {
         printf '  [6] Deshabilitar inicio automático\n'
         printf '  [7] Consultar registros (journal)\n'
         printf '  [0] Volver\n\n'
-        ui_read_option "Selecciona una opción: " option
+        ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
             1)
                 ui_clear
@@ -145,7 +145,7 @@ menu_system_admin() {
         printf '  [4] Información de instalación\n'
         printf '  [5] Desinstalar componentes\n'
         printf '  [0] Volver\n\n'
-        ui_read_option "Selecciona una opción: " option
+        ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
             1) menu_xray_admin || true ;;
             2) manager_dependencies_menu || true ;;
@@ -173,7 +173,7 @@ menu_xray_admin() {
         printf '  [5] Reinstalar Xray-core\n'
         printf '  [6] Reparar instalación\n'
         printf '  [0] Volver\n\n'
-        ui_read_option "Selecciona una opción: " option
+        ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
             1) xray_admin_install_menu_action install || true ;;
             2) xray_admin_install_menu_action update || true ;;
@@ -239,7 +239,7 @@ menu_installation_information() {
         printf '  [0] Volver
 
 '
-        ui_read_option "Selecciona una opción: " option
+        ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
             1) menu_installation_paths || true ;;
             2) menu_installation_files || true ;;
