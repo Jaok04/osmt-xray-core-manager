@@ -9,6 +9,7 @@ source "$ROOT/config/manager.conf"
 source "$ROOT/config/xray-version.conf"
 # shellcheck disable=SC1091
 source "$ROOT/modules/xray_admin.sh"
+run_lock_mode="$(stat -c %a /run/lock 2>/dev/null || printf unavailable)"
 
 mapfile -t versions < <(xray_admin_compatible_versions)
 [[ "${#versions[@]}" -eq 1 ]]
@@ -20,8 +21,22 @@ if xray_admin_install_version '26.9.9' install >/dev/null 2>&1; then
 fi
 printf '%s\n' 'OK: catálogo de versiones compatibles, arquitectura Linux amd64 y rechazo de versiones sin adaptador.'
 
+ui_clear() { :; }
+ui_title() { :; }
+ui_pause() { :; }
+ui_read_option() { printf -v "$2" '%s' 1; }
+ui_confirm() { return 1; }
+FETCH_COUNT=0
+cancel_output="$(mktemp)"
+xray_admin_install_menu_action install >"$cancel_output" 2>&1
+grep -q 'Operación cancelada' "$cancel_output"
+[[ "$FETCH_COUNT" -eq 0 ]]
+rm -f -- "$cancel_output"
+
 # Integración de instalación/rollback con fixtures: nunca usa las rutas reales.
 tmp="$(mktemp -d)"
+XRAY_MANAGER_LIFECYCLE_LOCK="$tmp/lifecycle.lock"
+export XRAY_MANAGER_LIFECYCLE_LOCK
 trap 'rm -rf -- "$tmp"' EXIT
 XRAY_ADMIN_BIN="$tmp/bin/xray"
 XRAY_ADMIN_DATA="$tmp/share"
@@ -88,6 +103,17 @@ xray_admin_install_version 26.10.31 update >"$tmp/noop.out"
 [[ "$FETCH_COUNT" == "$fetch_before" ]]
 [[ -z "${XRAY_ADMIN_LOCK_FD:-}" ]]
 
+exec {busy_fd}>"$XRAY_MANAGER_LIFECYCLE_LOCK"
+flock -x "$busy_fd"
+if xray_admin_install_version 26.10.31 reinstall >"$tmp/lifecycle-busy.out" 2>&1; then
+	printf 'ERROR: administración Xray ignoró el bloqueo de ciclo de vida.\n' >&2
+	exit 1
+fi
+grep -q 'otra operación de ciclo de vida' "$tmp/lifecycle-busy.out"
+[[ -x "$XRAY_ADMIN_BIN" ]]
+flock -u "$busy_fd"
+exec {busy_fd}>&-
+
 # Un fallo antes de iniciar el commit no puede borrar la instalación existente.
 cat >"$XRAY_ADMIN_BIN" <<'OLD'
 #!/usr/bin/env bash
@@ -120,3 +146,4 @@ fi
 grep -q 'Rollback de binario/geodata completado' "$tmp/rollback.out"
 
 printf 'OK: instalación aislada, no-op, liberación del lock, preservación ante fallo de descarga y rollback ante paquete incompleto.\n'
+[[ "$(stat -c %a /run/lock 2>/dev/null || printf unavailable)" == "$run_lock_mode" ]]
