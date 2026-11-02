@@ -251,7 +251,7 @@ connections_manage_existing() {
 	done
 }
 connections_existing_menu() {
-	local id="$1" option fd state name protocol_id port
+	local id="$1" option fd state name protocol_id port has_configuration
 	while true; do
 		if ! connections_require_storage_tools || ! connections_lock fd; then
 			printf '\nNo fue posible consultar la conexión.\n'
@@ -268,6 +268,7 @@ connections_existing_menu() {
 		name="$(jq -r --arg id "$id" '.[] | select(.id == $id) | .name' "$CONNECTION_DATA_FILE")"
 		protocol_id="$(jq -r --arg id "$id" '.[] | select(.id == $id) | .protocol_id' "$CONNECTION_DATA_FILE")"
 		port="$(jq -r --arg id "$id" '.[] | select(.id == $id) | .port' "$CONNECTION_DATA_FILE")"
+		has_configuration="$(jq -r --arg id "$id" 'any(.[]; .id == $id and (.configuration_ref | type == "string"))' "$CONNECTION_DATA_FILE")"
 		connections_unlock "$fd"
 		ui_clear
 		ui_title "ADMINISTRAR CONEXIÓN"
@@ -275,6 +276,7 @@ connections_existing_menu() {
 		printf '\n  [1] Consultar detalles\n'
 		if [[ "$state" == draft ]]; then
 			printf '  [2] Editar borrador\n  [3] Eliminar borrador\n'
+			if [[ "$has_configuration" == true ]]; then printf '  [4] Recuperar y validar configuración guardada\n'; fi
 		fi
 		printf '  [0] Volver\n\n'
 		ui_read_option "Selecciona una opción: " option
@@ -286,6 +288,11 @@ connections_existing_menu() {
 			3)
 				if [[ "$state" == draft ]]; then connections_delete_draft "$id" || true; else printf '\nOperación no disponible.\n'; ui_pause; fi
 				return 0
+				;;
+			4)
+				if [[ "$state" == draft && "$has_configuration" == true ]] && declare -F connections_vless_assistant_restore >/dev/null 2>&1; then
+					connections_vless_assistant_restore "$id" "$protocol_id" || true
+				else printf '\nNo hay una configuración VLESS recuperable.\n'; ui_pause; fi
 				;;
 			0) return 0 ;;
 			*) printf '\nOpción no válida.\n'; ui_pause ;;
@@ -299,7 +306,7 @@ connections_show_existing_detail() {
 		ui_pause
 		return 1
 	fi
-	jq -r --arg id "$id" '.[] | select(.id == $id) | "Nombre: \(.name)\nID: \(.id)\nModalidad: \(.protocol_id)\nPuerto: \(.port)\nSlots: \(.max_users)\nEstado: \(.state)\nAplicada a runtime: \(.runtime_applied)\nCreada: \(.created_at)"' "$CONNECTION_DATA_FILE"
+	jq -r --arg id "$id" '.[] | select(.id == $id) | "Nombre: \(.name)\nID: \(.id)\nModalidad: \(.protocol_id)\nPuerto: \(.port)\nSlots: \(.max_users)\nEstado: \(.state)\nAplicada a runtime: \(.runtime_applied)\nRevisión guardada: \(.configuration_revision // "ninguna")\nReferencia de configuración: \(.configuration_ref // "ninguna")\nReferencia de secreto: \(.secret_ref // "ninguna")\nCreada: \(.created_at)"' "$CONNECTION_DATA_FILE"
 	connections_unlock "$fd"
 	ui_pause
 }

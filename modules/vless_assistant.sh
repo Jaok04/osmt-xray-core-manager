@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Asistente de previsualización/validación VLESS. No persiste secretos ni aplica runtime.
+# Asistente VLESS: previsualiza, valida, persiste bajo confirmación y recupera borradores.
 
 connections_vless_assistant_read() {
 	local prompt="$1" var_name="$2" value
@@ -21,7 +21,9 @@ connections_vless_assistant_read_secret() {
 connections_vless_assistant() (
 	[[ "$#" -eq 2 ]] || return 2
 	local connection_id="$1" mode_id="$2" listen_address listen_port options_file model_file config_file tmp
-	local path service_name tls_cert tls_key reality_target reality_private reality_names reality_ids xhttp_mode
+	local path='' service_name='' tls_cert='' tls_key='' reality_target='' reality_private='' reality_names='' reality_ids='' xhttp_mode=''
+	local save_choice='' prepared_file='' secret_file='' secret_meta='' secret_type=''
+	local -a store_args=()
 	local users_json='[]' xray_bin="${XRAY_VALIDATION_BINARY:-/var/cache/xray-manager/validation/v26.10.31/xray}"
 	command -v jq >/dev/null 2>&1 || {
 		printf '\nSe requiere jq; no se generó configuración.\n'
@@ -32,7 +34,7 @@ connections_vless_assistant() (
 		return 1
 	fi
 	printf '\n--- ASISTENTE VLESS: PREVISUALIZACIÓN ---\n'
-	printf 'La configuración se construirá temporalmente; no se guardarán claves ni se aplicará al servicio.\n'
+	printf 'La configuración se construirá temporalmente. Solo se guardará si confirmas; nunca se aplicará al servicio.\n'
 	connections_vless_assistant_read 'Dirección de escucha (ej. 127.0.0.1): ' listen_address || return 1
 	listen_port="$(jq -r --arg id "$connection_id" '.[] | select(.id == $id) | .port' "$CONNECTION_DATA_FILE")" || return 1
 	tmp="$(mktemp -d "${TMPDIR:-/tmp}/xray-vless-assistant.XXXXXX")" || return 1
@@ -85,7 +87,10 @@ connections_vless_assistant() (
 		connections_vless_assistant_read_secret 'Private key REALITY (entrada oculta): ' reality_private || return 1
 		connections_vless_assistant_read 'Server names (separados por comas): ' reality_names || return 1
 		connections_vless_assistant_read 'Short IDs hexadecimales (separados por comas): ' reality_ids || return 1
-		jq -n --arg target "$reality_target" --arg private_key "$reality_private" --arg names "$reality_names" --arg ids "$reality_ids" --arg service_name "$service_name" --arg path "$path" --arg mode "$xhttp_mode" '
+		printf '%s' "$reality_private" >"$tmp/reality.private"
+		chmod 600 "$tmp/reality.private"
+		unset reality_private
+		jq -n --rawfile private_key "$tmp/reality.private" --arg target "$reality_target" --arg names "$reality_names" --arg ids "$reality_ids" --arg service_name "$service_name" --arg path "$path" --arg mode "$xhttp_mode" '
 				{target:$target,private_key:$private_key,server_names:($names|split(",")),short_ids:($ids|split(","))} +
 				(if $service_name != "" then {service_name:$service_name} else {} end) +
 				(if $path != "" then {path:$path,mode:$mode} else {} end)' >"$options_file"
@@ -95,6 +100,7 @@ connections_vless_assistant() (
 		return 1
 		;;
 	esac
+	chmod 600 "$options_file"
 	if ! vless_xray_26_10_31_build "$model_file" "$options_file" >"$config_file"; then
 		printf '\nNo se pudo construir la configuración. Revisa las opciones; el borrador se conserva.\n'
 		return 1
@@ -110,5 +116,98 @@ connections_vless_assistant() (
 	fi
 	printf 'El resultado y los secretos temporales se eliminarán al salir del asistente.\n'
 	printf 'El registro continúa en estado draft; runtime_applied permanece false.\n'
+	printf '\n¿Deseas guardar esta configuración de forma persistente y cifrar su clave privada? [s/N]: '
+	IFS= read -r save_choice || save_choice=''
+	case "$save_choice" in
+	[sS] | [sS][iI])
+		prepared_file="$tmp/persistent-config.json"
+		secret_file="$tmp/private-secret.bin"
+		secret_meta="$tmp/secret-meta.json"
+		if ! python3 "${APP_ROOT:-/opt/xray-manager}/scripts/vless_prepare_config.py" --model "$model_file" --options "$options_file" --output "$prepared_file" --secret-output "$secret_file" >"$secret_meta"; then
+			printf '\nNo se pudo preparar el almacenamiento persistente. No se guardó la configuración.\n'
+			ui_pause
+			return 1
+		fi
+		secret_type="$(jq -r '.secret_type // empty' "$secret_meta")"
+		store_args=(store --connection-id "$connection_id" --input "$prepared_file" --base "${XRAY_MANAGER_CONNECTIONS_DIR:-$CONNECTION_DATA_DIR}" --catalog "$CONNECTION_DATA_FILE" --lock "$CONNECTION_LOCK" --secrets-dir "${XRAY_MANAGER_SECRETS_DIR:-/var/lib/xray-manager/secrets}" --master-key "${XRAY_MANAGER_MASTER_KEY_FILE:-/etc/xray-manager/keys/master.key}")
+		if [[ -n "$secret_type" ]]; then store_args+=(--secret-input "$secret_file" --secret-type "$secret_type"); fi
+		if python3 "${APP_ROOT:-/opt/xray-manager}/scripts/vless_config_store.py" "${store_args[@]}"; then
+			printf '\nConfiguración guardada. La conexión continúa como borrador; Xray no fue modificado.\n'
+		else
+			printf '\nNo se pudo guardar la configuración. No se activó runtime.\n'
+			ui_pause
+			return 1
+		fi
+		;;
+	*) printf '\nNo se guardó la configuración.\n' ;;
+	esac
+	ui_pause
+)
+
+# Recupera una revisión guardada y la valida sin modificar catálogo ni runtime.
+connections_vless_assistant_restore() (
+	[[ "$#" -eq 2 ]] || return 2
+	local connection_id="$1" mode_id="$2" tmp persisted secret model options xray_config secret_type
+	local -a read_args=()
+	command -v jq >/dev/null 2>&1 || return 1
+	tmp="$(mktemp -d "${TMPDIR:-/tmp}/xray-vless-restore.XXXXXX")" || return 1
+	chmod 700 "$tmp"
+	trap 'rm -rf "$tmp"' EXIT
+	persisted="$tmp/persisted.json"
+	secret="$tmp/private.secret"
+	model="$tmp/model.json"
+	options="$tmp/options.json"
+	xray_config="$tmp/xray.json"
+	read_args=(read --connection-id "$connection_id" --base "${XRAY_MANAGER_CONNECTIONS_DIR:-$CONNECTION_DATA_DIR}" --catalog "$CONNECTION_DATA_FILE" --lock "$CONNECTION_LOCK" --secrets-dir "${XRAY_MANAGER_SECRETS_DIR:-/var/lib/xray-manager/secrets}" --master-key "${XRAY_MANAGER_MASTER_KEY_FILE:-/etc/xray-manager/keys/master.key}" --secret-output "$secret")
+	if ! python3 "${APP_ROOT:-/opt/xray-manager}/scripts/vless_config_store.py" "${read_args[@]}" >"$persisted"; then
+		printf '\nNo fue posible recuperar la configuración o autenticar su secreto.\n'
+		return 1
+	fi
+	local actual_mode address port
+	actual_mode="$(jq -r '.configuration.mode_id' "$persisted")"
+	address="$(jq -r '.configuration.listen_address' "$persisted")"
+	port="$(jq -r '.configuration.listen_port' "$persisted")"
+	[[ "$actual_mode" == "$mode_id" ]] || {
+		printf '\nLa modalidad guardada no coincide con la seleccionada.\n'
+		return 1
+	}
+	if declare -F users_build_vless_model >/dev/null 2>&1; then
+		users_build_vless_model "$connection_id" "$address" >"$model" || return 1
+	else
+		vless_model_build "$connection_id" "$mode_id" "$address" "$port" >"$model" || return 1
+	fi
+	local security
+	security="$(jq -r '.configuration.security' "$persisted")"
+	case "$security" in
+	none)
+		jq -n '{}' >"$options"
+		;;
+	tls)
+		jq -n --arg certificate_file "$(jq -r '.configuration.security_options.certificate_file' "$persisted")" --arg key_file "$secret" '{certificate_file:$certificate_file,key_file:$key_file}' >"$options"
+		;;
+	reality)
+		jq -n --rawfile private_key "$secret" --arg target "$(jq -r '.configuration.security_options.target' "$persisted")" --argjson server_names "$(jq -c '.configuration.security_options.server_names' "$persisted")" --argjson short_ids "$(jq -c '.configuration.security_options.short_ids' "$persisted")" --arg service_name "$(jq -r '.configuration.transport_options.service_name // empty' "$persisted")" --arg path "$(jq -r '.configuration.transport_options.path // empty' "$persisted")" --arg mode "$(jq -r '.configuration.transport_options.mode // empty' "$persisted")" '{target:$target,private_key:$private_key,server_names:$server_names,short_ids:$short_ids} + (if $service_name != "" then {service_name:$service_name} else {} end) + (if $path != "" then {path:$path,mode:$mode} else {} end)' >"$options"
+		;;
+	*)
+		printf '\nSeguridad guardada desconocida.\n'
+		return 1
+		;;
+	esac
+	chmod 600 "$options"
+	if ! vless_xray_26_10_31_build "$model" "$options" >"$xray_config"; then
+		printf '\nNo se pudo reconstruir la configuración Xray.\n'
+		return 1
+	fi
+	local xray_bin="${XRAY_VALIDATION_BINARY:-/var/cache/xray-manager/validation/v26.10.31/xray}"
+	if [[ -x "$xray_bin" ]]; then
+		"$xray_bin" run -test -config "$xray_config" || {
+			printf '\nXray rechazó la revisión recuperada.\n'
+			return 1
+		}
+		printf '\nRevisión recuperada y validada correctamente por Xray.\n'
+	else
+		printf '\nRevisión recuperada y reconstruida; no hay binario Xray de validación disponible.\n'
+	fi
+	printf 'No se modificó el catálogo ni el runtime. Los secretos temporales se eliminarán al salir.\n'
 	ui_pause
 )

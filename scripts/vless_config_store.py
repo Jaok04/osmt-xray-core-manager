@@ -66,7 +66,7 @@ def atomic_write(path: Path, data: bytes) -> None:
         tmp.unlink(missing_ok=True)
         raise
 
-def validate_config(config: object, connection: dict) -> dict:
+def validate_config(config: object, connection: dict, expected_secret_ref: str | None = None) -> dict:
     if not isinstance(config, dict): raise StoreError("configuración debe ser objeto JSON")
     required = {"schema_version", "connection_id", "protocol", "mode_id", "transport", "security", "listen_address", "listen_port", "transport_options", "security_options"}
     if set(config) != required: raise StoreError("campos ausentes o no permitidos en configuración")
@@ -99,32 +99,37 @@ def validate_config(config: object, connection: dict) -> dict:
             raise StoreError("opciones gRPC inválidas")
     elif t:
         raise StoreError("esta modalidad no admite opciones de transporte")
-    if security := MODES[mode][1]:
-        if security == "tls":
-            if set(sec) != {"certificate_file", "key_file"}: raise StoreError("TLS requiere referencias de certificado y clave")
-            for field in ("certificate_file", "key_file"):
-                value = sec[field]
-                if not isinstance(value, str) or not value.startswith("/") or len(value) > 4096:
-                    raise StoreError("referencia TLS debe ser una ruta absoluta")
-        elif security == "reality":
-            if set(sec) != {"target", "server_names", "short_ids"}: raise StoreError("REALITY requiere metadatos públicos; la clave privada se integra en P3")
-            if not isinstance(sec["target"], str) or not sec["target"] or len(sec["target"]) > 255:
-                raise StoreError("target REALITY inválido")
-            if not isinstance(sec["server_names"], list) or not sec["server_names"] or not all(isinstance(x, str) and x for x in sec["server_names"]):
-                raise StoreError("server names REALITY inválidos")
-            if not isinstance(sec["short_ids"], list) or not all(isinstance(x, str) and re.fullmatch(r"[0-9a-fA-F]{0,16}", x) for x in sec["short_ids"]):
-                raise StoreError("short IDs REALITY inválidos")
-        elif sec:
-            raise StoreError("esta modalidad no admite opciones de seguridad")
+    security = MODES[mode][1]
+    if security == "tls":
+        if set(sec) != {"certificate_file", "secret_ref"}: raise StoreError("TLS requiere certificado y referencia cifrada de clave")
+        value = sec["certificate_file"]
+        if not isinstance(value, str) or not value.startswith("/") or len(value) > 4096:
+            raise StoreError("referencia TLS debe ser una ruta absoluta")
+        if sec["secret_ref"] != expected_secret_ref or not isinstance(expected_secret_ref, str):
+            raise StoreError("referencia cifrada TLS no coincide con catálogo")
+    elif security == "reality":
+        if set(sec) != {"target", "server_names", "short_ids", "secret_ref"}: raise StoreError("REALITY requiere metadatos públicos y referencia cifrada de clave privada")
+        if sec["secret_ref"] != expected_secret_ref or not isinstance(expected_secret_ref, str):
+            raise StoreError("referencia cifrada REALITY no coincide con catálogo")
+        if not isinstance(sec["target"], str) or not sec["target"] or len(sec["target"]) > 255:
+            raise StoreError("target REALITY inválido")
+        if not isinstance(sec["server_names"], list) or not sec["server_names"] or not all(isinstance(x, str) and x for x in sec["server_names"]):
+            raise StoreError("server names REALITY inválidos")
+        if not isinstance(sec["short_ids"], list) or not all(isinstance(x, str) and re.fullmatch(r"[0-9a-fA-F]{0,16}", x) for x in sec["short_ids"]):
+            raise StoreError("short IDs REALITY inválidos")
     elif sec:
         raise StoreError("esta modalidad sin TLS/REALITY no admite opciones de seguridad")
+    if security == "none" and expected_secret_ref is not None:
+        raise StoreError("modalidad sin seguridad no debe referenciar secretos")
     return config
 
 def run(args: argparse.Namespace) -> dict:
     if os.geteuid() != 0: raise StoreError("el almacén requiere root")
     base = Path(args.base).absolute(); cat = Path(args.catalog).absolute(); lock = Path(args.lock).absolute()
     configs = base / "configurations"
+    secrets_dir = Path(args.secrets_dir).absolute()
     check_dir(base); check_dir(configs, create=True)
+    check_dir(secrets_dir, create=True)
     if cat.is_symlink() or lock.is_symlink(): raise StoreError("symlink en catálogo o bloqueo")
     lock.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     fd = os.open(lock, os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
@@ -143,12 +148,34 @@ def run(args: argparse.Namespace) -> dict:
             if entry.get("state") != "draft" or entry.get("runtime_applied") is not False:
                 raise StoreError("solo se pueden guardar borradores no aplicados")
             config = json.loads(read_regular(Path(args.input), MAX_CONFIG))
-            validate_config(config, entry)
             current = entry.get("configuration_revision", 0)
             if isinstance(current, bool) or not isinstance(current, int) or current < 0: raise StoreError("revisión de catálogo inválida")
             revision = current + 1
             filename = f"{cid}.r{revision:06d}.json"
             destination = configs / filename
+            secret_ref = None
+            secret_destination = secrets_dir / f"{cid}.r{revision:06d}.bin"
+            mode_security = MODES.get(config.get("mode_id"), (None, None))[1]
+            secret_plain = None
+            if mode_security in ("tls", "reality"):
+                if not args.secret_input or not args.secret_type: raise StoreError("la modalidad requiere clave privada para cifrar")
+                expected_type = "tls_private_key" if mode_security == "tls" else "reality_private_key"
+                if args.secret_type != expected_type: raise StoreError("tipo de secreto no coincide con modalidad")
+                if secret_destination.exists() or secret_destination.is_symlink(): raise StoreError("colisión de blob secreto; no se sobrescribe")
+                sys.path.insert(0, str(Path(__file__).resolve().parent))
+                import vless_crypto as crypto
+                secret_plain = read_regular(Path(args.secret_input), crypto.MAX_PLAINTEXT_BYTES)
+                secret_ref = f"secrets/{cid}.r{revision:06d}.bin"
+                config["security_options"]["secret_ref"] = secret_ref
+            elif args.secret_input or args.secret_type:
+                raise StoreError("modalidad sin TLS/REALITY no debe recibir secretos")
+            validate_config(config, entry, secret_ref)
+            if secret_plain is not None:
+                # La clave maestra solo se crea al persistir un secreto válido.
+                master = crypto.ensure_master_key(args.master_key)
+                key = crypto.load_master_key(master)
+                blob = crypto.encrypt_secret(secret_plain, key, cid, 1)
+                crypto.write_encrypted_blob(secret_destination, blob)
             if destination.exists() or destination.is_symlink(): raise StoreError("colisión de revisión; no se sobrescribe")
             payload = (json.dumps(config, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode()
             atomic_write(destination, payload)
@@ -159,10 +186,10 @@ def run(args: argparse.Namespace) -> dict:
             entry["configuration_schema_version"] = 1
             entry["configuration_revision"] = revision
             entry["configuration_ref"] = f"configurations/{filename}"
-            entry.setdefault("secret_ref", None)
+            entry["secret_ref"] = secret_ref
             updated = (json.dumps(catalog, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode()
             atomic_write(cat, updated)
-            return {"status": "stored", "connection_id": cid, "revision": revision, "configuration_ref": entry["configuration_ref"], "state": "draft", "runtime_applied": False}
+            return {"status": "stored", "connection_id": cid, "revision": revision, "configuration_ref": entry["configuration_ref"], "secret_ref": secret_ref, "state": "draft", "runtime_applied": False}
         if args.action == "read":
             cid = safe_id(args.connection_id)
             matches = [x for x in catalog if x.get("id") == cid]
@@ -172,10 +199,25 @@ def run(args: argparse.Namespace) -> dict:
             if not expected: raise StoreError("referencia de configuración inválida")
             data = read_regular(configs / f"{cid}.r{int(expected.group(1)):06d}.json", MAX_CONFIG)
             config = json.loads(data)
-            validate_config(config, matches[0])
-            return {"status": "ok", "configuration": config}
+            secret_ref = matches[0].get("secret_ref")
+            validate_config(config, matches[0], secret_ref)
+            if secret_ref is not None:
+                expected_secret = re.fullmatch(rf"secrets/{re.escape(cid)}\.r([0-9]{{6}})\.bin", secret_ref if isinstance(secret_ref, str) else "")
+                if not expected_secret: raise StoreError("referencia de secreto inválida")
+                secret_path = secrets_dir / f"{cid}.r{int(expected_secret.group(1)):06d}.bin"
+                sys.path.insert(0, str(Path(__file__).resolve().parent))
+                import vless_crypto as crypto
+                key = crypto.load_master_key(args.master_key)
+                plain = crypto.decrypt_secret(crypto.read_encrypted_blob(secret_path), key, cid, 1)
+                if args.secret_output:
+                    output = Path(args.secret_output).absolute()
+                    if output.exists() or output.is_symlink(): raise StoreError("destino de secreto ya existe")
+                    atomic_write(output, plain)
+            elif args.secret_output and MODES[config["mode_id"]][1] in ("tls", "reality"):
+                raise StoreError("falta el secreto cifrado requerido")
+            return {"status": "ok", "configuration": config, "secret_written": bool(secret_ref and args.secret_output)}
         if args.action == "audit":
-            referenced, broken = set(), []
+            referenced, referenced_secrets, broken = set(), set(), []
             for entry in catalog:
                 ref = entry.get("configuration_ref")
                 if ref is None: continue
@@ -184,10 +226,21 @@ def run(args: argparse.Namespace) -> dict:
                 if not match: broken.append({"id": cid, "issue": "invalid_reference"}); continue
                 filename = f"{cid}.r{int(match.group(1)):06d}.json"; referenced.add(filename)
                 try:
-                    config = json.loads(read_regular(configs / filename, MAX_CONFIG)); validate_config(config, entry)
+                    secret_ref = entry.get("secret_ref")
+                    config = json.loads(read_regular(configs / filename, MAX_CONFIG)); validate_config(config, entry, secret_ref)
+                    if secret_ref is not None:
+                        sm = re.fullmatch(rf"secrets/{re.escape(cid)}\.r([0-9]{{6}})\.bin", secret_ref if isinstance(secret_ref, str) else "")
+                        if not sm: raise StoreError("referencia de secreto inválida")
+                        sf = f"{cid}.r{int(sm.group(1)):06d}.bin"; referenced_secrets.add(sf)
+                        crypto_path = secrets_dir / sf
+                        sys.path.insert(0, str(Path(__file__).resolve().parent))
+                        import vless_crypto as crypto
+                        encrypted_blob = crypto.read_encrypted_blob(crypto_path)
+                        crypto.decrypt_secret(encrypted_blob, crypto.load_master_key(args.master_key), cid, 1)
                 except Exception: broken.append({"id": cid, "issue": "missing_or_invalid_reference"})
             orphans = sorted(p.name for p in configs.iterdir() if p.is_file() and not p.is_symlink() and p.name.endswith(".json") and p.name not in referenced)
-            return {"status": "audit", "broken_references": broken, "orphan_files": orphans, "automatic_deletion": False}
+            secret_orphans = sorted(p.name for p in secrets_dir.iterdir() if p.is_file() and not p.is_symlink() and p.name.endswith(".bin") and p.name not in referenced_secrets)
+            return {"status": "audit", "broken_references": broken, "orphan_files": orphans, "orphan_secret_files": secret_orphans, "automatic_deletion": False}
         raise StoreError("acción desconocida")
     finally:
         fcntl.flock(fd, fcntl.LOCK_UN); os.close(fd)
@@ -200,6 +253,11 @@ def main() -> int:
     p.add_argument("--lock", default="/run/xray-manager/integrity.lock")
     p.add_argument("--connection-id")
     p.add_argument("--input")
+    p.add_argument("--secret-input")
+    p.add_argument("--secret-type", choices=("tls_private_key", "reality_private_key"))
+    p.add_argument("--secret-output")
+    p.add_argument("--secrets-dir", default="/var/lib/xray-manager/secrets")
+    p.add_argument("--master-key", default="/etc/xray-manager/keys/master.key")
     a = p.parse_args()
     if a.action in ("store", "read") and not a.connection_id: p.error("--connection-id requerido")
     if a.action == "store" and not a.input: p.error("--input requerido")

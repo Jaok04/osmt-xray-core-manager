@@ -231,3 +231,22 @@ P1 no incluye todavía el almacén de configuración por conexión ni integraci�
 **Verificación de P2 en esta revisión:** prueba focal de almacenamiento, lectura, revisiones, referencias rotas, huérfanos, versión/campos desconocidos, ID traversal, fallo simulado antes de publicar el catálogo y dos escritores concurrentes: PASS. Suite completa `tests/*.sh`: 25/25 PASS. `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt y `git diff --check`: PASS. La prueba de concurrencia cubre dos escritores del almacén; la suite existente mantiene las pruebas de concurrencia cruzada de usuarios/conexiones.
 
 **Límite restante:** falta integrar el guardado y recuperación de secretos cifrados desde el asistente (P3), validar la exposición de clave privada REALITY y probar recuperación de backup/restore (P4). P2 no aplica runtime.
+
+
+## 14. Ejecución de P3 — integración del asistente y secretos cifrados
+
+**Alcance implementado en esta revisión:** el asistente VLESS permite guardar la configuración persistente después de validarla, solo tras confirmación explícita. `scripts/vless_prepare_config.py` traduce el modelo y las opciones temporales al esquema neutral del almacén. `scripts/vless_config_store.py` integra P1 y P2 para proteger claves privadas TLS y REALITY.
+
+- Las claves privadas TLS (contenido del archivo) y REALITY se cifran con AES-256-GCM. La clave maestra se genera de forma idempotente solo al guardar por primera vez una modalidad que tenga secreto; un borrador sin TLS/REALITY no genera clave maestra.
+- Los archivos cifrados se guardan bajo `/var/lib/xray-manager/secrets/`, con permisos root-only y referencias versionadas en el catálogo y configuración. Las rutas de certificados TLS y los metadatos públicos REALITY permanecen en la configuración neutral.
+- La clave REALITY ya no se pasa como argumento `--arg` de jq: se transporta mediante archivo temporal privado y `--rawfile`. Las claves temporales se eliminan al salir del asistente.
+- La escritura del blob cifrado precede a la revisión de configuración y a la publicación atómica del catálogo. Un fallo intermedio puede dejar un huérfano detectable, pero no una referencia publicada a datos incompletos. No se eliminan huérfanos automáticamente.
+- La recuperación valida referencias, descifra el secreto hacia un archivo temporal root-only y reconstruye la configuración Xray para validación. El secreto no se imprime en stdout.
+- El menú de conexión ofrece recuperar y validar la revisión guardada. Esta operación no cambia el catálogo, no inicia Xray y no modifica el runtime.
+- Los borradores mantienen `state=draft` y `runtime_applied=false`. No hay activación, apertura de puertos ni cambios de firewall.
+
+**Pruebas específicas añadidas:** persistencia sin secreto sin generar clave maestra; cifrado y recuperación de clave REALITY; cifrado y recuperación de clave privada TLS; ausencia de texto secreto en catálogo/configuración/blob; recuperación y validación de una revisión REALITY; auditoría de referencias y blobs.
+
+**Verificación de P3:** pruebas focales de persistencia WS sin secreto, cifrado/recuperación REALITY, cifrado/recuperación TLS, reconstrucción y validación Xray de ambas modalidades con secreto recuperado, ausencia de claves en claro en archivos persistentes y auditoría sin referencias rotas ni huérfanos: PASS. Suite completa `tests/*.sh`: 25/25 PASS. `install.sh --check`, `bash -n`, `py_compile`, ShellCheck, shfmt (archivos con formato controlado) y `git diff --check`: PASS. La clave maestra real de la VPS no se generó; las pruebas usan un entorno temporal aislado.
+
+**Pendiente:** P4, backup/restore y recuperación ante pérdida de clave maestra. P3 no activa runtime.
