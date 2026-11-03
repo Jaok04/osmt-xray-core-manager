@@ -1,8 +1,8 @@
 # Plan de migración histórica TLS — VMess y VLESS
 
-**Versión:** 1.0
+**Versión:** 1.1
 **Fecha:** 2026-11-03
-**Estado:** PROPUESTA TÉCNICA / NO APROBADA PARA EJECUCIÓN
+**Estado:** DISEÑO APROBADO / FASE DE PREFLIGHT IMPLEMENTADA / MIGRACIÓN ESCRITORA PENDIENTE
 **Ámbito:** migrar revisiones TLS históricas al catálogo central de certificados.
 **No forma parte:** migrar REALITY, modificar runtime o eliminar datos históricos.
 
@@ -122,12 +122,27 @@ La herramienta debe ser root-only, no interactiva en modo automatizado, requerir
 - Restore completo desde backup antes y después de una migración parcial.
 - Probar leases en fixtures y, en entorno autorizado, lectura por Xray real como prueba separada.
 
-## 8. Decisiones que requieren aprobación antes de implementar
+## 8. Decisiones aprobadas (2026-11-03)
 
-1. Alcance del primer lote: VLESS, VMess o ambos.
-2. Política de certificados de referencia: migrar siempre a `managed` (recomendado) o permitir `reference` con confirmación individual.
-3. Tratamiento de certificados expirados/no vigentes: bloquear (recomendado) o permitir importación inactiva para análisis, sin asociarlos a conexiones.
-4. Retención de blobs históricos: conservar indefinidamente hasta una política de retención posterior (recomendado); no eliminarlos como parte de esta migración.
-5. Entorno y ventana autorizados para la ejecución.
+1. **Alcance:** VMess y VLESS.
+2. **Almacenamiento:** `managed` por defecto. `reference` sólo con selección/confirmación explícita para cada grupo de certificado.
+3. **Vigencia:** certificados vencidos o aún no vigentes bloquean la migración; no se asocian a conexiones.
+4. **Retención:** conservar revisiones y blobs históricos; no eliminarlos como parte de la migración.
+5. **Ejecución real:** requiere backup compartido verificable, revisión del plan/fingerprints y autorización específica del lote y ventana. La aprobación del diseño no autoriza una migración de datos reales ni runtime apply.
 
-**Estado:** diseño propuesto. No se ha creado herramienta de migración ni se han cambiado conexiones históricas.
+## 9. Implementación del preflight — 2026-11-03
+
+Implementado `scripts/certificate_migration.py plan --protocol all|vless|vmess`.
+
+- Sólo lectura: no crea directorios/locks, no importa certificados, no genera revisiones/journals y no modifica catálogos, configuraciones ni blobs.
+- Reconoce las modalidades TLS a partir de los mapas `MODES` de ambos almacenes.
+- Valida referencias, revisión/schema, contrato histórico, permisos root, archivos regulares y rechazo de symlinks/hardlinks.
+- Descifra en memoria con el backend específico: `vless_crypto.decrypt_secret` o `vmess_config_store.decrypt`; los formatos/AAD no se consideran intercambiables.
+- Comprueba PEM, correspondencia certificado/clave, vigencia y fingerprints SHA-256; agrupa pares idénticos entre protocolos.
+- Emite `READY`, `BLOCKED` o `ALREADY_CENTRAL`, hashes de entrada y `plan_id`; no emite PEM ni claves privadas.
+- Usa lock compartido de integridad si ya existe y vuelve a comprobar hashes de catálogo/configuración/blob/certificado. Si una entrada cambia, aborta el plan.
+- Prueba sintética `tests/certificate_migration_plan.sh`: VLESS+VMess, deduplicación, backend criptográfico distinto, sólo lectura y blob alterado bloqueado.
+
+**Inventario real de la VPS de implementación (2026-11-03):** el catálogo `/var/lib/xray-manager/connections/connections.json` contiene 0 registros; el preflight devuelve 0 candidatos TLS, 0 bloqueados y 0 listos. Los directorios de configuración VLESS y el catálogo central TLS no existen actualmente en esa VPS. No se migró ningún dato.
+
+**Estado:** PREFLIGHT IMPLEMENTADO Y VERIFICADO CON FIXTURES; inventario real ejecutado sin candidatos. Fases de backup obligatorio, importación `managed`, publicación de revisiones, journal, verify y rollback siguen pendientes.

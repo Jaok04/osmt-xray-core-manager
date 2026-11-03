@@ -452,3 +452,15 @@ No se probó lectura de lease por un servicio Xray real: la VPS de desarrollo ca
 - Auditoría cruzada: validadores de lease VMess/VLESS equivalentes salvo el protocolo; asistentes VMess ahora pasan explícitamente todos los paths del almacén central al resolutor.
 - Nuevos documentos de propuesta: `docs/PLAN_MIGRACION_TLS_HISTORICO.md` y `docs/PLAN_BACKUP_RESTORE_CENTRAL.md`. No se implementaron migración ni backup compartido.
 - Sin cambios a datos históricos, runtime, servicios, firewall, puertos, certificados desplegados, VPS de pruebas o `Xray-Normativa/`; sin commit/push.
+
+
+## 2026-11-03 — Aprobación de migración histórica y backup compartido; preflight
+
+- El propietario aprobó criterios para migración TLS histórica VMess+VLESS y backup/restore compartido: `managed` por defecto, bloquear certificados vencidos/no vigentes, conservar históricos, reenvolver secretos bajo cifrado del backup y master key destino, excluir master key, bloquear restore completo si faltan references y no sobrescribir datos posteriores/conflictos.
+- Nuevo `scripts/certificate_migration.py` con `plan --protocol all|vless|vmess`, read-only. Verifica contrato/revisiones, permisos, descifra con backends específicos, valida par PEM/vigencia/fingerprints y deduplica entre protocolos. No importa ni escribe.
+- Nuevo `tests/certificate_migration_plan.sh`: VLESS+VMess, envelopes distintos, deduplicación, no escritura y ciphertext alterado bloqueado.
+- Regresión completa: 46/46 pruebas PASS; Bash syntax, py_compile, ShellCheck y diff-check PASS.
+- Inventario real VPS implementación: 0 registros en catálogo, 0 candidatos TLS; no se migró nada.
+- Auditoría de `vless_backup.py`: backup tar actual no cifra el archivo completo; secretos cifrados bajo master key y recuperación de master key cifrada por separado. Plan compartido v1.1 define contenedor cifrado integral nuevo.
+- Documentos: `docs/PLAN_MIGRACION_TLS_HISTORICO.md` v1.1, `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` v1.1, `docs/IMPLEMENTACION_PREFLIGHT_MIGRACION_TLS.md`.
+- Sin runtime, servicio, firewall, puertos, certificados desplegados, VPS pruebas ni cambios a `Xray-Normativa/`. Pendiente backup compartido y migración escritora. Cambios aún locales, no commit/push.

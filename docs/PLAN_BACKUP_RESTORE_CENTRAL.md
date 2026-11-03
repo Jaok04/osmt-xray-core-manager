@@ -1,8 +1,8 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.0
+**Versión:** 1.1
 **Fecha:** 2026-11-03
-**Estado:** PROPUESTA TÉCNICA / NO APROBADA PARA IMPLEMENTACIÓN
+**Estado:** CRITERIOS APROBADOS / DISEÑO CRIPTOGRÁFICO EN REVISIÓN / IMPLEMENTACIÓN PENDIENTE
 **Ámbito:** backup consistente de conexiones VLESS/VMess y catálogo central TLS.
 
 ## 1. Objetivo
@@ -39,11 +39,17 @@ Los backups de protocolo existentes deben seguir siendo compatibles y no deben i
 
 Los blobs del catálogo central están cifrados con la clave maestra del host. Copiar esos blobs sin una estrategia de recuperación de clave no permite restaurarlos en otro host.
 
-**Propuesta preferida:** el backup compartido debe envolver los blobs centrales con la protección de backup ya utilizada por el sistema (KDF robusta, cifrado autenticado y verificación de integridad), sin exportar `master.key`. En restore, los blobs se desenvuelven en memoria y se vuelven a cifrar bajo la clave maestra existente del destino, ligando la autenticación a `certificate_id` y revisión. No escribir claves privadas en claro en el staging ni en archivos temporales.
+**Hallazgo de auditoría:** el backup actual `scripts/vless_backup.py backup-data` crea un `tar.gz` de datos y manifiesto con hashes; no cifra el archivo completo. Los blobs de secretos ya están cifrados bajo la master key del host. `create-recovery` cifra una copia de la master key por separado con scrypt + AES-256-GCM, pero no cifra el backup de datos. Por tanto, no se debe describir el backup actual como un contenedor cifrado ni reutilizarlo como si ya ofreciera cifrado integral.
 
-Alternativa de recuperación: usar la misma master key mediante un procedimiento de escrow externo, cifrado y fuera del paquete. No guardar la master key junto a los datos que protege. La decisión final debe comprobar compatibilidad con el mecanismo actual de backup y con `certificate_crypto.py` antes de implementar.
+**Diseño que se implementará para el formato compartido:**
 
-La contraseña/clave de backup no se almacena en el manifiesto. El proceso debe fallar cerrado ante contraseña incorrecta, tag inválido, clave maestra ausente/inválida o envelope incompatible.
+- Paquete independiente versionado con cifrado autenticado integral AES-256-GCM y clave derivada de una contraseña introducida interactivamente mediante scrypt. Parámetros KDF versionados y límites de recursos estrictos.
+- Durante el backup, descifrar cada secreto legado/REALITY/TLS central en memoria usando el backend que corresponde, construir el contenido lógico del snapshot y cifrar el paquete antes de persistirlo. No escribir PEM/secretos descifrados en staging, archivos temporales, logs ni manifiestos.
+- El backup no incluye `master.key` ni una copia recuperable de ésta. El paquete queda ligado a su contraseña; el destino no necesita reutilizar la clave maestra de origen.
+- Durante restore, autenticar y descifrar el paquete en memoria, validar todos los recursos y volver a cifrar los secretos bajo la master key ya existente del destino, preservando el envelope/AAD específico de VLESS, VMess y certificados centrales.
+- No guardar contraseña ni clave derivada en el manifiesto. Fallar cerrado ante contraseña incorrecta, tag/hash inválido, KDF no admitido, clave maestra destino ausente/inválida o formato incompatible.
+
+Este mecanismo es nuevo para el backup compartido; no modifica retroactivamente el formato VLESS actual ni sus herramientas legacy.
 
 ## 4. Consistencia del snapshot
 
@@ -131,12 +137,16 @@ La falta de una dependencia `reference` bloquea por defecto el restore completo;
 - Rollback preserva datos activos previos; no borra archivos huérfanos automáticamente.
 - Confirmar que leases `/run`, runtime Xray, firewall, servicios y master key no se incluyen.
 
-## 10. Decisiones requeridas
+## 10. Decisiones aprobadas (2026-11-03)
 
-1. Aprobar la re-envoltura de secretos centrales para restaurar bajo una master key destino (recomendado) o exigir escrow externo de la misma master key.
-2. Definir si la falta de un certificado `reference` bloquea todo el restore o permite un restore parcial con conexiones bloqueadas (recomendado: bloquear todo por defecto).
-3. Definir política de merge cuando existen conexiones nuevas en destino posteriores al backup.
-4. Definir retención, cifrado externo, custodia de contraseña y almacenamiento fuera del VPS.
-5. Aprobar formato/CLI compartido y plan de compatibilidad antes de implementar.
+1. **Secretos:** reenvolverlos con cifrado propio del backup y restaurarlos bajo la master key existente del destino; no incluir `master.key` en el paquete.
+2. **Dependencias `reference`:** si falta una referencia o no coincide su fingerprint/par, bloquear el restore completo por defecto. No omitir silenciosamente conexiones.
+3. **Datos posteriores al snapshot:** no sobrescribir. Si el destino contiene datos no idénticos o posteriores que entren en conflicto con el snapshot, bloquear la publicación completa y conservar el destino intacto; no realizar merge automático.
+4. **Retención/custodia:** contraseña no persistida en VPS ni manifiesto; el operador debe custodiarla y almacenar el paquete fuera de la VPS. Política de retención se fijará antes de habilitar producción.
+5. **Formato:** paquete compartido versionado y separado de backups legacy; compatibilidad legacy preservada.
 
-**Estado:** diseño propuesto. No se ha implementado un backup compartido ni se ha exportado/importado el catálogo central.
+## 11. Estado y siguiente diseño
+
+Los criterios funcionales anteriores están aprobados. Antes de escribir el backup compartido se debe cerrar y probar el contrato de cifrado integral descrito en §3, el formato del manifiesto externo/interno, el orden real de locks y la detección de conflictos del restore. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
+
+**Estado:** criterios aprobados; implementación compartida no iniciada. No se ha creado ni restaurado un backup compartido.

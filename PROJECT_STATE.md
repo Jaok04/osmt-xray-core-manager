@@ -374,3 +374,15 @@ VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servi
 - Verificación: suite completa 43/43 PASS; Xray-core 26.10.31 valida 14/14 modalidades con fixture de lease; ciclo asistente con resolutor/Xray simulados PASS; ShellCheck warning, Bash syntax, py_compile y git diff --check PASS.
 - Límites: la VPS de desarrollo carece de `xray.service` y usuario/grupo Xray. No se ha demostrado lectura del lease por Xray real. No hubo runtime apply, despliegue, certificados persistentes ni migración histórica. Backup compartido/independiente VMess pendiente; integración VLESS pendiente.
 - Cambios locales aún no publicados ni sincronizados. `Xray-Normativa/` y `main` intactas. VMess/Etapa 2 no se consideran aceptados ni cerrados.
+
+
+## 2026-11-03 — Migración TLS histórica / backup compartido: preflight y decisiones aprobadas
+
+- Aprobados los criterios de migración histórica VMess+VLESS, `managed` por defecto, referencias sólo con consentimiento, bloqueo de certificados fuera de vigencia y conservación de históricos.
+- Aprobados criterios de backup compartido: cifrado propio del paquete, re-cifrado bajo master key destino, master key fuera del backup, bloquear restore completo si falta `reference`, y no sobrescribir datos posteriores/conflictos.
+- Nuevo `scripts/certificate_migration.py` ofrece `plan --protocol all|vless|vmess`, sólo lectura. Descifra en memoria con el backend de cada protocolo, valida contrato/revisiones, archivos/permisos, par PEM, vigencia, fingerprints y deduplicación. No escribe ni migra.
+- `tests/certificate_migration_plan.sh` añadido. Suite `tests/*.sh`: 46/46 PASS; Bash syntax, py_compile, ShellCheck de prueba nueva y git diff check PASS.
+- Inventario real: catálogo de conexiones de VPS implementación vacío; 0 candidatos TLS. Sin migración real.
+- Se corrigió el plan de backup tras auditoría: backup-data VLESS actual no cifra el tar integral; sólo los blobs de secretos y el paquete de recuperación de master key tienen cifrado. El nuevo backup compartido tendrá contenedor integral independiente.
+- Informe: `docs/IMPLEMENTACION_PREFLIGHT_MIGRACION_TLS.md`; planes v1.1 en `docs/PLAN_MIGRACION_TLS_HISTORICO.md` y `docs/PLAN_BACKUP_RESTORE_CENTRAL.md`.
+- Estado: PREFLIGHT IMPLEMENTADO/VERIFICADO EN FIXTURES; BACKUP COMPARTIDO Y FASE ESCRITORA DE MIGRACIÓN PENDIENTES. No runtime apply, servicios, firewall, puertos, certificados desplegados, VPS pruebas ni cambios normativos. No commit/push aún; `Xray-Normativa/` intacta.

@@ -440,3 +440,29 @@ Auditoría cruzada VMess/VLESS: validadores de lease equivalentes salvo el proto
 Se redactaron dos propuestas sin ejecutar: `docs/PLAN_MIGRACION_TLS_HISTORICO.md` (inventario de solo lectura, validación de pares/fingerprints, deduplicación, importación central, nuevas revisiones inmutables, journal y rollback) y `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` (snapshot coordinado VLESS/VMess/certificados, dependencias reference, envoltura de secretos centrales y restore/rollback). Ambas están marcadas como propuestas no aprobadas.
 
 No se migraron revisiones históricas, no se eliminó ningún blob, no se creó el backup compartido, no se modificó runtime, servicios, firewall, puertos, certificados desplegados, VPS de pruebas ni `Xray-Normativa/`. Sin commit ni push.
+
+
+## 2026-11-03 — Continuidad: aprobación de migración histórica y backup compartido; preflight inicial
+
+**Rama autorizada:** `design/user-identity-association-v1`. **HEAD de partida sincronizado:** `cd5095514f4a08bc2feca26d29f1fbdc3302db39`. GitHub y VPS estaban alineados antes de este trabajo. `Xray-Normativa/` permanece intacta.
+
+El propietario aprobó los criterios de ambos bloques:
+
+- Migración TLS histórica: VMess y VLESS; `managed` por defecto; `reference` sólo con confirmación expresa; certificados vencidos/no vigentes bloqueados; conservar revisiones y blobs históricos; backup verificable y autorización específica antes de cualquier lote real.
+- Backup/restore compartido: reenvolver secretos con cifrado propio del backup y re-cifrarlos bajo la master key existente del destino; no incluir `master.key`; bloquear restore completo si faltan referencias externas; no sobrescribir datos posteriores al snapshot ni realizar merge automático ante conflictos.
+
+**Implementación de migración:** nuevo `scripts/certificate_migration.py`, comando `plan --protocol all|vless|vmess`. Es estrictamente read-only: no crea locks/directorios, no importa certificados, no crea revisiones ni journals y no modifica stores. Valida las referencias/revisiones, permisos y archivos; usa el backend criptográfico específico VLESS o VMess; comprueba PEM, par, vigencia y fingerprints; agrupa pares duplicados y emite `READY`, `BLOCKED` o `ALREADY_CENTRAL`. Si existe el lock de integridad lo toma compartido y revalida hashes de entradas, incluyendo master key, antes de cerrar el plan. No muestra ni persiste claves descifradas.
+
+Prueba nueva `tests/certificate_migration_plan.sh`: fixtures VLESS/VMess, sobres criptográficos diferentes, deduplicación cruzada, no escritura y ciphertext alterado bloqueado. Regresión completa: 46/46 archivos de prueba PASS; Bash syntax, `py_compile`, ShellCheck de prueba nueva y `git diff --check` PASS.
+
+**Inventario real VPS implementación:** `/var/lib/xray-manager/connections/connections.json` contiene 0 registros; preflight `--protocol all` devuelve 0 candidatos TLS, 0 READY, 0 BLOCKED y 0 ALREADY_CENTRAL. La carpeta de configuración VLESS y el catálogo central TLS no existen actualmente; el preflight no los creó. No hay migración real.
+
+**Hallazgo backup crítico:** `scripts/vless_backup.py backup-data` genera `tar.gz` y manifiesto con hashes; el tar no está cifrado integralmente. Los blobs de secretos sí están cifrados bajo la master key del host. `create-recovery` cifra la master key separadamente mediante scrypt + AES-256-GCM. Por tanto, el backup compartido necesita un contenedor cifrado integral nuevo; no debe describirse el backup VLESS actual como ya cifrado. El diseño v1.1 de `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` define paquete compartido independiente, scrypt + AES-256-GCM y re-cifrado de secretos bajo la master key destino, sin escribir plaintext en staging.
+
+Documentos actualizados: `docs/PLAN_MIGRACION_TLS_HISTORICO.md` v1.1, `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` v1.1 y nuevo `docs/IMPLEMENTACION_PREFLIGHT_MIGRACION_TLS.md`.
+
+**Pendiente:** implementar y probar backup/restore compartido; completar fase escritora de migración (importación idempotente, nuevas revisiones, publicación, journal, verify y rollback). Ningún certificado histórico fue migrado ni se creó backup compartido.
+
+**Límites:** no se tocó runtime, servicio, firewall, puertos, certificados desplegados, VPS de pruebas ni `Xray-Normativa/`. No commit/push aún para este avance; `main` no se modificó. `scripts/__pycache__/` continúa no rastreado y excluido.
+
+**Siguiente punto exacto:** terminar el contrato de backup compartido, especialmente el cifrado integral, reconstrucción de envelopes VLESS/VMess/certificados y preflight de conflictos, antes de habilitar la migración escritora.

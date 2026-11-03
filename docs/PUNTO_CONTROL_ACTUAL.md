@@ -276,3 +276,17 @@ Siguiente paso: integrar el nuevo contrato de forma versionada en VMess, primero
 - No se migraron datos históricos ni se borraron blobs. No runtime apply, servicio, firewall, puertos, certificados reales, VPS pruebas ni cambios a normativa. No commit/push.
 
 **Decisiones requeridas antes de seguir:** aprobar alcance inicial de migración (VLESS/VMess/ambos), política `managed` vs `reference`, retención de blobs históricos; y aprobar re-envoltura de secretos centrales para backup/restore o escrow externo de master key, además de política para dependencias `reference` ausentes y merge con datos posteriores al snapshot.
+
+
+## 22. Migración histórica TLS aprobada: preflight inicial (2026-11-03)
+
+- Criterios aprobados por el propietario: alcance VMess+VLESS; `managed` por defecto y `reference` con confirmación; bloquear certificados vencidos/no vigentes; conservar históricos; backup obligatorio y aprobación específica para lote real. Backup compartido: secretos reenvueltos por cifrado propio del backup, restore bajo master key destino, no incluir master key, bloquear restore completo ante references ausentes y no sobrescribir datos posteriores al snapshot.
+- Nuevo `scripts/certificate_migration.py plan --protocol all|vless|vmess`: read-only. Usa los backends de descifrado separados VLESS/VMess, valida refs/revisiones/permisos, par PEM, vigencia y fingerprints; agrupa duplicados y emite READY/BLOCKED/ALREADY_CENTRAL. No escribe datos ni genera material plaintext.
+- Nuevo `tests/certificate_migration_plan.sh`: fixtures sintéticos y negativos PASS. Suite completa 46/46; Bash syntax, py_compile, ShellCheck de prueba y diff-check PASS.
+- Preflight real VPS implementación: catálogo de conexiones vacío (0 registros); 0 candidatos TLS. No se crearon directorios VLESS/catálogo central ni se migró dato alguno.
+- Auditoría del backup existente: el `tar.gz` VLESS no tiene cifrado integral; sólo blobs secretos están cifrados bajo master key. La recuperación de master key se cifra aparte. El backup compartido requiere contenedor cifrado nuevo, documentado en plan v1.1.
+- Documentación: `docs/PLAN_MIGRACION_TLS_HISTORICO.md` v1.1, `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` v1.1, `docs/IMPLEMENTACION_PREFLIGHT_MIGRACION_TLS.md`.
+- Pendiente: implementación backup/restore compartido; migración escritora, journal y rollback. Sin backup compartido ni migración real.
+- No runtime, servicios, firewall, puertos, certificados desplegados, VPS pruebas ni cambios a `Xray-Normativa/`. No commit/push aún; rama `design/user-identity-association-v1`, base `cd50955`.
+
+**Siguiente paso:** cerrar/implementar el contrato de backup cifrado compartido y sus pruebas antes de habilitar la fase escritora de migración.
