@@ -595,3 +595,82 @@ Se añadió `scripts/shared_backup_zip.py`: `ZipMember` prepara miembros bytes o
 El ZIP fija timestamps, UTF-8/NFC, nombres y orden; `manifest.json`/`index.json` son las dos primeras entradas. Se rechazan traversal, paths absolutos, separadores alternativos, NUL/control, colisiones normalizadas/casefold, symlinks/hardlinks, permisos inseguros, cambios TOCTOU, ZIP64, más de 10.000 entradas y tamaño total >512 MiB.
 
 Prueba focal `tests/shared_backup_zip.sh` PASS: lectura ZIP estándar, ZIP_STORED, CRC, determinismo, integración directa ZIP→AES-GCM streaming→verificación→ZIP válido, límites, paths y archivos inseguros. Suite completa `tests/*.sh`: 48/48 PASS; sintaxis Python, ShellCheck focal, shfmt focal y `git diff --check` PASS. Snapshot writer y adaptadores aún no implementados; no se creó backup real ni se tocaron secretos/master key/runtime.
+
+
+## Continuidad — primera implementación local del snapshot writer compartido v1 (2026-11-03)
+
+Se creó localmente scripts/shared_snapshot_writer.py conforme al contrato técnico aprobado §10.11. Se corrigieron tres puntos de la revisión: selective requiere categorías explícitas; la secuencia valida destino/prepara staging privado antes de pedir passphrase y solicita passphrase antes de adquirir locks; los directorios padres de locks deben existir y superar controles de propiedad/permisos, sin crearlos automáticamente. El timeout ahora rechaza valores no numéricos, booleanos, negativos o no finitos.
+
+Se añadió tests/shared_snapshot_writer.sh. Cubre selección, staging antes del prompt, limpieza por contraseña no coincidente, locks ausentes/inseguros, orden de adquisición/liberación, timeout, referencias de identidad y exclusión de credenciales. Pruebas sintéticas confirman que los UUID de asociaciones/VMess no aparecen en el catálogo saneado, mientras email y level VMess se conservan como metadatos protegidos.
+
+Verificación focal VPS: tests/shared_snapshot_writer.sh, tests/shared_backup_format.sh, tests/shared_backup_zip.sh y AST Python: PASS. Regresión global tests/*.sh: 49/49 PASS; git diff --check: PASS. No se ejecutó create_snapshot contra datos reales; no se generó backup; no se accedió a master key ni secretos reales. No se ejecutó restore ni verify independiente.
+
+Estado: IMPLEMENTADO LOCALMENTE / VERIFICADO PARCIALMENTE / NO PUBLICADO / NO SINCRONIZADO / NO ACEPTADO. Pendiente completar la suite de aceptación integral y auditoría de trazabilidad §10.11. Rama autorizada design/user-identity-association-v1, HEAD ec9b306b38f0bce17f28c301c47df3b3d092785a; no se creó commit ni se hizo push. Xray-Normativa/ y main permanecen intactas.
+
+## 2026-11-03 — Endurecimiento y ampliación de pruebas del snapshot writer v1
+
+Implementados localmente los cuatro bloques autorizados de corrección:
+
+1. **Destino y TOCTOU:** la validación inspecciona toda la cadena de directorios; exige root:root, rechaza symlinks y ancestros group/world-writable sin sticky bit; conserva la excepción segura para directorios sticky como /tmp y exige 0700 en el directorio final.
+2. **Dependencias TLS:** se incorpora `external-dependencies.json` como miembro del ZIP cifrado. Para certificados `reference` registra certificate_id, fingerprint, ruta esperada, conexiones dependientes y validación requerida. La ruta absoluta no se incorpora al manifiesto y sólo queda dentro del payload cifrado. Las dependencias TLS reference se identifican como `tls_reference`.
+3. **Errores y estados:** passphrase inválida, origen/miembro ZIP alterado, límites/formato cifrado inválido y verificación fallida se clasifican como `BLOCKED`; fallos operativos de I/O se mantienen como `FAILED`.
+4. **Snapshot y exclusiones:** `source_snapshot` registra catalog_id, schema_version, revision, SHA-256 y presencia. Los almacenes sin schema/revision propia declaran null, no valores inventados. El catálogo de identidades ausente bloquea en vez de interpretarse silenciosamente como vacío. Las exclusiones de asociaciones ahora identifican asociación, identidad y conexión y se representan como recursos individuales.
+
+La suite focal `tests/shared_snapshot_writer.sh` se amplió con:
+- Rechazo de ancestros inseguros y symlinks en el destino.
+- Rechazo de passphrase débil como BLOCKED.
+- Revisiones VLESS/VMess incorrectas, destino preexistente y cleanup.
+- Dependencias TLS reference con agregación de conexiones y path confinado al miembro cifrado.
+- E2E sintético VLESS + VMess + identidades: UUID ausentes del paquete, email/level VMess conservados.
+- E2E sintético TLS reference y TLS managed: certificado público managed incluido; clave privada excluida; ruta reference sólo en external-dependencies.json.
+- Cambio de configuración después del preflight rechazado por hash/size del miembro.
+- Fallos de verificación, fsync, interrupción controlada y carrera de publicación sin sobrescritura.
+- Medición tracemalloc de emisión ZIP→AES-GCM para un miembro de 16 MiB con umbral de memoria Python inferior a 8 MiB.
+
+Pruebas focales writer, formato cifrado y ZIP PASS; AST Python, ShellCheck, shfmt y git diff --check PASS. Regresión global `tests/*.sh`: 49/49 PASS.
+
+**Limitaciones aún abiertas antes de aceptación:** no se ha ejecutado una matriz de terminaciones abruptas SIGKILL en cada fase; la medición de memoria es tracemalloc (no RSS máximo del proceso); los límites de 10.000 entradas/512 MiB se verifican en el generador ZIP, pero falta una prueba de orquestación que los fuerce desde el writer; falta ampliar escenarios integrales de catálogos y revisiones VLESS/VMess y pruebas de publicación/durabilidad posteriores al punto de commit. Por tanto, el writer sigue NO ACEPTADO.
+
+No se creó backup real ni se accedió a master.key o secretos reales. No se ejecutó restore/verify independiente ni se modificó runtime, servicios, firewall, puertos, certificados desplegados o VPS de pruebas. `Xray-Normativa/` permanece intacta. Sin commit/push ni sincronización GitHub; rama `design/user-identity-association-v1`, HEAD sin cambio `ec9b306b38f0bce17f28c301c47df3b3d092785a`.
+
+## 2026-11-03 — Cierre de la matriz ampliada de pruebas del snapshot writer
+
+Se completó una segunda ampliación de la suite de aceptación local:
+
+- E2E sintético VLESS + VMess + identidades, TLS `reference` y TLS `managed`; se verificó ausencia de UUID/credenciales excluidas, conservación de `email`/`level` VMess y ruta de referencia sólo dentro del miembro cifrado.
+- TOCTOU de configuración después del preflight: el cambio de bytes se detecta y bloquea antes de publicar.
+- Límites ejercidos a través de `create_snapshot`: 10.001 entradas y ZIP lógico superior a 512 MiB producen BLOCKED sin paquete final.
+- Locks con contención real: timeout al segundo lock y liberación del primero comprobada.
+- Publicación: destino concurrente no sobrescrito; fallos pre-commit limpian staging; fallo de fsync post-commit informa FAILED y conserva el artefacto ya publicado, que se vuelve a autenticar.
+- Terminación abrupta mediante `os._exit` en tres puntos (antes del prompt, durante emisión cifrada y antes del enlace final): no aparece destino final; los residuos observados permanecen dentro de staging root:root 0700 y archivo 0600. La prueba los elimina al terminar.
+- Memoria: tracemalloc bajo el umbral de 8 MiB adicionales; proceso aislado con miembro de 16 MiB midió RSS máximo de 73.436 KiB (incluye Python y scrypt).
+- CLI/API: `all_available` delega selección por defecto correctamente; `selective` exige categorías explícitas.
+
+Validación final: `tests/*.sh` 49/49 PASS; AST Python 16/16; ShellCheck PASS; shfmt PASS; `git diff --check` PASS.
+
+**Consideración operativa pendiente:** tras una terminación no capturable (`os._exit`/SIGKILL), el proceso no puede ejecutar `finally`; puede quedar un staging privado sin destino publicado. La matriz demuestra que el residuo es privado y no contiene un ZIP en claro, pero no se implementó un recolector automático de staging huérfano. No se borrarán esos directorios de forma heurística mientras pueda existir otro proceso activo.
+
+El writer continúa **IMPLEMENTADO LOCALMENTE / VERIFICADO EN AISLAMIENTO / NO PUBLICADO / NO ACEPTADO FORMALMENTE**. No se ejecutó backup real ni se accedió a master.key/secretos reales; no restore, verify independiente ni runtime apply. `Xray-Normativa/` intacta. Rama `design/user-identity-association-v1`, HEAD `ec9b306b38f0bce17f28c301c47df3b3d092785a`; sin commit/push ni sincronización GitHub.
+
+## Actualización de continuidad — recuperación de staging autorizada (2026-11-03)
+
+La enmienda autorizada a §10.11 fue implementada localmente. La passphrase se solicita y valida antes de crear staging. `.xrm-coordination.lock` serializa recuperación/preparación/limpieza; `owner.lock` root:root 0600 y `nlink == 1` permanece bloqueado durante cada operación. Se recuperan sólo directorios `.xrm-snapshot-*` cuyo lock esté libre y cuya estructura sea estrictamente válida. Staging activos se conservan; temporales vacíos sólo se retiran bajo coordinación; nombres/tipos/permisos inesperados bloquean fail-closed y no se borran. La coordinación se libera antes de adquirir los locks de datos, cuyo orden sigue siendo `lifecycle → integrity → catalog`.
+
+La suite focal pasó tras corregir una colisión inicial del nombre del lock de coordinación con el patrón de staging. Se retiró el caso de terminación abrupta durante el prompt del crash matrix porque ahora no debe existir staging en esa fase; SW-02 verifica esa propiedad. Permanecen los casos de terminación durante cifrado y antes de publicación. `bash tests/*.sh` PASS; AST 16/16; ShellCheck, shfmt y `git diff --check` PASS. RSS aislado medido: 74.120 KiB. El writer sigue implementado localmente, no publicado y pendiente de aceptación formal. No se creó backup real ni se accedió a secretos o `master.key`; normativa intacta; sin commit/push/sync.
+
+## 2026-11-03 — Corrección del lock de coordinación y contrato de manifiesto
+
+Por autorización expresa del propietario se corrigió `_acquire_coordination_lock()`: los locks preexistentes se inspeccionan sin mutación; se rechazan hardlinks, symlinks, tipos especiales y permisos/propietarios incorrectos antes de modificar nada. Se comprueba que el descriptor abierto conserve el inode inspeccionado. El archivo nuevo se crea de forma exclusiva (`O_EXCL`/`O_NOFOLLOW`) y sólo entonces se fijan propietario y modo.
+
+Se completaron validaciones del manifiesto: estructura raíz, UUID v4 canónico, timestamp UTC RFC 3339 `Z`, versión entera, source, selección y categorías únicas/no vacías, listas estructurales, contadores, miembros SHA-256/tamaño/media type y coherencia de recursos/global `COMPLETE` con exclusiones/dependencias.
+
+Pruebas nuevas: hardlink (incluida preservación de modo, inode, nlink y contenido del otro nombre), symlink, FIFO, modo inseguro, contención/timeout de coordinación y manifiestos con UUID/timestamps/categorías/versión inválidos. Suite focal PASS; regresión completa PASS (49 scripts); AST 16/16; `bash -n`, ShellCheck, shfmt y `git diff --check` PASS. RSS aislado focal 75.120 KiB.
+
+Estado: IMPLEMENTADO LOCALMENTE / VERIFICADO EN AISLAMIENTO / NO PUBLICADO / NO ACEPTADO FORMALMENTE. No commit/push ni sincronización GitHub. No se creó backup real ni se accedió a datos secretos; no restore/verify independiente ni runtime apply. Normativa inmutable. Siguiente paso: revisión de aceptación actualizada; no publicar sin autorización expresa.
+
+
+## Continuidad — publicación del snapshot writer v1 (2026-11-03)
+
+Se publicó el código local del snapshot writer v1, las pruebas, dependencias de ZIP streaming/API y documentos técnicos en la rama autorizada design/user-identity-association-v1. Commit local: 520cf6481962121eb1dd4ae7a9a77ccd6be7ff33 (verificar HEAD remoto antes de continuar).
+
+La regresión local previa a publicar pasó: 49/49 scripts; AST 16/16; bash -n, ShellCheck, shfmt y git diff --check. La normativa mantiene 14/14 hashes coincidentes con la copia maestra. scripts/__pycache__/ quedó fuera del commit. El writer sigue NO ACEPTADO FORMALMENTE; publicar no equivale a aceptar. Próximo paso: revisión de aceptación contra §10.11.8 y plan v1.14. No ejecutar backup real, restore/verify independiente, ni tocar secretos/master.key/runtime.

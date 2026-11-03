@@ -68,6 +68,11 @@ def _passphrase_bytes(passphrase: str) -> bytes:
     return encoded
 
 
+def validate_passphrase(passphrase: str) -> None:
+    """Valida la política de contraseña v1 sin derivar ni persistir claves."""
+    _passphrase_bytes(passphrase)
+
+
 def _derive_key(passphrase: bytes, salt: bytes) -> bytes:
     try:
         return hashlib.scrypt(

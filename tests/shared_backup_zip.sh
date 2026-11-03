@@ -80,6 +80,21 @@ for duplicate_set in (
     else:
         raise AssertionError("se aceptó nombre duplicado/colisión")
 
+# Fuentes regenerables permiten transformar JSON sin acumular todos los miembros.
+factory_state = [b"generated-v1"]
+factory_member = z.ZipMember.from_factory("generated/config.json", lambda: io.BytesIO(factory_state[0]))
+factory_zip = io.BytesIO()
+z.write_zip_stream([z.ZipMember.from_bytes("manifest.json", b"{}"), z.ZipMember.from_bytes("index.json", b"{}"), factory_member], factory_zip)
+with zipfile.ZipFile(io.BytesIO(factory_zip.getvalue())) as package:
+    assert package.read("generated/config.json") == b"generated-v1"
+factory_state[0] = b"generated-v2-different"
+try:
+    z.write_zip_stream([z.ZipMember.from_bytes("manifest.json", b"{}"), z.ZipMember.from_bytes("index.json", b"{}"), factory_member], io.BytesIO())
+except z.SharedBackupZipError:
+    pass
+else:
+    raise AssertionError("se aceptó factory regenerable que cambió tras el preflight")
+
 # Límites de entrada: 10.000 totales sí; 10.001 no.
 maximum = [z.ZipMember.from_bytes("manifest.json", b"{}"), z.ZipMember.from_bytes("index.json", b"{}")]
 maximum.extend(z.ZipMember.from_bytes(f"members/{i:05d}", b"") for i in range(z.MAX_ENTRIES - 2))

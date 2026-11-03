@@ -14,7 +14,7 @@ import unicodedata
 import zlib
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any, BinaryIO, Iterator
+from typing import Any, BinaryIO, Callable, Iterator
 
 MAX_ENTRIES = 10_000
 MAX_ZIP_BYTES = 512 * 1024 * 1024
@@ -117,6 +117,22 @@ def _open_root_regular(
             os.close(directory_fd)
 
 
+def read_root_regular(path: Path, allowed_root: Path, *, limit: int) -> bytes:
+    """Lee un archivo regular root:root 0600 bajo allowed_root con TOCTOU checks."""
+    if type(limit) is not int or not 0 <= limit <= MAX_ZIP_BYTES:
+        raise SharedBackupZipError("límite de lectura inválido")
+    stream, identity = _open_root_regular(Path(path), Path(allowed_root))
+    try:
+        data = stream.read(limit + 1)
+        if len(data) > limit or len(data) != identity[6]:
+            raise SharedBackupZipError("archivo excede el límite o cambió durante lectura")
+        if _stat_identity(os.fstat(stream.fileno())) != identity:
+            raise SharedBackupZipError("archivo cambió durante lectura")
+        return data
+    finally:
+        stream.close()
+
+
 @dataclass(frozen=True)
 class ZipMember:
     """Miembro preflighted; source es bytes o ruta regular root:root 0600."""
@@ -125,7 +141,7 @@ class ZipMember:
     size: int
     crc32: int
     sha256: str
-    source: bytes | Path
+    source: bytes | Path | Callable[[], BinaryIO]
     source_identity: tuple[int, ...] | None = None
     allowed_root: Path | None = None
 
@@ -142,6 +158,50 @@ class ZipMember:
             crc32=zlib.crc32(data) & UINT32_MAX,
             sha256=hashlib.sha256(data).hexdigest(),
             source=data,
+        )
+
+    @classmethod
+    def from_factory(
+        cls,
+        name: str,
+        opener: Callable[[], BinaryIO],
+        *,
+        max_size: int = MAX_ZIP_BYTES,
+    ) -> "ZipMember":
+        """Preflight de una fuente regenerable; se reabre y revalida al emitir."""
+        validate_logical_path(name)
+        if not callable(opener) or type(max_size) is not int or not 0 <= max_size <= MAX_ZIP_BYTES:
+            raise SharedBackupZipError("factory o límite de miembro inválido")
+        stream = opener()
+        if not hasattr(stream, "read"):
+            raise SharedBackupZipError("factory no devolvió un flujo binario")
+        digest = hashlib.sha256()
+        crc = 0
+        size = 0
+        try:
+            while True:
+                block = stream.read(DEFAULT_CHUNK_SIZE)
+                if not isinstance(block, (bytes, bytearray, memoryview)):
+                    raise SharedBackupZipError("factory devolvió datos no binarios")
+                if not block:
+                    break
+                if len(block) > DEFAULT_CHUNK_SIZE:
+                    raise SharedBackupZipError("factory excedió el bloque solicitado")
+                size += len(block)
+                if size > max_size:
+                    raise SharedBackupZipError("miembro generado excede su límite")
+                digest.update(block)
+                crc = zlib.crc32(block, crc)
+        finally:
+            close = getattr(stream, "close", None)
+            if callable(close):
+                close()
+        return cls(
+            name=name,
+            size=size,
+            crc32=crc & UINT32_MAX,
+            sha256=digest.hexdigest(),
+            source=opener,
         )
 
     @classmethod
@@ -183,6 +243,33 @@ class ZipMember:
         if isinstance(self.source, bytes):
             for offset in range(0, len(self.source), chunk_size):
                 yield self.source[offset : offset + chunk_size]
+            return
+        if callable(self.source):
+            stream = self.source()
+            digest = hashlib.sha256()
+            crc = 0
+            size = 0
+            try:
+                while True:
+                    block = stream.read(chunk_size)
+                    if not isinstance(block, (bytes, bytearray, memoryview)):
+                        raise SharedBackupZipError("factory devolvió datos no binarios durante emisión")
+                    if not block:
+                        break
+                    if len(block) > chunk_size:
+                        raise SharedBackupZipError("factory excedió el bloque solicitado durante emisión")
+                    size += len(block)
+                    if size > self.size:
+                        raise SharedBackupZipError("miembro generado creció desde el preflight")
+                    digest.update(block)
+                    crc = zlib.crc32(block, crc)
+                    yield bytes(block)
+                if size != self.size or (crc & UINT32_MAX) != self.crc32 or digest.hexdigest() != self.sha256:
+                    raise SharedBackupZipError("miembro generado cambió desde el preflight")
+            finally:
+                close = getattr(stream, "close", None)
+                if callable(close):
+                    close()
             return
         if self.allowed_root is None:
             raise SharedBackupZipError("miembro de ruta sin directorio autorizado")
@@ -239,6 +326,8 @@ def _validate_members(members: list[ZipMember]) -> tuple[list[tuple[ZipMember, b
     for index, member in enumerate(members):
         if not isinstance(member, ZipMember):
             raise SharedBackupZipError("tipo de miembro ZIP inválido")
+        if not isinstance(member.source, (bytes, Path)) and not callable(member.source):
+            raise SharedBackupZipError("fuente de miembro ZIP inválida")
         encoded = validate_logical_path(member.name)
         if member.name in names or member.name.casefold() in folded:
             raise SharedBackupZipError("nombre duplicado o colisión normalizada en ZIP")
