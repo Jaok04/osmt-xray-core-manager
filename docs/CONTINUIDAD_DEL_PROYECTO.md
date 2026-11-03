@@ -1,6 +1,7 @@
 # Protocolo de continuidad — Xray Core Manager
 
 > Frente activo 2026-11-03: modelo TLS centralizado aprobado. Contrato: docs/ARQUITECTURA_CERTIFICADOS_CENTRALIZADOS.md; informe: docs/IMPLEMENTACION_ALMACEN_CERTIFICADOS_CENTRALIZADOS.md. Catálogo/crypto central implementados parcialmente y suite 41/41 PASS. No hay resolutor, integración VMess/VLESS, migración ni backup/restore central. En VPS de desarrollo no hay Xray ni identidad de servicio; no inventar permisos runtime. No tocar Xray-Normativa sin aprobación específica ni la VPS Vps de Pruebas.
+> HEAD publicado y sincronizado: 6d35b0dde502db66d9826bc4fb67e8500b6b4561 en design/user-identity-association-v1. main permanece intacta.
 
 
 > **Nuevo frente activo (2026-11-03):** el propietario aprobó el modelo de certificados TLS centralizados. Leer `docs/ARQUITECTURA_CERTIFICADOS_CENTRALIZADOS.md` antes de cualquier cambio. La primera revisión contractual está documentada; el código del almacén/resolutor/migración todavía no se ha modificado. Próximo paso: auditoría read-only de crypto VMess/VLESS, catálogos, generadores, backup y permisos/identidad del servicio Xray; cerrar §14 del contrato. No tocar `Xray-Normativa/` sin aprobación específica. No tocar la VPS `Vps de Pruebas` ni runtime/certificados desplegados.

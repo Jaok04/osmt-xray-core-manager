@@ -197,3 +197,13 @@ Estado: catálogo y cifrado central IMPLEMENTADOS PARCIALMENTE; pruebas PASS. Ac
 - Informe: docs/IMPLEMENTACION_ALMACEN_CERTIFICADOS_CENTRALIZADOS.md.
 
 Siguiente paso: revisión de seguridad del almacén y diseño/implementación del resolutor TLS sin integración runtime; después integrar VMess y VLESS por separado. Mantener intactos secretos históricos y REALITY.
+
+
+## 17. Publicación y sincronización del bloque TLS — 2026-11-03
+
+- Implementación y documentación publicadas en la rama autorizada.
+- HEAD local: 6d35b0dde502db66d9826bc4fb67e8500b6b4561.
+- HEAD remoto consultado directamente y origin/design/user-identity-association-v1 tras fetch: mismo SHA.
+- Rama main: 656ecedc506a94a6461aee296b20871d51a38bf3; no modificada.
+- El diff de Xray-Normativa desde el HEAD de partida no contiene cambios. SHA-256 de la especificación Etapa 4: Markdown f6cb3ecfa2a09c50009d07fe511227973f13db62b51c9ced06efc498797e7cba; YAML f0947cb3af935d58035341e257ce6d5565b044aa97857b5a49b34168565b3dd5.
+- El checkout versionado coincide con la rama remota. Permanece el directorio preexistente y no seguido scripts/__pycache__; no se eliminó ni incorporó al commit.

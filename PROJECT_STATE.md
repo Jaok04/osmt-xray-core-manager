@@ -325,3 +325,5 @@ VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servi
 - Pendiente: resolutor, autorización por conexión, integración VMess/VLESS, migración histórica, backup/restore compartido, rotación y permisos de lectura por el servicio Xray.
 - En VPS de desarrollo no hay Xray instalado ni unidad/cuenta/grupo xray; la integración runtime no se puede validar allí actualmente.
 - No se tocó VPS Vps de Pruebas, runtime, servicio, firewall, puertos o certificados desplegados. Xray-Normativa sigue intacta.
+
+- Publicación del bloque inicial TLS verificada: HEAD local/remoto 6d35b0dde502db66d9826bc4fb67e8500b6b4561 en design/user-identity-association-v1. main permanece en 656ecedc506a94a6461aee296b20871d51a38bf3. Xray-Normativa sin diferencias en el bloque publicado.
