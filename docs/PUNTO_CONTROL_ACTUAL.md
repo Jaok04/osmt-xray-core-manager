@@ -290,3 +290,8 @@ Siguiente paso: integrar el nuevo contrato de forma versionada en VMess, primero
 - No runtime, servicios, firewall, puertos, certificados desplegados, VPS pruebas ni cambios a `Xray-Normativa/`. No commit/push aún; rama `design/user-identity-association-v1`, base `cd50955`.
 
 **Siguiente paso:** cerrar/implementar el contrato de backup cifrado compartido y sus pruebas antes de habilitar la fase escritora de migración.
+
+
+### Publicación del punto 22
+
+Commit `631d7eda11615b692557a2e0958a8f318b81c223` (`feat(tls): add read-only historical migration preflight`) publicado y verificado en `origin/design/user-identity-association-v1`; HEAD local/remoto idéntico. `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`. Sin cambios en `Xray-Normativa/`.

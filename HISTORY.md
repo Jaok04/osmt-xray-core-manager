@@ -464,3 +464,5 @@ No se probó lectura de lease por un servicio Xray real: la VPS de desarrollo ca
 - Auditoría de `vless_backup.py`: backup tar actual no cifra el archivo completo; secretos cifrados bajo master key y recuperación de master key cifrada por separado. Plan compartido v1.1 define contenedor cifrado integral nuevo.
 - Documentos: `docs/PLAN_MIGRACION_TLS_HISTORICO.md` v1.1, `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` v1.1, `docs/IMPLEMENTACION_PREFLIGHT_MIGRACION_TLS.md`.
 - Sin runtime, servicio, firewall, puertos, certificados desplegados, VPS pruebas ni cambios a `Xray-Normativa/`. Pendiente backup compartido y migración escritora. Cambios aún locales, no commit/push.
+
+**Publicación:** commit `631d7eda11615b692557a2e0958a8f318b81c223` sincronizado con GitHub en `design/user-identity-association-v1`. `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`; `Xray-Normativa/` sin cambios.

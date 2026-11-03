@@ -386,3 +386,5 @@ VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servi
 - Se corrigió el plan de backup tras auditoría: backup-data VLESS actual no cifra el tar integral; sólo los blobs de secretos y el paquete de recuperación de master key tienen cifrado. El nuevo backup compartido tendrá contenedor integral independiente.
 - Informe: `docs/IMPLEMENTACION_PREFLIGHT_MIGRACION_TLS.md`; planes v1.1 en `docs/PLAN_MIGRACION_TLS_HISTORICO.md` y `docs/PLAN_BACKUP_RESTORE_CENTRAL.md`.
 - Estado: PREFLIGHT IMPLEMENTADO/VERIFICADO EN FIXTURES; BACKUP COMPARTIDO Y FASE ESCRITORA DE MIGRACIÓN PENDIENTES. No runtime apply, servicios, firewall, puertos, certificados desplegados, VPS pruebas ni cambios normativos. No commit/push aún; `Xray-Normativa/` intacta.
+
+**Publicación:** commit `631d7eda11615b692557a2e0958a8f318b81c223` publicado en `design/user-identity-association-v1`; HEAD local/remoto coincide. `main` sin cambios (`656ecedc506a94a6461aee296b20871d51a38bf3`); `Xray-Normativa/` intacta.

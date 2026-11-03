@@ -466,3 +466,8 @@ Documentos actualizados: `docs/PLAN_MIGRACION_TLS_HISTORICO.md` v1.1, `docs/PLAN
 **Límites:** no se tocó runtime, servicio, firewall, puertos, certificados desplegados, VPS de pruebas ni `Xray-Normativa/`. No commit/push aún para este avance; `main` no se modificó. `scripts/__pycache__/` continúa no rastreado y excluido.
 
 **Siguiente punto exacto:** terminar el contrato de backup compartido, especialmente el cifrado integral, reconstrucción de envelopes VLESS/VMess/certificados y preflight de conflictos, antes de habilitar la migración escritora.
+
+
+## Publicación del preflight de migración TLS — 2026-11-03
+
+El bloque anterior quedó publicado y sincronizado en GitHub y VPS de implementación: commit `631d7eda11615b692557a2e0958a8f318b81c223` (`feat(tls): add read-only historical migration preflight`), rama `design/user-identity-association-v1`. `origin/main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`. El commit no contiene cambios en `Xray-Normativa/`; `git diff HEAD^ HEAD -- Xray-Normativa/` está vacío. `scripts/__pycache__/` permanece no rastreado y excluido.
