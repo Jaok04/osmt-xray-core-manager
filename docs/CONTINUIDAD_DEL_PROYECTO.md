@@ -1,7 +1,7 @@
 # Protocolo de continuidad — Xray Core Manager
 
 > Frente activo 2026-11-03: contenedor cifrado compartido v1 implementado y verificado en aislamiento; siguiente tarea: snapshot lógico/manifiesto y adaptadores VLESS/VMess/certificados. La integración VMess/VLESS TLS centralizado continúa parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 47/47 PASS tras incorporar `tests/shared_backup_format.sh`. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
-> HEAD publicado y sincronizado: d9a0542 (Implementación parcial del resolutor TLS centralizado) en design/user-identity-association-v1. main permanece intacta. El working tree conserva únicamente scripts/__pycache__/ preexistente sin seguimiento; no se incorporó.
+> HEAD publicado y sincronizado tras el bloque de contenedor cifrado: 164f91f (164f91f9c9be8ab275da0b28a53b2314a636f1e2) en design/user-identity-association-v1. `main` permanece intacta. `scripts/__pycache__/` permanece sin seguimiento y excluido.
 
 
 > Registro histórico: la auditoría inicial de almacenes/certificados y el cierre del contrato se documentaron antes del primer bloque. Consultar los dos informes de implementación para el estado vigente.
@@ -486,3 +486,6 @@ El módulo sólo cifra/descifra bytes opacos y no conoce protocolos ni escribe a
 **Verificación actual:** 47/47 `tests/*.sh` PASS; `py_compile scripts/*.py`, `bash -n` de shell modules/scripts, ShellCheck warning y shfmt focal, `git diff --check` PASS. No se ha generado un backup real ni se ha implementado snapshot/restore. No hubo cambios en runtime, servicios, firewall, puertos, master key, datos persistentes ni `Xray-Normativa/`.
 
 **Siguiente punto:** definir el manifiesto interno y el snapshot lógico de datos actuales, resolver orden global de locks y diseñar adaptadores por protocolo antes de implementar el writer.
+
+
+**Publicación del contenedor v1:** commit `164f91f9c9be8ab275da0b28a53b2314a636f1e2` en `design/user-identity-association-v1`; HEAD local/remoto coincide. Sin cambios a `Xray-Normativa/` ni `main`.

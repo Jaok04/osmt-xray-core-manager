@@ -477,4 +477,4 @@ No se probó lectura de lease por un servicio Xray real: la VPS de desarrollo ca
 - La envoltura es independiente del protocolo y reutilizable por VLESS, VMess, Trojan y futuros adaptadores; cada protocolo conserva su backend/AAD nativo para re-envoltura.
 - Pruebas actuales: `tests/*.sh` 47/47 PASS; `python3 -m py_compile scripts/*.py`, `bash -n` de shell modules/scripts, ShellCheck warning y shfmt focal, `git diff --check` PASS.
 - No se creó snapshot ni backup real; no se implementó writer, verify, restore, journal o rollback compartido. No se leyó/modificó master key ni datos persistentes; runtime, servicios, firewall, puertos, certificados desplegados, VPS de pruebas y `Xray-Normativa/` intactos.
-- Estado del bloque: IMPLEMENTADO / VERIFICADO en aislamiento; publicación/sincronización y aceptación formal pendientes de cierre.
+- Estado del bloque: IMPLEMENTADO / VERIFICADO en aislamiento / PUBLICADO / SINCRONIZADO; aceptación formal pendiente. Commit `164f91f9c9be8ab275da0b28a53b2314a636f1e2` en `design/user-identity-association-v1`; HEAD local/remoto verificado idéntico. `main` y `Xray-Normativa/` sin cambios.

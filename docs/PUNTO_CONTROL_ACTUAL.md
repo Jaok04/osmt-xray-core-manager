@@ -299,7 +299,7 @@ Commit `631d7eda11615b692557a2e0958a8f318b81c223` (`feat(tls): add read-only his
 
 ## 12. Contenedor cifrado compartido v1 — 2026-11-03
 
-**Estado:** IMPLEMENTADO y VERIFICADO en aislamiento; NO PUBLICADO hasta completar el ciclo documental y commit; NO ACEPTADO formalmente.
+**Estado:** IMPLEMENTADO / VERIFICADO en aislamiento / PUBLICADO y SINCRONIZADO / NO ACEPTADO formalmente.
 
 - Nuevo `scripts/shared_backup_format.py`: contenedor neutral de bytes opacos, independiente de protocolos. Magic `XRMGSBKP`, cabecera JSON canónica, scrypt fijo `N=2^15/r=8/p=1`, AES-256-GCM y AAD sobre cabecera completa. Salt/nonce aleatorios; límites de tamaño y parámetros KDF cerrados.
 - Passphrase UTF-8 con mínimo 12 caracteres/16 bytes, máximo 1024 bytes; el módulo no recibe secretos por CLI ni persiste contraseña.
@@ -311,3 +311,8 @@ Commit `631d7eda11615b692557a2e0958a8f318b81c223` (`feat(tls): add read-only his
 - No se creó backup real, snapshot, staging, archivo temporal con plaintext, journal ni restore. No se leyó/modificó la master key ni datos persistentes; no se tocó runtime, servicios, firewall, puertos, certificados desplegados, VPS de pruebas ni `Xray-Normativa/`.
 
 **Siguiente paso:** diseñar y probar el manifiesto interno y el snapshot lógico actual (sin historiales), resolver el orden global de locks y definir adaptadores de exportación/re-envoltura para VLESS, VMess y certificados. Después implementar el backup writer; no iniciar restore real ni migración TLS escritora sin autorización específica.
+
+
+### Publicación del contenedor cifrado compartido v1
+
+Commit `164f91f9c9be8ab275da0b28a53b2314a636f1e2` (`feat(backup): add protocol-neutral encrypted container v1`) publicado en `origin/design/user-identity-association-v1`. HEAD local/remoto verificado idéntico (`164f91f`). `main` no se modificó. `Xray-Normativa/` no tiene cambios. `scripts/__pycache__/` sigue sin seguimiento y quedó excluido.
