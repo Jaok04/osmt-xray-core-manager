@@ -1,6 +1,6 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.6
+**Versión:** 1.7
 **Fecha:** 2026-11-03
 **Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / CONTRATO DE MANIFIESTO EN DISEÑO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
 **Ámbito:** contenedor criptográfico neutral y primera versión incremental de snapshot para VLESS/VMess/metadatos de identidades/certificados TLS centrales. Las categorías normativas no cubiertas se declaran explícitamente como no soportadas; extensible a protocolos futuros mediante adaptadores.
@@ -277,11 +277,127 @@ El manifiesto residirá dentro del payload cifrado por el contenedor compartido 
 | `members[]` | ID lógico/content-addressed, categoría, tamaño, SHA-256 y tipo de contenido; nunca ruta absoluta |
 | `exclusions[]` | Recurso afectado, clase de secreto excluida y razón; nunca valor secreto |
 | `dependencies[]` | Tipo/ID de dependencia, fingerprint esperado, recursos dependientes y resultado de validación; para `reference` no incluir ruta privada en claro fuera del payload cifrado |
-| `completeness` | Estado global `COMPLETE`/`PARTIAL`/`BLOCKED` y detalle por recurso/categoría |
+| `completeness` | Estado del paquete `COMPLETE`/`PARTIAL` y detalle por recurso/categoría; `BLOCKED` es resultado de preflight y no genera paquete |
 | `source_snapshot` | Revisiones/schema versions y hashes de los catálogos/entradas que fijan la vista consistente |
 
 Los miembros se identificarán por hashes SHA-256 y nombres lógicos normalizados, no por rutas absolutas del host. El contenedor lógico rechazará symlinks, hardlinks, devices, traversal, nombres duplicados, tamaños/entradas fuera de límite y discrepancias entre hash/tamaño declarado y bytes. El manifiesto y el índice de miembros se validarán antes de cualquier restore.
 
-**Reglas de estado propuestas:** `COMPLETE` significa que todo lo solicitado está incluido y restaurable; `PARTIAL` significa que el paquete íntegro contiene omisiones declaradas (categorías no soportadas, secretos excluidos o dependencias no satisfechas); `BLOCKED` significa que no debe publicarse un paquete porque falló una validación de seguridad/consistencia. La integridad criptográfica del contenedor es independiente de la completitud funcional.
+**Reglas de estado propuestas:** `COMPLETE` significa que todo lo solicitado está incluido y restaurable; `PARTIAL` significa que el paquete íntegro contiene omisiones declaradas (categorías no soportadas, secretos excluidos o dependencias no satisfechas); `BLOCKED` es un resultado del preflight y significa que no se publica paquete porque falló una validación de seguridad/consistencia. La integridad criptográfica del contenedor es independiente de la completitud funcional.
 
 **Pendiente de aprobación:** nombres/tipos exactos, enums, cardinalidades, relación recurso-miembro, codificación canónica, formato de timestamps, reglas de paths lógicos, límite de entradas/expansión y validaciones cruzadas. No implementar writer hasta congelar este contrato y sus pruebas sintéticas.
+
+
+## 10.7. Propuesta de estructura JSON del manifiesto — pendiente de aprobación
+
+La siguiente estructura concreta desarrolla §10.6. Es un ejemplo de contrato, no un manifiesto real ni un JSON Schema definitivo. Los identificadores y hashes son marcadores ilustrativos; no deben copiarse como valores reales.
+
+```json
+{
+  "manifest_format": "xray-manager-shared-snapshot",
+  "manifest_version": 1,
+  "backup_id": "<uuid-v4>",
+  "created_at": "<UTC-RFC3339-timestamp>",
+  "source": {
+    "manager_version": null,
+    "xray_version": null
+  },
+  "request": {
+    "selection_mode": "selective",
+    "requested_categories": [
+      "connections.vless",
+      "connections.vmess",
+      "identities",
+      "certificates.tls"
+    ]
+  },
+  "categories": {
+    "included": [
+      "connections.vless",
+      "connections.vmess",
+      "identities",
+      "certificates.tls"
+    ],
+    "unsupported": []
+  },
+  "resources": [
+    {
+      "resource_id": "vless:connection:<logical-id>",
+      "resource_type": "connection",
+      "protocol": "vless",
+      "completeness": "PARTIAL",
+      "member_ids": ["sha256:<64-hex>"] ,
+      "dependency_ids": ["tls:<certificate-id>"],
+      "exclusion_ids": ["exclude:<logical-id>:vless_uuid"]
+    }
+  ],
+  "members": [
+    {
+      "member_id": "sha256:<64-hex>",
+      "logical_path": "connections/vless/catalog.json",
+      "category": "connections.vless",
+      "media_type": "application/json",
+      "size_bytes": 1234,
+      "sha256": "<64-hex>"
+    }
+  ],
+  "exclusions": [
+    {
+      "exclusion_id": "exclude:<logical-id>:vless_uuid",
+      "resource_id": "vless:connection:<logical-id>",
+      "secret_class": "vless_uuid",
+      "reason": "excluded_by_default"
+    }
+  ],
+  "dependencies": [
+    {
+      "dependency_id": "tls:<certificate-id>",
+      "dependency_type": "tls_reference",
+      "resource_id": "certificate:<certificate-id>",
+      "fingerprint_sha256": "<64-hex>",
+      "required": true,
+      "validation": "pending_restore_preflight"
+    }
+  ],
+  "source_snapshot": {
+    "catalogs": [
+      {
+        "catalog_id": "connections.vless",
+        "schema_version": 1,
+        "revision": 7,
+        "sha256": "<64-hex>"
+      }
+    ]
+  },
+  "completeness": {
+    "status": "PARTIAL",
+    "reasons": ["secret_excluded", "external_dependency_requires_validation"],
+    "complete_resources": 0,
+    "partial_resources": 1
+  }
+}
+```
+
+### Reglas de validación propuestas
+
+1. `manifest_version` es entero positivo; `backup_id` es UUID aleatorio; `created_at` es timestamp UTC RFC 3339 terminado en `Z`.
+2. `selection_mode` sólo admite `selective` o `all_available`. `requested_categories` no puede estar vacío y no puede contener duplicados.
+3. `categories.included` y `categories.unsupported` deben ser disjuntos. Toda categoría solicitada debe estar en una de esas dos listas o provocar `BLOCKED`; no se permite omisión silenciosa.
+4. `resources`, `members`, `exclusions` y `dependencies` tienen IDs únicos. Toda referencia `member_id`, `exclusion_id` y `dependency_id` debe resolver exactamente una entrada.
+5. Cada miembro declara tamaño y SHA-256 calculados sobre sus bytes exactos. `member_id` se deriva del contenido (`sha256:<digest>`); mismo contenido puede compartirse sin duplicar bytes.
+6. `logical_path` es relativo, POSIX, normalizado y único; se rechazan rutas absolutas, `..`, separadores alternativos, NUL, symlinks, hardlinks, devices, FIFOs y colisiones tras normalización.
+7. `resources[].completeness` sólo admite `COMPLETE` o `PARTIAL`. Si un recurso tiene una exclusión necesaria o una dependencia obligatoria no verificada, no puede declararse `COMPLETE`.
+8. El estado global `COMPLETE` exige que todas las categorías solicitadas estén incluidas, todos los recursos solicitados sean completos y no haya exclusiones/dependencias pendientes que afecten la restauración. Cualquier omisión declarada fuerza `PARTIAL`.
+9. `BLOCKED` es un resultado de preflight, no un paquete publicable: fallo de seguridad, consistencia, permisos, integridad o referencias aborta la creación sin publicar artefacto.
+10. El manifiesto no contiene UUID, contraseñas, claves privadas, secretos REALITY, email VMess, rutas absolutas, contenido de credenciales ni valores de la master key. `email` y `level` VMess permanecen en los miembros de configuración protegidos, no en el manifiesto.
+11. El manifiesto se serializa como UTF-8 JSON estricto, sin claves duplicadas, NaN/Infinity ni tipos ambiguos; la canonicalización exacta debe fijarse antes del writer. El manifiesto y el índice de miembros permanecen dentro del payload AES-GCM.
+12. El tamaño total del payload lógico (manifiesto, índice y miembros) nunca supera el límite de 512 MiB del contenedor compartido v1. El límite de cantidad de miembros y el formato de empaquetado se fijarán antes de implementar el writer.
+
+### Decisiones que se solicitan al propietario
+
+- Aprobar o corregir la estructura de campos y sus relaciones.
+- Aprobar los estados globales `COMPLETE`/`PARTIAL`, dejando `BLOCKED` como resultado de preflight sin paquete.
+- Aprobar que `logical_path` sea un nombre relativo interno y que no se exporten rutas host-specific.
+- Aprobar la regla de que el manifiesto nunca contiene `email` VMess ni credenciales, aunque esos metadatos puedan existir en miembros cifrados.
+- Dejar para la siguiente decisión el formato de empaquetado (ZIP almacenado u otra estructura), el límite de cantidad de miembros y la canonicalización JSON exacta.
+
+**No implementar writer, verify ni restore hasta recibir aprobación expresa de este contrato.**
