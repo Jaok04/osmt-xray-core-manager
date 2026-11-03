@@ -1,0 +1,176 @@
+document:
+  project: Xray Core Manager
+  title: Etapa 6 - Servicio, diagnóstico y mantenimiento
+  version: '1.2'
+  status: approved
+  approval_date: '2026-10-31'
+modules:
+- id: service
+  menu:
+  - key: 1
+    label: Consultar estado del servicio
+  - key: 2
+    label: Iniciar servicio
+  - key: 3
+    label: Detener servicio
+  - key: 4
+    label: Reiniciar servicio
+  - key: 5
+    label: Recargar configuración
+  - key: 6
+    label: Habilitar inicio automático
+  - key: 7
+    label: Deshabilitar inicio automático
+  - key: 8
+    label: Consultar información del proceso
+  - key: 9
+    label: Verificar funcionamiento de Xray
+  - key: 0
+    label: Volver
+  rules:
+    reload_requires_compatible_mechanism: true
+    validate_before_reload: true
+    reuse_stage_5_validator: true
+    never_substitute_restart_automatically: true
+    restart_confirmation_and_interruption_warning: true
+    hide_secrets_in_process_arguments: true
+- id: diagnostics_logs
+  menu:
+  - key: 1
+    label: Diagnóstico general del sistema
+  - key: 2
+    label: Diagnóstico del servicio Xray
+  - key: 3
+    label: Diagnóstico de conexiones y puertos
+  - key: 4
+    label: Diagnóstico de configuración
+  - key: 5
+    label: Diagnóstico de certificados SSL/TLS
+  - key: 6
+    label: Consultar registros de Xray
+  - key: 7
+    label: Consultar registros del administrador
+  - key: 8
+    label: Gestionar registros e historiales
+  - key: 9
+    label: Generar informe de diagnóstico
+  - key: 0
+    label: Volver
+  rules:
+    reuse_stage_5_validation: true
+    reuse_stage_4_ssl_checks: true
+    centralize_query_export_cleanup: true
+    duplicate_storage: false
+    mask_secrets: true
+    diagnostic_reports_export:
+    - txt
+    - md
+    - json
+- id: security_network_maintenance
+  menu:
+  - key: 1
+    label: Gestión de firewall
+  - key: 2
+    label: Seguridad del servidor
+  - key: 3
+    label: Protección y acceso SSH
+  - key: 4
+    label: Información y diagnóstico de red
+  - key: 5
+    label: Gestión de puertos
+  - key: 6
+    label: Gestión de reglas de red
+  - key: 7
+    label: Mantenimiento del sistema
+  - key: 8
+    label: Limpieza de archivos temporales
+  - key: 9
+    label: Verificación de integridad
+  - key: 10
+    label: Herramientas de mantenimiento Xray
+  - key: 0
+    label: Volver
+  rules:
+    detect_firewall:
+    - ufw
+    - firewalld
+    - iptables
+    - nftables
+    protect_ssh_xray: true
+    security_updates_separate_from_general_packages: true
+    no_automatic_destructive_changes: true
+    temporary_cleanup_excludes:
+    - configurations
+    - profiles
+    - certificates
+    - keys
+    - users
+    - backups
+    - logs
+    - histories
+coherence_delimitations:
+  package_management:
+    stage_1_option_8: Xray/manager install update repair specific dependencies uninstall
+    stage_6_option_2: OS security updates
+    stage_6_option_7: General OS package maintenance
+    shared_mechanism: true
+  histories:
+    stage_5_owns:
+    - profile_versions
+    - validation_history
+    - restoration_reports
+    - retention_preferences
+    stage_6_centralizes:
+    - query
+    - filter
+    - export
+    - management
+    - cleanup
+    duplicate_storage: false
+  profile_activation_vs_reload:
+    stage_5: Activate selected profile and verify
+    stage_6: Reload current configuration only
+    restart_requires_warning_authorization: true
+  scheduler:
+    shared_os_compatible_scheduler: true
+    owners:
+      stage_3:
+      - user_expiration
+      - traffic_resets
+      stage_4:
+      - certificate_renewal
+      stage_5:
+      - history_retention
+      stage_6:
+      - maintenance_cleanup
+    no_duplicate_instances: true
+    after_reboot_execute_at_most_once_if_valid: true
+    no_catch_up_accumulation: true
+    destructive_tasks_require_prior_authorization: true
+  uninstallation:
+    owner: stage_1_option_8
+    duplicate_in_stage_6: false
+cross_cutting_adjustments_approved: 24
+implementation_pending:
+- safe_config_test
+- profile_apply_verify
+- version_compatibility
+- shared_package_manager
+- common_scheduler
+- network_backup_rollback
+- logs_history_storage_retention
+implementation_now: false
+
+renewal_history_integration:
+  owner: stage_4
+  stage_4_responsibilities:
+    - generate_renewal_records
+    - retain_renewal_history
+    - perform_certificate_renewals
+  stage_6_centralized_operations:
+    - query
+    - filter
+    - export
+    - retention_management
+    - cleanup
+  duplicate_storage: false

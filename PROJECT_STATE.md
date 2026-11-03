@@ -8,13 +8,13 @@
 
 > Este documento es una fotografía de estado, no sustituye la documentación normativa. Antes de actuar, verifica el HEAD actual de GitHub y vuelve a inspeccionar la VPS.
 
-> **Regla obligatoria permanente:** antes de implementar cualquier etapa o funcionalidad, contrastar el proyecto con la documentación preliminar aprobada en `/root/Xray_Manager_Documentacion_Final_2026-10-31`. Las mejoras requieren informe previo y autorización expresa del propietario. Ver `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md` y `AGENTS.md`.
+> **Regla obligatoria permanente:** antes de implementar cualquier etapa o funcionalidad, contrastar el proyecto con la documentación preliminar aprobada en `Xray-Normativa/` del repositorio (respaldo original en `/root/Xray_Manager_Documentacion_Final_2026-10-31`). Las mejoras requieren informe previo y autorización expresa del propietario. Ver `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md` y `AGENTS.md`.
 
 > **Segunda regla obligatoria permanente:** ninguna etapa se declara TERMINADA/COMPLETADA sin auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos, matriz de trazabilidad, pruebas y aceptación formal expresa. Cerrar un módulo no cierra su etapa. Ver `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md` y `AGENTS.md`.
 
 ## 1. Referencias oficiales
 
-- Documentación normativa: /root/Xray_Manager_Documentacion_Final_2026-10-31
+- Documentación normativa canónica: `Xray-Normativa/` (14 archivos originales + README de custodia). Respaldo local VPS: `/root/Xray_Manager_Documentacion_Final_2026-10-31`.
 - Especificación funcional Etapa 2: 02_Protocolos_Conexiones/Etapa_2_Protocolos.md y Etapa_2_Protocolos.yaml.
 - Código en VPS: /opt/xray-manager
 - Rama autorizada: design/user-identity-association-v1

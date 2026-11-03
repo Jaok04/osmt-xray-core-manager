@@ -25,7 +25,8 @@ design/user-identity-association-v1
 No modificar la rama main.
 
 Rutas oficiales de la VPS:
-- Documentación normativa aprobada: /root/Xray_Manager_Documentacion_Final_2026-10-31
+- Documentación normativa canónica versionada: `/opt/xray-manager/Xray-Normativa` (en GitHub: `Xray-Normativa/`).
+- Copia maestra de respaldo en la VPS: `/root/Xray_Manager_Documentacion_Final_2026-10-31`.
 - Proyecto en desarrollo: /opt/xray-manager
 
 Primero lee, en este orden:
@@ -76,7 +77,7 @@ Antes de proponer implementación:
 - Si no existe .git, tratarla como copia de trabajo sin rama/commit verificables.
 - Inventariar módulos, configuración, pruebas y documentación.
 - Revisar cambios locales y fechas, sin sobrescribir nada.
-- Leer la documentación normativa en /root/Xray_Manager_Documentacion_Final_2026-10-31.
+- Leer la documentación normativa en `Xray-Normativa/`; comparar sus SHA-256 con la copia de respaldo `/root/Xray_Manager_Documentacion_Final_2026-10-31`.
 
 ### Contraste
 - Comparar archivos por contenido y SHA-256 cuando sea posible.
@@ -87,14 +88,20 @@ Antes de proponer implementación:
 
 ## 4.1 Contraste normativo obligatorio antes de implementar
 
-Antes de iniciar cualquier etapa o tarea de implementación, consulta directamente la documentación preliminar aprobada en `/root/Xray_Manager_Documentacion_Final_2026-10-31` y contrástala punto por punto con el estado real de GitHub, la VPS, el código, los catálogos, las pruebas y la documentación técnica. Presenta el informe de conformidad, omisiones y divergencias antes de editar.
+Antes de iniciar cualquier etapa o tarea de implementación, consulta directamente la documentación preliminar aprobada en `Xray-Normativa/` del repositorio y contrástala punto por punto con el estado real de GitHub, la VPS, el código, los catálogos, las pruebas y la documentación técnica. Presenta el informe de conformidad, omisiones y divergencias antes de editar.
 
 Las mejoras son posibles, pero toda mejora o cambio respecto del alcance aprobado debe justificarse, describir sus impactos y alternativas, y recibir autorización expresa del propietario antes de modificar diseño o código. No infieras autorización por silencio, continuidad de la conversación ni aprobaciones anteriores de otras tareas. Si la fuente no está disponible o existe una contradicción relevante, detente y solicita aclaración.
 
 Procedimiento completo y vinculante: `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`. Esta regla complementa AGENTS.md y es de cumplimiento obligatorio para cualquier IA o colaborador.
 
 
-## 4.2 Auditoría integral obligatoria antes de cerrar cualquier etapa
+## 4.2 Custodia inmutable de Xray-Normativa
+
+La carpeta `Xray-Normativa/` contiene la documentación maestra normativa aprobada. **Está prohibido modificar, corregir, reformatear, renombrar, mover, eliminar o sustituir cualquiera de sus archivos sin consentimiento previo, explícito y específico del propietario.** La autorización para implementar o publicar código no incluye autorización para alterar la normativa. Ante errores, ambigüedades o mejoras, conservar los originales y presentar una propuesta separada; esperar consentimiento expreso. Toda modificación autorizada debe quedar justificada y registrada en `HISTORY.md`.
+
+Antes de iniciar cada etapa, subetapa o módulo, se debe contrastar su alcance punto por punto con `Xray-Normativa/`, identificar conformidades, ausencias, divergencias y decisiones pendientes, y presentar el resultado antes de editar o implementar. La copia `/root/Xray_Manager_Documentacion_Final_2026-10-31` se conserva en la VPS como respaldo; comprobar sus hashes frente a la carpeta versionada cuando esté disponible. Si hay diferencias, no resolverlas automáticamente: informar y solicitar decisión.
+
+## 4.3 Auditoría integral obligatoria antes de cerrar cualquier etapa
 
 Regla permanente del propietario: ninguna etapa puede declararse TERMINADA/COMPLETADA si no se han auditado y documentado técnicamente todos sus puntos, subpuntos, módulos, submódulos y componentes internos. No basta con cerrar un protocolo, completar una funcionalidad, pasar pruebas, publicar o sincronizar.
 

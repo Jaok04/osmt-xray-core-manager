@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-02. **Estado:** implementado y verificado parcialmente; la Etapa 2 continúa abierta.
 
-La especificación normativa sigue siendo la revisión 1.3 ubicada en `/root/Xray_Manager_Documentacion_Final_2026-10-31/02_Protocolos_Conexiones/Etapa_2_Protocolos.md`.
+La especificación normativa sigue siendo la revisión 1.3 ubicada en `Xray-Normativa/02_Protocolos_Conexiones/Etapa_2_Protocolos.md`.
 
 Se implementó la navegación por familias VLESS, VMess, Trojan, Shadowsocks e Hysteria2, el menú opcional SOCKS/HTTP Proxy/WireGuard, los submenús de modalidades, la selección de seguridad prevista y el flujo Crear/Administrar/Volver. Se añadió selección numerada de conexiones, consulta de detalles y edición de borradores. Los plugins OBFS se identifican como externos.
 

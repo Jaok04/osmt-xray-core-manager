@@ -1,0 +1,248 @@
+project: Xray Core Manager
+document:
+  stage: 5
+  title: Configuraciones, perfiles y respaldos
+  version: "1.0"
+  status: approved
+  specification_type: functional
+  language: es
+  approval:
+    main_menu: approved
+    audit: completed
+    sections: [xray_configurations, validate_configurations, manage_profiles, activate_profile, create_backup, manage_backups, restore_backup]
+
+navigation:
+  back_option: {key: 0, label: Volver, behavior: return_to_immediate_parent_menu}
+  general_rules: [show_operation_result_before_returning, errors_do_not_close_manager, destructive_operations_require_confirmation, never_silently_overwrite]
+
+main_menu:
+  id: configurations_profiles_backups
+  title: CONFIGURACIONES, PERFILES Y RESPALDOS
+  sections:
+    - title: CONFIGURACIONES
+      options:
+        - {key: 1, id: xray_configurations, label: Gestionar configuraciones de Xray}
+        - {key: 2, id: validate_configurations, label: Validar archivos de configuración}
+    - title: PERFILES
+      options:
+        - {key: 3, id: manage_profiles, label: Gestionar perfiles}
+        - {key: 4, id: activate_profile, label: Cambiar perfil activo}
+    - title: RESPALDOS
+      options:
+        - {key: 5, id: create_backup, label: Crear respaldo}
+        - {key: 6, id: manage_backups, label: Gestionar respaldos}
+        - {key: 7, id: restore_backup, label: Restaurar respaldo}
+  back: {key: 0, label: Volver}
+
+configurations:
+  menu:
+    - {key: 1, id: view, label: Ver configuración actual}
+    - {key: 2, id: create, label: Crear configuración nueva}
+    - {key: 3, id: edit, label: Editar configuración}
+    - {key: 4, id: import, label: Importar configuración desde archivo}
+    - {key: 5, id: export, label: Exportar configuración}
+    - {key: 6, id: compare, label: Comparar configuraciones}
+    - {key: 7, id: delete, label: Eliminar configuración}
+    - {key: 0, label: Volver}
+  view: {read_only: true, show: [inbounds, outbounds, routing, dns, other_sections, full_json, file_info], distinguish_saved_from_applied: true, missing_config_does_not_block_manager: true}
+  create: {name_unique: true, sources: [template, empty], save_requires_confirmation: true, initial_state: draft, allow_incomplete_or_invalid: true, auto_activate: false}
+  edit: {modes: [guided_sections, advanced_json], editing_validated_creates_new_draft: true, preserve_previous_validated: true, show_diff: true, failed_validation_preserves_versions: true, does_not_change_running_xray: true, cancel_discards_unsaved: true}
+  import: {source_read_only: true, checks: [json_syntax, structure, required_parameters, types, values, installed_version_compatibility], preview: true, creates_independent_config: true, auto_activate: false, duplicate_name: ask_new_name_or_explicit_replace, invalid_or_incomplete_can_be_draft: true}
+  export: {multiple: true, destination_and_name_required: true, preserve_originals: true, overwrite_confirmation: true, verify_each_output: true, continue_after_individual_failure: true}
+  compare: {read_only: true, sections: [inbounds, outbounds, routing, dns, other], identify: [equal, different, only_first, only_second]}
+  delete: {confirmation: true, cannot_delete_currently_applied: true, delete_selected_only: true, preserve_profiles_copies_and_backups: true, preserve_record_on_failure: true}
+  types:
+    independent: {managed_in_menu: true, activation_path: false}
+    profile_copy: {independent_json_copy: true, source_to_profile_sync: false, profile_to_source_sync: false, deleting_source_preserves_copy: true}
+    activation_managed_through_profiles: true
+
+validation:
+  menu:
+    - {key: 1, id: saved, label: Validar configuración guardada}
+    - {key: 2, id: external, label: Validar archivo externo}
+    - {key: 3, id: active, label: Validar configuración activa}
+    - {key: 4, id: latest_report, label: Ver último informe de validación}
+    - {key: 5, id: history, label: Consultar historial de validaciones}
+    - {key: 0, label: Volver}
+  static_checks: [json_syntax, xray_structure, required_parameters, types_and_values, installed_version_compatibility, references_and_detectable_conflicts]
+  static_validation_required_for_validated: true
+  outcomes: [correct, warning, error]
+  read_only: true
+  external: {readable_path_required: true, import_modify_apply: false}
+  active: {check_service: true, compare_saved_and_running_when_possible: true, report_uncertainty: true, restart_or_modify: false}
+  runtime_test: {independent_from_static: true, tests_load_without_replacing_running_instance: true, static_valid_can_fail_runtime: true, mechanism: pending, assume_second_daemon_possible: false}
+  reports: {preserve_after_config_edit_or_delete: true, query_by: [file, date, type], inspect: [warnings, errors], compare_previous: true}
+
+configuration_states:
+  draft: {label: Borrador, may_be_incomplete_or_invalid: true, activatable: false}
+  validated: {label: Validada, requires_static_validation: true}
+  applied: {label: Aplicada, requires_verified_running_state: true}
+  previous: {label: Anterior, retains_historical_metadata: true}
+  mutually_exclusive: false
+  validated_and_applied_can_coexist: true
+  editing_validated_creates_draft: true
+  preserve_previous_validated: true
+
+profiles:
+  menu:
+    - {key: 1, id: create, label: Crear perfil}
+    - {key: 2, id: consult, label: Consultar perfiles}
+    - {key: 3, id: modify, label: Modificar perfil}
+    - {key: 4, id: duplicate, label: Duplicar perfil}
+    - {key: 5, id: rename, label: Renombrar perfil}
+    - {key: 6, id: delete, label: Eliminar perfil}
+    - {key: 0, label: Volver}
+  create: {sources: [zero, independent_configuration, another_profile], unique_name: true, independent_json_copy: true, validate_if_config_exists: true, confirmation: true, auto_activate: false, no_partial_record_on_failure: true}
+  consult: {fields: [name, active_status, config, created_at, modified_at, validation_status], show_missing_or_invalid_config: true, read_only: true}
+  modify: {fields: [name, configuration, description, notes], preserve_versions: true, new_version_on_config_change: true, validate_and_diff: true, active_changes_not_applied_automatically: true, failure_preserves_previous: true}
+  duplicate: {unique_name: true, independent_copy: true, validate: true, original_unchanged: true, auto_activate: false}
+  rename: {changes_record_only: true, changes_json: false, unique_name: true, runtime_unchanged_if_active: true, confirmation: true}
+  delete: {active_profile_must_be_replaced_first: true, check_dependencies: true, delete_profile_record_only: true, preserve_json_and_backups: true, confirmation: true}
+  independence: {each_profile_has_independent_json: true, changes_propagate_between_profiles_or_source: false, deleting_profile_preserves_other_copies: true}
+  version_history: {preserve_old_versions: true, identify_last_validated: true, view_and_compare: true, restore_by_creating_new_version: true, configurable_retention: true, included_in_backup: false}
+
+activation:
+  steps: [list_profiles_and_current, select_target, require_config, require_static_validation, show_old_and_new, confirm, apply_to_xray, verify_running_new_config, update_active_record_after_verification]
+  failure: {attempt_restore_previous: true, report_if_restore_fails: true}
+  cancel_preserves_old_active: true
+  active_record: [profile_id, profile_name, applied_version, application_datetime, last_result, json_path, service_status]
+  detect_saved_selected_runtime_mismatch: true
+  detect_external_restart_mismatch: true
+  selection_or_save_does_not_mean_active: true
+
+backup_creation:
+  selectable: [independent_configs, profiles_current_version_and_associations, active_profile_record, users_identities_associations, manager_preferences, domains, certificates_private_keys]
+  individual_or_full: true
+  preview_and_confirmation: true
+  verify_integrity: true
+  modify_originals: false
+  stop_or_restart_xray_unless_necessary_and_preannounced: false
+  credentials_and_private_keys: {excluded_by_default: true, inclusion_requires_selection_authorization_extra_confirmation: true}
+  per_element_failures_reported: true
+  incomplete_not_reported_complete: true
+  metadata: [manager_version, xray_version, structure_version]
+  exclude_all_history: [profile_version_history, profile_modification_history, validation_history, restoration_reports, technical_logs]
+  histories_remain_in_manager_with_independent_retention: true
+  backup_contains_current_selected_data_and_states_only: true
+
+backup_management:
+  menu:
+    - {key: 1, id: list, label: Listar respaldos}
+    - {key: 2, id: inspect, label: Consultar contenido de un respaldo}
+    - {key: 3, id: verify, label: Verificar integridad de un respaldo}
+    - {key: 4, id: export, label: Exportar respaldo}
+    - {key: 5, id: delete, label: Eliminar respaldo}
+    - {key: 0, label: Volver}
+  list: {search_configured_dirs: true, fields: [name, datetime, size, full_or_partial, location, integrity], filters: [date, type, name], statuses: [valid, pending, damaged, inaccessible]}
+  inspect: {metadata: [date, type, manager_version, xray_version, size, location], categories: [configs, profiles, users, certificates_domains, preferences, other], auto_extract_or_restore: false, hide_secrets_unless_authorized: true}
+  verify: {checks: [exists, readable, format, structure, internal_files, extraction_readability, included_checksums], outcomes: [correct, warning, error], read_only: true, no_crypto_claim_without_checksums: true}
+  export: {verify_first: true, compare_copy_with_original: true, preserve_original: true, overwrite_confirmation: true, damaged_not_exported_as_valid: true, continue_after_failure: true}
+  delete: {confirmation: true, selected_backup_only: true, preserve_related_original_data: true}
+
+restore:
+  menu:
+    - {key: 1, id: full, label: Restaurar respaldo completo}
+    - {key: 2, id: selective, label: Restaurar elementos específicos}
+    - {key: 0, label: Volver}
+  flow: [select, verify_integrity_and_compatibility, inspect, choose_scope, detect_conflicts, preview, create_security_backup, verify_security_backup, confirm, restore_by_dependencies, verify_and_report]
+  security_backup: {mandatory: true, verify_creation_and_readability: true, failure_cancels_all: true, override_allowed: false, current_data_untouched_on_failure: true}
+  full: {restore_compatible_included_elements: true, respect_conflicts_and_exclusions: true, delete_current_data_absent_from_backup: false, silent_overwrite: false}
+  selective: {choose_categories_or_items: true, unselected_untouched: true, item_selection_does_not_expand_category: true, security_backup_covers_affected_elements: true}
+  global_conflict_policy:
+    choices: [ask_each_conflict, replace_after_global_confirmation, preserve_current_restore_missing_only]
+    category_policy_overrides_global: true
+    show_effective_policies_before_confirm: true
+  category_policies:
+    users:
+      choices: [preserve, replace, update_selected_fields, ask_individually]
+      fields: [alias, credentials, duration, expiry, traffic, connections, status]
+      preview: [new, duplicate, updated, omitted]
+      identity_choices: [preserve_identity_add_missing_associations, replace_all_associations, select_associations]
+      preserve_global_id: true
+      never_use_alias_as_identity: true
+      full_connection_choices: [reject_association, reassign_compatible_existing_with_capacity]
+      auto_increase_limit: false
+      preview_and_confirmation: true
+      reject_if_no_compatible_capacity: true
+    connections:
+      choices: [preserve, replace_fully, update_selected_fields]
+      show_affected_users_associations: true
+      validate_compatibility_and_capacity: true
+      auto_modify_users: false
+      preserve_old_on_failure: true
+    domains:
+      choices: [preserve, replace_all, update_selected_fields]
+      show_linked_connections_certificates: true
+      auto_modify_connections_or_certificates: false
+    certificates:
+      choices: [preserve, replace, select_individually]
+      validate: [validity, domains, cert_key_match, readability]
+      private_keys_excluded_by_default: true
+      private_key_restore_requires_selection_authorization_extra_confirmation: true
+      auto_modify_linked_connections: false
+      preserve_old_on_failure: true
+    manager_preferences:
+      choices: [preserve_all, replace_all, select_individual]
+      show: [paths, permissions, language, date_format, colors, backup_preferences]
+      validate_before_apply: true
+      confirmation: true
+      recovery_on_failure: true
+  exclusions: {allow_category_or_item: true, excluded_untouched: true, absent_never_deletes_current: true}
+  dependency_order:
+    - prepare_read_validate_preferences_without_applying
+    - domains_and_certificates
+    - independent_configurations
+    - profiles_and_current_configs
+    - connections
+    - users_identities_associations
+    - apply_preferences_at_end
+    - final_verification
+  preferences_prepared_first_applied_last: true
+  verify_manager_after_preferences: true
+  restored_configuration_state:
+    preserve_original_state: true
+    draft_remains_draft: true
+    validated_only_if_integrity_and_version_correspondence_verified: true
+    unverified_not_presented_as_validated: true
+    static_validation_required_for_activation: true
+  profile_history: {restore_current_version_only: true, exclude_version_and_modification_history: true}
+  active_profile: {restore_data_without_auto_activation: true, do_not_replace_running_config_automatically: true, ask_after_restore: true, normal_validated_activation_flow: true}
+  failures:
+    isolated: rollback_affected_element
+    preserve_independent_successes_when_consistent: true
+    broader_rollback_if_consistency_compromised: true
+    report_exact_state_if_rollback_fails: true
+    never_claim_full_success_after_failure: true
+  damaged_backup: {continue_only_independently_verified_elements: true, preview_and_confirm: true, cancel_if_none_recoverable: true, no_changes_on_cancel: true, failed_report_if_none_restored: true}
+  incompatibilities: {allow_individual_exclusion: true, continue_compatible: true, never_force: true}
+  result_classes:
+    successful: all_selected_compatible_restored
+    partial: some_selected_restored_others_rejected_or_failed
+    failed: none_selected_restored
+    deliberate_exclusions_are_not_execution_failures: true
+
+restoration_reports:
+  choices: [summary_only, detailed_not_retained, detailed_saved]
+  include: [overall_result, processed, added, replaced, preserved, omitted, incompatibilities, errors, verifications, rollbacks]
+  retention: {configurable_time: true, configurable_max_count: true, cleanup_on_startup: true, cleanup_after_save: true, manual_delete: [one, multiple, all], confirmation: true}
+  included_in_backups: false
+
+technical_logs:
+  enabled_configurable: true
+  record_when_enabled: [operations, affected_paths_elements, errors, rollbacks, datetime]
+  plaintext_credentials_or_private_keys: false
+  retention: {configurable_time: true, configurable_max_count: true, independent_from_reports: true, cleanup_on_startup: true, cleanup_after_new_logs: true}
+  functions: [view_recent, filter_by_date_operation_result_elements_errors_rollbacks, export_all_filtered_selected, delete_one_multiple_all_with_confirmation]
+  export_formats: [TXT, JSON, CSV]
+  statistics_dashboard: false
+  included_in_backups: false
+
+implementation_pending:
+  - backup_format_packaging_versioning_checksums
+  - safe_runtime_test_without_interfering_with_active_xray
+  - configuration_apply_and_verification_mechanism
+  - profile_version_metadata_model
+  - final_paths_permissions_and_secret_protection
+  - rollback_strategy
+  - history_and_report_storage
+  - retention_cleanup_mechanism

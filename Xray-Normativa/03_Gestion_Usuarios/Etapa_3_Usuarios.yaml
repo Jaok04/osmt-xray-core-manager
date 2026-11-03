@@ -1,0 +1,241 @@
+document:
+  project: "Xray Core Manager"
+  title: "Etapa 3 - Gestión de usuarios"
+  version: "1.2"
+  status: "approved_functional_specification"
+  approval_date: "2026-10-31"
+  scope: "Identidades globales, asociaciones, operaciones, límites, tráfico, importación y exportación; sin implementación técnica."
+
+main_menu:
+  title: "GESTIÓN DE USUARIOS"
+  options:
+    - {key: 1, id: global_user_management, label: "Gestión global de usuarios"}
+    - {key: 2, id: connection_user_management, label: "Usuarios por protocolo y conexión"}
+    - {key: 0, id: back, label: "Volver"}
+
+identity_model:
+  global_identity:
+    unique_id: true
+    id_generation: automatic
+    id_mutable: false
+    id_depends_on_alias: false
+    id_in_exports: true
+    id_is_access_credential: false
+    duplicate_aliases_allowed: true
+    merge_by_alias_only: false
+    external_file_without_global_id: "Require unambiguous mapping or treat as a new identity; never merge solely by alias."
+  associations:
+    multiple_connections_per_identity: true
+    same_protocol_multiple_connections_allowed: true
+    independent_fields: [credentials, duration, expiration, traffic_limit, simultaneous_connection_limit, state]
+    operations_are_isolated: true
+    additional_association_from_global_management: true
+    credentials_for_new_association: [automatic, manual]
+    validate_protocol_mode_compatibility: true
+    validate_credential_uniqueness: true
+    validate_destination_capacity: true
+
+connection_capacity:
+  configured_in_stage: 2
+  active_suspended_expired_occupy_slot: true
+  reject_when_full: true
+  automatic_transfer: false
+  deleting_association_releases_one_slot: true
+  deleting_global_identity_releases_all_slots: true
+
+common_user_operations:
+  menu_title: "ADMINISTRAR USUARIO"
+  options:
+    - {key: 1, id: create, label: "Crear usuario"}
+    - {key: 2, id: view, label: "Consultar información"}
+    - {key: 3, id: modify, label: "Modificar usuario"}
+    - {key: 4, id: renew, label: "Renovar usuario"}
+    - {key: 5, id: suspend, label: "Suspender usuario"}
+    - {key: 6, id: reactivate, label: "Reactivar usuario"}
+    - {key: 7, id: traffic_usage, label: "Consultar consumo de tráfico"}
+    - {key: 8, id: delete, label: "Eliminar usuario"}
+    - {key: 0, id: back, label: "Volver"}
+  unsupported_operation_behavior: "Mark unavailable for the selected protocol; do not simulate support."
+
+user_association_fields:
+  alias: {required: true, duplicate_aliases_allowed_across_identities: true}
+  credential: {required: true, protocol_dependent: true, methods: [automatic, manual], reject_duplicates: true}
+  creation_datetime: automatic
+  duration: configurable
+  expiration: calculated_automatically
+  traffic_limit: optional
+  simultaneous_connection_limit: optional_when_supported
+
+creation:
+  global_flow: [select_protocol, select_mode_if_applicable, select_existing_connection, complete_association, validate, review_and_confirm]
+  per_connection_flow: "Create directly in the already selected connection without selecting protocol/connection again."
+  additional_association: "Attach a new independent association to an existing global identity without changing previous associations."
+
+duration:
+  menu:
+    - {key: 1, id: custom, label: "Duración personalizada"}
+    - {key: 2, id: no_expiration, label: "Sin vencimiento"}
+    - {key: 0, id: back, label: "Volver"}
+  custom_units: [days, hours, minutes]
+  creation_expiration_origin: creation_datetime
+  modification: "New custom duration is calculated from modification time and replaces previous expiration."
+  renewal: "New period begins at renewal time; do not add to previous expiration."
+  no_expiration_allows_other_operations: true
+  expired_behavior: "Block association and set state expired; renewal required for access."
+  expiration_checks:
+    periodic: true
+    on_manager_or_service_start: true
+    scope: per_association
+
+states: [active, suspended, expired]
+suspension:
+  immediate_block: true
+  reason_required: false
+  pause_remaining_time_during_suspension: true
+reactivation:
+  previously_limited_duration:
+    menu:
+      - {key: 1, id: custom, label: "Duración personalizada"}
+      - {key: 2, id: no_expiration, label: "Sin vencimiento"}
+      - {key: 0, id: cancel, label: "Volver"}
+    custom_units: [days, hours, minutes]
+    expiration_origin: reactivation_datetime
+    replace_previous_expiration: true
+    carry_previous_remaining_time: false
+    immediate_after_valid_selection: true
+    second_confirmation: false
+  previously_no_expiration:
+    menu:
+      - {key: 1, id: no_expiration, label: "Sin vencimiento"}
+      - {key: 2, id: set_expiration, label: "Establecer una caducidad"}
+      - {key: 0, id: cancel, label: "Volver"}
+    set_expiration_units: [days, hours, minutes]
+    immediate_after_valid_selection: true
+
+limits:
+  traffic:
+    menu:
+      - {key: 1, id: custom_gb, label: "Límite personalizado (GB)"}
+      - {key: 2, id: unlimited, label: "Sin límites"}
+      - {key: 0, id: back, label: "Volver"}
+    modification_options: [custom_gb, unlimited]
+    changing_limit_resets_usage: false
+  simultaneous_connections:
+    menu:
+      - {key: 1, id: custom, label: "Límite personalizado"}
+      - {key: 2, id: unlimited, label: "Sin límites"}
+      - {key: 0, id: back, label: "Volver"}
+    modification_options: [custom, unlimited]
+    only_when_protocol_supports: true
+
+listing_and_filters:
+  columns: [selection_number, alias, protocol, connection, state, expiration]
+  filters:
+    - {id: alias_search, label: "Buscar por nombre/alias"}
+    - {id: protocol, label: "Filtrar por protocolo"}
+    - {id: state, label: "Filtrar por estado", values: [active, suspended, expired]}
+    - {id: all, label: "Mostrar todos"}
+  global_scope: "All identities/associations across protocols and connections; retain protocol and connection columns."
+  per_connection_scope: "Only associations of selected connection."
+  global_identity_detail_shows_all_associations: true
+
+modification:
+  independently_editable_fields: [alias, credentials, duration_and_expiration, traffic_limit, simultaneous_connection_limit]
+  credentials_methods: [automatic, manual]
+  changing_one_field_changes_others: false
+  traffic_limit_change_resets_usage: false
+  technical_connection_fields_managed_in_stage: 2
+
+traffic_usage:
+  metrics: [downloaded, uploaded, total, assigned_limit, percentage_used, remaining_traffic]
+  unavailable_metric_label: "No disponible para este protocolo"
+  fabricate_or_estimate_unavailable_metrics: false
+  per_association: true
+  history_enabled: false
+  reset:
+    manual: {enabled: true, require_usage_review: true, require_confirmation: true}
+    automatic:
+      enabled: true
+      schedules: [daily, weekly, monthly, every_n_days]
+      missed_while_server_off: "On startup detect pending reset and execute once; do not replay multiple missed resets."
+    changes_credentials_duration_or_expiration: false
+
+delete:
+  association: {scope: selected_connection_only, preserve_other_associations: true, revoke_selected_access: true, release_one_slot: true, confirmation_required: true}
+  global_identity: {delete_all_associations: true, revoke_all_access: true, delete_identity_and_records: true, release_all_slots: true, confirmation_required: true, recoverable_in_manager: false}
+
+export:
+  formats: [json, csv, txt]
+  scopes: [individual, all, filtered_by_protocol_connection_or_state]
+  include_global_identity_id: true
+  credentials:
+    ask_before_export: true
+    extra_confirmation_if_included: true
+    include_without_explicit_authorization: false
+
+import:
+  scopes: [specific_protocol_and_connection, global_multiple_protocols_and_connections]
+  source: "Previously exported file or file prepared with defined structure."
+  preview_fields: [detected_total, valid, duplicate_credentials, incomplete_or_invalid, to_be_imported]
+  validation: [structure, version, compatibility, required_fields, credential_duplicates, destination_exists, destination_capacity]
+  existing_global_identity_on_different_connection: "Create a new independent association under the existing identity; preserve previous associations."
+  same_association_conflict:
+    resolution: selective_update
+    selectable_fields: [alias, credentials, duration_and_expiration, traffic_limit, simultaneous_connection_limit, state]
+    show_old_and_new_values: true
+    preview_before_confirmation: true
+    unselected_fields_unchanged: true
+    other_associations_unchanged: true
+  nonexistent_destination:
+    create_connection_automatically: false
+    allow_reassign_to_existing_compatible_connection: true
+    show_reassignment_in_preview: true
+    batch_assign_multiple_users_to_one_connection: true
+    reject_if_no_compatible_destination_or_capacity: true
+  imported_suspended_or_expired_state: "Ask administrator which state to apply."
+  unexpected_record_error: "Continue processing remaining records and report failed rows and reasons."
+  partial_import_reported_as_partial: true
+  final_summary: [imported_successfully, rejected, rejection_reasons, source_file_path]
+  older_versions_and_unknown_fields:
+    identify_version_and_structure: true
+    retain_compatible_data: true
+    warn_unknown_or_incompatible_fields: true
+    silently_discard_information: false
+    preview_and_authorization_required: true
+    reject_invalid_records_individually: true
+
+navigation_and_safety:
+  back_key: 0
+  back_returns_to_immediate_previous_level: true
+  invalid_input_allows_retry: true
+  errors_exit_manager: false
+  show_result_before_return: true
+  destructive_operations_require_confirmation: true
+  exception_reactivation_immediate_after_valid_selection: true
+  association_operations_affect_other_associations: false
+  enforce_stage_2_connection_capacity: true
+
+implementation_constraints:
+  - "Validate real protocol capabilities before implementation."
+  - "Do not simulate unsupported traffic metrics or simultaneous-connection enforcement."
+  - "Keep Markdown and YAML synchronized."
+  - "Later additions must be documented as revisions."
+
+
+connection_identity_association_model:
+  connection_owner: "Etapa 2"
+  identity_and_association_owner: "Etapa 3"
+  connection_means: "Configuración técnica del servidor: protocolo, modalidad/transporte, puerto y parámetros técnicos."
+  identity_means: "Identidad global única, independiente de sus asociaciones."
+  association_means: "Vínculo de acceso entre una identidad global y una conexión, con parámetros independientes."
+  one_connection_multiple_associations: true
+  one_identity_multiple_connections: true
+
+wireguard_peer_relationship:
+  each_peer_linked_to_global_identity: true
+  one_identity_can_have_multiple_peers: true
+  peer_data: ["keys", "IP address", "technical parameters"]
+  peer_data_scope: "Per peer and its access association; not shared as one set on the global identity"
+  delete_association: "Delete only the peer linked to that association"
+  delete_global_identity: "Delete all associations and all WireGuard peers linked to that identity"
+  private_keys_sensitive: true

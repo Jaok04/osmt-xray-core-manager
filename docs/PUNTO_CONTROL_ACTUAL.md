@@ -15,7 +15,8 @@
 - Commit Bloque 1: `c890b5b5362e17e439f198b9b8bbbdbe0af0c653` (`fix(vless): preserve current VMess entries on restore`), publicado y sincronizado.
 - Remoto: `git@github.com-xray-core-manager:Jaok04/xray-core-manager.git`.
 - Deploy Key SSH dedicada con permiso de escritura configurado.
-- Documentación normativa: `/root/Xray_Manager_Documentacion_Final_2026-10-31`.
+- Documentación normativa canónica: `Xray-Normativa/` (versionada en GitHub y presente en `/opt/xray-manager`).
+- Respaldo original en la VPS: `/root/Xray_Manager_Documentacion_Final_2026-10-31`; comparar hashes con la copia versionada.
 - Etapa 1: aceptada formalmente.
 - Etapa 2: abierta.
 - P4 backup/restore VLESS: alcance original completado y aceptado; corrección posterior de preservación VMess implementada y verificada, aceptación específica pendiente.

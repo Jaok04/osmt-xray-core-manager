@@ -1,0 +1,261 @@
+document:
+  project: "Xray Core Manager"
+  title: "Etapa 2 - Gestión de protocolos y conexiones"
+  version: "1.3"
+  status: "approved"
+  approval_date: "2026-10-30"
+  scope: "Especificación funcional; no implementación técnica"
+  parent_menu_option: 1
+
+navigation:
+  back_key: 0
+  back_behavior: "return_to_immediately_previous_menu"
+  invalid_input: "show_error_and_retry"
+  operation_result: "display_before_return"
+  destructive_actions_require_confirmation: true
+  errors_close_manager: false
+
+main_menu:
+  title: "GESTIÓN DE PROTOCOLOS Y CONEXIONES"
+  options:
+    - key: 1
+      id: vless
+      label: "VLESS"
+      category: "main"
+      has_modalities: true
+    - key: 2
+      id: vmess
+      label: "VMess"
+      category: "main"
+      has_modalities: true
+    - key: 3
+      id: trojan
+      label: "Trojan"
+      category: "main"
+      has_modalities: true
+    - key: 4
+      id: shadowsocks
+      label: "Shadowsocks"
+      category: "main"
+      has_modalities: true
+    - key: 5
+      id: hysteria2
+      label: "Hysteria2"
+      category: "main"
+      has_modalities: true
+    - key: 6
+      id: optional_protocols
+      label: "Protocolos opcionales"
+      category: "optional"
+      has_modalities: false
+    - key: 0
+      id: back_to_main_menu
+      label: "Volver al menú principal"
+      action: "back"
+
+protocols:
+  vless:
+    menu_title: "ADMINISTRAR VLESS"
+    modalities:
+      - {key: 1, id: "vless_ws", label: "VLESS-WS", transport: "WebSocket", security: "none", note: "Sin TLS"}
+      - {key: 2, id: "vless_tls", label: "VLESS-TLS", transport: "RAW/TCP", security: "TLS"}
+      - {key: 3, id: "vless_ws_tls", label: "VLESS-WS-TLS", transport: "WebSocket", security: "TLS"}
+      - {key: 4, id: "vless_reality", label: "VLESS-REALITY", transport: "RAW/TCP", security: "REALITY"}
+      - {key: 5, id: "vless_grpc", label: "VLESS-GRPC", transport: "gRPC", security_choices: ["TLS", "REALITY"]}
+    back_key: 0
+    compatibility_validation_required: true
+
+  vmess:
+    menu_title: "ADMINISTRAR VMESS"
+    modality_groups:
+      - name: "PRINCIPALES"
+        modalities:
+          - {key: 1, id: "vmess_ws", label: "VMess-WS", transport: "WebSocket", security: "none", note: "Sin TLS adicional"}
+          - {key: 2, id: "vmess_tls", label: "VMess-TLS", transport: "RAW/TCP", security: "TLS"}
+          - {key: 3, id: "vmess_ws_tls", label: "VMess-WS-TLS", transport: "WebSocket", security: "TLS"}
+          - {key: 4, id: "vmess_reality", label: "VMess-REALITY", transport: "RAW/TCP", security: "REALITY"}
+          - {key: 5, id: "vmess_grpc", label: "VMess-GRPC", transport: "gRPC", security_choices: ["none", "TLS", "REALITY"]}
+      - name: "ADICIONALES"
+        modalities:
+          - {key: 6, id: "vmess_httpupgrade", label: "VMess-HTTPUpgrade", transport: "HTTPUpgrade"}
+          - {key: 7, id: "vmess_xhttp", label: "VMess-XHTTP", transport: "XHTTP", security_choices: ["none", "TLS", "REALITY"]}
+          - {key: 8, id: "vmess_mkcp", label: "VMess-mKCP", transport: "mKCP", security_choices: ["none", "TLS"]}
+    notes:
+      - "VMess utiliza UUID y su cifrado propio."
+      - "La compatibilidad de cada combinación debe verificarse con la versión objetivo."
+    back_key: 0
+    compatibility_validation_required: true
+
+  trojan:
+    menu_title: "ADMINISTRAR TROJAN"
+    modality_groups:
+      - name: "PRINCIPALES"
+        modalities:
+          - {key: 1, id: "trojan_tls", label: "Trojan-TLS", transport: "RAW/TCP", security: "TLS"}
+          - {key: 2, id: "trojan_ws_tls", label: "Trojan-WS-TLS", transport: "WebSocket", security: "TLS"}
+          - {key: 3, id: "trojan_grpc_tls", label: "Trojan-GRPC-TLS", transport: "gRPC", security: "TLS"}
+      - name: "ADICIONALES"
+        modalities:
+          - {key: 4, id: "trojan_xhttp_tls", label: "Trojan-XHTTP-TLS", transport: "XHTTP", security: "TLS"}
+          - {key: 5, id: "trojan_httpupgrade_tls", label: "Trojan-HTTPUpgrade-TLS", transport: "HTTPUpgrade", security: "TLS"}
+    excluded_modalities: ["Trojan sin TLS", "Trojan-REALITY"]
+    back_key: 0
+    compatibility_validation_required: true
+
+  shadowsocks:
+    menu_title: "ADMINISTRAR SHADOWSOCKS"
+    modalities:
+      - {key: 1, id: "shadowsocks_tcp", label: "Shadowsocks-TCP", network: ["tcp"]}
+      - {key: 2, id: "shadowsocks_udp", label: "Shadowsocks-UDP", network: ["udp"]}
+      - {key: 3, id: "shadowsocks_tcp_udp", label: "Shadowsocks-TCP-UDP", network: ["tcp", "udp"]}
+      - key: 4
+        id: "shadowsocks_obfs"
+        label: "Shadowsocks + OBFS"
+        suboptions:
+          - {key: 1, id: "obfs_http", label: "OBFS-HTTP"}
+          - {key: 2, id: "obfs_tls", label: "OBFS-TLS"}
+        implementation_condition: "Requires compatible external component; not a native Xray feature."
+      - key: 5
+        id: "shadowsocks_v2ray_plugin"
+        label: "Shadowsocks + V2Ray-Plugin"
+        implementation_condition: "Requires compatible external plugin; not a native Xray feature."
+    parameters:
+      - "encryption_method"
+      - "password"
+      - "port"
+      - "network_mode"
+      - "plugin_and_plugin_parameters_when_applicable"
+    encryption_methods:
+      classic_aead:
+        - "aes-128-gcm"
+        - "aes-256-gcm"
+        - "chacha20-poly1305"
+      aead_2022:
+        - "2022-blake3-aes-128-gcm"
+        - "2022-blake3-aes-256-gcm"
+        - "2022-blake3-chacha20-poly1305"
+    excluded_modalities: ["Shadowsocks-WS", "Shadowsocks-WS-TLS"]
+    back_key: 0
+
+  hysteria2:
+    menu_title: "ADMINISTRAR HYSTERIA"
+    modalities:
+      - key: 1
+        id: "hysteria2_quic"
+        label: "Hysteria2-QUIC"
+        transport: "QUIC"
+        network: "UDP"
+        security: "TLS"
+    creation_parameters:
+      - "server_domain_or_ip"
+      - "udp_port"
+      - "tls_certificate_and_private_key"
+      - "sni"
+      - "tls_validation"
+      - "user_authentication_password"
+      - "user_identifier"
+      - "upload_download_speed_limits_when_supported"
+      - "udp_relay_options_when_supported"
+      - "masquerade_options_when_supported"
+      - "pre_save_summary"
+    excluded_options:
+      - "Hysteria-WS"
+      - "Hysteria-gRPC"
+      - "Hysteria-REALITY"
+      - "Hysteria-TCP"
+      - "Salamander until verified for target Xray version"
+      - "Gecko until verified for target Xray version"
+    implementation_note: "Distinguish Hysteria2 integrated into Xray-core from independent Hysteria implementations."
+    back_key: 0
+    compatibility_validation_required: true
+
+optional_protocols:
+  menu_title: "PROTOCOLOS OPCIONALES"
+  groups:
+    - name: "PROXIES AUXILIARES"
+      options:
+        - key: 1
+          id: "socks"
+          label: "SOCKS"
+          managed_elements: ["connections", "credentials"]
+        - key: 2
+          id: "http_proxy"
+          label: "HTTP Proxy"
+          managed_elements: ["connections", "credentials"]
+    - name: "TÚNELES Y REDES"
+      options:
+        - key: 3
+          id: "wireguard"
+          label: "WireGuard"
+          managed_elements: ["peers", "keys"]
+          peer_identity_model:
+            each_peer_associated_with_global_identity: true
+            one_identity_can_have_multiple_peers: true
+            peer_parameters: ["keys", "IP address", "technical parameters"]
+            association_owner: "Etapa 3; each WireGuard access association corresponds to its peer"
+            association_deletion: "Delete only the corresponding peer"
+            global_identity_deletion: "Delete all peers and associations belonging to that identity"
+  excluded:
+    - "Tunnel (Dokodemo-door)"
+    - "TUN"
+    - "MASQUE"
+  back_key: 0
+
+common_management_flow:
+  menu_title_template: "ADMINISTRAR [PROTOCOLO]"
+  options:
+    - key: 1
+      id: create_new
+      label: "Crear una configuración nueva"
+    - key: 2
+      id: manage_existing
+      label: "Administrar configuraciones existentes"
+    - key: 0
+      id: back
+      label: "Volver"
+  behavior:
+    creation:
+      - "Use protocol-specific assistant."
+      - "Request only applicable parameters."
+      - "Validate inputs before saving."
+      - "Show a review summary before applying changes."
+      - "Display operation result."
+    existing:
+      - "List saved configurations for selected protocol and modality."
+      - "Use numbered entries."
+      - "Allow selecting one configuration."
+      - "Show only applicable management operations."
+      - "Display operation result before returning."
+    empty_list:
+      message: "No hay configuraciones disponibles para este protocolo o modalidad."
+      action: "Show back option [0]."
+
+compatibility_gate:
+  required_before_implementation:
+    - "Fix target Xray-core version."
+    - "Verify protocol, transport, and security combinations against that version."
+    - "Separate native Xray capabilities from external binaries, plugins, or services."
+    - "Do not display unsupported parameters as functional options."
+    - "Record unverified combinations as pending."
+    - "Validate generated configuration before reloading or restarting the service."
+
+next_stage: "Etapa 3 - Gestión de usuarios"
+
+
+connection_model:
+  connection_definition: "Configuración técnica del servidor asociada a protocolo, modalidad/transporte, puerto y parámetros técnicos."
+  identity_definition: "Identidad global única administrada en Etapa 3; no es una conexión ni una credencial."
+  association_definition: "Vínculo de acceso entre una identidad global y una conexión; se administra en Etapa 3."
+  one_connection_can_have_multiple_associations: true
+  one_identity_can_have_multiple_connections: true
+  connection_list_displays: "Conexiones técnicas, nunca usuarios ni asociaciones."
+  ownership:
+    technical_connections: "Etapa 2"
+    global_identities_and_access_associations: "Etapa 3"
+
+wireguard_identity_relationship:
+  peer_associated_with_global_identity: true
+  one_identity_multiple_peers: true
+  peer_owns_its_keys_and_technical_parameters: true
+  association_deletion_removes_only_corresponding_peer: true
+  global_identity_deletion_removes_all_its_peers_and_associations: true

@@ -4,7 +4,7 @@
 **Etapa:** 2 — Gestión de protocolos y conexiones
 **Estado:** DISEÑO APROBADO por el propietario el 2026-11-02
 **Motor objetivo:** Xray-core v26.10.31
-**Base funcional:** `/root/Xray_Manager_Documentacion_Final_2026-10-31/02_Protocolos_Conexiones/Etapa_2_Protocolos.md`, revisión 1.3
+**Base funcional:** `Xray-Normativa/02_Protocolos_Conexiones/Etapa_2_Protocolos.md`, revisión 1.3
 **Decisión complementaria:** `docs/DECISIONES_ETAPA_2.md`
 
 ## 1. Objetivo y límites

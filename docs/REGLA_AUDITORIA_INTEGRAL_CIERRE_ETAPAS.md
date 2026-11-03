@@ -15,9 +15,11 @@ El cierre de un módulo no cierra automáticamente la etapa a la que pertenece. 
 
 ## 2. Contraste obligatorio con la línea base aprobada
 
-La auditoría integral debe partir de la documentación preliminar aprobada que se conserva en:
+La auditoría integral debe partir de la documentación preliminar aprobada y versionada en:
 
-`/root/Xray_Manager_Documentacion_Final_2026-10-31`
+`Xray-Normativa/`
+
+La copia original de respaldo permanece en `/root/Xray_Manager_Documentacion_Final_2026-10-31`. No modificar ningún archivo de `Xray-Normativa/` sin consentimiento previo, explícito y específico del propietario.
 
 Se debe cumplir también, sin excepción, la regla descrita en `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`:
 

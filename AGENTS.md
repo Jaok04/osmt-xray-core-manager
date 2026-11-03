@@ -12,7 +12,7 @@ Lee este archivo antes de analizar o modificar el proyecto. Después consulta PR
 - Rama de desarrollo autorizada: design/user-identity-association-v1
 - Rama main: protegida por instrucción del propietario; no modificarla.
 - VPS de desarrollo: /opt/xray-manager
-- Documentación funcional normativa aprobada: /root/Xray_Manager_Documentacion_Final_2026-10-31
+- Documentación funcional normativa aprobada y versionada: `Xray-Normativa/`. Copia maestra original de respaldo en la VPS: `/root/Xray_Manager_Documentacion_Final_2026-10-31`.
 
 La documentación normativa define QUÉ debe hacer el producto. El código, las pruebas y la documentación técnica describen CÓMO se ha implementado. No conviertas una decisión técnica en un requisito funcional aprobado sin autorización del usuario.
 
@@ -25,9 +25,13 @@ Orden para resolver discrepancias:
 
 Si una ampliación técnica contradice o amplía la especificación normativa, conserva la implementación existente sin extenderla y registra la discrepancia como pendiente de ratificación. No reescribas silenciosamente la especificación.
 
+## 2.0 Custodia inmutable de la documentación normativa
+
+`Xray-Normativa/` contiene la documentación maestra normativa aprobada. **Ningún agente o colaborador puede modificar, corregir, reformatear, renombrar, mover, eliminar o sustituir sus archivos sin consentimiento previo, explícito y específico del propietario.** La autorización para implementar código, corregir documentación técnica o publicar cambios no autoriza a modificar la normativa. Si se detecta un error, ambigüedad o mejora, conservar el original y presentar una propuesta separada; esperar consentimiento expreso. Toda modificación autorizada debe quedar justificada y registrada en `HISTORY.md`.
+
 ## 2.1 Regla obligatoria: contrastar con la documentación preliminar aprobada
 
-Antes de implementar cualquier etapa, subetapa, módulo, protocolo, modalidad o funcionalidad, es obligatorio contrastar el alcance y el estado real del proyecto con la documentación preliminar aprobada ubicada en `/root/Xray_Manager_Documentacion_Final_2026-10-31`. Debe consultarse directamente en la VPS; no basta con recordar su contenido ni con revisar únicamente el código, el catálogo o los resúmenes de continuidad.
+Antes de implementar cualquier etapa, subetapa, módulo, protocolo, modalidad o funcionalidad, es obligatorio contrastar el alcance y el estado real del proyecto con la documentación preliminar aprobada ubicada en `Xray-Normativa/` dentro de la rama autorizada del repositorio; la copia original `/root/Xray_Manager_Documentacion_Final_2026-10-31` se conserva como respaldo en la VPS. Debe consultarse desde `Xray-Normativa/` y contrastarse por SHA-256 con el respaldo cuando esté disponible; no basta con recordar su contenido ni con revisar únicamente el código, el catálogo o los resúmenes de continuidad.
 
 Procedimiento vinculante:
 1. Identificar en la documentación preliminar la etapa, requisitos, alcance, decisiones, exclusiones, dependencias y criterios aplicables.
@@ -47,7 +51,7 @@ Documento operativo: `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`.
 **Ninguna etapa puede declararse TERMINADA/COMPLETADA sin una auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos.** Cerrar un módulo, pasar pruebas, publicar código o sincronizar la VPS no cierra la etapa.
 
 Antes de proponer el cierre de una etapa, es obligatorio:
-1. Consultar la documentación preliminar aprobada en `/root/Xray_Manager_Documentacion_Final_2026-10-31` y aplicar la regla 2.1.
+1. Consultar la documentación preliminar aprobada en `Xray-Normativa/` y aplicar la regla 2.1.
 2. Construir un inventario exhaustivo de todos los requisitos y componentes internos de la etapa.
 3. Mantener una matriz de trazabilidad requisito → diseño → implementación → pruebas → evidencia.
 4. Auditar individualmente cada punto y módulo: comportamiento, diseño, implementación, datos/persistencia, seguridad, errores/recuperación, integración, pruebas, documentación técnica y evidencia aplicables.
@@ -68,7 +72,7 @@ Antes de implementar:
 2. Consulta el HEAD real de la rama autorizada en GitHub; no confíes únicamente en el SHA guardado en estos documentos.
 3. Comprueba si /opt/xray-manager contiene .git. Si no existe, no afirmes una rama, commit ni estado Git local.
 4. Inspecciona los archivos y modificaciones actuales de la VPS sin sobrescribirlos.
-5. Lee la documentación normativa pertinente en /root/Xray_Manager_Documentacion_Final_2026-10-31.
+5. Lee la documentación normativa pertinente en `Xray-Normativa/` y verifica su coincidencia con la copia de respaldo `/root/Xray_Manager_Documentacion_Final_2026-10-31` cuando esté disponible.
 6. Contrasta GitHub, VPS, documentación normativa y documentos técnicos.
 7. Identifica divergencias, archivos no publicados, archivos remotos no presentes localmente y cualquier estado incierto.
 8. Presenta un informe de recuperación y espera autorización del usuario antes de implementar.

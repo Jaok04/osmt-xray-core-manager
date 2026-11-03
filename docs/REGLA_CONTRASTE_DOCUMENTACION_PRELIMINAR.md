@@ -6,11 +6,13 @@
 
 ## 1. Fuente normativa obligatoria
 
-La línea base funcional de cada etapa es la documentación preliminar aprobada que se conserva en la VPS en:
+La línea base funcional de cada etapa es la documentación preliminar aprobada y versionada en el repositorio en:
 
-`/root/Xray_Manager_Documentacion_Final_2026-10-31`
+`Xray-Normativa/`
 
-Esta documentación debe consultarse directamente antes de implementar cualquier etapa, subetapa, módulo, protocolo, modalidad o funcionalidad. Los documentos del repositorio, el código y las pruebas describen el estado del desarrollo; no sustituyen ni modifican por sí solos la línea base aprobada.
+La copia original de respaldo se conserva en la VPS en `/root/Xray_Manager_Documentacion_Final_2026-10-31`. La carpeta versionada es la referencia canónica para GitHub y para el checkout `/opt/xray-manager`; ambas copias deben contrastarse por SHA-256 cuando estén disponibles.
+
+Esta documentación debe consultarse directamente desde `Xray-Normativa/` antes de implementar cualquier etapa, subetapa, módulo, protocolo, modalidad o funcionalidad. Los documentos del repositorio, el código y las pruebas describen el estado del desarrollo; no sustituyen ni modifican por sí solos la línea base aprobada.
 
 ## 2. Contraste previo obligatorio
 
@@ -40,7 +42,7 @@ Se permiten mejoras a la propuesta original, pero no se incorporan automáticame
 ## 4. Secuencia obligatoria de trabajo
 
 1. Recuperar el estado real del proyecto y de GitHub/VPS.
-2. Consultar la documentación preliminar aprobada en la ruta indicada.
+2. Consultar la documentación preliminar aprobada en `Xray-Normativa/` y verificar el respaldo local cuando esté disponible.
 3. Ejecutar y documentar el contraste completo de la etapa o tarea.
 4. Presentar discrepancias y mejoras propuestas.
 5. Esperar la autorización expresa del propietario para el alcance concreto.
@@ -53,7 +55,7 @@ Si la documentación normativa no está disponible, su versión no puede identif
 
 ## 5. Jerarquía y control documental
 
-Esta regla complementa `AGENTS.md` y se aplica a todas las etapas del proyecto. La documentación preliminar aprobada determina el alcance funcional; las decisiones complementarias solo pueden modificarlo cuando el propietario las autorice expresamente y queden registradas. La especificación original no se reescribe retroactivamente para ocultar diferencias: se conserva y se registra la decisión complementaria con su fecha y alcance.
+Esta regla complementa `AGENTS.md` y se aplica a todas las etapas del proyecto. La documentación preliminar aprobada en `Xray-Normativa/` determina el alcance funcional y no puede modificarse sin consentimiento previo, explícito y específico del propietario; las decisiones complementarias solo pueden modificarlo cuando el propietario las autorice expresamente y queden registradas. La especificación original no se reescribe retroactivamente para ocultar diferencias: se conserva y se registra la decisión complementaria con su fecha y alcance.
 
 Cualquier IA o colaborador que retome el proyecto debe leer esta regla y cumplirla antes de proponer o ejecutar una implementación.
 

@@ -1,0 +1,343 @@
+project: Xray Core Manager
+document:
+  stage: 4
+  title: Certificados SSL/TLS y dominios
+  version: "1.1"
+  status: approved
+  specification_type: functional
+  language: es
+  approval:
+    main_menu: approved
+    sections:
+      - id: certificates_management
+        option: 1
+        status: approved
+      - id: obtain_certificate
+        option: 2
+        status: approved
+      - id: renew_certificates
+        option: 3
+        status: approved
+      - id: manage_domains
+        option: 4
+        status: approved
+      - id: verify_dns
+        option: 5
+        status: approved
+      - id: lets_encrypt_configuration
+        option: 6
+        status: approved
+      - id: ssl_tls_diagnostics
+        option: 7
+        status: approved
+
+navigation:
+  back_option:
+    key: 0
+    label: Volver
+    behavior: return_to_immediate_parent_menu
+  general_rules:
+    - show_operation_result_before_returning
+    - errors_do_not_close_manager
+    - invalid_input_can_be_corrected
+    - destructive_operations_require_confirmation
+    - protect_private_keys
+
+main_menu:
+  id: ssl_tls_domains
+  title: CERTIFICADOS SSL/TLS Y DOMINIOS
+  sections:
+    - title: CERTIFICADOS
+      options:
+        - key: 1
+          id: certificates_management
+          label: Gestionar certificados
+        - key: 2
+          id: obtain_certificate
+          label: Obtener certificado nuevo
+        - key: 3
+          id: renew_certificates
+          label: Renovar certificados
+    - title: DOMINIOS
+      options:
+        - key: 4
+          id: manage_domains
+          label: Gestionar dominios
+        - key: 5
+          id: verify_dns
+          label: Verificar configuración DNS
+    - title: CONFIGURACIÓN Y DIAGNÓSTICO
+      options:
+        - key: 6
+          id: lets_encrypt_configuration
+          label: Configuración de Let's Encrypt
+        - key: 7
+          id: ssl_tls_diagnostics
+          label: Diagnóstico SSL/TLS
+  back:
+    key: 0
+    label: Volver
+
+sections:
+  certificates_management:
+    title: GESTIONAR CERTIFICADOS
+    options:
+      - key: 1
+        id: list_installed
+        label: Listar certificados instalados
+        behavior: show_detected_certificates_with_available_domain_issuer_expiry_and_status
+      - key: 2
+        id: certificate_details
+        label: Consultar información de un certificado
+        behavior: select_certificate_and_show_details
+      - key: 3
+        id: verify_certificate
+        label: Verificar estado y validez
+        behavior: check_temporal_validity_and_required_file_availability_integrity
+      - key: 4
+        id: associated_domains
+        label: Consultar dominios asociados
+        behavior: show_domains_covered_by_certificate
+      - key: 5
+        id: delete_certificate
+        label: Eliminar un certificado
+        behavior: select_and_confirm_before_deletion
+    rules:
+      - deleting_certificate_does_not_automatically_delete_domain_record
+      - deleting_certificate_does_not_modify_xray_connections
+      - warn_if_certificate_is_in_use_before_file_deletion
+    back: {key: 0, label: Volver}
+
+  obtain_certificate:
+    title: OBTENER CERTIFICADO
+    options:
+      - key: 1
+        id: lets_encrypt_http01
+        label: Let's Encrypt (HTTP-01)
+        requirements:
+          - domain_resolves_to_intended_server
+          - certificate_authority_can_reach_http_validation_resource
+        behavior: validate_preconditions_then_request_certificate
+      - key: 2
+        id: lets_encrypt_dns01
+        label: Let's Encrypt (DNS-01)
+        behavior: provide_txt_validation_record_and_check_visibility_before_continuing
+        provider_api_automation: pending_compatible_dns_provider_integration
+      - key: 3
+        id: install_existing_certificate
+        label: Instalar certificado existente
+        inputs:
+          - certificate_file_path
+          - private_key_file_path
+        validation:
+          - files_exist_and_are_readable
+          - certificate_and_private_key_match
+          - certificate_covers_requested_domain
+      - key: 0
+        label: Volver
+    common:
+      allow_one_or_multiple_domains: true
+      show_requested_domain_set_before_issuance_or_installation: true
+      only_allow_domain_combinations_supported_by_validation_method: true
+
+  renew_certificates:
+    title: RENOVAR CERTIFICADOS
+    options:
+      - key: 1
+        id: renew_one
+        label: Renovar un certificado
+      - key: 2
+        id: renew_all
+        label: Renovar todos los certificados
+      - key: 3
+        id: check_pending
+        label: Comprobar renovaciones pendientes
+      - key: 4
+        id: automatic_renewal
+        label: Configurar renovación automática
+        actions: [enable, disable, configure]
+      - key: 5
+        id: renewal_history
+        label: Consultar historial de renovaciones
+      - key: 0
+        label: Volver
+    rules:
+      - failed_renewal_must_not_replace_or_invalidate_current_certificate
+      - validate_renewed_certificate_before_applying
+      - report_individual_results_for_bulk_operations
+      - renewal_runs_without_manager_menu_remaining_open
+      - automatic_renewal_mechanism_depends_on_selected_acme_client_and_os
+
+  manage_domains:
+    title: GESTIONAR DOMINIOS
+    options:
+      - key: 1
+        id: add_domain
+        label: Agregar un dominio
+      - key: 2
+        id: list_domains
+        label: Listar dominios registrados
+      - key: 3
+        id: domain_details
+        label: Consultar información de un dominio
+      - key: 4
+        id: modify_domain
+        label: Modificar un dominio
+        rules: [does_not_automatically_modify_xray_connections]
+      - key: 5
+        id: delete_domain
+        label: Eliminar un dominio
+        confirmation_required: true
+      - key: 6
+        id: associate_certificate
+        label: Asociar dominio a un certificado
+      - key: 7
+        id: disassociate_certificate
+        label: Desasociar dominio de un certificado
+        rules:
+          - does_not_delete_domain
+          - does_not_delete_certificate
+      - key: 0
+        label: Volver
+    rules:
+      - domain_registration_does_not_imply_dns_points_to_server
+      - dns_verification_is_independent
+
+  verify_dns:
+    title: VERIFICACIÓN DNS
+    options:
+      - key: 1
+        id: resolve_domain
+        label: Verificar resolución del dominio
+      - key: 2
+        id: query_a_aaaa
+        label: Consultar registros A y AAAA
+      - key: 3
+        id: query_cname
+        label: Consultar registros CNAME
+      - key: 4
+        id: query_txt
+        label: Consultar registros TXT
+      - key: 5
+        id: propagation
+        label: Comprobar propagación DNS
+        behavior: compare_visibility_across_multiple_dns_resolvers
+      - key: 6
+        id: server_pointing
+        label: Verificar apuntado hacia el servidor
+        behavior: compare_resolved_addresses_with_known_server_public_address
+      - key: 0
+        label: Volver
+    reporting:
+      distinguish_when_possible:
+        - record_not_found
+        - resolution_error
+        - differing_resolver_responses
+        - address_differs_from_server
+      account_for:
+        - cdn
+        - reverse_proxy
+        - load_balancer
+        - intentional_external_dns_architecture
+
+  lets_encrypt_configuration:
+    title: CONFIGURACIÓN LET'S ENCRYPT
+    options:
+      - key: 1
+        id: contact_email
+        label: Configurar correo electrónico
+      - key: 2
+        id: preferred_validation
+        label: Seleccionar método de validación
+        allowed: [HTTP-01, DNS-01]
+        default_is_overridable_per_certificate_request: true
+      - key: 3
+        id: acme_client
+        label: Configurar cliente ACME
+        client_selection: pending_compatibility_verification
+      - key: 4
+        id: directories
+        label: Configurar directorios y rutas
+        paths:
+          - certificates
+          - private_keys
+          - working_files
+      - key: 5
+        id: show_configuration
+        label: Consultar configuración actual
+        do_not_reveal_secrets: true
+      - key: 6
+        id: restore_defaults
+        label: Restaurar configuración predeterminada
+        confirmation_required: true
+        show_parameters_to_be_changed: true
+      - key: 0
+        label: Volver
+
+  ssl_tls_diagnostics:
+    title: DIAGNÓSTICO SSL/TLS
+    options:
+      - key: 1
+        id: verify_cert_key
+        label: Verificar certificado y clave privada
+      - key: 2
+        id: check_expiry
+        label: Comprobar fecha de vencimiento
+      - key: 3
+        id: check_domain_match
+        label: Verificar coincidencia de dominio
+        check: subject_alternative_names
+      - key: 4
+        id: verify_chain
+        label: Comprobar cadena de confianza
+      - key: 5
+        id: test_tls
+        label: Probar conexión TLS
+        inputs: [domain, port]
+      - key: 6
+        id: detect_configuration_issues
+        label: Detectar problemas de configuración
+      - key: 7
+        id: diagnostic_report
+        label: Mostrar informe de diagnóstico
+        include: [tests_performed, results, detected_problems, possible_actions]
+      - key: 0
+        label: Volver
+    rules:
+      - diagnostic_operations_are_read_only
+      - no_automatic_changes_to_certificates_keys_domains_or_configuration
+      - repairs_require_separate_authorized_operation
+
+security_and_scope:
+  private_keys:
+    display_in_terminal: false
+    include_in_ordinary_reports: false
+    protect_permissions_and_storage: true
+  certificate_replacement:
+    keep_current_certificate_until_new_certificate_is_validated: true
+  domain_and_certificate_operations:
+    automatically_modify_xray_connections: false
+  implementation_pending:
+    - concrete_acme_client
+    - dns_provider_api_integrations
+    - final_paths_and_permissions
+    - private_key_backup_strategy
+    - operating_system_renewal_and_deployment_mechanism
+    - reliable_detection_of_services_using_a_certificate
+    - dns_propagation_sources_and_frequency
+
+renewal_history_ownership:
+  owner: stage_4
+  stored_records:
+    - date
+    - certificate
+    - result
+    - available_errors
+  stage_6_centralized_operations:
+    - query
+    - filter
+    - export
+    - retention_management
+    - cleanup
+  duplicate_storage: false
+  renewal_operations_remain_in_stage_4: true

@@ -1,3 +1,11 @@
+## 2026-11-03 — Incorporación de Xray-Normativa al repositorio
+
+Por instrucción expresa del propietario, se incorporó la documentación maestra normativa a `Xray-Normativa/` en la rama `design/user-identity-association-v1`. Se copiaron los 14 archivos originales conservando nombres, estructura y contenido; se añadió `README.md` como regla de custodia, sin alterar los documentos normativos. La carpeta queda protegida: ningún archivo podrá modificarse, corregirse, reformatearse, renombrarse, moverse, eliminarse o sustituirse sin consentimiento previo, explícito y específico del propietario. La autorización para desarrollar código no implica autorización para modificar la normativa.
+
+Desde esta actualización, `Xray-Normativa/` es la ubicación canónica versionada en GitHub y en `/opt/xray-manager`. La copia original `/root/Xray_Manager_Documentacion_Final_2026-10-31` se conserva en la VPS como respaldo. Antes de cada etapa o módulo se debe contrastar el alcance punto por punto con `Xray-Normativa/`; las divergencias se presentan antes de editar o implementar.
+
+Estado de publicación y verificación: se registrará tras completar la publicación y comparar hashes entre la carpeta original, el checkout y GitHub.
+
 ## 2026-11-02 — Aprobación y formalización del diseño VMess
 
 - El propietario aprobó el diseño técnico VMess y confirmó expresamente que VMess-HTTPUpgrade-TLS también será implementado.

@@ -10,10 +10,10 @@
 
 Se consultaron directamente en la VPS:
 
-- `/root/Xray_Manager_Documentacion_Final_2026-10-31/00_Indice_General.md`
-- `/root/Xray_Manager_Documentacion_Final_2026-10-31/02_Protocolos_Conexiones/Etapa_2_Protocolos.md` — revisión 1.3.
-- `/root/Xray_Manager_Documentacion_Final_2026-10-31/02_Protocolos_Conexiones/Etapa_2_Protocolos.yaml`.
-- `/root/Xray_Manager_Documentacion_Final_2026-10-31/07_Auditoria_Tecnica_Final.md`.
+- `Xray-Normativa/00_Indice_General.md`
+- `Xray-Normativa/02_Protocolos_Conexiones/Etapa_2_Protocolos.md` — revisión 1.3.
+- `Xray-Normativa/02_Protocolos_Conexiones/Etapa_2_Protocolos.yaml`.
+- `Xray-Normativa/07_Auditoria_Tecnica_Final.md`.
 - `AGENTS.md`.
 - `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`.
 - `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.

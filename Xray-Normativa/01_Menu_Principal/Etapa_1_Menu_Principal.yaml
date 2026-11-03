@@ -1,0 +1,105 @@
+document:
+  project: Xray Core Manager
+  title: Etapa 1 - Menú principal y organización general
+  version: '1.2'
+  status: approved
+  original_approval_date: '2026-10-30'
+  revision_date: '2026-10-31'
+  scope: Estructura funcional; no implementación
+main_menu:
+  options:
+  - key: 1
+    label: Gestión de protocolos y conexiones
+  - key: 2
+    label: Gestión de usuarios
+  - key: 3
+    label: Certificados SSL/TLS y dominios
+  - key: 4
+    label: Configuraciones, perfiles y respaldos
+  - key: 5
+    label: Gestión del servicio Xray-core
+  - key: 6
+    label: Diagnóstico y registros
+  - key: 7
+    label: Seguridad, red y mantenimiento
+  - key: 8
+    label: Configuración del sistema y administrador
+  - key: 9
+    label: Información y ayuda
+  - key: 0
+    label: Salir
+    confirmation: true
+system_manager_settings:
+  owner: stage_1_option_8
+  menu:
+  - key: 1
+    label: Administración de Xray-core
+    options:
+    - key: 1
+      label: Instalar Xray-core
+    - key: 2
+      label: Actualizar Xray-core
+    - key: 3
+      label: Consultar versión instalada
+    - key: 4
+      label: Consultar última versión disponible
+    - key: 5
+      label: Reinstalar Xray-core
+    - key: 6
+      label: Reparar instalación
+  - key: 2
+    label: Dependencias del sistema
+  - key: 3
+    label: Configuración del administrador
+  - key: 4
+    label: Información de instalación
+  - key: 5
+    label: Desinstalar componentes
+    unique_uninstallation_entry: true
+  - key: 0
+    label: Volver
+  uninstallation:
+    entry_point: stage_1_option_8_menu_5
+    no_duplicate_entry_inside_xray_core_administration: true
+    scopes:
+    - xray_core_only
+    - manager_only
+    - both
+    data_policies:
+    - preserve_all
+    - delete_all
+    - select_categories
+    categories:
+    - xray_configurations
+    - profiles_current_versions
+    - users_associations
+    - connections
+    - domains
+    - certificates_private_keys
+    - backups
+    - manager_preferences
+    - logs_histories
+    warn_certificate_key_deletion: true
+    backup_before_uninstall:
+      ask: true
+      create_and_verify_before_risky_deletion: true
+      abort_if_creation_or_verification_fails: true
+      offer_external_export: true
+      verify_export: true
+    delete_all_includes_existing_and_process_backup: true
+    external_download_is_only_external_copy: true
+    final_irreversible_confirmation: true
+    warn_stage_5_backup_excludes_histories_logs:
+    - profile_version_modification_history
+    - validation_history
+    - restoration_reports
+    - technical_logs
+package_boundary:
+  stage_1_owns: Xray-core/manager install update repair specific dependencies uninstall
+  stage_6_option_2: OS security updates
+  stage_6_option_7: General OS package/dependency maintenance
+  shared_package_manager_mechanism: true
+change_control:
+  revision: '1.2'
+  approved_change: Eliminar la entrada duplicada de desinstalación dentro de Administración de Xray-core; conservar una única opción Desinstalar componentes con selección de alcance.
+  implementation_now: false
