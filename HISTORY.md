@@ -398,3 +398,15 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Commit de implementación: c720fbf4d65f61e5b7d3dc8a9cb5c69639eb628f; commit de registro: 6d35b0dde502db66d9826bc4fb67e8500b6b4561. Push completado; HEAD local, origin y GitHub coinciden en 6d35b0dde502db66d9826bc4fb67e8500b6b4561.
 
 - Verificación posterior: main remoto se mantiene en 656ecedc506a94a6461aee296b20871d51a38bf3; diff de Xray-Normativa vacío. Los SHA-256 de Etapa 4 Markdown/YAML coinciden con la línea base registrada antes de editar. El checkout versionado coincide con origin; scripts/__pycache__/ permanece untracked y no se borró.
+
+
+## 2026-11-03 — Segundo bloque: resolutor TLS centralizado parcial
+
+- Se añadió scripts/certificate_resolver.py. Comprueba conexión y protocolo VMess/VLESS, referencia/revisión de configuración, modalidad TLS y asociación exacta certificate_id. Rechaza protocolos no admitidos, IDs ajenos, campos de seguridad adicionales y configuraciones inconsistentes.
+- Comprueba certificado central activo, referencia managed/reference, blob autenticado AES-256-GCM, par certificado/clave, huellas y período de validez.
+- Prepara leases aleatorios en /run/xray-manager-certificates con directorios root:<grupo-servicio> 0750 y archivos 0640; manifest contiene metadatos no secretos. Cleanup valida ID, manifest, tipo, propietario, grupo, modos y hardlinks; sólo borra el lease indicado.
+- La CLI consulta identidad efectiva con systemctl show, requiere User/Group explícitos y no admite grupos suplementarios ni identidad privilegiada. En VPS desarrollo no existe xray.service/cuenta/grupo xray; CLI fail-closed sin crear lease. Prueba de API con UID/GID sintético 1 sólo valida permisos POSIX, no acceso por Xray real.
+- Se añadió tests/certificate_resolver.sh con managed/reference y ambos protocolos, asociación autorizada/no autorizada, permisos, cleanup y negativos.
+- Regresión completa: 42/42 scripts PASS. bash -n, py_compile, ShellCheck de ambas pruebas y git diff --check PASS.
+- Los stores VMess/VLESS y sus asistentes/generadores aún no admiten el contrato certificate_id; la integración está pendiente. No se cambió runtime, servicio, VPS Vps de Pruebas, firewall, puertos, certificados desplegados, secretos históricos, REALITY ni Xray-Normativa.
+- Documentación: docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md; arquitectura, estado y continuidad actualizados.

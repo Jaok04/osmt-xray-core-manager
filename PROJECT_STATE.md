@@ -327,3 +327,15 @@ VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servi
 - No se tocó VPS Vps de Pruebas, runtime, servicio, firewall, puertos o certificados desplegados. Xray-Normativa sigue intacta.
 
 - Publicación del bloque inicial TLS verificada: HEAD local/remoto 6d35b0dde502db66d9826bc4fb67e8500b6b4561 en design/user-identity-association-v1. main permanece en 656ecedc506a94a6461aee296b20871d51a38bf3. Xray-Normativa sin diferencias en el bloque publicado.
+
+
+## Segundo bloque — resolutor TLS centralizado (2026-11-03)
+
+- Informe: docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md.
+- Nuevo scripts/certificate_resolver.py: autorización exacta connection_id + certificate_id, lectura versionada VMess/VLESS, validación de catálogo TLS central, huellas, vigencia y correspondencia de clave.
+- Prepara leases aleatorios temporales en XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR (/run/xray-manager-certificates), con root:<grupo-servicio> 0750 y archivos 0640; ofrece cleanup validado.
+- Identidad de systemd se consulta con systemctl show y requiere User/Group explícitos, sin grupos suplementarios. En VPS desarrollo no hay xray.service ni cuenta/grupo xray; CLI fail-closed, sin crear lease.
+- Pruebas aisladas managed/reference y VMess/VLESS con UID/GID sintético 1; no son prueba de acceso por Xray real.
+- Nueva tests/certificate_resolver.sh. Suite completa 42/42 PASS; bash -n, py_compile, ShellCheck de pruebas y git diff --check PASS.
+- Los stores y asistentes/generadores VMess/VLESS todavía no guardan/aceptan certificate_id; la integración permanece pendiente.
+- No se tocó runtime, servicio, VPS Vps de Pruebas, firewall, puertos, certificados desplegados, secretos históricos, REALITY ni Xray-Normativa.

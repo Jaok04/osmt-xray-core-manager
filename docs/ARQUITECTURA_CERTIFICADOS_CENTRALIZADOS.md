@@ -1,8 +1,8 @@
 # Arquitectura de certificados TLS centralizados
 
-**Versión:** 1.0 — contrato técnico inicial
+**Versión:** 1.1 — contrato con primer almacén y resolutor parciales
 **Fecha:** 2026-11-03
-**Estado:** DISEÑO DOCUMENTADO — pendiente de revisión técnica y validación por pruebas
+**Estado:** DISEÑO APROBADO; almacén y resolutor IMPLEMENTADOS PARCIALMENTE; integración VMess/VLESS pendiente
 **Rama:** `design/user-identity-association-v1`
 **Normativa funcional de referencia:** `Xray-Normativa/04_Certificados_Dominios/Etapa_4_Certificados_Dominios.md` v1.1 (inmutable)
 
@@ -143,6 +143,12 @@ No se fija todavía el propietario/grupo/modo final de los archivos preparados. 
 
 El resolutor no modifica por sí mismo conexiones, certificados externos, configuración activa, firewall ni servicio.
 
+Implementación parcial documentada en docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md: scripts/certificate_resolver.py valida la asociación exacta connection_id/certificate_id, consulta catálogos/configuraciones versionados, verifica el recurso central, prepara un lease temporal con archivos root:<grupo-servicio> y permite limpieza controlada.
+
+El contrato TLS central (security_options exactamente {certificate_id}) aún no está admitido por los almacenes actuales VMess/VLESS. Las pruebas usan fixtures de ese contrato; no prueban integración de asistentes/generadores ni lectura por un Xray real. La CLI obtiene User/Group de systemd y falla cerrada si no hay unidad/identidad explícita. En la VPS de desarrollo no existe xray.service ni cuenta/grupo xray.
+
+Los temporales se preparan bajo /run/xray-manager-certificates, raíz/lease root:<grupo-servicio> 0750, archivos 0640. La clave se mantiene temporalmente en memoria y en el archivo que el servicio debe leer. El runtime path es volátil; la futura integración deberá recrearlo antes de validar/iniciar Xray.
+
 ## 8. Integración con generadores y runtime
 
 - Los generadores VMess/VLESS dejan de aceptar rutas libres a claves para el flujo TLS centralizado.
@@ -220,7 +226,7 @@ Un test de JSON válido o `xray run -test` no demuestra conectividad extremo a e
 |---|---|---|
 | 1 | Contrato arquitectónico, esquema y decisiones de seguridad | DOCUMENTADO; revisión evolutiva pendiente |
 | 2 | Catálogo central y almacén cifrado | IMPLEMENTADO PARCIALMENTE; import/list/show/audit |
-| 3 | Resolutor e integración VMess | PENDIENTE |
+| 3 | Resolutor TLS y posterior integración VMess | RESOLUTOR PARCIAL IMPLEMENTADO; integración pendiente |
 | 4 | Integración VLESS | PENDIENTE |
 | 5 | Migración versionada y reversible | PENDIENTE |
 | 6 | Backup/restore central compartido | PENDIENTE |
@@ -229,36 +235,44 @@ Un test de JSON válido o `xray run -test` no demuestra conectividad extremo a e
 
 Cada etapa tendrá inventario, trazabilidad, pruebas y evidencia. Ninguna etapa se cerrará sin auditoría integral y aceptación formal del propietario.
 
-## 14. Decisiones técnicas que deben cerrarse antes de codificar el almacén
+## 14. Decisiones técnicas pendientes después de los primeros bloques
 
-La aprobación arquitectónica no determina por sí sola estos detalles. Deben resolverse mediante inspección del código y pruebas de compatibilidad, y documentarse antes de implementarlos:
+Los primeros bloques cerraron las decisiones siguientes:
 
-- Fuente y formato de la clave maestra central; relación con los formatos VMess/VLESS existentes.
-- Algoritmo/parámetros AEAD y formato versionado del envelope.
-- Estructura exacta del catálogo y del directorio de secretos.
-- Estrategia de locking y publicación atómica.
-- Identidad efectiva del servicio Xray y permisos seguros del área temporal.
-- Política de rotación/revisión del certificado y retención de ciphertext anterior.
-- Contrato de backup compartido con los formatos VLESS/VMess actuales.
-- Interfaz de migración y límites de reversión.
+- Clave maestra: se reutiliza en lectura la ruta común existente /etc/xray-manager/keys/master.key; no se crea, regenera ni modifica.
+- Envelope: AES-256-GCM, nonce aleatorio de 12 bytes, AAD xray-manager:certificate-secret:v1:<certificate_id>:<revision>, JSON versionado.
+- Catálogo: /var/lib/xray-manager/certificates/catalog.json, con directorios separados managed/, references/ (reservado) y secrets/.
+- Resolución temporal: lease volátil bajo /run/xray-manager-certificates; raíz/lease root:<grupo-servicio> 0750, archivos 0640.
+- Identidad del servicio: se consulta la identidad efectiva de systemd; no se asume usuario/grupo ni se permite resolver cuando no se puede verificar.
+- La conexión debe autorizar exactamente el certificate_id guardado en su configuración; se bloquean rutas TLS libres y referencias ajenas.
 
-No se inventarán valores por defecto ni se adoptarán decisiones irreversibles para avanzar más rápido.
+Continúan pendientes antes de integrar y usar el resolutor en producción:
+
+- Cambiar contratos de configuración, catálogos, asistentes y generadores VMess/VLESS para guardar/consumir certificate_id.
+- Confirmar la unidad systemd instalada y su usuario/grupo efectivos en un entorno donde Xray exista; probar lectura real dentro de sus restricciones (ProtectSystem, PrivateTmp).
+- Resolver el ciclo de vida de leases al aplicar/reiniciar Xray y recrear temporales después de reinicio.
+- Diseñar publicación atómica de configuración y rollback de runtime en un bloque independiente, con autorización expresa.
+- Política de rotación y revisiones posteriores a r1.
+- Migración versionada, idempotente y reversible de secretos históricos.
+- Backup/restore compartido y reglas de aislamiento.
+- Estrategia de limpieza de leases abandonados, sin eliminar archivos fuera del directorio controlado.
+- Validar la semántica de reference y dependencias externas durante backup/restore.
+
+No se habilitará runtime ni se borrarán secretos históricos para avanzar más rápido.
 
 ## 15. Evidencia y estado
 
-Este documento registra el contrato arquitectónico aprobado, no una implementación terminada.
+Este documento registra el diseño aprobado y dos bloques de implementación parcial; no declara terminado el sistema central de certificados.
 
 - Decisión arquitectónica: APROBADA por el propietario.
-- Contrato técnico: DOCUMENTADO en esta revisión inicial.
-- Revisión técnica de cada decisión pendiente: PENDIENTE.
-- Código: SIN CAMBIOS en esta primera entrega.
-- Pruebas de implementación: NO APLICAN todavía.
-- Normativa: SIN MODIFICACIONES.
+- Catálogo/almacén central: IMPLEMENTADO PARCIALMENTE; import/list/show/audit, pruebas focales y regresión.
+- Resolutor TLS: IMPLEMENTADO PARCIALMENTE; autorización, verificación, temporales y limpieza probados con fixtures.
+- Contrato TLS central en stores/asistentes/generadores VMess/VLESS: PENDIENTE.
+- Xray real, identidad efectiva y sandbox: NO PROBADO; la VPS de desarrollo carece de servicio/cuenta Xray.
+- Migración y backup/restore central: PENDIENTES.
 - Runtime y VPS de pruebas: SIN MODIFICACIONES.
+- Normativa: SIN MODIFICACIONES.
 - Aceptación de implementación: PENDIENTE.
-
-**Fin del contrato arquitectónico inicial.**
-
 
 ## 16. Primer bloque implementado — catálogo y secreto central
 
@@ -274,3 +288,21 @@ El primer bloque está implementado y documentado en docs/IMPLEMENTACION_ALMACEN
 - No se modificaron runtime, servicio, firewall, puertos, certificados desplegados ni Xray-Normativa.
 
 Estado: catálogo/almacén IMPLEMENTADO PARCIALMENTE y VERIFICADO en pruebas aisladas y regresión del proyecto. Aceptación formal pendiente.
+
+
+## 17. Segundo bloque implementado — resolutor TLS parcial
+
+Informe: docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md.
+
+- scripts/certificate_resolver.py comprueba la conexión, protocolo, referencia/revisión de configuración y asociación exacta security_options.certificate_id.
+- Comprueba estado y revisión del certificado, referencia central, autenticación AES-GCM, par criptográfico, huellas y vigencia.
+- Admite recursos managed y reference.
+- Prepara leases aleatorios bajo /run/xray-manager-certificates, con archivos root:<grupo-servicio> 0640 y directorios 0750; no imprime secretos.
+- La identidad de servicio se obtiene de systemctl show; exige User y Group explícitos, sin grupos suplementarios. En la VPS de desarrollo no hay unidad/cuenta Xray y la CLI rechaza la operación sin crear temporales.
+- La limpieza verifica lease, manifest, propietario/grupo/permisos y sólo elimina el directorio de ese lease.
+- tests/certificate_resolver.sh: casos VLESS/VMess, managed/reference, autorización, permisos, cleanup y fallos cerrados.
+- Regresión completa tras el bloque: 42/42 scripts PASS. bash -n, py_compile, ShellCheck de ambas pruebas y git diff --check: PASS.
+- Los stores VMess/VLESS actuales aún no aceptan el contrato central certificate_id; las pruebas usan fixtures. No hay integración de asistentes/generadores ni lectura por Xray real.
+- No se tocó runtime, servicio, firewall, puertos, VPS Vps de Pruebas, secretos históricos, REALITY ni Xray-Normativa.
+
+Estado: resolutor IMPLEMENTADO PARCIALMENTE y VERIFICADO con fixtures; no aceptado para producción.

@@ -33,6 +33,7 @@ readonly XRAY_MANAGER_CERTIFICATES_MANAGED_DIR="/var/lib/xray-manager/certificat
 readonly XRAY_MANAGER_CERTIFICATES_REFERENCES_DIR="/var/lib/xray-manager/certificates/references"
 readonly XRAY_MANAGER_CERTIFICATES_SECRETS_DIR="/var/lib/xray-manager/certificates/secrets"
 readonly XRAY_MANAGER_CERTIFICATES_LOCK="/var/lib/xray-manager/certificates/catalog.lock"
+readonly XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR="/run/xray-manager-certificates"
 readonly XRAY_MANAGER_HISTORY_DIR="/var/lib/xray-manager/history"
 readonly XRAY_MANAGER_STATE_DIR="/var/lib/xray-manager/state"
 readonly XRAY_MANAGER_LOG_DIR="/var/log/xray-manager"

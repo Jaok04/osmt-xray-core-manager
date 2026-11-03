@@ -207,3 +207,19 @@ Siguiente paso: revisión de seguridad del almacén y diseño/implementación de
 - Rama main: 656ecedc506a94a6461aee296b20871d51a38bf3; no modificada.
 - El diff de Xray-Normativa desde el HEAD de partida no contiene cambios. SHA-256 de la especificación Etapa 4: Markdown f6cb3ecfa2a09c50009d07fe511227973f13db62b51c9ced06efc498797e7cba; YAML f0947cb3af935d58035341e257ce6d5565b044aa97857b5a49b34168565b3dd5.
 - El checkout versionado coincide con la rama remota. Permanece el directorio preexistente y no seguido scripts/__pycache__; no se eliminó ni incorporó al commit.
+
+
+## 18. Segundo bloque — resolutor TLS parcial (2026-11-03)
+
+Este punto sustituye el siguiente paso anterior de diseño del resolutor, pero no cierra la integración.
+
+- Nuevo: scripts/certificate_resolver.py; prueba: tests/certificate_resolver.sh.
+- Verifica asociación exacta conexión/certificado, modalidad TLS, referencias/revisiones, integridad AES-GCM, par criptográfico, huellas y vigencia.
+- Admite recursos managed/reference y prepara lease temporal con archivos root:<grupo-servicio> 0640 y directorios 0750. La limpieza comprueba manifest y permisos antes de borrar sólo el lease.
+- CLI consulta identidad efectiva systemd; sin User/Group explícitos falla cerrada. En VPS desarrollo no hay xray.service ni usuario/grupo xray. Prueba API con UID/GID sintético 1 no demuestra lectura real por Xray.
+- Suite completa 42/42 PASS; bash -n, py_compile, ShellCheck de ambas pruebas y git diff --check PASS.
+- Limitación bloqueante para integración: vmess_config_store.py y vless_config_store.py, asistentes y generadores aún rechazan/no emiten el contrato TLS central certificate_id. Las pruebas del resolutor usan fixtures.
+- No hay runtime apply ni reinicio; VPS Vps de Pruebas y Xray-Normativa intactas.
+- Informe: docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md.
+
+Siguiente paso: integrar el nuevo contrato de forma versionada en VMess, primero store y generador, sin tocar los secretos históricos ni runtime. Después VLESS en un bloque separado y con regresión cruzada.
