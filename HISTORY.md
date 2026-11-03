@@ -4,7 +4,7 @@ Por instrucción expresa del propietario, se incorporó la documentación maestr
 
 Desde esta actualización, `Xray-Normativa/` es la ubicación canónica versionada en GitHub y en `/opt/xray-manager`. La copia original `/root/Xray_Manager_Documentacion_Final_2026-10-31` se conserva en la VPS como respaldo. Antes de cada etapa o módulo se debe contrastar el alcance punto por punto con `Xray-Normativa/`; las divergencias se presentan antes de editar o implementar.
 
-Estado de publicación y verificación: se registrará tras completar la publicación y comparar hashes entre la carpeta original, el checkout y GitHub.
+Publicación confirmada en GitHub, rama `design/user-identity-association-v1`: commit de incorporación `1f303fdd1ab4776a2b33b821140cb3502c3801bb`, seguido de corrección de preservación byte a byte `0f6ee47fd38be85495769ab29cc73a970c81f9a7`. Se verificó que los 14 documentos normativos del directorio original y los 14 de `Xray-Normativa/` son idénticos por SHA-256 (mismos bytes, nombres y estructura). El checkout local quedó alineado con el HEAD remoto `0f6ee47fd38be85495769ab29cc73a970c81f9a7`; la única entrada no versionada preexistente `scripts/__pycache__/` se conservó sin cambios.
 
 ## 2026-11-02 — Aprobación y formalización del diseño VMess
 
