@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1 y API incremental IMPLEMENTADOS/VERIFICADOS en aislamiento; manifiesto v1, formato ZIP/JSON y contrato técnico del writer APROBADOS; ZIP streaming y snapshot writer pendientes. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
+**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1, API incremental y generador ZIP streaming IMPLEMENTADOS/VERIFICADOS en aislamiento; manifiesto v1, formato ZIP/JSON y contrato técnico del writer APROBADOS; snapshot writer/orquestador y adaptadores pendientes. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -495,4 +495,13 @@ Se añadieron `encrypt_payload_stream()` y `verify_package_stream()` a `scripts/
 
 Pruebas: `tests/shared_backup_format.sh` PASS con compatibilidad cruzada, truncamiento, bytes sobrantes, alteración/tag, contraseña incorrecta y longitudes incorrectas; pruebas adicionales de tamaños aleatorios PASS; suite completa `tests/*.sh` 47/47 PASS; sintaxis Python y `git diff --check` PASS.
 
-Estado: cifrado incremental IMPLEMENTADO/VERIFICADO en aislamiento. ZIP streaming y snapshot writer pendientes. No se creó backup real ni se tocaron secretos, master key, runtime o `Xray-Normativa/`.
+Estado: cifrado incremental IMPLEMENTADO/VERIFICADO en aislamiento. snapshot writer/orquestador y adaptadores pendientes. No se creó backup real ni se tocaron secretos, master key, runtime o `Xray-Normativa/`.
+
+
+## 2026-11-03 — Generador ZIP determinista en streaming v1
+
+Se añadió `scripts/shared_backup_zip.py` con `ZipMember`, `ZipStream` y `write_zip_stream()`. Permite preflight de bytes/archivos autorizados y emisión ZIP_STORED determinista; las rutas de origen requieren `allowed_root`, se recorren sin symlinks, se valida root:root 0600/nlink 1 y se comparan inode/metadatos, SHA-256 y CRC-32 durante emisión. `ZipStream` alimenta directamente `encrypt_payload_stream()` sin ZIP temporal en claro.
+
+Se aplican UTF-8/NFC, nombres seguros y orden estable, `manifest.json`/`index.json` primero, sin ZIP64, límite 10.000 entradas y 512 MiB contando overhead. Prueba focal `tests/shared_backup_zip.sh` PASS con ZIP estándar, CRC, determinismo, integración cifrada, TOCTOU, paths, symlink/hardlink/permisos y límites. Suite completa `tests/*.sh`: 48/48 PASS; sintaxis Python, ShellCheck focal, shfmt focal y `git diff --check` PASS.
+
+Snapshot writer/orquestador y adaptadores siguen pendientes. No se creó backup real ni se tocaron secretos, master key, runtime o `Xray-Normativa/`.

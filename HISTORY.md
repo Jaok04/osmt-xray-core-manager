@@ -571,3 +571,10 @@ La interfaz incremental deberá conservar magic, cabecera/AAD, perfil scrypt, sa
 Se añadieron `encrypt_payload_stream()` y `verify_package_stream()` a `scripts/shared_backup_format.py`. El cifrado/verificador trabajan por bloques y conservan el formato binario v1, incluida cabecera/AAD, perfil scrypt, AES-256-GCM, salt/nonce y tag. Se mantienen las APIs de bytes existentes. El verificador incremental requiere un flujo seekable, descarta plaintext no autenticado y sólo confirma autenticidad después de validar el tag GCM.
 
 `tests/shared_backup_format.sh` amplía cobertura de compatibilidad cruzada, longitudes exactas, truncamiento, bytes sobrantes, alteración/tag y contraseña incorrecta. Prueba focal PASS; suite completa `tests/*.sh`: 47/47 PASS; pruebas adicionales de tamaños aleatorios, sintaxis Python y `git diff --check` PASS. ZIP streaming y snapshot writer siguen pendientes. No se creó backup real ni se tocaron secretos, master key o runtime.
+
+
+## 2026-11-03 — Generador ZIP determinista en streaming v1
+
+Se añadió `scripts/shared_backup_zip.py` con `ZipMember`, `ZipStream` y `write_zip_stream()`. La fuente `ZipStream.read(n)` conecta el ZIP directamente con `encrypt_payload_stream()` sin archivo ZIP temporal en claro. El ZIP es `ZIP_STORED`, determinista, UTF-8/NFC, timestamps fijos, `manifest.json` e `index.json` primero, datos ordenados, sin ZIP64; límite estricto 10.000 entradas y 512 MiB incluyendo overhead.
+
+La lectura de archivos requiere `allowed_root` explícito, recorre directorios sin seguir symlinks, valida root:root 0600, nlink 1, inode/metadatos, tamaño, CRC-32 y SHA-256 en preflight y emisión. `tests/shared_backup_zip.sh` PASS: ZIP estándar, CRC, determinismo, integración ZIP→AES-GCM streaming→verificación→ZIP válido, rutas inseguras, symlink/hardlink, permisos, TOCTOU y límites. Suite completa `tests/*.sh`: 48/48 PASS; sintaxis Python, ShellCheck focal, shfmt focal y `git diff --check` PASS. No se creó backup real ni se tocaron secretos, master key o runtime.

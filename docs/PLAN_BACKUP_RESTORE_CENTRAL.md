@@ -1,8 +1,8 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.11
+**Versión:** 1.12
 **Fecha:** 2026-11-03
-**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTRATO DE MANIFIESTO V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / FORMATO LÓGICO DE PAQUETE V1 APROBADO / CONTRATO TÉCNICO DEL SNAPSHOT WRITER V1 APROBADO / API DE CIFRADO INCREMENTAL V1 IMPLEMENTADA Y VERIFICADA EN AISLAMIENTO / WRITER PENDIENTE
+**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTRATO DE MANIFIESTO V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / FORMATO LÓGICO DE PAQUETE V1 APROBADO / CONTRATO TÉCNICO DEL SNAPSHOT WRITER V1 APROBADO / API DE CIFRADO INCREMENTAL V1 Y ZIP STREAMING DETERMINISTA IMPLEMENTADOS Y VERIFICADOS EN AISLAMIENTO / SNAPSHOT WRITER PENDIENTE
 **Ámbito:** contenedor criptográfico neutral y primera versión incremental de snapshot para VLESS/VMess/metadatos de identidades/certificados TLS centrales. Las categorías normativas no cubiertas se declaran explícitamente como no soportadas; extensible a protocolos futuros mediante adaptadores.
 
 ## 1. Objetivo
@@ -510,3 +510,14 @@ Estados de resultado: `CREATED_COMPLETE`, `CREATED_PARTIAL`, `BLOCKED` y `FAILED
 La suite deberá cubrir: locks y timeout; cambios/TOCTOU; symlinks/hardlinks/permisos/rutas; catálogos y revisiones corruptos; exclusiones y filtración de secretos; canonicalización JSON; ZIP duplicado/no indexado/método no admitido; límites de 10.000 entradas y 512 MiB; hashes/CRC; GCM/tag/contraseña/truncamiento/bytes sobrantes; compatibilidad cruzada streaming/no streaming; ZIP reproducible y tamaño calculado; destino existente; interrupciones y fallos en cada fase; limpieza de staging; memoria máxima medida; regresión global y validaciones estáticas.
 
 **Límite de autorización:** esta aprobación congela el contrato de diseño y autoriza la implementación del writer y de la interfaz incremental compatible con v1 en la rama de desarrollo autorizada. No autoriza crear un snapshot/backup operativo o real, incluir secretos, implementar verify independiente/restore/journal/rollback, leer o modificar `master.key`, ejecutar runtime apply ni tocar servicios, firewall, puertos, certificados desplegados o la VPS de pruebas. `Xray-Normativa/` permanece inmutable.
+
+
+## 10.12. Implementación del generador ZIP streaming v1 — 2026-11-03
+
+Se implementó `scripts/shared_backup_zip.py` como componente neutral de empaquetado. `ZipMember` permite preparar miembros desde bytes generados o archivos de origen autorizados; los archivos se abren con recorrido de directorios mediante `openat`/`O_NOFOLLOW`, se exige archivo regular `root:root` modo `0600` y `st_nlink == 1`, se compara identidad de inode/metadatos y se vuelven a comprobar tamaño, CRC-32 y SHA-256 durante la emisión para detectar cambios TOCTOU. Los miembros de ruta requieren un `allowed_root` explícito.
+
+`ZipStream` expone el ZIP como fuente `read(n)` para conectarlo directamente con `encrypt_payload_stream()`, sin crear un ZIP temporal en claro. `write_zip_stream()` se conserva para pruebas/uso con un destino de streaming. El ZIP usa `ZIP_STORED`, timestamps deterministas, nombres UTF-8 normalizados NFC, orden estable, `manifest.json` e `index.json` como dos primeras entradas y miembros de datos ordenados lexicográficamente. Se rechazan paths absolutos/traversal/separadores alternativos/NUL/control/colisiones case-folded, tipos de origen inseguros, ZIP64, más de 10.000 entradas y tamaño total superior a 512 MiB; el tamaño exacto se calcula antes de emitir y se contrasta al finalizar.
+
+Pruebas focales `tests/shared_backup_zip.sh`: validación con `zipfile`, CRC, determinismo, integración directa `ZipStream` → cifrado incremental v1 → verificación GCM → descifrado de prueba → ZIP válido; paths inseguros, symlink/hardlink, permisos, cambio de origen entre preflight y emisión, límite de 10.000 entradas y overhead total de 512 MiB. Suite completa `tests/*.sh`: 48/48 PASS, incluida la nueva prueba ZIP; sintaxis de todos los scripts Python, ShellCheck focal, shfmt focal y `git diff --check` PASS.
+
+**Estado:** generador ZIP streaming IMPLEMENTADO en aislamiento. El snapshot writer/orquestador, adaptadores de protocolo, locks y publicación atómica todavía no están implementados. No se ha creado backup real ni se han leído secretos/master key o modificado runtime. Esta implementación no altera el contrato aprobado en §10.9–§10.11.
