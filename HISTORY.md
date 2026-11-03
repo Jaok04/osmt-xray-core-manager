@@ -550,3 +550,8 @@ El plan pasa a v1.8 y el contrato de manifiesto v1 queda APROBADO. Empaquetado f
 El propietario aprobó empaquetado ZIP con `ZIP_STORED`, estructura interna `manifest.json`/`index.json`, entradas deterministas, validaciones estrictas de rutas y tipos, hashes/tamaños/CRC, límite total de 512 MiB y perfil JSON canónico propio (UTF-8 sin BOM, claves ordenadas, compactación, sin duplicados ni floats/valores no finitos, enteros interoperables y comparación de bytes canónicos). No se afirma compatibilidad RFC 8785/JCS. El máximo de cantidad de miembros queda pendiente.
 
 `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.9. Es una aprobación de diseño; no autoriza writer, verify, restore, paquetes reales, inclusión de secretos ni runtime apply. `Xray-Normativa/` no se modificó.
+
+
+## 2026-11-03 — Aprobación del máximo de entradas ZIP v1
+
+El propietario aprobó un máximo estricto de 10.000 entradas ZIP totales, contando `manifest.json` e `index.json` (hasta 9.998 miembros de datos). La creación debe abortar sin publicar paquete parcial si se supera; el lector/verify debe rechazar paquetes que excedan el límite. `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.10. No se autorizó implementación de writer/verify/restore ni creación de paquetes reales.

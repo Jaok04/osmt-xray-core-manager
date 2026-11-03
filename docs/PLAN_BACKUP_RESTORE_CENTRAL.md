@@ -1,6 +1,6 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.9
+**Versión:** 1.10
 **Fecha:** 2026-11-03
 **Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTRATO DE MANIFIESTO V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / FORMATO LÓGICO DE PAQUETE V1 APROBADO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
 **Ámbito:** contenedor criptográfico neutral y primera versión incremental de snapshot para VLESS/VMess/metadatos de identidades/certificados TLS centrales. Las categorías normativas no cubiertas se declaran explícitamente como no soportadas; extensible a protocolos futuros mediante adaptadores.
@@ -115,7 +115,7 @@ Los nombres y directorios anteriores son nombres lógicos internos, no rutas act
 
 El ZIP sólo puede contener entradas de archivos regulares. Se rechazan nombres duplicados, rutas absolutas, `..`, separadores alternativos, NUL, colisiones tras normalización, symlinks y tipos especiales; no se extrae siguiendo rutas ni enlaces del archivo. Cada miembro debe corresponder exactamente a una entrada del índice y validar tamaño y SHA-256 sobre sus bytes. Se rechazan métodos de compresión distintos de `ZIP_STORED`, miembros no indexados e índices que apunten a miembros ausentes.
 
-El límite total del archivo ZIP lógico es 512 MiB, sin exceder el límite de payload del contenedor cifrado v1; el writer deberá contabilizar también cabeceras y directorio central antes de publicar. El máximo de cantidad de miembros queda pendiente de una decisión independiente y no se inventa un valor en esta aprobación. Las claves privadas TLS y secretos REALITY no aparecen por defecto; la sección opcional sólo se materializa tras selección y autorización adicionales.
+El límite total del archivo ZIP lógico es 512 MiB, sin exceder el límite de payload del contenedor cifrado v1; el writer deberá contabilizar también cabeceras y directorio central antes de publicar. El ZIP admite como máximo 10.000 entradas en total, contando `manifest.json` e `index.json`; por tanto, hasta 9.998 miembros de datos. El límite es estricto: si se supera, la creación aborta sin publicar un paquete parcial. Las claves privadas TLS y secretos REALITY no aparecen por defecto; la sección opcional sólo se materializa tras selección y autorización adicionales.
 
 `external-dependencies.json` enumera recursos `reference` con `certificate_id`, fingerprint, path esperado, conexiones dependientes y validación requerida. Las rutas son datos no confiables: nunca seguir symlinks durante restore.
 
@@ -204,9 +204,9 @@ Un registro VMess cuyo UUID se excluya debe marcarse como incompleto/no restaura
 
 ## 11. Estado y siguiente diseño
 
-El alcance incremental del snapshot v1 está aprobado en §10.5. El contenedor cifrado v1 está implementado y probado en aislamiento; el contrato lógico/JSON del manifiesto está aprobado en §10.6–§10.8 y el formato ZIP/canonicalización JSON está aprobado en §5 y §10.9. El inventario estático de locks y el orden `lifecycle → integrity → catalog` constan en §10.4; falta stress testing de concurrencia y la futura implementación deberá usar timeout finito. La detección de conflictos del restore, el schema formal ejecutable, las pruebas sintéticas del snapshot y el máximo de cantidad de miembros siguen pendientes. La política de campos VMess queda definida en §10.1: excluir UUID por defecto y conservar email y level como metadatos dentro del payload cifrado. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
+El alcance incremental del snapshot v1 está aprobado en §10.5. El contenedor cifrado v1 está implementado y probado en aislamiento; el contrato lógico/JSON del manifiesto está aprobado en §10.6–§10.8 y el formato ZIP/canonicalización JSON está aprobado en §5 y §10.9. El inventario estático de locks y el orden `lifecycle → integrity → catalog` constan en §10.4; falta stress testing de concurrencia y la futura implementación deberá usar timeout finito. La detección de conflictos del restore, el schema formal ejecutable, las pruebas sintéticas del snapshot siguen pendientes; el máximo de entradas ZIP quedó aprobado en §10.10. La política de campos VMess queda definida en §10.1: excluir UUID por defecto y conservar email y level como metadatos dentro del payload cifrado. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
 
-**Estado:** contenedor criptográfico neutral v1 IMPLEMENTADO y VERIFICADO con prueba aislada; alcance incremental, contrato de manifiesto y formato lógico ZIP/JSON APROBADOS; snapshot, adaptadores VLESS/VMess/identidades/certificados, backup, verify, restore, journal y rollback aún NO IMPLEMENTADOS. El máximo de cantidad de miembros y el schema formal ejecutable siguen pendientes. No se ha creado ni restaurado un backup compartido.
+**Estado:** contenedor criptográfico neutral v1 IMPLEMENTADO y VERIFICADO con prueba aislada; alcance incremental, contrato de manifiesto y formato lógico ZIP/JSON APROBADOS; snapshot, adaptadores VLESS/VMess/identidades/certificados, backup, verify, restore, journal y rollback aún NO IMPLEMENTADOS. El schema formal ejecutable sigue pendiente; el máximo de entradas ZIP quedó aprobado en §10.10. No se ha creado ni restaurado un backup compartido.
 
 ## 10.2. Coordinación de desinstalación y catálogo TLS — 2026-11-03
 
@@ -407,7 +407,7 @@ La siguiente estructura concreta desarrolla §10.6 y queda aprobada como contrat
 9. `BLOCKED` es un resultado de preflight, no un paquete publicable: fallo de seguridad, consistencia, permisos, integridad o referencias aborta la creación sin publicar artefacto.
 10. El manifiesto no contiene UUID, contraseñas, claves privadas, secretos REALITY, email VMess, rutas absolutas, contenido de credenciales ni valores de la master key. `email` y `level` VMess permanecen en los miembros de configuración protegidos, no en el manifiesto.
 11. El manifiesto, índice y JSON estructural se serializan conforme al perfil canónico de §5: UTF-8 estricto sin BOM, claves ordenadas, separadores compactos, sin claves duplicadas, floats ni valores no finitos; el parser compara los bytes con la serialización canónica. Manifiesto e índice permanecen dentro del payload AES-GCM.
-12. El ZIP lógico completo, incluyendo metadatos ZIP, nunca supera 512 MiB ni el límite del payload del contenedor compartido v1. El máximo de cantidad de miembros sigue pendiente de decisión separada.
+12. El ZIP lógico completo, incluyendo metadatos ZIP, nunca supera 512 MiB ni el límite del payload del contenedor compartido v1. El máximo es 10.000 entradas ZIP totales, incluyendo `manifest.json` e `index.json` (hasta 9.998 miembros de datos); superar el límite aborta la creación sin publicar paquete.
 
 ### Decisiones aprobadas por el propietario
 
@@ -416,7 +416,7 @@ La siguiente estructura concreta desarrolla §10.6 y queda aprobada como contrat
 - `logical_path` como nombre relativo interno sin rutas host-specific: APROBADO.
 - Manifiesto sin `email` VMess ni credenciales, aunque esos metadatos puedan existir en miembros cifrados: APROBADO.
 - Formato ZIP con `ZIP_STORED`, estructura `manifest.json` + `index.json`, validaciones de entradas (paths seguros, sin duplicados, symlinks ni tipos especiales; miembros identificados por SHA-256) y perfil canónico JSON de §5: APROBADOS en §10.9.
-- Máximo de cantidad de miembros: PENDIENTE de decisión independiente.
+- Máximo de entradas ZIP: 10.000 en total, incluyendo `manifest.json` e `index.json` (máximo 9.998 miembros de datos); superar el límite aborta sin publicar paquete: APROBADO en §10.10.
 
 **La aprobación del manifiesto no autoriza writer, verify, restore, creación de paquetes reales ni runtime apply.**
 
@@ -432,6 +432,15 @@ El contrato de manifiesto v1 quedó **APROBADO** en esa decisión. No se cambia 
 
 El propietario aprobó el formato lógico ZIP con `ZIP_STORED` (sin compresión) y la política de canonicalización JSON definida en §5. Quedan aprobados el contenedor ZIP interno al payload cifrado, `manifest.json` e `index.json`, admisión exclusiva de archivos regulares, rechazo de rutas inseguras, duplicados, symlinks/tipos especiales, métodos distintos de `ZIP_STORED`, entradas ausentes/no indexadas y verificación de tamaño/SHA-256.
 
-La canonicalización aprobada requiere UTF-8 estricto sin BOM, claves lexicográficamente ordenadas, separadores compactos, sin claves duplicadas, sin floats/valores no finitos, enteros dentro del rango interoperable exacto y comparación de bytes originales contra la serialización canónica. Es un perfil propio del formato Xray Manager v1; no se afirma compatibilidad RFC 8785/JCS. El límite del ZIP completo es 512 MiB. El máximo de cantidad de miembros permanece pendiente y deberá cerrarse antes del writer.
+La canonicalización aprobada requiere UTF-8 estricto sin BOM, claves lexicográficamente ordenadas, separadores compactos, sin claves duplicadas, sin floats/valores no finitos, enteros dentro del rango interoperable exacto y comparación de bytes originales contra la serialización canónica. Es un perfil propio del formato Xray Manager v1; no se afirma compatibilidad RFC 8785/JCS. El límite del ZIP completo es 512 MiB. El máximo de entradas ZIP quedó fijado en 10.000 en total (hasta 9.998 miembros de datos) por aprobación posterior en §10.10.
 
 Esta aprobación sólo congela las decisiones descritas. No autoriza implementar writer, verify, restore, crear paquetes/backups reales, incluir secretos ni ejecutar runtime apply. El alcance incremental sigue siendo el aprobado en §10.5 y la normativa `Xray-Normativa/` permanece inmutable.
+
+
+## 10.10. Aprobación del máximo de entradas ZIP — 2026-11-03
+
+El propietario aprobó un máximo estricto de **10.000 entradas ZIP en total**, contando las dos entradas estructurales `manifest.json` e `index.json`. En consecuencia, se permiten hasta **9.998 miembros de datos**.
+
+El writer/preflight deberá contar todas las entradas antes de publicar. Si el conjunto supera el máximo, la operación abortará sin publicar un paquete parcial ni sustituir un artefacto previo. El lector/verify deberá rechazar paquetes que excedan el límite, incluso si su tamaño total está dentro de 512 MiB.
+
+Con esta decisión queda cerrado el límite de cantidad de miembros del paquete lógico v1. La aprobación no autoriza implementar writer, verify, restore, crear paquetes/backups reales, incluir secretos ni ejecutar runtime apply.

@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> Frente activo 2026-11-03: contenedor cifrado compartido v1 implementado/verificado; alcance, manifiesto y formato lógico ZIP/JSON v1 aprobados; siguiente tarea: cerrar máximo de miembros y diseño de writer/snapshot antes de implementar. La integración VMess/VLESS TLS centralizado continúa parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 47/47 PASS tras incorporar `tests/shared_backup_format.sh`. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
+> Frente activo 2026-11-03: contenedor cifrado compartido v1 implementado/verificado; alcance, manifiesto y formato lógico ZIP/JSON v1 aprobados; siguiente tarea: cerrar diseño de writer/snapshot y pruebas antes de implementar; el máximo de entradas ZIP ya está aprobado en §10.10. La integración VMess/VLESS TLS centralizado continúa parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 47/47 PASS tras incorporar `tests/shared_backup_format.sh`. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
 > HEAD publicado y sincronizado tras el bloque de contenedor cifrado: 164f91f (164f91f9c9be8ab275da0b28a53b2314a636f1e2) en design/user-identity-association-v1. `main` permanece intacta. `scripts/__pycache__/` permanece sin seguimiento y excluido.
 
 
@@ -560,6 +560,11 @@ El plan pasa a v1.8 y el contrato de manifiesto v1 queda APROBADO. Empaquetado f
 
 ## 2026-11-03 — Aprobación de formato lógico ZIP/JSON v1
 
-El propietario aprobó ZIP con `ZIP_STORED`, `manifest.json` e `index.json`, validación estricta de paths/tipos/duplicados/miembros indexados/tamaño/SHA-256. Límite total ZIP: 512 MiB. Canonicalización JSON propia: UTF-8 estricto sin BOM, claves ordenadas lexicográficamente, separadores compactos, sin duplicados, floats ni valores no finitos, enteros interoperables y comparación byte-a-byte con serialización canónica. No se declara RFC 8785/JCS. Máximo de cantidad de miembros pendiente.
+El propietario aprobó ZIP con `ZIP_STORED`, `manifest.json` e `index.json`, validación estricta de paths/tipos/duplicados/miembros indexados/tamaño/SHA-256. Límite total ZIP: 512 MiB. Canonicalización JSON propia: UTF-8 estricto sin BOM, claves ordenadas lexicográficamente, separadores compactos, sin duplicados, floats ni valores no finitos, enteros interoperables y comparación byte-a-byte con serialización canónica. No se declara RFC 8785/JCS. Máximo de entradas ZIP aprobado: 10.000 en total (incluye `manifest.json` e `index.json`; hasta 9.998 miembros de datos).
 
 El plan es v1.9. No existe writer, verify, restore ni paquete real; esta aprobación no autoriza su implementación ni runtime apply. `Xray-Normativa/` permanece intacta.
+
+
+## 2026-11-03 — Máximo de entradas ZIP aprobado
+
+Se aprobó el límite estricto de 10.000 entradas ZIP totales (incluye `manifest.json` e `index.json`), por lo que caben hasta 9.998 miembros de datos. Si se supera, writer/preflight aborta sin publicar paquete parcial y verify/lector rechaza el paquete. El plan pasa a v1.10. Esta decisión cierra el límite de miembros, pero no autoriza writer, verify, restore ni paquetes reales.
