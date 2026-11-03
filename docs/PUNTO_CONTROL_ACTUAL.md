@@ -552,3 +552,12 @@ Estado: writer y correcciones locales, no publicados ni aceptados formalmente. H
 - Rechazo probado de hardlink arbitrario sin marcador, destino con basename distinto y tercer hardlink (nlink == 3).
 - Verificación posterior: tests/*.sh 49/49 PASS; AST 16/16; bash -n 74 archivos; ShellCheck PASS; shfmt focal PASS; git diff --check PASS; SHA normativa 14/14 coincidente. A-16 pasa la recuperación post-link y la reanudación idempotente.
 - Próximo paso: revisar el diff completo y la matriz A-01–A-19; presentar resultados al propietario para aceptación formal o nuevos hallazgos. No backup real, no acceso a secretos/master.key, no runtime ni restore/verify independiente. No commit/push/sync sin autorización expresa; mantener la condición NO ACEPTADO.
+
+## Punto de control — A-16 publicado y VPS sincronizada (2026-11-03)
+
+**Estado:** A-16 IMPLEMENTADO / VERIFICADO / PUBLICADO / SINCRONIZADO. Snapshot Writer v1 permanece **NO ACEPTADO FORMALMENTE**.
+
+- Rama: `design/user-identity-association-v1`.
+- Commit: `40c907e2a9da639f3458547e09fec6f26fdac5e1`.
+- SHA remoto confirmado mediante `git ls-remote`; `/opt/xray-manager` está en el mismo HEAD y limpio.
+- Próximo paso permitido: presentar al propietario el estado publicado y esperar su decisión expresa sobre aceptación formal del Snapshot Writer v1 o nuevas observaciones. No ejecutar backup real, no leer secretos/master.key, no restore/verify independiente, no runtime apply y no modificar `Xray-Normativa/`.

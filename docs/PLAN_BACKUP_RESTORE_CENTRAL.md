@@ -599,3 +599,7 @@ La regresión completa posterior a la corrección: tests/*.sh 49/49 PASS; AST Py
 La matriz de aceptación histórica A-01–A-15 y A-17–A-19 mantiene sus resultados PASS de la auditoría previa; la modificación de recuperación/publicación se revalidó mediante las pruebas focales, la matriz de interrupciones y la regresión completa. A-16 cambia de FAIL a PASS. No se ejecutó backup real, no se leyó master.key ni secretos reales, no se ejecutó restore/verify independiente ni runtime apply. Xray-Normativa/ permanece intacta.
 
 **Estado global:** Snapshot Writer v1 IMPLEMENTADO / VERIFICADO EN AISLAMIENTO / NO ACEPTADO FORMALMENTE. La publicación de la corrección y la aceptación final requieren decisión posterior del propietario; esta auditoría no publica ni aprueba formalmente el writer.
+
+## 10.19. Publicación de la corrección A-16 — 2026-11-03
+
+Por autorización expresa del propietario, la corrección A-16, pruebas y documentación se publicaron en `design/user-identity-association-v1`, commit `40c907e2a9da639f3458547e09fec6f26fdac5e1`. SHA remoto confirmado; la VPS está sincronizada con el mismo HEAD. Esta publicación no cambia el estado de aceptación: Snapshot Writer v1 sigue **NO ACEPTADO FORMALMENTE** hasta decisión expresa del propietario.

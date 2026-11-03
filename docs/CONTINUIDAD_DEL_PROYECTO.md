@@ -704,3 +704,7 @@ El propietario autorizó corregir A-16. La implementación local incorpora publi
 Se mantienen bloqueados hardlinks sin marcador, nlink > 2, destino con nombre/inode/tamaño/hash distinto, symlinks, tipos especiales, metadatos inseguros y staging activos. Los tests focales ejercitan crash post-link, fallos de coordinación/unlink y crash del propio recuperador. Verificación ejecutada: tests/*.sh 49/49 PASS; AST 16/16; bash -n 74 archivos; ShellCheck PASS; shfmt focal PASS; git diff --check PASS; normativa 14/14 hashes coincidentes. A-16 pasa. El Snapshot Writer sigue NO ACEPTADO formalmente hasta revisión/decisión expresa del propietario.
 
 No crear backup real, no leer master.key/secretos, no restore/verify independiente, no runtime apply y no modificar Xray-Normativa/.
+
+## Publicación y sincronización A-16 — 2026-11-03
+
+Por autorización expresa del propietario, la corrección A-16, sus pruebas y la documentación afectada quedaron publicadas en `design/user-identity-association-v1`, commit `40c907e2a9da639f3458547e09fec6f26fdac5e1`. `git ls-remote` confirmó el mismo SHA en GitHub; el checkout de `/opt/xray-manager` coincide con el commit y quedó limpio. La rama `main` y `Xray-Normativa/` no se modificaron. Snapshot Writer v1 continúa NO ACEPTADO FORMALMENTE: publicar/sincronizar no equivale a aceptación.
