@@ -1,8 +1,8 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.10
+**Versión:** 1.11
 **Fecha:** 2026-11-03
-**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTRATO DE MANIFIESTO V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / FORMATO LÓGICO DE PAQUETE V1 APROBADO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
+**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTRATO DE MANIFIESTO V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / FORMATO LÓGICO DE PAQUETE V1 APROBADO / CONTRATO TÉCNICO DEL SNAPSHOT WRITER V1 APROBADO / IMPLEMENTACIÓN PENDIENTE
 **Ámbito:** contenedor criptográfico neutral y primera versión incremental de snapshot para VLESS/VMess/metadatos de identidades/certificados TLS centrales. Las categorías normativas no cubiertas se declaran explícitamente como no soportadas; extensible a protocolos futuros mediante adaptadores.
 
 ## 1. Objetivo
@@ -444,3 +444,69 @@ El propietario aprobó un máximo estricto de **10.000 entradas ZIP en total**, 
 El writer/preflight deberá contar todas las entradas antes de publicar. Si el conjunto supera el máximo, la operación abortará sin publicar un paquete parcial ni sustituir un artefacto previo. El lector/verify deberá rechazar paquetes que excedan el límite, incluso si su tamaño total está dentro de 512 MiB.
 
 Con esta decisión queda cerrado el límite de cantidad de miembros del paquete lógico v1. La aprobación no autoriza implementar writer, verify, restore, crear paquetes/backups reales, incluir secretos ni ejecutar runtime apply.
+
+
+## 10.11. Contrato técnico del snapshot writer v1 — aprobado (2026-11-03)
+
+El propietario aprobó el diseño técnico del writer compartido v1, incluida la ampliación de cifrado incremental compatible con el contenedor criptográfico v1. Esta aprobación autoriza documentar el contrato y preparar la implementación en la rama de desarrollo autorizada; no equivale a que el código esté implementado, verificado o desplegado. Tampoco autoriza crear un backup real, ejecutar restore, incluir secretos ni aplicar cambios al runtime.
+
+### 10.11.1. Orquestación y fases
+
+El writer seguirá una secuencia fail-closed: validar solicitud/destino; preparar staging privado; solicitar la passphrase interactivamente; adquirir locks; capturar catálogos y revisiones; validar entradas y dependencias; ejecutar adaptadores; construir manifiesto e índice; validar canonicalización y límites; generar ZIP `ZIP_STORED`; cifrarlo incrementalmente en el contenedor compartido v1; verificar integridad del paquete cifrado; liberar locks cuando la captura cifrada esté completa; publicar atómicamente; sincronizar el directorio y emitir un resumen sin secretos.
+
+Cualquier error anterior a la publicación aborta la operación, elimina los temporales propios cuando sea seguro y deja intacto el destino final. `BLOCKED` se reserva para validaciones de seguridad, consistencia, permisos, referencias o límites que impiden crear el paquete. Un error operativo inesperado se informa como `FAILED`. Ningún error se convierte silenciosamente en snapshot reducido.
+
+### 10.11.2. Locks y vista consistente
+
+El orden obligatorio de adquisición es `lifecycle.lock` → `integrity.lock` → `catalog.lock`; la liberación será inversa. La adquisición será no bloqueante (`flock` con `LOCK_NB`) y tendrá un timeout total configurable; el valor inicial recomendado es 30 segundos para el conjunto de locks. Un lock ocupado o vencimiento del plazo aborta antes de capturar/publicar.
+
+Los locks se mantienen durante la captura, validación de las entradas, generación del manifiesto/índice y emisión del ZIP cifrado. El proceso debe obtener una vista consistente de los catálogos y de las revisiones actualmente referenciadas. Se registran en `source_snapshot` los IDs de catálogo, schema versions, revisiones y hashes de los bytes capturados. Los locks se liberan en orden inverso una vez que el contenedor cifrado queda cerrado; verificación criptográfica final y publicación operan sobre ese artefacto inmutable.
+
+La auditoría estática de locks disponible no es una prueba de estrés exhaustiva. La implementación deberá incluir pruebas de contención, timeout, fallo durante adquisición y liberación inversa.
+
+### 10.11.3. Adaptadores y alcance de datos
+
+La orquestación delega el conocimiento de cada esquema a adaptadores separados:
+
+- VLESS: catálogo de conexiones compartido, configuración/revisión actualmente referenciada y metadatos de protocolo.
+- VMess: registros del catálogo compartido, configuración/revisión actualmente referenciada y metadatos permitidos; `email` y `level` se conservan dentro de miembros cifrados.
+- Identidades: identidades globales y asociaciones incluidas en el alcance, preservando IDs y relaciones sin exportar credenciales excluidas.
+- TLS central: catálogo, certificados públicos `managed` y metadatos/fingerprints de dependencias `reference`; no copiar claves privadas externas.
+
+Los UUID VLESS/VMess, secretos REALITY, claves privadas TLS y cualquier otra credencial detectada quedan excluidos por defecto. Cada exclusión debe señalar clase de secreto y recurso afectado sin revelar el valor. Los elementos afectados se marcan `PARTIAL`. Perfiles, perfil activo, preferencias, dominios independientes y protocolos fuera de VLESS/VMess se declaran `unsupported` cuando se soliciten. No se incluyen revisiones históricas no referenciadas, logs ni archivos huérfanos.
+
+### 10.11.4. Lectura segura de origen
+
+Cada entrada debe ser un archivo regular, root-owned, con permisos exactos esperados por su almacén, `st_nlink == 1` y sin symlinks ni tipos especiales. Se valida que la ruta resuelta permanezca dentro del directorio autorizado y que ID/revisión/nombre coincidan con la referencia del catálogo. Se abren archivos con protección contra symlink (`O_NOFOLLOW` cuando esté disponible) y se validan metadatos del descriptor antes y después de leer; cualquier cambio, referencia rota, duplicidad o discrepancia aborta. El SHA-256 y el tamaño se calculan sobre los bytes exactos capturados. No se siguen enlaces ni se incorporan huérfanos.
+
+La ausencia de un catálogo sólo puede tratarse como colección vacía si el contrato vigente de ese almacén lo permite; de lo contrario se registra como recurso ausente/estado parcial o se bloquea si impide garantizar seguridad o consistencia. No se crearán catálogos, revisiones ni directorios operativos para facilitar el backup.
+
+### 10.11.5. Manifiesto, índice y ZIP
+
+Se mantiene íntegramente el contrato de §10.6–§10.10. `manifest.json` e `index.json` serán entradas raíz del ZIP. Los miembros de datos usarán `logical_path` POSIX relativo, normalizado y único. El ZIP admite exclusivamente archivos regulares y `ZIP_STORED`; se rechazan nombres duplicados, traversal, rutas absolutas, separadores alternativos, NUL, colisiones normalizadas, symlinks, hardlinks, tipos especiales, entradas no indexadas/ausentes y discrepancias de tamaño/hash/CRC.
+
+El máximo estricto es 10.000 entradas totales (dos estructurales y hasta 9.998 de datos). El ZIP completo, incluidas cabeceras y directorio central, no superará 512 MiB. El writer calcula y valida el tamaño total real del ZIP, no sólo la suma de bytes de los miembros. Cualquier exceso aborta sin publicación.
+
+### 10.11.6. Cifrado incremental compatible con contenedor v1
+
+La interfaz actual `encrypt_payload(payload: bytes, passphrase: str) -> bytes` materializa el payload y el paquete completos en memoria. No es adecuada para el límite de 512 MiB en una VPS con memoria limitada. Se añadirá una interfaz de streaming con AES-GCM incremental, sin cambiar el formato binario compartido v1.
+
+La compatibilidad es estricta: conservar magic `XRMGSBKP`, longitud y bytes canónicos de cabecera, campos/valores, scrypt v1 (`N=32768`, `r=8`, `p=1`, maxmem 64 MiB), salt de 16 bytes, nonce de 12 bytes, AES-256-GCM, tag de 16 bytes y AAD exacto que autentica magic + longitud + cabecera. No se introduce un formato v2 ni parámetros KDF negociables. Los lectores v1 existentes deben poder descifrar los paquetes emitidos por el writer incremental, y la nueva interfaz debe descifrar paquetes generados por la interfaz actual.
+
+El ZIP se emitirá mediante un escritor ZIP determinista/streaming que calcule de antemano el tamaño exacto del flujo ZIP (incluidos headers locales, directorio central y EOCD) a partir de los nombres normalizados, tamaños y entradas estructurales ya validadas. Ese tamaño fija `ciphertext_length = zip_size + TAG_BYTES` en la cabecera autenticada antes de escribir ciphertext. Los bytes ZIP se entregan por bloques al cifrador GCM y el resultado cifrado se escribe en staging privado; no se crea un ZIP temporal en claro en disco. El cálculo del tamaño deberá contrastarse con el tamaño realmente emitido y cualquier diferencia aborta.
+
+La passphrase se solicita interactivamente antes de adquirir locks y nunca se pasa por argv, variables de entorno, archivos, manifiesto ni logs. No se lee ni se incluye `master.key`. Se minimizarán copias de bytes y vida de claves; la limitación de zeroization de objetos `bytes` Python se documentará. No se prometerá borrado físico seguro de bloques SSD/snapshots; staging se protege con directorio root-only y limpieza de temporales.
+
+### 10.11.7. Verificación y publicación
+
+Antes de publicar se valida el contenedor completo: magic, cabecera canónica, longitudes, perfil KDF, autenticación AES-GCM/tag y ausencia de bytes sobrantes. La verificación no debe aceptar ciphertext truncado ni confiar en plaintext antes de que GCM autentique el tag. El ZIP se valida durante su emisión y mediante sus estructuras/tamaños/hashes deterministas; las pruebas deberán demostrar que el flujo emitido es un ZIP válido y reproducible.
+
+El archivo cifrado se crea en staging privado ubicado en el mismo filesystem que el destino final, con permisos restrictivos; se hace `fsync` del archivo. El destino existente nunca se sobrescribe. La publicación debe ser atómica y exclusiva: crear el nombre final sin reemplazar un archivo preexistente (por ejemplo, enlace duro atómico desde el staging al destino en el mismo filesystem), luego retirar el nombre temporal y ejecutar `fsync` del directorio. Si el destino ya existe, se aborta; no se elige otro nombre ni se reemplaza automáticamente. Un fallo antes de la creación exclusiva deja el destino intacto.
+
+### 10.11.8. Resultado y pruebas de aceptación
+
+Estados de resultado: `CREATED_COMPLETE`, `CREATED_PARTIAL`, `BLOCKED` y `FAILED`. Los dos primeros requieren paquete publicado y verificado; `COMPLETE`/`PARTIAL` describen completitud funcional, no sólo autenticidad criptográfica. El resumen informa contadores de recursos y exclusiones sin valores de credenciales.
+
+La suite deberá cubrir: locks y timeout; cambios/TOCTOU; symlinks/hardlinks/permisos/rutas; catálogos y revisiones corruptos; exclusiones y filtración de secretos; canonicalización JSON; ZIP duplicado/no indexado/método no admitido; límites de 10.000 entradas y 512 MiB; hashes/CRC; GCM/tag/contraseña/truncamiento/bytes sobrantes; compatibilidad cruzada streaming/no streaming; ZIP reproducible y tamaño calculado; destino existente; interrupciones y fallos en cada fase; limpieza de staging; memoria máxima medida; regresión global y validaciones estáticas.
+
+**Límite de autorización:** esta aprobación congela el contrato de diseño y autoriza la implementación del writer y de la interfaz incremental compatible con v1 en la rama de desarrollo autorizada. No autoriza crear un snapshot/backup operativo o real, incluir secretos, implementar verify independiente/restore/journal/rollback, leer o modificar `master.key`, ejecutar runtime apply ni tocar servicios, firewall, puertos, certificados desplegados o la VPS de pruebas. `Xray-Normativa/` permanece inmutable.

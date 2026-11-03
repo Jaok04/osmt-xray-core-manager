@@ -1,7 +1,7 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> Frente activo 2026-11-03: contenedor cifrado compartido v1 implementado/verificado; alcance, manifiesto y formato lógico ZIP/JSON v1 aprobados; siguiente tarea: cerrar diseño de writer/snapshot y pruebas antes de implementar; el máximo de entradas ZIP ya está aprobado en §10.10. La integración VMess/VLESS TLS centralizado continúa parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 47/47 PASS tras incorporar `tests/shared_backup_format.sh`. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
-> HEAD publicado y sincronizado tras el bloque de contenedor cifrado: 164f91f (164f91f9c9be8ab275da0b28a53b2314a636f1e2) en design/user-identity-association-v1. `main` permanece intacta. `scripts/__pycache__/` permanece sin seguimiento y excluido.
+> Frente activo 2026-11-03: contenedor cifrado compartido v1 implementado/verificado; alcance, manifiesto, ZIP/JSON y contrato técnico del snapshot writer v1 aprobados; siguiente tarea: implementar el writer y cifrado incremental compatible con v1 en la rama autorizada, con pruebas sintéticas. No crear backups reales ni tocar runtime/secretos. El máximo ZIP es 10.000 entradas y 512 MiB. La integración VMess/VLESS TLS centralizado continúa parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 47/47 PASS tras incorporar `tests/shared_backup_format.sh`. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
+> HEAD publicado y sincronizado tras la aprobación del límite de entradas ZIP: ea26dacc69a1cc513946bbacda23c25f3dd664f0 en design/user-identity-association-v1. `main` permanece intacta. `scripts/__pycache__/` permanece sin seguimiento y excluido.
 
 
 > Registro histórico: la auditoría inicial de almacenes/certificados y el cierre del contrato se documentaron antes del primer bloque. Consultar los dos informes de implementación para el estado vigente.
@@ -499,7 +499,7 @@ La decisión del propietario queda registrada en docs/PLAN_BACKUP_RESTORE_CENTRA
 - No exponer email en el manifiesto externo ni en logs.
 - Marcar los registros sin UUID como incompletos/no restaurables íntegramente hasta que la credencial se aporte mediante flujo autorizado. Incluir UUID exige selección, autorización y confirmación adicional.
 
-No se ha cambiado el esquema VMess ni se ha creado snapshot/backup real. El siguiente trabajo es cerrar el contrato del manifiesto y del snapshot lógico, además de completar la auditoría del orden global de locks. El writer compartido no debe comenzar hasta cerrar esos contratos y sus pruebas sintéticas.
+No se ha cambiado el esquema VMess ni se ha creado snapshot/backup real. Esta nota describe el estado previo a la aprobación posterior del manifiesto, formato ZIP/JSON y contrato técnico del writer; consultar las actualizaciones de continuidad posteriores para el estado vigente.
 
 ## Continuidad — lock TLS en desinstalación (2026-11-03)
 
@@ -507,7 +507,7 @@ Se implementó localmente la coordinación de modules/uninstall.sh con catalog.l
 
 tests/uninstall.sh prueba que el lock ocupado impide la operación y que, durante la confirmación de eliminación de certificados, otro adquirente no puede tomar catalog.lock. La suite completa tests/*.sh, Bash syntax, ShellCheck del módulo modificado, py_compile y git diff check pasaron.
 
-La auditoría de todos los mutadores/locks sigue abierta y no debe darse por concluida a partir de este arreglo. Próximo: completar el inventario y revisar los órdenes de adquisición restantes; después cerrar schema de manifiesto y snapshot lógico. El writer sigue bloqueado hasta concluir esos puntos.
+La auditoría estática de locks descrita en esta nota fue completada posteriormente para los puntos localizados; no equivale a stress test exhaustivo. El contrato de manifiesto, snapshot y writer se aprobó después. Consultar la actualización de aprobación del contrato técnico al final de este documento.
 
 ## Continuidad — ubicación estable de catalog.lock (2026-11-03)
 
@@ -568,3 +568,12 @@ El plan es v1.9. No existe writer, verify, restore ni paquete real; esta aprobac
 ## 2026-11-03 — Máximo de entradas ZIP aprobado
 
 Se aprobó el límite estricto de 10.000 entradas ZIP totales (incluye `manifest.json` e `index.json`), por lo que caben hasta 9.998 miembros de datos. Si se supera, writer/preflight aborta sin publicar paquete parcial y verify/lector rechaza el paquete. El plan pasa a v1.10. Esta decisión cierra el límite de miembros, pero no autoriza writer, verify, restore ni paquetes reales.
+
+
+## 2026-11-03 — Aprobación del contrato técnico del snapshot writer v1
+
+El propietario aprobó el contrato técnico del snapshot writer compartido v1 y la ampliación de cifrado incremental compatible con el contenedor criptográfico v1. Se congelan: secuencia fail-closed; locks `lifecycle → integrity → catalog`, adquisición no bloqueante con timeout total configurable (30 s inicial recomendado) y liberación inversa; captura coherente de catálogos/revisiones referenciadas; adaptadores VLESS/VMess/identidades/TLS; exclusiones predeterminadas; validación segura de archivos; manifiesto/índice/ZIP `ZIP_STORED`; máximo 10.000 entradas y 512 MiB; cifrado GCM por bloques sin cambiar el formato binario v1; verificación y publicación atómica exclusiva sin sobrescritura; estados de resultado y matriz de pruebas.
+
+La interfaz incremental deberá conservar magic, cabecera/AAD, perfil scrypt, salt/nonce, AES-256-GCM y tag del formato v1, con compatibilidad cruzada respecto a la interfaz actual. El ZIP se emitirá en streaming al cifrador sin crear ZIP en claro en disco; el tamaño exacto del ZIP se calculará antes de fijar `ciphertext_length` y se contrastará con el flujo emitido.
+
+`docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.11. La aprobación autoriza implementar writer y cifrado incremental en la rama autorizada, pero no crear backups reales, incluir secretos, implementar restore/verify independiente, leer/modificar master key ni tocar runtime/servicios/firewall/puertos/certificados desplegados/VPS de pruebas. `Xray-Normativa/` permanece inmutable.

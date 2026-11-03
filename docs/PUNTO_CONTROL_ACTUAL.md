@@ -1,7 +1,7 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-03
-**Tarea activa:** backup/restore compartido — contenedor criptográfico neutral v1 implementado y probado; alcance incremental, contrato de manifiesto y formato ZIP/JSON lógico v1 aprobados; máximo de miembros cerrado en 10.000 entradas ZIP; pendiente diseño de writer/snapshot. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
+**Tarea activa:** backup/restore compartido — contenedor criptográfico neutral v1 implementado y probado; alcance incremental, manifiesto, ZIP/JSON y contrato técnico del snapshot writer v1 aprobados. Siguiente: implementar writer y cifrado incremental compatible con v1 en la rama autorizada; sin crear backups reales ni tocar runtime/secretos. Límites: 10.000 entradas ZIP y 512 MiB. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
 **Estado vigente:** contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
@@ -345,7 +345,7 @@ Contrato: docs/PLAN_BACKUP_RESTORE_CENTRAL.md v1.3, §10.1.
 
 **No ejecutado:** no se movieron ni borraron locks reales, no se aplicó runtime ni se modificaron datos persistentes.
 
-**Pendiente:** repetir la suite completa tras esta segunda corrección y continuar la auditoría global de todos los mutadores/locks. No iniciar writer de backup compartido hasta cerrar la auditoría y contrato de snapshot.
+**Estado histórico:** en ese punto se debía repetir la suite y continuar la auditoría. La auditoría estática y el contrato de snapshot/writer se cerraron posteriormente; consultar las actualizaciones finales de este documento.
 
 ## 16. Auditoría estática de locks — 2026-11-03
 
@@ -357,7 +357,7 @@ Contrato: docs/PLAN_BACKUP_RESTORE_CENTRAL.md v1.3, §10.1.
 
 **Limitación:** estática, no stress test exhaustivo. La ruta TLS nueva requiere despliegue con procesos de versión anterior detenidos. No se movió el lock anterior ni se ejecutó runtime apply.
 
-**Siguiente decisión pendiente:** cerrar alcance inicial de categorías/adaptadores del snapshot conforme a Etapa 5 antes de implementar el writer.
+**Estado histórico:** el alcance inicial de categorías/adaptadores fue aprobado posteriormente; el contrato técnico del writer también quedó aprobado. Consultar la actualización final de este documento.
 
 
 ## 2026-11-03 — Aprobación del alcance incremental del snapshot compartido v1
@@ -403,3 +403,12 @@ El plan pasa a v1.8 y el contrato de manifiesto v1 queda APROBADO. Empaquetado f
 ## Actualización — máximo de entradas ZIP aprobado (2026-11-03)
 
 Límite estricto: 10.000 entradas ZIP totales, contando `manifest.json` e `index.json`; máximo 9.998 miembros de datos. Superarlo aborta la creación sin publicar paquete parcial y el lector/verify debe rechazarlo. Plan v1.10. El límite de miembros queda cerrado; writer, verify, restore y paquetes reales siguen sin implementar/autorización.
+
+
+## 2026-11-03 — Aprobación del contrato técnico del snapshot writer v1
+
+El propietario aprobó el contrato técnico del snapshot writer compartido v1 y la ampliación de cifrado incremental compatible con el contenedor criptográfico v1. Se congelan: secuencia fail-closed; locks `lifecycle → integrity → catalog`, adquisición no bloqueante con timeout total configurable (30 s inicial recomendado) y liberación inversa; captura coherente de catálogos/revisiones referenciadas; adaptadores VLESS/VMess/identidades/TLS; exclusiones predeterminadas; validación segura de archivos; manifiesto/índice/ZIP `ZIP_STORED`; máximo 10.000 entradas y 512 MiB; cifrado GCM por bloques sin cambiar el formato binario v1; verificación y publicación atómica exclusiva sin sobrescritura; estados de resultado y matriz de pruebas.
+
+La interfaz incremental deberá conservar magic, cabecera/AAD, perfil scrypt, salt/nonce, AES-256-GCM y tag del formato v1, con compatibilidad cruzada respecto a la interfaz actual. El ZIP se emitirá en streaming al cifrador sin crear ZIP en claro en disco; el tamaño exacto del ZIP se calculará antes de fijar `ciphertext_length` y se contrastará con el flujo emitido.
+
+`docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.11. La aprobación autoriza implementar writer y cifrado incremental en la rama autorizada, pero no crear backups reales, incluir secretos, implementar restore/verify independiente, leer/modificar master key ni tocar runtime/servicios/firewall/puertos/certificados desplegados/VPS de pruebas. `Xray-Normativa/` permanece inmutable.

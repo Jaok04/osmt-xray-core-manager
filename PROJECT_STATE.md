@@ -478,3 +478,12 @@ El plan pasa a v1.8 y el contrato de manifiesto v1 queda APROBADO. Empaquetado f
 ## Decisión aprobada — límite de entradas ZIP (2026-11-03)
 
 Máximo estricto de 10.000 entradas ZIP totales, incluyendo `manifest.json` e `index.json`; hasta 9.998 miembros de datos. Writer/preflight abortará sin publicar si se excede; verify/lector rechazará paquetes sobre el límite. Plan actualizado a v1.10. Esto cierra el máximo de miembros, pero no autoriza writer, verify, restore, paquetes reales, inclusión de secretos ni runtime apply.
+
+
+## 2026-11-03 — Aprobación del contrato técnico del snapshot writer v1
+
+El propietario aprobó el contrato técnico del snapshot writer compartido v1 y la ampliación de cifrado incremental compatible con el contenedor criptográfico v1. Se congelan: secuencia fail-closed; locks `lifecycle → integrity → catalog`, adquisición no bloqueante con timeout total configurable (30 s inicial recomendado) y liberación inversa; captura coherente de catálogos/revisiones referenciadas; adaptadores VLESS/VMess/identidades/TLS; exclusiones predeterminadas; validación segura de archivos; manifiesto/índice/ZIP `ZIP_STORED`; máximo 10.000 entradas y 512 MiB; cifrado GCM por bloques sin cambiar el formato binario v1; verificación y publicación atómica exclusiva sin sobrescritura; estados de resultado y matriz de pruebas.
+
+La interfaz incremental deberá conservar magic, cabecera/AAD, perfil scrypt, salt/nonce, AES-256-GCM y tag del formato v1, con compatibilidad cruzada respecto a la interfaz actual. El ZIP se emitirá en streaming al cifrador sin crear ZIP en claro en disco; el tamaño exacto del ZIP se calculará antes de fijar `ciphertext_length` y se contrastará con el flujo emitido.
+
+`docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.11. La aprobación autoriza implementar writer y cifrado incremental en la rama autorizada, pero no crear backups reales, incluir secretos, implementar restore/verify independiente, leer/modificar master key ni tocar runtime/servicios/firewall/puertos/certificados desplegados/VPS de pruebas. `Xray-Normativa/` permanece inmutable.

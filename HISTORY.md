@@ -555,3 +555,12 @@ El propietario aprobó empaquetado ZIP con `ZIP_STORED`, estructura interna `man
 ## 2026-11-03 — Aprobación del máximo de entradas ZIP v1
 
 El propietario aprobó un máximo estricto de 10.000 entradas ZIP totales, contando `manifest.json` e `index.json` (hasta 9.998 miembros de datos). La creación debe abortar sin publicar paquete parcial si se supera; el lector/verify debe rechazar paquetes que excedan el límite. `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.10. No se autorizó implementación de writer/verify/restore ni creación de paquetes reales.
+
+
+## 2026-11-03 — Aprobación del contrato técnico del snapshot writer v1
+
+El propietario aprobó el contrato técnico del snapshot writer compartido v1 y la ampliación de cifrado incremental compatible con el contenedor criptográfico v1. Se congelan: secuencia fail-closed; locks `lifecycle → integrity → catalog`, adquisición no bloqueante con timeout total configurable (30 s inicial recomendado) y liberación inversa; captura coherente de catálogos/revisiones referenciadas; adaptadores VLESS/VMess/identidades/TLS; exclusiones predeterminadas; validación segura de archivos; manifiesto/índice/ZIP `ZIP_STORED`; máximo 10.000 entradas y 512 MiB; cifrado GCM por bloques sin cambiar el formato binario v1; verificación y publicación atómica exclusiva sin sobrescritura; estados de resultado y matriz de pruebas.
+
+La interfaz incremental deberá conservar magic, cabecera/AAD, perfil scrypt, salt/nonce, AES-256-GCM y tag del formato v1, con compatibilidad cruzada respecto a la interfaz actual. El ZIP se emitirá en streaming al cifrador sin crear ZIP en claro en disco; el tamaño exacto del ZIP se calculará antes de fijar `ciphertext_length` y se contrastará con el flujo emitido.
+
+`docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.11. La aprobación autoriza implementar writer y cifrado incremental en la rama autorizada, pero no crear backups reales, incluir secretos, implementar restore/verify independiente, leer/modificar master key ni tocar runtime/servicios/firewall/puertos/certificados desplegados/VPS de pruebas. `Xray-Normativa/` permanece inmutable.
