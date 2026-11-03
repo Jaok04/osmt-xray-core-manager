@@ -1,35 +1,44 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.5
+**Versión:** 1.6
 **Fecha:** 2026-11-03
-**Estado:** CRITERIOS APROBADOS / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
-**Ámbito:** contenedor criptográfico neutral y futuro backup consistente de VLESS/VMess/certificados; extensible a protocolos futuros mediante adaptadores.
+**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / CONTRATO DE MANIFIESTO EN DISEÑO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
+**Ámbito:** contenedor criptográfico neutral y primera versión incremental de snapshot para VLESS/VMess/metadatos de identidades/certificados TLS centrales. Las categorías normativas no cubiertas se declaran explícitamente como no soportadas; extensible a protocolos futuros mediante adaptadores.
 
 ## 1. Objetivo
 
-Añadir un flujo coordinado que respalde/restaure en conjunto:
+La primera versión incremental coordinará el snapshot lógico de:
 
-- catálogo de conexiones y revisiones VLESS;
-- catálogo de conexiones y revisiones VMess;
-- blobs REALITY actualmente referenciados por ambos protocolos, sujetos a selección/autorización expresa para incluir secretos;
-- catálogo central de certificados TLS;
-- certificados públicos `managed`;
-- claves privadas centrales, sólo si el operador las selecciona y autoriza expresamente con confirmación adicional;
-- manifiesto de dependencias externas para certificados `reference`.
+- catálogo de conexiones VLESS y VMess, con sus configuraciones de revisión actualmente referenciada;
+- metadatos no secretos de usuarios, identidades y asociaciones vinculadas a esas conexiones;
+- catálogo central TLS, certificados públicos `managed` y metadatos/dependencias de certificados `reference`;
+- manifiesto interno que declare categorías solicitadas, incluidas, no soportadas, exclusiones, dependencias y completitud por elemento y global.
 
-Los backups de protocolo existentes deben seguir siendo compatibles y no deben incorporar silenciosamente el almacén central ni alterar su contrato. El backup compartido será un artefacto/versionado distinto o una capa orquestadora explícita. El snapshot contiene únicamente la revisión actualmente referenciada por cada conexión; no empaqueta el historial de revisiones/validaciones/logs.
+Las credenciales y claves privadas quedan excluidas por defecto: UUID VMess, UUID VLESS, secretos REALITY, claves privadas TLS administradas y cualquier otra credencial detectada por adaptadores. Un elemento que necesite uno de esos secretos se marcará incompleto/no restaurable íntegramente mientras no se aporte por un flujo autorizado. La inclusión de secretos requiere selección, autorización expresa y confirmación adicional; no forma parte del alcance por defecto de esta primera versión.
+
+La primera versión no implementará adaptadores para perfiles, registro de perfil activo, preferencias del gestor, dominios independientes ni protocolos distintos de VLESS/VMess. Estas categorías se declararán `unsupported` en el manifiesto cuando sean solicitadas. Conforme a Etapa 5 de `Xray-Normativa`, si se solicita alguna categoría no soportada, el resultado global será `PARTIAL`, nunca `COMPLETE`.
+
+Los backups de protocolo existentes deben seguir siendo compatibles y no deben incorporar silenciosamente el almacén central ni alterar su contrato. El backup compartido será un artefacto/versionado distinto o una capa orquestadora explícita. El snapshot contiene únicamente la revisión actualmente referenciada por cada conexión; no empaqueta historiales de revisiones/validaciones/logs.
 
 ## 2. Qué se incluye y qué no
 
 | Elemento | Tratamiento |
 |---|---|
-| Catálogo VLESS y revisiones referenciadas | Incluir snapshot validado |
-| Catálogo VMess y revisiones referenciadas | Incluir snapshot validado |
-| Blobs REALITY por conexión | Excluir por defecto; incluir sólo con selección, autorización y confirmación adicional; reenvolver dentro del contenedor |
-| Catálogo central TLS | Incluir snapshot |
+| Catálogo VLESS y revisiones actualmente referenciadas | Incluir snapshot validado |
+| Catálogo VMess y revisiones actualmente referenciadas | Incluir snapshot validado |
+| Metadatos no secretos de usuarios/identidades/asociaciones | Incluir dentro del alcance VLESS/VMess; conservar relaciones e IDs globales |
+| UUID VMess / UUID VLESS | Excluir por defecto como credenciales; marcar los elementos afectados incompletos |
+| `email` y `level` VMess | Conservar como metadatos/configuración dentro del payload cifrado; nunca exponerlos en logs/manifiesto externo |
+| Secretos REALITY por conexión | Excluir por defecto; marcar elementos incompletos |
+| Catálogo central TLS | Incluir snapshot y referencias necesarias |
 | Certificados públicos `managed` | Incluir |
-| Claves privadas TLS centrales | Excluir por defecto; inclusión sólo con selección, autorización y confirmación adicional; cifrado integral del paquete |
-| Certificados `reference` | No copiar automáticamente; registrar ruta, fingerprint y dependencia |
+| Claves privadas TLS centrales | Excluir por defecto; marcar certificados/conexiones afectados incompletos |
+| Certificados `reference` | No copiar automáticamente; registrar fingerprint y dependencia; no exponer rutas privadas fuera del payload protegido |
+| Perfiles y asociaciones (versión actual) | `unsupported` en v1 incremental |
+| Registro de perfil activo | `unsupported` en v1 incremental |
+| Preferencias del gestor | `unsupported` en v1 incremental |
+| Dominios independientes | `unsupported` en v1 incremental |
+| Protocolos distintos de VLESS/VMess | `unsupported` en v1 incremental; requieren adaptador propio |
 | Clave maestra `/etc/xray-manager/keys/master.key` | No incluir en el mismo backup |
 | `/run/xray-manager-certificates` y leases | Excluir: son temporales y regenerables |
 | Configuración activa Xray, runtime, firewall, servicios | Excluir del backup de datos; tratar en flujo de despliegue separado |
@@ -44,7 +53,7 @@ Los blobs del catálogo central están cifrados con la clave maestra del host. C
 **Diseño que se implementará para el formato compartido:**
 
 - Paquete independiente versionado con cifrado autenticado integral AES-256-GCM y clave derivada de una contraseña introducida interactivamente mediante scrypt. Parámetros KDF versionados y límites de recursos estrictos.
-- Durante el backup, descifrar cada secreto legado/REALITY/TLS central en memoria usando el backend que corresponde, construir el contenido lógico del snapshot y cifrar el paquete antes de persistirlo. No escribir PEM/secretos descifrados en staging, archivos temporales, logs ni manifiestos.
+- Por defecto, no exportar credenciales ni claves privadas. Sólo si una credencial/clase de secreto se selecciona y autoriza expresamente con confirmación adicional, descifrarla en memoria usando el backend que corresponde, reenvolverla dentro del payload y cifrar el paquete antes de persistirlo. No escribir PEM/secretos descifrados en staging, archivos temporales, logs ni manifiestos.
 - El backup no incluye `master.key` ni una copia recuperable de ésta. El paquete queda ligado a su contraseña; el destino no necesita reutilizar la clave maestra de origen.
 - Durante restore, autenticar y descifrar el paquete en memoria, validar todos los recursos y volver a cifrar los secretos bajo la master key ya existente del destino, preservando el envelope/AAD específico de VLESS, VMess y certificados centrales.
 - No guardar contraseña ni clave derivada en el manifiesto. Fallar cerrado ante contraseña incorrecta, tag/hash inválido, KDF no admitido, clave maestra destino ausente/inválida o formato incompatible.
@@ -71,38 +80,38 @@ La neutralidad permite que VLESS, VMess, Trojan y futuros protocolos utilicen el
 
 El backup no debe mezclar revisiones de un instante con catálogos de otro.
 
-- Adquirir locks de catálogos de conexiones VLESS, VMess y certificados en orden global fijo y compatible con resolutor/migrador.
+- Adquirir locks en orden global ya auditado: `lifecycle → integrity → catalog`; liberar en orden inverso.
 - Validar catálogos y referencias mientras se mantienen locks.
 - Capturar únicamente archivos regulares, root-owned, modos esperados, sin symlinks/hardlinks ni traversal.
 - Construir snapshot en staging privado; no cambiar datos activos.
 - Registrar hashes, tamaños, schema versions, revisions y dependencias en manifiesto.
 - Liberar locks sólo después de cerrar/verificar el snapshot.
 
-El orden exacto de locks debe reconciliarse con el código existente para evitar deadlocks; no asumir que el orden propuesto aquí ya está implementado.
+El inventario estático y las pruebas de contención constan en §10.4. El orden está documentado, pero la auditoría estática no sustituye pruebas de estrés exhaustivas. El writer deberá usar adquisición no bloqueante con timeout finito configurable y abortar sin publicar si algún lock no se obtiene.
 
 ## 5. Formato de paquete propuesto
 
 Paquete lógico versionado, por ejemplo `xray-manager-shared-backup-v1`:
 
 ```text
-manifest.json
+manifest.json                 # dentro del payload cifrado
+index.json                    # índice lógico de miembros
 connections/
-  connections.json
-  configurations/*.json
-  secrets/*.bin
-vmess/
-  connections.json
-  configurations/*.json
-  secrets/*.bin
+  vless/catalog.json
+  vless/configurations/<logical-id>.json
+  vmess/catalog.json
+  vmess/configurations/<logical-id>.json
+identities/
+  identities.json
+  associations.json
 certificates/
   catalog.json
-  managed/*.pem
-  secrets/*.backup-envelope
-external-dependencies.json
-integrity.json
+  managed/public/<logical-id>.pem
+optional-secrets/             # sólo con selección/autorización adicional
+  <protocol-or-resource>/<logical-id>.bin
 ```
 
-Los nombres y directorios son un contrato propuesto, no rutas actuales confirmadas. El paquete debe tener límites de tamaño/entradas, paths normalizados, hashes, identificación de backup y versión de esquema. El contenido sensible debe ir cifrado por el contenedor de backup; el manifiesto externo no debe exponer rutas privadas o datos innecesarios.
+Los nombres y directorios son ilustrativos y no constituyen aún un contrato congelado ni rutas actuales confirmadas. El paquete debe tener límites de tamaño/entradas, nombres lógicos normalizados, hashes, identificación de backup y versión de esquema. El manifiesto y el índice viajan dentro del contenedor cifrado. Las claves privadas TLS y los secretos REALITY no aparecen en la estructura por defecto; la sección opcional sólo se materializa tras selección y autorización adicionales.
 
 `external-dependencies.json` debe enumerar recursos `reference` con `certificate_id`, fingerprint, path esperado, conexión(es) dependientes y validación requerida. Las rutas son datos no confiables: nunca seguir symlinks durante restore.
 
@@ -112,9 +121,9 @@ Antes de escribir en el host destino:
 
 1. Verificar versión, integridad global, autenticidad, tamaño, límites y estructura del paquete.
 2. Validar los dos catálogos de conexiones y todas las revisiones referenciadas.
-3. Validar blobs REALITY sin exponer plaintext y validar que su `secret_ref` coincide.
-4. Validar catálogo central, recursos `managed`/`reference`, fingerprints y blobs cifrados/envelopes.
-5. Confirmar master key destino presente, válida y de 32 bytes sin mostrarla; o validar el mecanismo de re-envoltura acordado.
+3. Verificar en el manifiesto las exclusiones de UUID/REALITY y marcar como incompletos los elementos que dependan de esos secretos; sólo validar blobs REALITY si fueron incluidos mediante autorización adicional.
+4. Validar catálogo central, certificados públicos `managed`, recursos `reference`, fingerprints y dependencias; si falta una clave privada excluida, no presentar la conexión TLS afectada como íntegramente restaurable.
+5. Si el paquete contiene secretos seleccionados, confirmar master key destino presente, válida y de 32 bytes sin mostrarla y validar la re-envoltura. Si no contiene secretos, no exigirla sólo para inspeccionar/restaurar metadatos.
 6. Para cada `reference`, verificar que el archivo externo existe, es regular, no es symlink/hardlink, fingerprint coincide y el par corresponde tras resolver el secreto en memoria.
 7. Verificar que toda conexión TLS central apunta a un certificado activo incluido en el snapshot.
 8. Detectar colisiones de connection_id, certificate_id, paths, revisiones y recursos existentes.
@@ -143,9 +152,10 @@ La falta de una dependencia `reference` bloquea por defecto el restore completo;
 
 ## 9. Pruebas obligatorias
 
-- Backup/verify/restore VLESS + VMess + TLS central + REALITY.
+- Backup/verify/restore de metadatos VLESS + VMess + identidades/asociaciones + catálogo TLS.
+- Verificar que UUID/REALITY/claves privadas se excluyen por defecto y que los recursos afectados quedan `PARTIAL`.
 - Recursos managed y reference presentes/ausentes/modificados.
-- Master key destino correcta, ausente e inválida; re-envoltura y passphrase errónea.
+- Si se habilita inclusión de secretos: master key destino correcta, ausente e inválida; re-envoltura y passphrase errónea.
 - Alteración de cada archivo, manifiesto, tag, hash, fingerprint y blob.
 - Límites de tamaño/archivos, traversal, symlink/hardlink, permisos y ownership.
 - Colisiones de IDs/revisiones y cambios concurrentes durante snapshot.
@@ -177,9 +187,9 @@ Un registro VMess cuyo UUID se excluya debe marcarse como incompleto/no restaura
 
 ## 11. Estado y siguiente diseño
 
-Los criterios funcionales anteriores están aprobados. El contrato del contenedor cifrado v1 ya está implementado y probado en aislamiento. Antes de escribir el orquestador de backup compartido se deben cerrar el manifiesto interno, el orden real de locks y la detección de conflictos del restore. La política de campos VMess queda definida en §10.1: excluir UUID por defecto y conservar email y level como metadatos dentro del payload cifrado. La desinstalación que incluya certificados ahora adquiere catalog.lock después de integrity.lock y lo mantiene durante el respaldo/confirmación/eliminación; la auditoría global de locks sigue abierta. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
+El alcance incremental del snapshot v1 está aprobado en §10.5. El contrato del contenedor cifrado v1 está implementado y probado en aislamiento. El borrador lógico de manifiesto está en §10.6 y requiere aprobación de sus tipos/campos y reglas exactas antes de congelarlo. El inventario estático de locks y el orden `lifecycle → integrity → catalog` constan en §10.4; falta stress testing de concurrencia y la futura implementación deberá usar timeout finito. La detección de conflictos del restore, el schema definitivo y las pruebas sintéticas del snapshot siguen pendientes. La política de campos VMess queda definida en §10.1: excluir UUID por defecto y conservar email y level como metadatos dentro del payload cifrado. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
 
-**Estado:** contenedor criptográfico neutral v1 IMPLEMENTADO y VERIFICADO con prueba aislada; snapshot, manifiesto, adaptadores VLESS/VMess/certificados, backup, verify, restore, journal y rollback aún NO IMPLEMENTADOS. No se ha creado ni restaurado un backup compartido.
+**Estado:** contenedor criptográfico neutral v1 IMPLEMENTADO y VERIFICADO con prueba aislada; alcance incremental APROBADO; manifiesto en BORRADOR; snapshot, adaptadores VLESS/VMess/identidades/certificados, backup, verify, restore, journal y rollback aún NO IMPLEMENTADOS. No se ha creado ni restaurado un backup compartido.
 
 ## 10.2. Coordinación de desinstalación y catálogo TLS — 2026-11-03
 
@@ -226,3 +236,52 @@ No se encontró una adquisición inversa entre integrity y catalog ni un ciclo e
 **Pruebas de concurrencia disponibles:** tests/uninstall.sh cubre contención de lifecycle, integrity, catalog y Xray; confirma que catalog se mantiene durante la confirmación de eliminación de certificados, que el lock se libera si la adquisición posterior de Xray falla y que el lock externo sobrevive al borrado del árbol de certificados. tests/certificate_store.sh valida los defaults de ruta en ambos CLI. Suite completa: 47/47 PASS; Bash syntax, ShellCheck de uninstall.sh, shfmt focal, py_compile y git diff --check PASS.
 
 **Límite:** inventario estático completo de los puntos de adquisición localizados en scripts, modules, lib, config e install.sh; no equivale a una prueba de estrés exhaustiva ni a una garantía frente a procesos de una versión antigua durante despliegue. El cambio de ruta del catálogo requiere desplegar con los procesos de la versión anterior detenidos. No se movió el lock antiguo ni se ejecutó migración/runtime en la VPS.
+
+
+## 10.5. Alcance incremental del snapshot v1 — aprobado por el propietario (2026-11-03)
+
+**Decisión:** aprobado el alcance incremental recomendado para la primera versión del snapshot compartido.
+
+**Incluido en v1:**
+
+1. Catálogo de conexiones VLESS y VMess, incluyendo únicamente la revisión/configuración actualmente referenciada por cada conexión.
+2. Metadatos no secretos de usuarios, identidades globales y asociaciones, conservando IDs y relaciones sin reconstruir credenciales excluidas.
+3. Catálogo central TLS, certificados públicos `managed` y metadatos de dependencias `reference` (fingerprint y asociación con recursos dependientes).
+4. Manifiesto interno cifrado con categorías solicitadas/incluidas/no soportadas, recursos, miembros, exclusiones, dependencias y estado de completitud por elemento y global.
+
+**Excluido por defecto:** UUID VMess, UUID VLESS, secretos REALITY, claves privadas TLS administradas y cualquier otra credencial/clave privada detectada por los adaptadores. El manifiesto podrá declarar tipo de secreto excluido y recurso afectado, pero nunca su valor. Los elementos que dependan de esos secretos quedan incompletos/no restaurables íntegramente hasta recibirlos mediante un flujo autorizado. Su inclusión requiere selección, autorización expresa y confirmación adicional.
+
+Se conserva la decisión VMess de §10.1: `email` y `level` son metadatos dentro del payload cifrado; UUID es credencial excluida por defecto. Los metadatos de identidad/asociación se conservan sin asumir que contienen credenciales exportables.
+
+**No soportado por la primera versión:** configuraciones JSON independientes fuera de las conexiones cubiertas, perfiles y asociaciones de perfil, registro del perfil activo, preferencias del gestor, dominios independientes y protocolos distintos de VLESS/VMess. Cada categoría solicitada y no soportada debe aparecer en `unsupported`; no se omite silenciosamente.
+
+**Completitud:** `COMPLETE` sólo podrá declararse cuando todas las categorías/elementos solicitados estén incluidos y sean íntegros/restaurables conforme al alcance y no existan exclusiones o dependencias pendientes que afecten esos elementos. Si se solicita una categoría `unsupported`, o si un elemento solicitado requiere un secreto excluido o una dependencia `reference` no verificada, el resultado correspondiente será `PARTIAL` (o `BLOCKED` si no es seguro producir el paquete). Nunca declarar `COMPLETE` por el solo hecho de que el contenedor AES-GCM se haya creado correctamente.
+
+**Contraste normativo:** la Etapa 5 de `Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md` §8 permite selección de configuraciones, perfiles actuales, perfil activo, usuarios/identidades/asociaciones, preferencias, dominios y certificados; exige credenciales/claves privadas excluidas por defecto y prohíbe declarar completo un respaldo que omitió elementos solicitados. El alcance incremental no modifica ni sustituye esa normativa: las categorías diferidas quedan explícitamente `unsupported` y fuerzan `PARTIAL` cuando sean solicitadas. `Xray-Normativa/` permanece inmutable.
+
+**Límite de esta aprobación:** aprueba el alcance funcional incremental, no el schema definitivo, el código writer, la creación de paquetes reales, la inclusión de secretos, el restore ni cambios de runtime.
+
+## 10.6. Borrador del contrato lógico de manifiesto — pendiente de aprobación
+
+El manifiesto residirá dentro del payload cifrado por el contenedor compartido v1. No habrá manifiesto de contenido en claro junto al paquete. Este borrador define semántica y campos requeridos; no es aún un schema JSON congelado.
+
+| Campo lógico | Contenido/contrato |
+|---|---|
+| `manifest_format` / `manifest_version` | Identificador del manifiesto y versión independiente del contenedor criptográfico |
+| `backup_id` / `created_at` | UUID aleatorio y timestamp UTC ISO-8601 |
+| `manager_version` / `xray_version` | Versiones conocidas; usar `null`/`unknown` si no pueden determinarse, nunca inventarlas |
+| `request` | Categorías/recursos solicitados y modalidad (selectiva o conjunto completo disponible) |
+| `categories.included` | Categorías realmente representadas en el payload |
+| `categories.unsupported` | Categorías solicitadas no soportadas por adaptadores v1, con razón estable |
+| `resources[]` | Tipo, ID lógico, protocolo/propietario, estado de completitud y referencias a miembros; sin credenciales ni rutas host-specific |
+| `members[]` | ID lógico/content-addressed, categoría, tamaño, SHA-256 y tipo de contenido; nunca ruta absoluta |
+| `exclusions[]` | Recurso afectado, clase de secreto excluida y razón; nunca valor secreto |
+| `dependencies[]` | Tipo/ID de dependencia, fingerprint esperado, recursos dependientes y resultado de validación; para `reference` no incluir ruta privada en claro fuera del payload cifrado |
+| `completeness` | Estado global `COMPLETE`/`PARTIAL`/`BLOCKED` y detalle por recurso/categoría |
+| `source_snapshot` | Revisiones/schema versions y hashes de los catálogos/entradas que fijan la vista consistente |
+
+Los miembros se identificarán por hashes SHA-256 y nombres lógicos normalizados, no por rutas absolutas del host. El contenedor lógico rechazará symlinks, hardlinks, devices, traversal, nombres duplicados, tamaños/entradas fuera de límite y discrepancias entre hash/tamaño declarado y bytes. El manifiesto y el índice de miembros se validarán antes de cualquier restore.
+
+**Reglas de estado propuestas:** `COMPLETE` significa que todo lo solicitado está incluido y restaurable; `PARTIAL` significa que el paquete íntegro contiene omisiones declaradas (categorías no soportadas, secretos excluidos o dependencias no satisfechas); `BLOCKED` significa que no debe publicarse un paquete porque falló una validación de seguridad/consistencia. La integridad criptográfica del contenedor es independiente de la completitud funcional.
+
+**Pendiente de aprobación:** nombres/tipos exactos, enums, cardinalidades, relación recurso-miembro, codificación canónica, formato de timestamps, reglas de paths lógicos, límite de entradas/expansión y validaciones cruzadas. No implementar writer hasta congelar este contrato y sus pruebas sintéticas.

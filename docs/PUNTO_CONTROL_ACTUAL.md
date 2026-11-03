@@ -358,3 +358,12 @@ Contrato: docs/PLAN_BACKUP_RESTORE_CENTRAL.md v1.3, §10.1.
 **Limitación:** estática, no stress test exhaustivo. La ruta TLS nueva requiere despliegue con procesos de versión anterior detenidos. No se movió el lock anterior ni se ejecutó runtime apply.
 
 **Siguiente decisión pendiente:** cerrar alcance inicial de categorías/adaptadores del snapshot conforme a Etapa 5 antes de implementar el writer.
+
+
+## 2026-11-03 — Aprobación del alcance incremental del snapshot compartido v1
+
+El propietario aprobó el alcance incremental: snapshot de conexiones/configuraciones actuales VLESS y VMess; metadatos no secretos de usuarios, identidades y asociaciones; catálogo central TLS, certificados públicos `managed` y dependencias `reference`. Se excluyen por defecto UUID VLESS/VMess, secretos REALITY, claves privadas TLS y cualquier otra credencial; los elementos afectados se marcan incompletos. Se mantienen `email` y `level` VMess como metadatos protegidos.
+
+Perfiles, perfil activo, preferencias, dominios independientes y protocolos distintos de VLESS/VMess quedan `unsupported` en v1. Si una categoría no soportada es solicitada, el resultado global será `PARTIAL`, nunca `COMPLETE`. Esto se contrasta con Etapa 5 normativa, que sigue siendo la referencia íntegra y no se modifica.
+
+`docs/PLAN_BACKUP_RESTORE_CENTRAL.md` actualizado a v1.6 con la decisión y un borrador del contrato lógico de manifiesto. El borrador sigue pendiente de aprobación: no es schema congelado. La aprobación actual no autoriza writer, paquetes reales, restore, inclusión de secretos ni runtime apply.

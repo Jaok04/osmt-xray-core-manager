@@ -511,3 +511,12 @@ No se probó lectura de lease por un servicio Xray real: la VPS de desarrollo ca
 - tests/uninstall.sh cubre contención lifecycle/integrity/catalog/Xray, lock catalog retenido durante confirmación, liberación cuando Xray está ocupado y supervivencia del lock externo. tests/certificate_store.sh valida defaults de los dos CLI.
 - Suite 47/47 PASS; Bash syntax, ShellCheck de uninstall.sh, shfmt focal, py_compile y git diff --check PASS.
 - Auditoría estática no equivale a stress test exhaustivo. El cambio de ruta del lock TLS requiere despliegue con procesos de versión anterior detenidos; no se hizo runtime apply ni migración de locks reales.
+
+
+## 2026-11-03 — Aprobación del alcance incremental del snapshot compartido v1
+
+El propietario aprobó el alcance incremental: snapshot de conexiones/configuraciones actuales VLESS y VMess; metadatos no secretos de usuarios, identidades y asociaciones; catálogo central TLS, certificados públicos `managed` y dependencias `reference`. Se excluyen por defecto UUID VLESS/VMess, secretos REALITY, claves privadas TLS y cualquier otra credencial; los elementos afectados se marcan incompletos. Se mantienen `email` y `level` VMess como metadatos protegidos.
+
+Perfiles, perfil activo, preferencias, dominios independientes y protocolos distintos de VLESS/VMess quedan `unsupported` en v1. Si una categoría no soportada es solicitada, el resultado global será `PARTIAL`, nunca `COMPLETE`. Esto se contrasta con Etapa 5 normativa, que sigue siendo la referencia íntegra y no se modifica.
+
+`docs/PLAN_BACKUP_RESTORE_CENTRAL.md` actualizado a v1.6 con la decisión y un borrador del contrato lógico de manifiesto. El borrador sigue pendiente de aprobación: no es schema congelado. La aprobación actual no autoriza writer, paquetes reales, restore, inclusión de secretos ni runtime apply.

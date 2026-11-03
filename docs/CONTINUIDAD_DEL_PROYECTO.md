@@ -524,3 +524,12 @@ Se completó el inventario estático de puntos de adquisición localizados en sc
 La desinstalación ahora coordina catalog.lock cuando elimina certificados. El lock vive fuera del árbol de datos, en /run/xray-manager-certificate-locks/catalog.lock, con padre root:root 0700. Pruebas cubren contención lifecycle/integrity/catalog/Xray, retención durante confirmación, liberación si Xray está ocupado y supervivencia al borrado del árbol. Suite 47/47 PASS y verificaciones estáticas PASS.
 
 La auditoría estática no sustituye pruebas de estrés exhaustivas. El cambio de ruta requiere despliegue con procesos de versión anterior detenidos; no se movió el lock antiguo ni se ejecutó runtime apply.
+
+
+## 2026-11-03 — Aprobación del alcance incremental del snapshot compartido v1
+
+El propietario aprobó el alcance incremental: snapshot de conexiones/configuraciones actuales VLESS y VMess; metadatos no secretos de usuarios, identidades y asociaciones; catálogo central TLS, certificados públicos `managed` y dependencias `reference`. Se excluyen por defecto UUID VLESS/VMess, secretos REALITY, claves privadas TLS y cualquier otra credencial; los elementos afectados se marcan incompletos. Se mantienen `email` y `level` VMess como metadatos protegidos.
+
+Perfiles, perfil activo, preferencias, dominios independientes y protocolos distintos de VLESS/VMess quedan `unsupported` en v1. Si una categoría no soportada es solicitada, el resultado global será `PARTIAL`, nunca `COMPLETE`. Esto se contrasta con Etapa 5 normativa, que sigue siendo la referencia íntegra y no se modifica.
+
+`docs/PLAN_BACKUP_RESTORE_CENTRAL.md` actualizado a v1.6 con la decisión y un borrador del contrato lógico de manifiesto. El borrador sigue pendiente de aprobación: no es schema congelado. La aprobación actual no autoriza writer, paquetes reales, restore, inclusión de secretos ni runtime apply.
