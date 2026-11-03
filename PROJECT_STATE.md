@@ -423,3 +423,13 @@ VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servi
 - Nuevo default único: /run/xray-manager-certificate-locks/catalog.lock. Fuera del árbol de datos persistentes que desinstalación elimina; certificate_store crea/valida su padre root-only y resolver reutiliza el acquire_lock central. uninstall.sh prepara el padre como root:root 0700.
 - Alineados config/paths.sh, defaults de certificate_store.py y certificate_resolver.py, fallbacks en asistentes VLESS/VMess, uninstall.sh y documentación. Pruebas parser y supervivencia del lock añadidas.
 - No se movió/eliminó ningún lock real en la VPS ni se ejecutó runtime apply. Auditoría global de mutadores sigue abierta.
+
+## Auditoría estática de locks para snapshot — 2026-11-03
+
+- Inventario estático de todos los puntos de adquisición encontrados en scripts, modules, lib, config e install.sh.
+- Orden observado: lifecycle → integrity → catalog (resolver); lifecycle → integrity (install/VLESS backup); lifecycle → Xray-admin; uninstall añade uninstall entre lifecycle e integrity y catalog condicional antes de Xray.
+- Conexiones, usuarios legacy/v2, stores VLESS/VMess, cutover y preflight migración TLS usan integrity; almacén de certificados usa catalog; settings/dependencias/servicio usan lifecycle.
+- No se encontró ciclo/inversión en los caminos inspeccionados. Orden recomendado snapshot: lifecycle → integrity → catalog; liberación inversa.
+- Los locks Python existentes son bloqueantes; el writer futuro deberá usar adquisición no bloqueante con timeout finito configurable y abortar sin publicar si falla.
+- Pruebas de contención lifecycle/integrity/catalog/Xray, retención/liberación del catalog y ruta estable; suite 47/47 PASS, Bash syntax, ShellCheck uninstall, shfmt focal, py_compile y diff-check PASS.
+- Limitación: auditoría estática no equivale a stress test exhaustivo. Cambio de ruta catalog requiere despliegue con procesos de versión anterior detenidos; no se movió lock antiguo ni se hizo runtime apply.

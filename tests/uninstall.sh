@@ -324,6 +324,25 @@ fi
 flock -u "$busy_catalog_fd"
 exec {busy_catalog_fd}>&-
 
+# Si el lock Xray está ocupado después de tomar catalog.lock, se libera catalog.lock.
+mkdir -p "$APP_ROOT"
+printf 'keep after Xray lock contention\n' >"$APP_ROOT/marker.txt"
+UNINSTALL_LOCK="$tmp/uninstall-xray-after-catalog.lock"
+UNINSTALL_DATA_LOCK="$tmp/integrity-xray-after-catalog.lock"
+UNINSTALL_CERTIFICATES_LOCK="$tmp/catalog-xray-after-catalog/catalog.lock"
+UNINSTALL_XRAY_LOCK="$tmp/xray-after-catalog.lock"
+exec {busy_xray_after_catalog_fd}>"$UNINSTALL_XRAY_LOCK"
+flock -x "$busy_xray_after_catalog_fd"
+if printf '2\n2\n' | uninstall_menu_action >"$tmp/uninstall-xray-after-catalog.out" 2>&1; then
+    printf 'ERROR: se desinstaló con el lock Xray ocupado.\n' >&2
+    exit 1
+fi
+[[ -f "$APP_ROOT/marker.txt" ]]
+manager_lock_acquire "$UNINSTALL_CERTIFICATES_LOCK" catalog_probe_fd
+manager_lock_release "$catalog_probe_fd"
+flock -u "$busy_xray_after_catalog_fd"
+exec {busy_xray_after_catalog_fd}>&-
+
 # Una exportación remota exitosa debe quedar reflejada como verificada en el resumen.
 source "$ROOT/modules/uninstall.sh"
 UNINSTALL_LOCK="$tmp/uninstall-export.lock"

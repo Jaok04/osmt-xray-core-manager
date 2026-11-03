@@ -346,3 +346,15 @@ Contrato: docs/PLAN_BACKUP_RESTORE_CENTRAL.md v1.3, §10.1.
 **No ejecutado:** no se movieron ni borraron locks reales, no se aplicó runtime ni se modificaron datos persistentes.
 
 **Pendiente:** repetir la suite completa tras esta segunda corrección y continuar la auditoría global de todos los mutadores/locks. No iniciar writer de backup compartido hasta cerrar la auditoría y contrato de snapshot.
+
+## 16. Auditoría estática de locks — 2026-11-03
+
+**Resultado:** inventario estático de los puntos de adquisición del repositorio completado; no se encontró ciclo/inversión en los caminos inspeccionados.
+
+**Orden recomendado del snapshot:** lifecycle → integrity → catalog; liberar en orden inverso. Writer con adquisición no bloqueante y timeout finito configurable. No usar flock bloqueante indefinido.
+
+**Pruebas:** contención lifecycle/integrity/catalog/Xray, catalog retenido durante confirmación, liberación ante lock Xray ocupado y supervivencia del lock fuera del árbol eliminado. Suite 47/47 PASS; Bash syntax, ShellCheck uninstall, shfmt focal, py_compile y git diff check PASS.
+
+**Limitación:** estática, no stress test exhaustivo. La ruta TLS nueva requiere despliegue con procesos de versión anterior detenidos. No se movió el lock anterior ni se ejecutó runtime apply.
+
+**Siguiente decisión pendiente:** cerrar alcance inicial de categorías/adaptadores del snapshot conforme a Etapa 5 antes de implementar el writer.

@@ -516,3 +516,11 @@ Se corrigió una segunda condición necesaria para que el lock de desinstalació
 Defaults CLI, paths centrales, asistentes VLESS/VMess, desinstalación y docs quedaron alineados. tests/certificate_store.sh valida defaults de ambos CLI; tests/uninstall.sh valida contención del lock y supervivencia fuera del árbol borrado. La suite completa debe volver a ejecutarse tras estos cambios.
 
 No se movió ni eliminó ningún lock real, no se aplicó runtime ni se tocaron datos persistentes. La auditoría global de todos los mutadores sigue abierta.
+
+## Continuidad — auditoría estática de locks (2026-11-03)
+
+Se completó el inventario estático de puntos de adquisición localizados en scripts, modules, lib, config e install.sh. No se encontró ciclo/inversión en los caminos inspeccionados. El orden recomendado para el snapshot compartido es lifecycle → integrity → catalog, liberando en orden inverso. El writer deberá usar locks no bloqueantes con timeout finito; los stores Python actuales son bloqueantes y no deben copiarse sin límite.
+
+La desinstalación ahora coordina catalog.lock cuando elimina certificados. El lock vive fuera del árbol de datos, en /run/xray-manager-certificate-locks/catalog.lock, con padre root:root 0700. Pruebas cubren contención lifecycle/integrity/catalog/Xray, retención durante confirmación, liberación si Xray está ocupado y supervivencia al borrado del árbol. Suite 47/47 PASS y verificaciones estáticas PASS.
+
+La auditoría estática no sustituye pruebas de estrés exhaustivas. El cambio de ruta requiere despliegue con procesos de versión anterior detenidos; no se movió el lock antiguo ni se ejecutó runtime apply.

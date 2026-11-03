@@ -1,6 +1,6 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.4
+**Versión:** 1.5
 **Fecha:** 2026-11-03
 **Estado:** CRITERIOS APROBADOS / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
 **Ámbito:** contenedor criptográfico neutral y futuro backup consistente de VLESS/VMess/certificados; extensible a protocolos futuros mediante adaptadores.
@@ -198,3 +198,31 @@ Se establece como ruta única por defecto de catalog.lock: /run/xray-manager-cer
 La nueva ubicación queda fuera de /var/lib/xray-manager y del árbol de certificados; por tanto, la política de desinstalación de certificados o de todos los datos del Manager no desvincula el archivo mientras se mantiene el lock. certificate_store.py crea/valida el directorio padre con safe_dir en modo root-only; certificate_resolver.py utiliza el mismo acquire_lock del almacén. Los defaults CLI, config/paths.sh, los asistentes VLESS/VMess y uninstall.sh deben permanecer alineados con esta ruta. El flujo de desinstalación crea y valida el directorio padre como root:root 0700 antes de adquirir el lock; certificate_store también valida ese modo mediante safe_dir. Las pruebas de parser comprueban que ambos CLI usan el default estable y tests/uninstall.sh comprueba que el lock sobrevive al borrado del árbol de certificados.
 
 La ruta es temporal bajo /run y se recrea tras reinicio cuando el almacén la necesite. No contiene datos del catálogo ni secretos. Este cambio modifica defaults de código/documentación, no mueve ni elimina archivos reales en la VPS y no ejecuta runtime apply.
+
+## 10.4. Inventario estático de locks y orden para snapshot — 2026-11-03
+
+La revisión de los puntos de adquisición del repositorio identifica este grafo:
+
+| Operación | Orden de adquisición |
+|---|---|
+| Instalación/actualización del Manager | lifecycle → integrity |
+| Backup VLESS existente | lifecycle → integrity |
+| Administración de Xray-core | lifecycle → xray-admin |
+| Desinstalación | lifecycle → uninstall → integrity → catalog (si elimina certificados) → xray-admin |
+| Resolutor TLS | integrity → catalog |
+| Almacén central de certificados | catalog |
+| Conexiones, usuarios legacy y users v2 | integrity |
+| Stores de configuración VLESS/VMess | integrity |
+| Cutover users v2 | integrity |
+| Preflight migración TLS (solo lectura) | integrity compartido |
+| Preferencias, dependencias del sistema y acciones de servicio | lifecycle |
+
+No se encontró una adquisición inversa entre integrity y catalog ni un ciclo en los caminos de adquisición inspeccionados. El resolutor y el desinstalador respetan integrity → catalog; el almacén de certificados toma catalog sin solicitar después integrity. Las operaciones de Xray toman lifecycle antes del lock Xray. Las operaciones de ciclo de vida que también toman integrity lo hacen después de lifecycle.
+
+**Orden requerido para el snapshot compartido:** lifecycle → integrity → catalog. No necesita tomar uninstall ni xray-admin, porque el snapshot no desinstala ni modifica el runtime. Debe adquirir todos los locks antes de leer los catálogos/archivos y liberarlos en orden inverso.
+
+**Tiempo de espera:** los stores/resolutor Python actuales usan flock bloqueante; no se debe copiar ese comportamiento al snapshot. El writer futuro debe usar adquisición no bloqueante con un timeout finito y configurable; si cualquier lock no se obtiene, aborta sin publicar paquete ni staging parcial.
+
+**Pruebas de concurrencia disponibles:** tests/uninstall.sh cubre contención de lifecycle, integrity, catalog y Xray; confirma que catalog se mantiene durante la confirmación de eliminación de certificados, que el lock se libera si la adquisición posterior de Xray falla y que el lock externo sobrevive al borrado del árbol de certificados. tests/certificate_store.sh valida los defaults de ruta en ambos CLI. Suite completa: 47/47 PASS; Bash syntax, ShellCheck de uninstall.sh, shfmt focal, py_compile y git diff --check PASS.
+
+**Límite:** inventario estático completo de los puntos de adquisición localizados en scripts, modules, lib, config e install.sh; no equivale a una prueba de estrés exhaustiva ni a una garantía frente a procesos de una versión antigua durante despliegue. El cambio de ruta del catálogo requiere desplegar con los procesos de la versión anterior detenidos. No se movió el lock antiguo ni se ejecutó migración/runtime en la VPS.

@@ -503,3 +503,11 @@ No se probó lectura de lease por un servicio Xray real: la VPS de desarrollo ca
 - Alineados defaults CLI de certificate_store.py y certificate_resolver.py, config/paths.sh, fallbacks VLESS/VMess, desinstalación y documentación de implementación.
 - tests/certificate_store.sh valida defaults de ambos CLI; tests/uninstall.sh valida que el lock vive fuera y sobrevive al borrado de los datos de certificados.
 - Sin operaciones sobre archivos/locks reales, runtime, servicios, master key, datos persistentes ni Xray-Normativa/.
+
+## 2026-11-03 — Auditoría estática del orden de locks
+
+- Inventariados los puntos de adquisición en scripts, modules, lib, config e install.sh. No se encontró ciclo entre lifecycle, integrity, catalog y Xray-admin en los caminos inspeccionados.
+- Orden recomendado para snapshot: lifecycle → integrity → catalog; liberar en orden inverso. El writer futuro debe usar timeout finito y no bloquear indefinidamente.
+- tests/uninstall.sh cubre contención lifecycle/integrity/catalog/Xray, lock catalog retenido durante confirmación, liberación cuando Xray está ocupado y supervivencia del lock externo. tests/certificate_store.sh valida defaults de los dos CLI.
+- Suite 47/47 PASS; Bash syntax, ShellCheck de uninstall.sh, shfmt focal, py_compile y git diff --check PASS.
+- Auditoría estática no equivale a stress test exhaustivo. El cambio de ruta del lock TLS requiere despliegue con procesos de versión anterior detenidos; no se hizo runtime apply ni migración de locks reales.
