@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-03 — VMess técnicamente preparado para aceptación; F-01–F-05 resueltos/verificados; VM-28 verificado; VM-32 con límite transaccional documentado; VM-33 no aplica; VM-38/39/40 verificados; suite 40/40; Xray 14/14 y 16 negativos; VM-46 live y VM-47 loopback verificados; VM-48 pendiente de decisión expresa
+**Corte de estado:** 2026-11-03 — VMess técnicamente preparado para aceptación (VM-48 pendiente); iniciado el diseño documentado de certificados TLS centralizados. Contrato inicial en `docs/ARQUITECTURA_CERTIFICADOS_CENTRALIZADOS.md`; implementación de almacén/resolutor/migración aún pendiente.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -300,3 +300,14 @@ VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servi
 **Cambios de esta revalidación:** únicamente se documentaron tres variables globales intencionales consumidas por el módulo cargado con `source`, con supresión local SC2034; no se eliminaron asignaciones necesarias. No se modificó código de producción, documentación normativa `Xray-Normativa/`, runtime, firewall, puertos, certificados desplegados ni servicio. La carpeta normativa se comparó con el respaldo original: 14/14 archivos originales coincidentes.
 
 **Siguiente paso:** decisión formal del propietario sobre VM-48. No iniciar Trojan hasta obtener aceptación VMess y contrastar específicamente su alcance normativo.
+
+
+## Trabajo aprobado — certificados TLS centralizados (2026-11-03)
+
+- El propietario aprobó el modelo arquitectónico: catálogo de certificados independiente de conexiones; recursos `managed` y `reference`; una única clave privada cifrada central por recurso; conexiones VMess/VLESS referencian mediante `certificate_id`; resolución controlada; REALITY permanece separado.
+- Contrato inicial documentado en `docs/ARQUITECTURA_CERTIFICADOS_CENTRALIZADOS.md`.
+- La decisión arquitectónica está APROBADA. El contrato está DOCUMENTADO en revisión inicial; las decisiones técnicas de implementación listadas en §14 siguen pendientes de auditoría/cierre.
+- Código de producción todavía NO MODIFICADO por este trabajo. Catálogo central, almacén, resolutor, integración VMess/VLESS, migración y backup/restore compartido siguen pendientes.
+- No se modificó `Xray-Normativa/`, ni la VPS `Vps de Pruebas`, ni runtime, certificados desplegados, firewall, puertos o servicio.
+- Etapa 4 funcional sigue sin implementación completa; este trabajo sólo establece el diseño técnico para el recurso de certificados compartidos.
+- Próximo paso: auditar los módulos criptográficos, catálogos y permisos/identidad efectiva del servicio Xray en la VPS de desarrollo; cerrar las decisiones de §14 antes de implementar el almacén central.

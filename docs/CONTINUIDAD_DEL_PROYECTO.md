@@ -1,5 +1,8 @@
 # Protocolo de continuidad — Xray Core Manager
 
+> **Nuevo frente activo (2026-11-03):** el propietario aprobó el modelo de certificados TLS centralizados. Leer `docs/ARQUITECTURA_CERTIFICADOS_CENTRALIZADOS.md` antes de cualquier cambio. La primera revisión contractual está documentada; el código del almacén/resolutor/migración todavía no se ha modificado. Próximo paso: auditoría read-only de crypto VMess/VLESS, catálogos, generadores, backup y permisos/identidad del servicio Xray; cerrar §14 del contrato. No tocar `Xray-Normativa/` sin aprobación específica. No tocar la VPS `Vps de Pruebas` ni runtime/certificados desplegados.
+
+
 > **Estado vigente 2026-11-03:** VMess técnicamente preparado para aceptación formal. F-01–F-05 resueltos/verificados; VM-28 verificado; VM-32 verificado con límite transaccional documentado; VM-33 no aplica al alcance aprobado; VM-38/39/40 verificados; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 cliente-servidor VMess-TLS loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño. VM-48 requiere decisión expresa del propietario; VMess NO está aún aceptado y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md, docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md y docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md. No iniciar Trojan.
 
 

@@ -373,3 +373,13 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - `Xray-Normativa/` se comparó con el respaldo original: 14/14 archivos originales coincidentes; sin cambios normativos. No se modificó código de producción ni runtime, firewall, puertos, certificados desplegados o servicio.
 - Estado: VMess IMPLEMENTADO, VERIFICADO y DOCUMENTADO; técnicamente preparado para aceptación formal, pero VM-48 PENDIENTE DE DECISIÓN. Etapa 2 ABIERTA. No iniciar Trojan antes de la aceptación formal y del contraste normativo específico.
 - Publicación del bloque técnico/documental confirmada en `ef0fbad9de276b4fe15d79831b7b0dc8bbc0f4be` (`docs(vmess): prepare module for formal acceptance`); GitHub y VPS quedaron en el mismo SHA de la rama autorizada. Este registro cronológico se incorpora en un commit documental posterior. `main` no se modificó.
+
+
+## 2026-11-03 — Inicio del diseño de certificados TLS centralizados
+
+- El propietario aprobó iniciar los cambios de código y documentación no normativa para implementar el modelo centralizado de certificados TLS. La aprobación arquitectónica previa define catálogo independiente, recursos `managed`/`reference`, una única clave privada cifrada central por certificado, referencias `certificate_id` desde VMess/VLESS y resolución controlada. REALITY permanece separado.
+- Se creó `docs/ARQUITECTURA_CERTIFICADOS_CENTRALIZADOS.md` v1.0 como contrato técnico inicial. Documenta semántica de recursos, contrato de conexión, seguridad, resolutor, migración, backup/restore, pruebas, etapas y decisiones técnicas pendientes.
+- Se actualizaron `PROJECT_STATE.md`, `docs/PUNTO_CONTROL_ACTUAL.md` y `docs/CONTINUIDAD_DEL_PROYECTO.md` para identificar el nuevo frente activo y el punto exacto de reanudación.
+- Esta entrega sólo modifica documentación técnica/no normativa. No se modificó código de producción, `Xray-Normativa/`, catálogo/secretos live, configuración runtime, servicio, firewall, puertos ni certificados desplegados. La VPS `Vps de Pruebas` no fue utilizada.
+- La decisión arquitectónica está APROBADA y el contrato inicial DOCUMENTADO. El contrato requiere revisión técnica; §14 enumera decisiones pendientes antes de implementar el almacén central. No se declaran funcionalidades IMPLEMENTADAS ni VERIFICADAS por esta entrega.
+- Rama de trabajo: `design/user-identity-association-v1`; HEAD de partida local/remoto verificado: `ee694da113ebd0ab3f33285a2e0480c5efc10b52`. Publicación y sincronización de esta entrega quedan pendientes de los controles finales de diff y documentación.

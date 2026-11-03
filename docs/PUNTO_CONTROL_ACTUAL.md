@@ -1,7 +1,7 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-03
-**Tarea:** preparación final de VMess para aceptación formal; revalidación integral, corrección de advertencias ShellCheck y reconciliación VM-28/32/33.
+**Tarea activa:** diseño e implementación progresiva del modelo centralizado de certificados TLS, iniciado con el contrato arquitectónico. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
 **Estado vigente:** F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
@@ -161,3 +161,23 @@ Se reejecutó en la VPS `/opt/xray-manager`: suite completa 40/40 PASS; Xray-cor
 Se documentaron sólo tres variables globales intencionales consumidas por funciones de `modules/connections.sh` cargado con `source`, mediante supresión local SC2034; se conservaron las asignaciones necesarias. No se modificó código de producción ni normativa. VM-28 pasa a VERIFICADO por evidencia de versionado, referencias separadas, coherencia y concurrencia r1/r2. VM-32 se precisa como atomicidad individual y concurrencia con límite multiarchivo documentado; VM-33 no aplica porque el diseño no promete rollback transaccional.
 
 VM-47 sigue probado en loopback local; WAN no probado y no requerido por el diseño. VMess queda listo para decisión formal del propietario (VM-48). Etapa 2 permanece ABIERTA.
+
+
+## 15. Nuevo punto de control — certificados TLS centralizados (2026-11-03)
+
+**Decisión del propietario:** APROBADO el modelo centralizado. Las conexiones VMess/VLESS usarán `certificate_id`; la clave privada se conservará una sola vez, cifrada en el almacén central; `managed` y `reference` tendrán semántica diferenciada; un resolutor autorizado preparará los archivos para Xray; REALITY queda separado.
+
+**Documento contractual:** `docs/ARQUITECTURA_CERTIFICADOS_CENTRALIZADOS.md` (versión 1.0, diseño documentado, revisión técnica pendiente).
+
+**Estado de esta entrega:**
+- Contrato arquitectónico: DOCUMENTADO.
+- Código: SIN CAMBIOS por esta iniciativa.
+- Pruebas de implementación: NO EJECUTADAS / aún no aplicables.
+- Normativa `Xray-Normativa/`: SIN CAMBIOS.
+- VPS `Vps de Pruebas`, runtime, servicio, firewall, puertos y certificados desplegados: SIN CAMBIOS.
+- Publicación GitHub: PENDIENTE en esta entrega.
+- Aceptación de implementación: PENDIENTE.
+
+**Siguiente paso permitido:** inspección técnica read-only de `scripts/vmess_config_store.py`, `scripts/vless_config_store.py`, módulos crypto, generadores, backups, `config/paths.sh`, unidad systemd y permisos de la VPS de desarrollo. Cerrar las decisiones abiertas de §14 del contrato antes de crear el almacén central. No migrar datos reales ni tocar runtime.
+
+La Etapa 4 normativa permanece funcionalmente NO IMPLEMENTADA en su conjunto. Este contrato no constituye cierre de Etapa 4 ni aceptación de una funcionalidad operativa.
