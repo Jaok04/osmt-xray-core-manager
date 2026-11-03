@@ -710,3 +710,8 @@ Estado: matriz A-01–A-19 documentada y verificada en aislamiento; Snapshot Wri
 ## 2026-11-03 — Publicación de la matriz A-01–A-19 y negativos A-16
 
 Se publicó la matriz de trazabilidad A-01–A-19, diez casos negativos adicionales A-16, las actualizaciones de `PROJECT_STATE.md`, continuidad, punto de control y plan técnico. Commit `101853e6ef0990686128f45561b22e1cd4248aea` (`test(backup): expand snapshot writer acceptance evidence`) en `design/user-identity-association-v1`. `git ls-remote` confirmó el mismo SHA; la VPS quedó sincronizada y el worktree limpio. `main` no se modificó y `Xray-Normativa/` permanece intacta. La publicación no implica aceptación formal del Snapshot Writer v1.
+
+
+## 2026-11-03 — Registro final de sincronización de la matriz A-01–A-19
+
+Se actualizó el estado operativo del plan y punto de control para reflejar la publicación final. Commit `7f03efcf080465d8bced447549e29f8abb95248b` (`docs(backup): publish snapshot acceptance matrix`) en `design/user-identity-association-v1`; la VPS y GitHub coinciden en ese HEAD. El commit anterior `101853e6ef0990686128f45561b22e1cd4248aea` contiene la matriz y los diez nuevos negativos A-16. Snapshot Writer v1 permanece NO ACEPTADO FORMALMENTE.
