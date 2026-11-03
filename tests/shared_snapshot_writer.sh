@@ -203,6 +203,75 @@ with tempfile.TemporaryDirectory(prefix="xrm-unknown-stage-") as raw:
     finally:
         os.close(coordination_fd)
 
+
+# A-16: un hardlink sin marcador no se interpreta como publicación válida.
+with tempfile.TemporaryDirectory(prefix="xrm-orphan-arbitrary-hardlink-") as raw:
+    parent = Path(raw)
+    os.chmod(parent, 0o700)
+    stage = parent / ".xrm-snapshot-arbitrary"
+    stage.mkdir(mode=0o700)
+    (stage / "owner.lock").touch(mode=0o600)
+    os.chmod(stage / "owner.lock", 0o600)
+    package = stage / "package.tmp"
+    package.write_bytes(b"synthetic-not-a-published-package")
+    os.chmod(package, 0o600)
+    unrelated = parent / "unrelated.bin"
+    os.link(package, unrelated)
+    coordination_fd = writer._acquire_coordination_lock(parent, 1.0)
+    try:
+        blocked(writer._recover_orphan_staging, parent)
+        assert stage.exists() and package.exists() and unrelated.exists()
+        assert package.stat().st_nlink == 2
+    finally:
+        os.close(coordination_fd)
+
+# A-16: el marcador sólo autoriza el nombre final exacto y el inode registrado.
+with tempfile.TemporaryDirectory(prefix="xrm-orphan-marker-mismatch-") as raw:
+    parent = Path(raw)
+    os.chmod(parent, 0o700)
+    stage = parent / ".xrm-snapshot-mismatch"
+    stage.mkdir(mode=0o700)
+    (stage / "owner.lock").touch(mode=0o600)
+    os.chmod(stage / "owner.lock", 0o600)
+    package = stage / "package.tmp"
+    package.write_bytes(b"synthetic-marker-bound-artifact")
+    os.chmod(package, 0o600)
+    expected = parent / "expected.xrm"
+    writer._write_publication_marker(package, expected)
+    wrong = parent / "different-name.xrm"
+    os.link(package, wrong)
+    coordination_fd = writer._acquire_coordination_lock(parent, 1.0)
+    try:
+        blocked(writer._recover_orphan_staging, parent)
+        assert stage.exists() and package.exists() and wrong.exists()
+        assert not expected.exists() and package.stat().st_nlink == 2
+    finally:
+        os.close(coordination_fd)
+
+# A-16: un tercer hardlink nunca se admite, incluso con marcador válido.
+with tempfile.TemporaryDirectory(prefix="xrm-orphan-third-hardlink-") as raw:
+    parent = Path(raw)
+    os.chmod(parent, 0o700)
+    stage = parent / ".xrm-snapshot-third-link"
+    stage.mkdir(mode=0o700)
+    (stage / "owner.lock").touch(mode=0o600)
+    os.chmod(stage / "owner.lock", 0o600)
+    package = stage / "package.tmp"
+    package.write_bytes(b"synthetic-three-link-artifact")
+    os.chmod(package, 0o600)
+    final_path = parent / "published.xrm"
+    writer._write_publication_marker(package, final_path)
+    os.link(package, final_path)
+    extra_link = parent / "extra-hardlink.bin"
+    os.link(package, extra_link)
+    coordination_fd = writer._acquire_coordination_lock(parent, 1.0)
+    try:
+        blocked(writer._recover_orphan_staging, parent)
+        assert stage.exists() and package.exists() and final_path.exists() and extra_link.exists()
+        assert package.stat().st_nlink == 3
+    finally:
+        os.close(coordination_fd)
+
 # SW-03: un padre ausente no debe crearse para alojar un lock.
 with tempfile.TemporaryDirectory(prefix="xrm-lock-test-") as raw:
     parent = Path(raw)
@@ -641,7 +710,7 @@ with tempfile.TemporaryDirectory(prefix="xrm-snapshot-e2e-") as raw:
     fsync_calls = []
     def fail_directory_fsync(fd):
         fsync_calls.append(fd)
-        if len(fsync_calls) == 2:
+        if len(fsync_calls) == 4:
             raise OSError("synthetic parent fsync failure")
         return real_fsync(fd)
     with mock.patch.object(writer.os, "fsync", side_effect=fail_directory_fsync):
@@ -674,15 +743,15 @@ with tempfile.TemporaryDirectory(prefix="xrm-snapshot-e2e-") as raw:
         leftovers = list(dirs["output"].glob(".xrm-snapshot-*"))
         assert len(leftovers) == (1 if expect_residue else 0), leftovers
         if leftovers:
-            owner_path = leftovers[0] / "owner.lock"
-            if owner_path.exists():
-                fd = os.open(owner_path, os.O_RDWR)
-                try:
-                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    fcntl.flock(fd, fcntl.LOCK_UN)
-                finally:
-                    os.close(fd)
-            writer.shutil.rmtree(leftovers[0])
+            coordination_fd = writer._acquire_coordination_lock(dirs["output"], 1.0)
+            try:
+                assert writer._recover_orphan_staging(dirs["output"]) == 1
+            finally:
+                os.close(coordination_fd)
+            assert not list(dirs["output"].glob(".xrm-snapshot-*"))
+            assert destination.stat().st_nlink == 1
+            with destination.open("rb") as stream:
+                writer.crypto.verify_package_stream(stream, "Synthetic-Only-Password-123!")
 
     # 1) No se pudo adquirir el lock de coordinación para limpiar.
     real_coord_lock = writer._acquire_coordination_lock
@@ -727,7 +796,7 @@ with tempfile.TemporaryDirectory(prefix="xrm-snapshot-e2e-") as raw:
     cleanup_fsync_calls = []
     def fail_cleanup_fsync(fd):
         cleanup_fsync_calls.append(fd)
-        if len(cleanup_fsync_calls) == 3:
+        if len(cleanup_fsync_calls) == 5:
             raise OSError("synthetic cleanup directory fsync failure")
         return real_fsync(fd)
     assert_cleanup_failed(
@@ -765,15 +834,11 @@ elif phase == "encrypt-crash":
 elif phase == "publish-crash":
     writer.os.link = lambda *args, **kwargs: os._exit(83)
 elif phase == "post-link-crash":
-    original_fsync = writer.os.fsync
-    fsync_count = 0
-    def crash_after_exclusive_link(fd):
-        global fsync_count
-        fsync_count += 1
-        if fsync_count == 2:
-            os._exit(84)
-        return original_fsync(fd)
-    writer.os.fsync = crash_after_exclusive_link
+    original_link = writer.os.link
+    def link_then_crash(source, target, **kwargs):
+        original_link(source, target, **kwargs)
+        os._exit(84)
+    writer.os.link = link_then_crash
 writer.create_snapshot(destination, None if phase == "prompt-crash" else "Synthetic-Only-Password-123!", paths=paths)
 '''
     import subprocess
@@ -813,9 +878,72 @@ writer.create_snapshot(destination, None if phase == "prompt-crash" else "Synthe
         assert partial.read_bytes().startswith(writer.crypto.MAGIC)
         if phase == "post-link-crash":
             assert partial_stat.st_nlink == 2  # hard-link publicado + staging pendiente
+            marker = json.loads((leftovers[0] / "publication.json").read_text(encoding="utf-8"))
+            assert marker["destination_name"] == final_path.name
+            assert marker["inode"] == partial_stat.st_ino
         else:
             assert partial_stat.st_nlink == 1
-        writer.shutil.rmtree(leftovers[0])
+        coordination_fd = writer._acquire_coordination_lock(dirs["output"], 1.0)
+        try:
+            assert writer._recover_orphan_staging(dirs["output"]) == 1
+        finally:
+            os.close(coordination_fd)
+        assert not leftovers[0].exists()
+        if phase == "post-link-crash":
+            assert final_path.exists() and final_path.stat().st_nlink == 1
+            with final_path.open("rb") as stream:
+                writer.crypto.verify_package_stream(stream, "Synthetic-Only-Password-123!")
+        else:
+            assert not final_path.exists()
+
+
+# A-16: si la recuperación se interrumpe después de retirar package.tmp,
+# el siguiente intento reconoce el marcador y finaliza sin tocar el paquete.
+with tempfile.TemporaryDirectory(prefix="xrm-recovery-interrupted-") as raw:
+    parent = Path(raw)
+    os.chmod(parent, 0o700)
+    stage = parent / ".xrm-snapshot-recovery-interrupted"
+    stage.mkdir(mode=0o700)
+    (stage / "owner.lock").touch(mode=0o600)
+    os.chmod(stage / "owner.lock", 0o600)
+    package = stage / "package.tmp"
+    package.write_bytes(b"synthetic-recovery-interruption")
+    os.chmod(package, 0o600)
+    final_path = parent / "durable-final.xrm"
+    writer._write_publication_marker(package, final_path)
+    os.link(package, final_path)
+    recovery_program = r'''import os, sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[2])
+import shared_snapshot_writer as writer
+parent = Path(sys.argv[1])
+original_unlink = Path.unlink
+def unlink_then_crash(path, *args, **kwargs):
+    result = original_unlink(path, *args, **kwargs)
+    if path.name == "package.tmp":
+        os._exit(86)
+    return result
+Path.unlink = unlink_then_crash
+coordination_fd = writer._acquire_coordination_lock(parent, 1.0)
+writer._recover_orphan_staging(parent)
+'''
+    child = subprocess.run(
+        [sys.executable, "-c", recovery_program, str(parent), str(root / "scripts")],
+        capture_output=True, text=True,
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+    )
+    assert child.returncode == 86, (child.returncode, child.stderr)
+    assert final_path.exists() and final_path.stat().st_nlink == 1
+    assert stage.exists() and not (stage / "package.tmp").exists()
+    assert (stage / "publication.json").exists()
+    coordination_fd = writer._acquire_coordination_lock(parent, 1.0)
+    try:
+        assert writer._recover_orphan_staging(parent) == 1
+    finally:
+        os.close(coordination_fd)
+    assert final_path.exists() and final_path.stat().st_nlink == 1
+    assert not stage.exists()
+    assert final_path.read_bytes() == b"synthetic-recovery-interruption"
 
 # E2E de adaptadores VLESS/VMess e identidades con datos sintéticos. Comprueba
 # que los UUID no salen en ningún miembro y que email/level VMess se conservan.

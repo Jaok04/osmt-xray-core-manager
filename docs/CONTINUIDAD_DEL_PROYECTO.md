@@ -696,3 +696,11 @@ A-16: `_recover_orphan_staging()` rechaza un staging post-publicación legítimo
 Siguiente paso tras publicar/sincronizar: diseñar y solicitar autorización para una corrección fail-closed que reconozca sólo el hardlink post-link demostrablemente correspondiente al paquete final; mantener rechazo de hardlinks arbitrarios, staging activo, symlinks, tipos especiales y metadatos inseguros. Añadir tests de recuperación tras crash post-link, unlink fallido y fallo de coordinación, comprobando integridad/preservación del paquete final y conservación de staging ambiguos. Repetir auditoría antes de proponer aceptación.
 
 No ejecutar backup real, no leer `master.key`/secretos, no restore/verify independiente, no runtime apply ni modificar `Xray-Normativa/`.
+
+## Continuidad — A-16 corregido localmente, pendiente de auditoría (2026-11-03)
+
+El propietario autorizó corregir A-16. La implementación local incorpora publication.json en el staging privado, escrito y sincronizado antes del hardlink final. El marcador vincula el basename exacto de destino, device/inode, tamaño y SHA-256 del paquete. El recuperador admite el estado legítimo package.tmp nlink == 2 sólo con marcador válido y destino coincidente; retira exclusivamente package.tmp, comprueba que el destino conserva nlink == 1 y elimina después marcador/owner/staging. El flujo soporta reintento si el recuperador se interrumpe tras retirar el nombre temporal.
+
+Se mantienen bloqueados hardlinks sin marcador, nlink > 2, destino con nombre/inode/tamaño/hash distinto, symlinks, tipos especiales, metadatos inseguros y staging activos. Los tests focales ejercitan crash post-link, fallos de coordinación/unlink y crash del propio recuperador. Verificación ejecutada: tests/*.sh 49/49 PASS; AST 16/16; bash -n 74 archivos; ShellCheck PASS; shfmt focal PASS; git diff --check PASS; normativa 14/14 hashes coincidentes. A-16 pasa. El Snapshot Writer sigue NO ACEPTADO formalmente hasta revisión/decisión expresa del propietario.
+
+No crear backup real, no leer master.key/secretos, no restore/verify independiente, no runtime apply y no modificar Xray-Normativa/.

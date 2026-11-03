@@ -602,3 +602,10 @@ Por autorización expresa del propietario se corrigieron los hallazgos B-01, B-0
 - No crear backup real, no leer `master.key`/secretos, no restore/verify independiente, no runtime apply. `Xray-Normativa/` permanece inmutable.
 
 - Publicación B-01/B-02/B-03: commit `b6582da` en `origin/design/user-identity-association-v1` (2026-11-03). La publicación no implica aceptación; A-16 sigue bloqueante.
+
+## A-16 — corrección implementada localmente, auditoría pendiente (2026-11-03)
+
+- Se agregó marcador de publicación publication.json root:root 0600, nlink == 1, durable antes de os.link, con destino exacto, device/inode, tamaño y SHA-256.
+- Recuperación post-link sólo acepta package.tmp nlink == 2 cuando el marcador coincide y el destino es el mismo archivo regular root:root 0600, con exactamente dos enlaces y hash coincidente. Retira sólo el enlace de staging y valida el destino final con nlink == 1.
+- Recuperación idempotente tras crash posterior al unlink de package.tmp. Hardlinks arbitrarios sin marcador, nlink > 2, destino diferente y estructura insegura bloquean.
+- Verificación posterior: tests/*.sh 49/49 PASS; AST 16/16; bash -n 74 archivos; ShellCheck PASS; shfmt focal PASS; git diff --check PASS; normativa 14/14 hashes coincidentes. A-16 pasa. Snapshot Writer v1 continúa NO ACEPTADO formalmente.

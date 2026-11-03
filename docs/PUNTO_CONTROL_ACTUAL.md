@@ -541,3 +541,14 @@ Estado: writer y correcciones locales, no publicados ni aceptados formalmente. H
 - Restricciones: no backup real, no `master.key`/secretos, no restore/verify independiente, no runtime apply, no cambios a `Xray-Normativa/`.
 
 - Publicación de B-01/B-02/B-03 verificada en commit `b6582da` de `origin/design/user-identity-association-v1`. El checkout de la VPS se encuentra en ese commit; `scripts/__pycache__/` permanece como artefacto local no versionado y no fue incluido.
+
+## Punto de control — A-16 corregido localmente (2026-11-03)
+
+**Estado:** A-16 IMPLEMENTADO LOCALMENTE / PRUEBA FOCAL PASS / AUDITORÍA GLOBAL PENDIENTE. Snapshot Writer v1 continúa **NO ACEPTADO**.
+
+- publication.json privado/durable ata destino exacto, device/inode, tamaño y SHA-256 antes de os.link.
+- Recuperación acepta package.tmp nlink == 2 sólo con marcador y destino exactos; retira únicamente el nombre temporal y valida que el paquete final permanece intacto con nlink == 1.
+- Reanudación idempotente tras crash del recuperador después del unlink del temporal.
+- Rechazo probado de hardlink arbitrario sin marcador, destino con basename distinto y tercer hardlink (nlink == 3).
+- Verificación posterior: tests/*.sh 49/49 PASS; AST 16/16; bash -n 74 archivos; ShellCheck PASS; shfmt focal PASS; git diff --check PASS; SHA normativa 14/14 coincidente. A-16 pasa la recuperación post-link y la reanudación idempotente.
+- Próximo paso: revisar el diff completo y la matriz A-01–A-19; presentar resultados al propietario para aceptación formal o nuevos hallazgos. No backup real, no acceso a secretos/master.key, no runtime ni restore/verify independiente. No commit/push/sync sin autorización expresa; mantener la condición NO ACEPTADO.

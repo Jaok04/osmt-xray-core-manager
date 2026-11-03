@@ -684,3 +684,9 @@ El propietario autorizó publicar B-01/B-02/B-03 manteniendo el writer NO ACEPTA
 ## Publicación — B-01/B-02/B-03 (2026-11-03)
 
 Commit `b6582da` (`fix(backup): harden snapshot identity and manifest validation`) publicado en `origin/design/user-identity-association-v1`. Incluye las correcciones B-01/B-02/B-03, sus pruebas y la documentación de continuidad/estado que mantiene A-16 como bloqueo. Snapshot Writer v1 continúa NO ACEPTADO.
+
+## 2026-11-03 — Corrección A-16 implementada localmente (pendiente de auditoría)
+
+Se añadió publication.json privado y durable antes de publicar el hardlink. El marcador ata el destino exacto al device/inode/tamaño/SHA-256 del paquete. _recover_orphan_staging() admite package.tmp con nlink == 2 sólo cuando el marcador y el destino prueban que ambos nombres son el mismo artefacto; elimina únicamente el nombre temporal, valida el destino restante con nlink == 1 y conserva el paquete final. La recuperación también es idempotente si se interrumpe después de retirar package.tmp. Hardlinks arbitrarios, enlaces adicionales, destinos distintos y estructuras inseguras continúan bloqueados.
+
+Verificación posterior: tests/*.sh 49/49 PASS; AST 16/16; bash -n 74 archivos; ShellCheck PASS; shfmt focal PASS; git diff --check PASS; normativa 14/14 hashes coincidentes. A-16 pasa las pruebas de recuperación post-link y de interrupción idempotente. El writer continúa NO ACEPTADO formalmente. No backup real, secretos/master.key, restore/verify independiente, runtime ni normativa.

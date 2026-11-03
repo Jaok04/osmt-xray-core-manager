@@ -1441,14 +1441,139 @@ def _validate_staging_directory(path: Path) -> None:
         raise SnapshotBlocked("directorio temporal con tipo, propietario o permisos inseguros")
 
 
-def _validate_staging_file(path: Path) -> None:
+def _validate_staging_file(path: Path, *, link_counts: tuple[int, ...] = (1,)) -> os.stat_result:
     st = path.lstat()
     if (
         not stat.S_ISREG(st.st_mode) or stat.S_ISLNK(st.st_mode)
         or st.st_uid != 0 or st.st_gid != 0 or stat.S_IMODE(st.st_mode) != 0o600
-        or st.st_nlink != 1
+        or st.st_nlink not in link_counts
     ):
-        raise SnapshotBlocked("archivo temporal con tipo, propietario o permisos inseguros")
+        raise SnapshotBlocked("archivo temporal con tipo, propietario, permisos o hardlinks inseguros")
+    return st
+
+
+def _sha256_regular_file(path: Path, expected: os.stat_result, *, link_counts: tuple[int, ...]) -> str:
+    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    digest = hashlib.sha256()
+    try:
+        opened = os.fstat(fd)
+        if (
+            not stat.S_ISREG(opened.st_mode) or opened.st_dev != expected.st_dev
+            or opened.st_ino != expected.st_ino or opened.st_uid != 0 or opened.st_gid != 0
+            or stat.S_IMODE(opened.st_mode) != 0o600 or opened.st_nlink not in link_counts
+            or opened.st_size != expected.st_size
+            or opened.st_mtime_ns != expected.st_mtime_ns
+            or opened.st_ctime_ns != expected.st_ctime_ns
+        ):
+            raise SnapshotBlocked("el artefacto publicado cambió durante su inspección")
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        after = os.fstat(fd)
+        current = path.lstat()
+        if (
+            after.st_dev != opened.st_dev or after.st_ino != opened.st_ino
+            or after.st_size != opened.st_size or after.st_nlink not in link_counts
+            or after.st_mtime_ns != opened.st_mtime_ns or after.st_ctime_ns != opened.st_ctime_ns
+            or current.st_dev != opened.st_dev or current.st_ino != opened.st_ino
+            or current.st_size != opened.st_size or current.st_nlink not in link_counts
+            or current.st_mtime_ns != opened.st_mtime_ns or current.st_ctime_ns != opened.st_ctime_ns
+        ):
+            raise SnapshotBlocked("el artefacto publicado cambió durante su inspección")
+    finally:
+        os.close(fd)
+    return digest.hexdigest()
+
+
+def _write_publication_marker(package_path: Path, destination: Path) -> None:
+    package_stat = _validate_staging_file(package_path)
+    if destination.parent != package_path.parent.parent:
+        raise SnapshotBlocked("el destino publicado debe compartir el directorio padre del staging")
+    marker = {
+        "version": 1,
+        "destination_name": destination.name,
+        "device": package_stat.st_dev,
+        "inode": package_stat.st_ino,
+        "size": package_stat.st_size,
+        "sha256": _sha256_regular_file(package_path, package_stat, link_counts=(1,)),
+    }
+    encoded = json.dumps(marker, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    marker_path = package_path.parent / "publication.json"
+    fd = os.open(
+        marker_path,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0),
+        0o600,
+    )
+    try:
+        os.fchown(fd, 0, 0)
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "wb", closefd=False) as stream:
+            stream.write(encoded)
+            stream.flush()
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+    directory_fd = os.open(package_path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        os.fsync(directory_fd)
+    finally:
+        os.close(directory_fd)
+
+
+def _read_publication_marker(marker_path: Path) -> dict[str, Any]:
+    marker_stat = _validate_staging_file(marker_path)
+    fd = os.open(marker_path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        opened = os.fstat(fd)
+        if (opened.st_dev, opened.st_ino) != (marker_stat.st_dev, marker_stat.st_ino):
+            raise SnapshotBlocked("el marcador de publicación cambió durante su apertura")
+        with os.fdopen(fd, "rb", closefd=False) as stream:
+            raw = stream.read(4097)
+        if len(raw) > 4096:
+            raise SnapshotBlocked("marcador de publicación excede el tamaño permitido")
+    finally:
+        os.close(fd)
+    try:
+        marker = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SnapshotBlocked("marcador de publicación inválido; se conserva staging") from exc
+    expected = {"version", "destination_name", "device", "inode", "size", "sha256"}
+    if not isinstance(marker, dict) or set(marker) != expected:
+        raise SnapshotBlocked("estructura del marcador de publicación inválida")
+    name = marker["destination_name"]
+    if (
+        marker["version"] != 1 or type(marker["version"]) is not int
+        or not isinstance(name, str) or not name or name in (".", "..")
+        or Path(name).name != name or "/" in name or "\\" in name or "\x00" in name
+        or name.startswith(".xrm-snapshot-") or name == ".xrm-coordination.lock"
+        or any(type(marker[key]) is not int or marker[key] < 0 for key in ("device", "inode", "size"))
+        or not isinstance(marker["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", marker["sha256"])
+    ):
+        raise SnapshotBlocked("valores del marcador de publicación inválidos")
+    canonical = json.dumps(marker, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    if raw != canonical:
+        raise SnapshotBlocked("marcador de publicación no canónico")
+    return marker
+
+
+def _validate_published_link(parent: Path, marker: dict[str, Any], *, link_counts: tuple[int, ...]) -> Path:
+    final_path = parent / marker["destination_name"]
+    try:
+        final_stat = final_path.lstat()
+    except OSError as exc:
+        raise SnapshotBlocked("no existe el destino registrado de publicación; se conserva staging") from exc
+    if (
+        not stat.S_ISREG(final_stat.st_mode) or stat.S_ISLNK(final_stat.st_mode)
+        or final_stat.st_uid != 0 or final_stat.st_gid != 0
+        or stat.S_IMODE(final_stat.st_mode) != 0o600
+        or final_stat.st_nlink not in link_counts
+        or final_stat.st_dev != marker["device"] or final_stat.st_ino != marker["inode"]
+        or final_stat.st_size != marker["size"]
+    ):
+        raise SnapshotBlocked("el enlace final no coincide exactamente con el artefacto registrado; se conserva staging")
+    if _sha256_regular_file(final_path, final_stat, link_counts=link_counts) != marker["sha256"]:
+        raise SnapshotBlocked("el contenido del artefacto publicado no coincide con el marcador; se conserva staging")
+    return final_path
 
 
 def _recover_orphan_staging(parent: Path) -> int:
@@ -1460,12 +1585,13 @@ def _recover_orphan_staging(parent: Path) -> int:
         _validate_staging_directory(path)
         owner_path = path / "owner.lock"
         package_path = path / "package.tmp"
+        marker_path = path / "publication.json"
         names = {child.name for child in os.scandir(path)}
         if not names:
             path.rmdir()
             recovered += 1
             continue
-        if "owner.lock" not in names or names - {"owner.lock", "package.tmp"}:
+        if "owner.lock" not in names or names - {"owner.lock", "package.tmp", "publication.json"}:
             raise SnapshotBlocked("temporal abandonado con estructura inesperada; se conserva")
         _validate_staging_file(owner_path)
         owner_fd = os.open(owner_path, os.O_RDWR | getattr(os, "O_NOFOLLOW", 0))
@@ -1475,14 +1601,38 @@ def _recover_orphan_staging(parent: Path) -> int:
                 fcntl.flock(owner_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
                 continue
+            marker = _read_publication_marker(marker_path) if "publication.json" in names else None
+            published_link = False
             if "package.tmp" in names:
-                _validate_staging_file(package_path)
+                package_stat = _validate_staging_file(package_path, link_counts=(1, 2))
+                if package_stat.st_nlink == 2:
+                    if marker is None:
+                        raise SnapshotBlocked("hardlink de staging sin marcador de publicación; se conserva")
+                    if (package_stat.st_dev, package_stat.st_ino, package_stat.st_size) != (
+                        marker["device"], marker["inode"], marker["size"]
+                    ):
+                        raise SnapshotBlocked("package.tmp no coincide con el marcador de publicación")
+                    _validate_published_link(parent, marker, link_counts=(2,))
+                    published_link = True
                 package_path.unlink()
+            elif marker is not None:
+                _validate_published_link(parent, marker, link_counts=(1,))
+                published_link = True
+            if marker is not None:
+                if published_link:
+                    _validate_published_link(parent, marker, link_counts=(1,))
+                marker_path.unlink()
             owner_path.unlink()
             path.rmdir()
             recovered += 1
         finally:
             os.close(owner_fd)
+    if recovered:
+        parent_fd = os.open(parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+        try:
+            os.fsync(parent_fd)
+        finally:
+            os.close(parent_fd)
     return recovered
 
 
@@ -1544,6 +1694,7 @@ def _cleanup_snapshot_staging(
         coordination_fd = _acquire_coordination_lock(parent, timeout)
         if staging_file is not None:
             staging_file.unlink(missing_ok=True)
+        (staging_dir / "publication.json").unlink(missing_ok=True)
         os.close(owner_fd)
         owner_closed = True
         (staging_dir / "owner.lock").unlink(missing_ok=True)
@@ -1607,8 +1758,13 @@ def create_snapshot(
         raise SnapshotBlocked("timeout de locks inválido")
 
     destination = Path(destination).absolute()
-    if not destination.name or destination.name in (".", "..") or "/" in destination.name or "\x00" in destination.name:
-        raise SnapshotBlocked("nombre de destino inválido")
+    if (
+        not destination.name or destination.name in (".", "..")
+        or "/" in destination.name or "\x00" in destination.name
+        or destination.name.startswith(".xrm-snapshot-")
+        or destination.name == ".xrm-coordination.lock"
+    ):
+        raise SnapshotBlocked("nombre de destino inválido o reservado para staging/coordinación")
     _validate_destination_parent(destination.parent)
     if _path_exists(destination):
         raise SnapshotBlocked("el destino ya existe; no se sobrescribe")
@@ -1673,6 +1829,9 @@ def create_snapshot(
                 crypto.verify_package_stream(package_stream, passphrase)
             except crypto.SharedBackupFormatError as exc:
                 raise SnapshotBlocked("el contenedor cifrado no superó la verificación v1") from exc
+        # El marcador durable liga de forma verificable staging e inode final.
+        # Sólo permite recuperar el hard-link exacto creado por esta publicación.
+        _write_publication_marker(staging_file, destination)
         # La creación exclusiva del hard-link es el punto de commit atómico.
         os.link(staging_file, destination, follow_symlinks=False)
         published = True
