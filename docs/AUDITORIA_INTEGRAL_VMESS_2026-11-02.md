@@ -4,7 +4,7 @@
 **Proyecto:** Xray Core Manager
 **Etapa:** 2 — Gestión de protocolos y conexiones
 **Alcance de esta revisión:** módulo VMess y sus integraciones directas. Esta auditoría no certifica la Etapa 2 completa.
-**Resultado actualizado:** **NO APTO PARA ACEPTACIÓN FORMAL** — F-01 a F-05 resueltos/verificados; VM-38/39/40 verificados; VM-47 verificado en loopback local. No se ha probado cliente externo/WAN. La aceptación formal de VMess permanece pendiente.
+**Resultado actualizado al 2026-11-03:** **TÉCNICAMENTE PREPARADO PARA ACEPTACIÓN FORMAL DEL PROPIETARIO** — F-01 a F-05 resueltos/verificados; VM-28 verificado en fixtures; VM-32 verificado con límite multiarchivo documentado; VM-38/39/40 verificados; VM-46 live y VM-47 loopback verificados. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VM-48 requiere decisión expresa; VMess aún no está ACEPTADO.
 
 ## 1. Línea base y autoridad
 
@@ -170,7 +170,7 @@ No se creó almacén/clave maestra live; no se modificó runtime, firewall, puer
 | Código base | IMPLEMENTADO |
 | Compatibilidad estática Xray | VERIFICADA 14/14 |
 | Suite de regresión | VERIFICADA 40/40 (revalidación controlada 2026-11-02) |
-| Auditoría integral del módulo | F-01 a F-05 RESUELTOS/VERIFICADOS; VM-47 VERIFICADO en loopback; cliente externo/WAN pendiente; otros límites en matriz |
+| Auditoría integral del módulo | F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO EN FIXTURES; VM-32 verificado con límite transaccional; VM-47 VERIFICADO en loopback; WAN no requerido por el diseño; otros límites en matriz |
 | Documentación de auditoría | DOCUMENTADA en este expediente y matriz |
 | Publicación | Bloque correctivo, prueba de navegación y validación live documentados en la rama autorizada; sincronización de este expediente en el commit que lo contiene |
 | Sincronización | VPS/local/remoto en rama `design/user-identity-association-v1`; esta actualización se publica junto con el expediente |
@@ -200,3 +200,32 @@ La prueba live autorizada quedó completada. Se creó y conservó la clave maest
 ## Validación cliente-servidor VM-47 — 2026-11-02
 
 VM-47 quedó VERIFICADO en loopback local. El modelo y adaptador reales generaron el servidor VMess-TLS (`settings.users`); dos procesos Xray 26.10.31 establecieron el túnel TLS/VMess y transportaron una solicitud HTTP desde el SOCKS cliente hasta el servicio destino. El destino respondió HTTP 200 con el marcador exacto esperado. Ambos `xray run -test` pasaron. La prueba usó listeners sólo en `127.0.0.1`, un certificado efímero fijado por SHA-256 y una excepción `freedom.finalRules` temporal restringida a TCP/127.0.0.1/18080. Los procesos se detuvieron y los listeners se cerraron. No se modificaron runtime, firewall, puertos públicos, catálogo ni servicio del sistema. No se probó cliente externo/WAN. Informe reproducible: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.
+
+
+## Revalidación final previa a aceptación — 2026-11-03
+
+Esta sección actualiza los estados históricos anteriores sin borrar el registro de cómo se detectaron y resolvieron los hallazgos. La revalidación se ejecutó en la VPS de desarrollo `/opt/xray-manager`, sobre la rama autorizada `design/user-identity-association-v1`, antes de los cambios documentales de este corte.
+
+### Resultado ejecutado
+
+- Suite completa `tests/*.sh`: **40/40 PASS**.
+- Xray-core 26.10.31: **14/14 combinaciones VMess PASS** mediante `xray run -test`.
+- Casos negativos VMess: **16/16 PASS**.
+- `bash -n` de los módulos y pruebas Bash VMess: PASS.
+- `python3 -m py_compile` de `scripts/vmess_config_store.py` y `scripts/vmess_prepare_config.py`: PASS.
+- ShellCheck (`-S warning`) de módulos y pruebas VMess: PASS; tres variables globales intencionales consumidas por funciones de un módulo cargado con `source` se documentaron con supresión local SC2034, sin eliminar las asignaciones.
+- `git diff --check`: PASS.
+
+### Reconciliación de VM-28, VM-32 y VM-33
+
+- **VM-28 — VERIFICADO EN FIXTURES.** La prueba de persistencia cubre store/read de configuración TLS con secreto AES-256-GCM, referencias de configuración y secreto versionadas separadamente, comprobaciones de coherencia entre revisión del catálogo, referencia, schema y secreto, rechazo de metadatos parciales y dos escrituras concurrentes sobre la misma conexión que se serializan en revisiones r1 y r2. También prueba escrituras concurrentes sobre IDs distintos sin perder actualizaciones del catálogo. La clasificación histórica `VERIFICADO PARCIAL` de la matriz queda superada por esta evidencia ejecutada.
+- **VM-32 — VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO.** La escritura individual usa archivo temporal, `fsync`, `os.replace` y `fsync` del directorio; el bloqueo exclusivo serializa escritores del catálogo. El fallo inyectado después de escribir los archivos de configuración/secreto y antes de publicar el catálogo deja el catálogo sin referencias incompletas y genera huérfanos que `audit` detecta. Esto no es una transacción multiarchivo.
+- **VM-33 — NO APLICA AL ALCANCE APROBADO.** El diseño técnico VMess §8 dice expresamente que el almacén no promete rollback transaccional. La ausencia de rollback no es una función faltante frente al diseño; la detección de huérfanos y la ausencia de borrado automático sí están probadas. No se presenta rollback como implementado.
+
+### Estado técnico consolidado
+
+F-01 a F-05 permanecen resueltos/verificados conforme a la auditoría y evidencia live registrada. VM-38/39/40 pasaron sus pruebas focales. VM-46 fue verificado live en VPS. VM-47 fue verificado con cliente-servidor VMess-TLS en loopback local; cliente externo/WAN no fue probado y no se declara como probado. VM-42 (backup/restore VMess independiente) está fuera del alcance aprobado y VM-43 pertenece a Etapa 3. Ninguno de esos elementos se convierte en bloqueo del módulo VMess conforme al alcance documentado.
+
+No se modificó código de producción en esta revalidación. La única corrección de archivos ejecutables es documentar tres variables globales de prueba consumidas dinámicamente por el módulo cargado con `source`; no se alteró su valor ni su uso. No se modificó ni se propone modificar `Xray-Normativa/`. No se tocó runtime, firewall, puertos, certificados desplegados ni servicio Xray.
+
+**Conclusión:** VMess está IMPLEMENTADO, VERIFICADO y DOCUMENTADO, y queda técnicamente preparado para que el propietario decida la aceptación formal. **VM-48 sigue PENDIENTE DE DECISIÓN**; por tanto, VMess todavía no está ACEPTADO y Etapa 2 permanece ABIERTA.

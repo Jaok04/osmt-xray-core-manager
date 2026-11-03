@@ -1,8 +1,8 @@
-# Matriz de trazabilidad VMess — 2026-11-02
+# Matriz de trazabilidad VMess — revalidación 2026-11-03
 
 **Línea base:** Etapa 2 revisión 1.3 (Markdown + YAML), más decisiones complementarias y diseño VMess aprobado.
 **Alcance:** módulo VMess dentro de Etapa 2; no equivale a auditoría completa de la Etapa 2.
-**Evidencia detallada:** `docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md`.
+**Evidencia detallada:** `docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md` y su actualización de revalidación del 2026-11-03.
 
 | ID | Requisito / componente | Diseño / referencia | Implementación | Prueba / evidencia | Estado |
 |---|---|---|---|---|---|
@@ -33,12 +33,12 @@
 | VM-25 | Crear sólo borrador; no activar runtime | diseño VMess §1, §5 | asistente/almacén | catálogo `draft`, `runtime_applied=false` en fixtures | VERIFICADO EN FIXTURES |
 | VM-26 | Cancelar/EOF no guardar configuración | diseño §8 y decisión correctiva autorizada | asistente devuelve estado no exitoso ante cancelación/EOF | prueba de estado 3 y catálogo intacto | VERIFICADO EN FIXTURES |
 | VM-27 | Cancelar creación común no deja registro base | Etapa 2 §5.1; decisión correctiva autorizada | limpieza condicional bajo bloqueo; sólo retira draft VMess sin refs y no aplicado | vmess_creation_flow.sh: cancelación/fallo sin cambios; preserva draft con refs | VERIFICADO EN FIXTURES |
-| VM-28 | Persistencia versionada y referencias VMess separadas | diseño VMess §6.1 | `vmess_config_store.py` | suite persistencia | VERIFICADO PARCIAL |
+| VM-28 | Persistencia versionada y referencias VMess separadas | diseño VMess §6.1 | `vmess_config_store.py` | `vmess_persistence_hardening.sh`: store/read TLS, referencias separadas, coherencia de revisión/schema/secreto, metadatos parciales y escrituras concurrentes r1/r2 | VERIFICADO EN FIXTURES |
 | VM-29 | AES-256-GCM y AAD VMess | diseño VMess §6.1-7 | almacén | store/read, tag alterado, AAD | VERIFICADO |
 | VM-30 | Clave maestra fail-closed | diseño de persistencia | almacén | clave ausente/inválida | VERIFICADO EN FIXTURES |
 | VM-31 | Archivos privados, regulares, no symlink | diseño VMess §7-8 | almacén | permisos/symlink tests | VERIFICADO PARA ALMACÉN |
-| VM-32 | Escritura atómica y concurrencia | diseño VMess §8 | almacén | publicación fallida y escritores concurrentes | VERIFICADO CON LIMITACIÓN |
-| VM-33 | Rollback transaccional del almacén VMess | diseño VMess §8 | no implementado; huérfanos detectables | fallo inyectado deja huérfanos; catálogo intacto | NO APLICABLE / LIMITACIÓN DOCUMENTADA |
+| VM-32 | Escritura atómica por archivo y concurrencia | diseño VMess §8 | `atomic_write()` usa archivo temporal, fsync, replace y fsync del directorio; bloqueo exclusivo del catálogo | fallo inyectado conserva catálogo; auditoría detecta huérfanos; escritores concurrentes sobre IDs distintos y misma conexión | VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO |
+| VM-33 | Rollback transaccional multiarchivo | diseño VMess §8 excluye esta garantía | no implementado; el almacén no promete rollback transaccional | fallo inyectado deja huérfanos detectables sin modificar referencias del catálogo; audit no borra automáticamente | NO APLICA AL ALCANCE APROBADO; LÍMITE DOCUMENTADO |
 | VM-34 | Lectura/recuperación y revalidación Xray | diseño VMess §8 | asistente restore/store read | recuperación TLS/REALITY y Xray test | VERIFICADO EN FIXTURES |
 | VM-35 | Coherencia revisión de catálogo ↔ referencia ↔ schema | diseño de persistencia versionada y decisión correctiva autorizada | store/read/audit validan revisión, schema y referencia de secreto | pruebas de revision/schema catálogo/documento/secreto y metadatos parciales | VERIFICADO EN FIXTURES |
 | VM-36 | Audit de refs rotas, huérfanos, symlinks y metadatos versionados | diseño VMess §8 | acción audit | refs rotas, huérfanos, symlinks, revisiones/schema incoherentes; sin borrado automático | VERIFICADO EN FIXTURES |
@@ -59,7 +59,9 @@
 
 - VERIFICADO EN FIXTURES no significa que se haya creado o usado el almacén real de la VPS.
 - La validación `xray run -test` no equivale a interoperabilidad ni conectividad extremo a extremo.
-- La limitación de rollback transaccional está documentada y no debe describirse como función implementada.
+- VM-28 queda VERIFICADO EN FIXTURES: la evidencia actual cubre persistencia versionada y referencias VMess separadas, incluida serialización concurrente de revisiones.
+- VM-32 verifica atomicidad individual de cada archivo y serialización del catálogo; no equivale a una transacción multiarchivo.
+- VM-33 no es un requisito funcional del diseño aprobado: no hay rollback transaccional y no debe describirse como función implementada.
 - VM-42 y VM-43 permanecen fuera del alcance actual.
 - La Etapa 2 sigue ABIERTA; esta matriz sólo cubre VMess y sus integraciones directas. F-01 a F-05 están corregidos/verificados; VM-38/39/40 se verificaron con pruebas focales. VM-46 quedó VERIFICADO LIVE; VM-47 quedó VERIFICADO en loopback local (sin cliente externo/WAN); VM-48 requiere aceptación formal.
 
@@ -77,3 +79,12 @@ Primer guardado TLS real, clave maestra compartida, permisos, lectura/descifrado
 ## Validación cliente-servidor VM-47 — 2026-11-02
 
 VM-47 se verificó con dos procesos Xray 26.10.31 en loopback. El modelo y adaptador reales generaron el servidor `vmess_tcp_tls` (`settings.users`); el cliente SOCKS estableció VMess-TLS y una solicitud HTTP llegó al servicio destino, que respondió HTTP 200 con el marcador exacto `VMESS-VM47-END-TO-END-OK`. Configuraciones cliente/servidor pasaron `xray run -test`. Los procesos y listeners temporales fueron detenidos. No se tocó servicio, firewall, runtime, puertos públicos ni catálogo. Alcance limitado a loopback: cliente externo/WAN no probado. Informe: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.
+
+
+## Revalidación de preparación para aceptación — 2026-11-03
+
+En `/opt/xray-manager`, rama `design/user-identity-association-v1`, se reejecutó `tests/*.sh`: 40/40 PASS. Xray-core 26.10.31 validó 14/14 combinaciones VMess y 16/16 casos negativos. `bash -n` de los archivos Bash VMess, `py_compile` de los dos módulos Python VMess, ShellCheck de los módulos y pruebas VMess, y `git diff --check`: PASS.
+
+La revalidación de la prueba de persistencia confirmó VM-28: configuración versionada, referencias VMess separadas, validación de revisión/schema/referencia de secreto y serialización de dos escrituras concurrentes sobre una conexión a revisiones r1/r2. VM-32 queda precisado como atomicidad individual por archivo y concurrencia del catálogo, con límite multiarchivo explícito; VM-33 no aplica como requisito porque el diseño VMess §8 no promete rollback transaccional.
+
+Se documentaron con supresión local SC2034 tres variables globales intencionales en pruebas (`CONNECTION_CATALOG` y `CONNECTION_LOCK` en `vmess_creation_flow.sh`; `CONNECTION_LOCK` en `vmess_navigation_edge_cases.sh`), porque son consumidas dinámicamente por funciones de `modules/connections.sh` cargado con `source`. Se conservaron las asignaciones y su comportamiento. No se modificó código de producción ni `Xray-Normativa/`. VM-47 sigue verificado en loopback; no se afirma prueba WAN. VMess queda técnicamente preparado para aceptación formal del propietario; VM-48 permanece pendiente y Etapa 2 continúa ABIERTA.

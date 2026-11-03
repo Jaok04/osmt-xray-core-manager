@@ -16,6 +16,7 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 CONNECTION_DATA_DIR="$TMP/data"
 CONNECTION_DATA_FILE="$CONNECTION_DATA_DIR/connections.json"
+# shellcheck disable=SC2034 # Global consumida por funciones del módulo cargado.
 CONNECTION_LOCK="$TMP/run/integrity.lock"
 USER_DATA_FILE="$TMP/users.json"
 mkdir -p "$CONNECTION_DATA_DIR" "$TMP/run"

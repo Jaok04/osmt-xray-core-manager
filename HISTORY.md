@@ -361,3 +361,15 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Se fijó la huella SHA-256 del certificado TLS efímero; no se usó `allowInsecure`. Se añadió sólo al JSON temporal una regla `freedom.finalRules` TCP/127.0.0.1/18080 para permitir el destino local.
 - Procesos y listeners temporales detenidos. Sin cambios en runtime, firewall, puertos públicos, catálogo o servicio Xray. Cliente externo/WAN no probado. Xray 26.10.31 emitió advertencia de deprecación de VMess; se documenta como advertencia del core, no como fallo de la prueba.
 - VM-47: VERIFICADO — loopback local. VMess sigue pendiente de aceptación formal; Etapa 2 permanece ABIERTA. Informe: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.
+
+
+## 2026-11-03 — Revalidación final y preparación de aceptación VMess
+
+- El propietario autorizó completar la limpieza de advertencias, reconciliación de trazabilidad y actualización de continuidad para preparar la aprobación formal de VMess, sin modificar código de producción ni `Xray-Normativa/`.
+- Se documentaron con supresión local SC2034 tres variables globales intencionales de `tests/vmess_creation_flow.sh` y `tests/vmess_navigation_edge_cases.sh`, consumidas dinámicamente por funciones de `modules/connections.sh`; se conservaron las asignaciones y el comportamiento de las pruebas.
+- Revalidación ejecutada en `/opt/xray-manager`: suite completa 40/40 PASS; Xray-core 26.10.31 14/14 combinaciones VMess y 16/16 negativos PASS; sintaxis Bash VMess, compilación Python VMess, ShellCheck de módulos/pruebas VMess y `git diff --check`: PASS.
+- Se actualizó la clasificación de VM-28 a VERIFICADO con evidencia de versionado, referencias separadas, coherencia y concurrencia r1/r2. VM-32 se precisa como atomicidad individual/concurrencia con límite multiarchivo documentado. VM-33 no aplica como requisito porque el diseño VMess §8 no promete rollback transaccional.
+- Se actualizaron matriz, auditoría integral, punto de control, continuidad e `PROJECT_STATE.md`. VM-46 live y VM-47 loopback permanecen verificados; no se afirma prueba WAN. VM-42 está fuera del alcance y VM-43 pertenece a Etapa 3.
+- `Xray-Normativa/` se comparó con el respaldo original: 14/14 archivos originales coincidentes; sin cambios normativos. No se modificó código de producción ni runtime, firewall, puertos, certificados desplegados o servicio.
+- Estado: VMess IMPLEMENTADO, VERIFICADO y DOCUMENTADO; técnicamente preparado para aceptación formal, pero VM-48 PENDIENTE DE DECISIÓN. Etapa 2 ABIERTA. No iniciar Trojan antes de la aceptación formal y del contraste normativo específico.
+- Publicación y sincronización de esta actualización: SHA del commit se registrará tras la confirmación remota.

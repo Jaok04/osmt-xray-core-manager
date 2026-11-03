@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
-**Fecha del corte:** 2026-11-02
-**Tarea:** revalidación controlada VMess; cobertura VM-38/39/40, F-05/VM-46 y VM-47 en loopback.
-**Estado vigente:** F-01 a F-05 CORREGIDOS/VERIFICADOS; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado. VMess NO está aceptado formalmente; Etapa 2 ABIERTA.
+**Fecha del corte:** 2026-11-03
+**Tarea:** preparación final de VMess para aceptación formal; revalidación integral, corrección de advertencias ShellCheck y reconciliación VM-28/32/33.
+**Estado vigente:** F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -51,10 +51,11 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 ## 4. Límites que no bloquean el cierre de VMess
 
 - `xray run -test` valida estructura y configuración; no demuestra conectividad extremo a extremo.
-- No se realizó prueba cliente-servidor real.
+- VM-47 sí se verificó en loopback local; no se probó cliente externo/WAN. El diseño VMess §8 no convierte una prueba WAN en requisito de aceptación.
 - No se activaron borradores ni se modificó configuración activa, runtime, servicio, firewall o puertos.
-- Usuarios VMess se introducen manualmente; integración con identidades globales corresponde a Etapa 3.
-- Backup/restore VMess no está implementado y requiere diseño y autorización separados.
+- Usuarios VMess se introducen manualmente; integración con identidades globales corresponde a Etapa 3 (VM-43).
+- El almacén VMess no promete rollback transaccional multiarchivo; VM-32 se verifica a nivel de archivo/catálogo y VM-33 no aplica como requisito del diseño aprobado.
+- Backup/restore VMess independiente no está implementado y requiere diseño y autorización separados; VM-42 está fuera del alcance aprobado.
 - La restauración VLESS combina las entradas VLESS del backup con las entradas VMess vigentes, valida sus referencias y conserva sin cambios el almacén VMess.
 - El backup VLESS sigue sin incluir configuraciones ni secretos VMess. Backup/restore VMess independiente queda fuera de alcance.
 
@@ -71,14 +72,14 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 | Estado | Resultado |
 |---|---|
 | IMPLEMENTADO | Sí — base VMess y correcciones F-01 a F-05 implementadas/verificadas |
-| VERIFICADO | Suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-38/39/40 focal PASS; F-05 live PASS; VM-47 loopback PASS. Cliente externo/WAN pendiente |
+| VERIFICADO | Suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-28 y VM-38/39/40 PASS; VM-46 live PASS; VM-47 loopback PASS; VM-32 con límite multiarchivo documentado |
 | PUBLICADO | Base y pruebas anteriores publicadas; este informe y la validación live se incluyen en la actualización de la rama autorizada |
 | SINCRONIZADO | Actualización live documentada y sincronizada en `design/user-identity-association-v1`; `main` intacta |
-| ACEPTADO | NO — pendiente aceptación formal del propietario; cliente externo/WAN no probado |
+| ACEPTADO | PENDIENTE — requiere decisión expresa del propietario; cliente externo/WAN no probado y no requerido por el diseño |
 
 ## 7. Siguiente acción
 
-F-05/VM-46 y VM-47 loopback están verificados. Revisar el informe VM-47 y decidir si el alcance local es suficiente o si se requiere una prueba desde otra máquina. No iniciar Trojan.
+La revalidación técnica de VMess está preparada para aceptación. Siguiente acción: el propietario revisa el expediente y decide expresamente si acepta VMess. La prueba externa/WAN es opcional y requeriría autorización separada; no es un bloqueo del alcance aprobado. No iniciar Trojan hasta recibir aceptación formal de VMess y efectuar el contraste específico de Trojan.
 
 No modificar `main`. No ampliar la corrección P4 más allá de la preservación VMess aprobada. No tocar runtime, firewall, puertos, certificados desplegados ni servicio.
 
@@ -151,3 +152,12 @@ Se eliminó el borrador temporal y sus dos archivos versionados; auditoría post
 ## 14. Validación cliente-servidor VM-47 — 2026-11-02
 
 VM-47: PASS en loopback local con dos procesos Xray 26.10.31. El modelo y adaptador reales generaron el servidor VMess-TLS; el cliente SOCKS estableció el túnel, el servidor aceptó el usuario sintético y el destino HTTP respondió 200 con el marcador esperado. Configuraciones cliente/servidor pasaron `xray run -test`. Listeners y procesos temporales detenidos. Sin cambios en runtime, firewall, puertos públicos, catálogo o servicio. No se probó cliente externo/WAN. Evidencia: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.
+
+
+## 10. Revalidación de preparación para aceptación — 2026-11-03
+
+Se reejecutó en la VPS `/opt/xray-manager`: suite completa 40/40 PASS; Xray-core 26.10.31 14/14 combinaciones y 16/16 negativos PASS; `bash -n` de módulos/pruebas VMess; `py_compile` de los dos scripts Python VMess; ShellCheck de módulos/pruebas VMess y `git diff --check`: PASS.
+
+Se documentaron sólo tres variables globales intencionales consumidas por funciones de `modules/connections.sh` cargado con `source`, mediante supresión local SC2034; se conservaron las asignaciones necesarias. No se modificó código de producción ni normativa. VM-28 pasa a VERIFICADO por evidencia de versionado, referencias separadas, coherencia y concurrencia r1/r2. VM-32 se precisa como atomicidad individual y concurrencia con límite multiarchivo documentado; VM-33 no aplica porque el diseño no promete rollback transaccional.
+
+VM-47 sigue probado en loopback local; WAN no probado y no requerido por el diseño. VMess queda listo para decisión formal del propietario (VM-48). Etapa 2 permanece ABIERTA.

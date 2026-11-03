@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-02 — F-01–F-05 corregidos/verificados; VM-38/39/40 verificados; suite 40/40; VM-47 VMess-TLS loopback verificado; cliente externo/WAN pendiente; VMess no aceptado formalmente
+**Corte de estado:** 2026-11-03 — VMess técnicamente preparado para aceptación; F-01–F-05 resueltos/verificados; VM-28 verificado; VM-32 con límite transaccional documentado; VM-33 no aplica; VM-38/39/40 verificados; suite 40/40; Xray 14/14 y 16 negativos; VM-46 live y VM-47 loopback verificados; VM-48 pendiente de decisión expresa
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -287,3 +287,16 @@ F-05/VM-46 VERIFICADO LIVE en VPS de desarrollo: clave maestra compartida creada
 ## Validación cliente-servidor VM-47 — 2026-11-02
 
 VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servidor VMess-TLS; cliente Xray SOCKS conectó mediante TLS/VMess y transportó una solicitud HTTP hasta un servicio destino, que respondió 200 con el marcador esperado. Ambos `xray run -test` pasaron. Procesos/listeners temporales detenidos; sin cambios de runtime, firewall, puertos públicos, catálogo o servicio. Cliente externo/WAN no probado. VMess no aceptado formalmente; Etapa 2 abierta. Informe: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.
+
+
+## Actualización de estado — revalidación VMess 2026-11-03
+
+**Estado del módulo:** VMess IMPLEMENTADO, VERIFICADO y DOCUMENTADO; técnicamente preparado para aceptación formal del propietario. VM-48 sigue pendiente, por lo que VMess no está aún ACEPTADO. Etapa 2 permanece ABIERTA.
+
+**Evidencia ejecutada en `/opt/xray-manager`:** suite completa `tests/*.sh` 40/40 PASS; Xray-core 26.10.31 14/14 modalidades VMess PASS y 16/16 casos negativos PASS; `bash -n` de módulos/pruebas Bash VMess; `py_compile` de `vmess_config_store.py` y `vmess_prepare_config.py`; ShellCheck de módulos/pruebas VMess; `git diff --check`: PASS.
+
+**Reconciliación de trazabilidad:** VM-28 VERIFICADO por persistencia versionada, referencias separadas, coherencia de revisiones/schema/secreto y concurrencia r1/r2. VM-32 VERIFICADO para atomicidad individual y serialización de catálogo, con límite multiarchivo explícito. VM-33 NO APLICA como requisito: el diseño técnico VMess §8 no promete rollback transaccional. VM-42 backup/restore VMess independiente está fuera del alcance aprobado; VM-43 corresponde a Etapa 3. VM-47 cliente-servidor VMess-TLS está verificado en loopback; cliente externo/WAN no probado ni requerido por el diseño.
+
+**Cambios de esta revalidación:** únicamente se documentaron tres variables globales intencionales consumidas por el módulo cargado con `source`, con supresión local SC2034; no se eliminaron asignaciones necesarias. No se modificó código de producción, documentación normativa `Xray-Normativa/`, runtime, firewall, puertos, certificados desplegados ni servicio. La carpeta normativa se comparó con el respaldo original: 14/14 archivos originales coincidentes.
+
+**Siguiente paso:** decisión formal del propietario sobre VM-48. No iniciar Trojan hasta obtener aceptación VMess y contrastar específicamente su alcance normativo.

@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Estado vigente 2026-11-02:** F-01–F-05 corregidos/verificados; VM-38/39/40 verificados; suite 40/40 PASS; Xray 14/14 y 16 casos negativos PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado; VMess NO está aceptado formalmente y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md, docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md y docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md. No iniciar Trojan. Los hitos históricos posteriores conservan su contexto y no sustituyen este estado vigente.
+> **Estado vigente 2026-11-03:** VMess técnicamente preparado para aceptación formal. F-01–F-05 resueltos/verificados; VM-28 verificado; VM-32 verificado con límite transaccional documentado; VM-33 no aplica al alcance aprobado; VM-38/39/40 verificados; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 cliente-servidor VMess-TLS loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño. VM-48 requiere decisión expresa del propietario; VMess NO está aún aceptado y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md, docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md y docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md. No iniciar Trojan.
 
 
 ## 1. Objetivo
@@ -360,3 +360,14 @@ El propietario autorizó la inicialización persistente controlada en la VPS de 
 ## Validación cliente-servidor VM-47 — 2026-11-02
 
 VM-47 quedó verificado en loopback local. El modelo y adaptador reales generaron la configuración VMess-TLS del servidor; un cliente Xray SOCKS estableció el túnel TLS/VMess y una solicitud HTTP llegó al destino, que respondió HTTP 200 con el marcador esperado. Configuraciones cliente y servidor `xray run -test`: PASS. Los procesos y listeners temporales se detuvieron. No se tocaron runtime, firewall, puertos públicos, catálogo ni servicio. No se probó cliente externo/WAN. Informe: `docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md`.
+
+
+## 2026-11-03 — Revalidación y punto de reanudación VMess
+
+La revalidación se ejecutó en `/opt/xray-manager` sobre `design/user-identity-association-v1`. Suite completa `tests/*.sh`: 40/40 PASS; Xray 26.10.31: 14/14 modalidades y 16/16 casos negativos PASS. También pasaron `bash -n` para los archivos Bash VMess, `py_compile` para `vmess_config_store.py` y `vmess_prepare_config.py`, ShellCheck de módulos/pruebas VMess y `git diff --check`.
+
+Se documentaron con supresión local SC2034 tres variables globales intencionales en `tests/vmess_creation_flow.sh` y `tests/vmess_navigation_edge_cases.sh`, consumidas dinámicamente por funciones de `modules/connections.sh` cargado con `source`; se conservaron las asignaciones. La matriz y auditoría aclaran VM-28 como VERIFICADO, VM-32 como atomicidad individual/concurrencia con límite multiarchivo y VM-33 como no aplicable porque el diseño no promete rollback transaccional.
+
+La documentación normativa `Xray-Normativa/` se comparó con el respaldo `/root/Xray_Manager_Documentacion_Final_2026-10-31`: 14 archivos originales coincidentes; no se modificó ninguno. No se tocó runtime, firewall, puertos, certificados desplegados ni servicio.
+
+**Punto exacto de reanudación:** expediente técnico VMess listo para que el propietario emita o deniegue la aceptación formal VM-48. Cliente externo/WAN no probado y no requerido por el diseño aprobado. Etapa 2 permanece ABIERTA; no iniciar Trojan antes de la aceptación formal de VMess y del contraste normativo específico de Trojan.

@@ -7,9 +7,11 @@ export APP_ROOT="$ROOT"
 source "$ROOT/config/manager.conf"
 source "$ROOT/lib/ui.sh"
 source "$ROOT/modules/connections.sh"
+# shellcheck disable=SC2034 # Globales consumidas por funciones del módulo cargado.
 CONNECTION_CATALOG="$ROOT/config/protocols.tsv"
 CONNECTION_DATA_DIR="$TMP/data"
 CONNECTION_DATA_FILE="$CONNECTION_DATA_DIR/connections.json"
+# shellcheck disable=SC2034 # Global consumida por funciones del módulo cargado.
 CONNECTION_LOCK="$TMP/run/integrity.lock"
 mkdir -p "$CONNECTION_DATA_DIR" "$TMP/run"
 cat >"$CONNECTION_DATA_FILE" <<'JSON'
