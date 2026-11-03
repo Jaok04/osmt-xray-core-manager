@@ -680,3 +680,7 @@ La base del writer permanece publicada en ae8a7a089809e2e1913c14a714f45d956f8a5a
 La auditoría de aceptación identificó A-16 como bloqueo: `_recover_orphan_staging()` exige `st_nlink == 1`, pero el intervalo legítimo posterior a `os.link(package.tmp, final_path)` y anterior al unlink de `package.tmp` deja ambos nombres sobre el mismo inode (`st_nlink == 2`). La recuperación rechaza ese staging residual y lo conserva, aunque el paquete final permanezca intacto. La prueba sintética en VPS reprodujo `SnapshotBlocked`, staging y destino presentes, mismo inode y `nlink == 2`. Los tests de crash/cleanup actuales no invocan el recuperador sobre ese estado.
 
 El propietario autorizó publicar B-01/B-02/B-03 manteniendo el writer NO ACEPTADO y documentando A-16 como pendiente bloqueante. Esta publicación no corrige A-16 ni constituye aceptación. La corrección propuesta deberá reconocer exclusivamente el hardlink legítimo demostrable hacia el artefacto final, sin relajar globalmente el rechazo de hardlinks arbitrarios, y añadir pruebas reales de recuperación.
+
+## Publicación — B-01/B-02/B-03 (2026-11-03)
+
+Commit `b6582da` (`fix(backup): harden snapshot identity and manifest validation`) publicado en `origin/design/user-identity-association-v1`. Incluye las correcciones B-01/B-02/B-03, sus pruebas y la documentación de continuidad/estado que mantiene A-16 como bloqueo. Snapshot Writer v1 continúa NO ACEPTADO.

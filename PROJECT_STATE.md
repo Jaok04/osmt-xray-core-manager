@@ -600,3 +600,5 @@ Por autorización expresa del propietario se corrigieron los hallazgos B-01, B-0
 - Los tests actuales no ejercitan el recuperador sobre el estado post-link ni demuestran recuperación tras fallos de cleanup equivalentes.
 - La corrección A-16 no está autorizada/implementada en este punto; requiere preservar el rechazo de hardlinks arbitrarios y validar de forma segura la correspondencia exacta entre staging y artefacto final.
 - No crear backup real, no leer `master.key`/secretos, no restore/verify independiente, no runtime apply. `Xray-Normativa/` permanece inmutable.
+
+- Publicación B-01/B-02/B-03: commit `b6582da` en `origin/design/user-identity-association-v1` (2026-11-03). La publicación no implica aceptación; A-16 sigue bloqueante.

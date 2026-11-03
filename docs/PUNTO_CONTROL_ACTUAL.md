@@ -539,3 +539,5 @@ Estado: writer y correcciones locales, no publicados ni aceptados formalmente. H
 - La publicación de B-01/B-02/B-03 no corrige ni exonera A-16. No marcar writer como aceptado.
 - Siguiente paso: después de publicar/sincronizar, solicitar autorización específica para corregir recuperación post-link sin relajar la política contra hardlinks arbitrarios; añadir pruebas de recuperación tras crash post-link, unlink fallido y coordinación fallida. Ejecutar matriz completa y nueva auditoría.
 - Restricciones: no backup real, no `master.key`/secretos, no restore/verify independiente, no runtime apply, no cambios a `Xray-Normativa/`.
+
+- Publicación de B-01/B-02/B-03 verificada en commit `b6582da` de `origin/design/user-identity-association-v1`. El checkout de la VPS se encuentra en ese commit; `scripts/__pycache__/` permanece como artefacto local no versionado y no fue incluido.
