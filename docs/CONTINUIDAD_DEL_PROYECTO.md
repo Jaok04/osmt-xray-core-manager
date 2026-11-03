@@ -57,7 +57,7 @@ No implementes, publiques, sincronices ni modifiques nada durante la auditoría.
 3. Este documento: procedimiento de recuperación y reanudación.
 4. docs/PUNTO_CONTROL_ACTUAL.md: tarea exacta en la que se detuvo el trabajo.
 5. HISTORY.md: decisiones e hitos cronológicos.
-6. Documentación normativa de la VPS y documentos técnicos específicos de la etapa que se vaya a trabajar.
+6. `Xray-Normativa/` y los documentos técnicos específicos de la etapa que se vaya a trabajar.
 7. `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md` y `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
 ## 4. Auditoría de recuperación obligatoria

@@ -15,7 +15,7 @@
 ## 1. Referencias oficiales
 
 - Documentación normativa canónica: `Xray-Normativa/` (14 archivos originales + README de custodia). Respaldo local VPS: `/root/Xray_Manager_Documentacion_Final_2026-10-31`.
-- Especificación funcional Etapa 2: 02_Protocolos_Conexiones/Etapa_2_Protocolos.md y Etapa_2_Protocolos.yaml.
+- Especificación funcional Etapa 2: `Xray-Normativa/02_Protocolos_Conexiones/Etapa_2_Protocolos.md` y `Xray-Normativa/02_Protocolos_Conexiones/Etapa_2_Protocolos.yaml`.
 - Código en VPS: /opt/xray-manager
 - Rama autorizada: design/user-identity-association-v1
 - main: no modificar.
