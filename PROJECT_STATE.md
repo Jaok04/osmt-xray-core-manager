@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1, API incremental, ZIP streaming y snapshot writer IMPLEMENTADOS/VERIFICADOS en aislamiento y PUBLICADOS en la rama autorizada. Correcciones B-01/B-02/B-03 y A-16 publicadas; matriz A-01–A-19 documentada y diez negativos adicionales A-16 verificados en esta revisión (49/49 scripts). Snapshot Writer v1 continúa NO ACEPTADO FORMALMENTE. Manifiesto v1, formato ZIP/JSON y contrato técnico APROBADOS. Backup real, restore y verify independiente pendientes. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md.
+**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1, API incremental, ZIP streaming y snapshot writer IMPLEMENTADOS/VERIFICADOS en aislamiento y PUBLICADOS en la rama autorizada. Correcciones B-01/B-02/B-03 y A-16 publicadas; matriz A-01–A-19 documentada y diez negativos adicionales A-16 verificados en esta revisión (49/49 scripts). Snapshot Writer v1 ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS (2026-11-03). Backup/restore integral y pruebas reales pendientes. Manifiesto v1, formato ZIP/JSON y contrato técnico APROBADOS. Backup real, restore y verify independiente pendientes. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -628,3 +628,21 @@ Por autorización expresa del propietario se corrigieron los hallazgos B-01, B-0
 - Rama `design/user-identity-association-v1`; base verificada `b1e2ef4537eafeacefd5584a7fde5c9fd02626a9`. La matriz y los diez negativos A-16 se publicaron en `101853e6ef0990686128f45561b22e1cd4248aea`; el registro final de publicación quedó en `7f03efcf080465d8bced447549e29f8abb95248b`. VPS y GitHub comparten el HEAD final.
 - `Xray-Normativa/` no se modificó. No backup real, no acceso a `master.key`/secretos, no restore/verify independiente, no runtime apply.
 - Estado: A-01–A-19 PASS en pruebas aisladas/sintéticas; Snapshot Writer v1 **NO ACEPTADO FORMALMENTE**. La aceptación formal requiere decisión expresa del propietario y no se infiere de pruebas o publicación.
+
+
+## Estado vigente — aceptación formal del Snapshot Writer v1 — 2026-11-03
+
+El propietario aceptó formalmente el **Snapshot Writer v1**, con las limitaciones expresamente documentadas en la matriz A-01–A-19 y en este plan. Esta aceptación cierra el componente Snapshot Writer v1; no equivale a certificar el flujo integral de backup/restore ni autoriza operaciones reales.
+
+**Alcance de la aceptación:** implementación v1 para las categorías soportadas y sus contratos de captura, manifiesto, ZIP streaming, cifrado, publicación, limpieza y recuperación; resultados A-01–A-19 PASS en pruebas aisladas/sintéticas; correcciones B-01/B-02/B-03 y A-16 incluidas.
+
+**Limitaciones que permanecen vigentes:**
+- No se ha ejecutado un backup real sobre datos del usuario.
+- No se ha ejecutado restore ni verify independiente de un backup real.
+- No se ha leído `master.key` ni secretos reales.
+- No se ha aplicado el Writer al runtime ni modificado servicios, firewall, puertos o certificados desplegados.
+- Los PASS acreditan pruebas aisladas/sintéticas; no constituyen evidencia de operación real ni conectividad extremo a extremo.
+- Categorías/protocolos fuera del alcance v1 se excluyen y pueden producir `PARTIAL`; `BLOCKED` y `FAILED` conservan sus semánticas documentadas.
+- Se mantienen los límites de 10.000 entradas ZIP y 512 MiB.
+
+**Decisión:** Snapshot Writer v1 = **ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS**. Backup/restore integral y sus verificaciones reales permanecen pendientes y no se declaran aceptados por esta decisión. La Etapa 2 del proyecto permanece ABIERTA conforme a la regla de auditoría integral de cierre de etapas.

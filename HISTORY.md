@@ -715,3 +715,24 @@ Se publicó la matriz de trazabilidad A-01–A-19, diez casos negativos adiciona
 ## 2026-11-03 — Registro final de sincronización de la matriz A-01–A-19
 
 Se actualizó el estado operativo del plan y punto de control para reflejar la publicación final. Commit `7f03efcf080465d8bced447549e29f8abb95248b` (`docs(backup): publish snapshot acceptance matrix`) en `design/user-identity-association-v1`; la VPS y GitHub coinciden en ese HEAD. El commit anterior `101853e6ef0990686128f45561b22e1cd4248aea` contiene la matriz y los diez nuevos negativos A-16. Snapshot Writer v1 permanece NO ACEPTADO FORMALMENTE.
+
+
+## Aceptación formal del Snapshot Writer v1 — 2026-11-03
+
+El propietario aceptó formalmente el **Snapshot Writer v1**, con las limitaciones expresamente documentadas en la matriz A-01–A-19 y en este plan. Esta aceptación cierra el componente Snapshot Writer v1; no equivale a certificar el flujo integral de backup/restore ni autoriza operaciones reales.
+
+**Alcance de la aceptación:** implementación v1 para las categorías soportadas y sus contratos de captura, manifiesto, ZIP streaming, cifrado, publicación, limpieza y recuperación; resultados A-01–A-19 PASS en pruebas aisladas/sintéticas; correcciones B-01/B-02/B-03 y A-16 incluidas.
+
+**Limitaciones que permanecen vigentes:**
+- No se ha ejecutado un backup real sobre datos del usuario.
+- No se ha ejecutado restore ni verify independiente de un backup real.
+- No se ha leído `master.key` ni secretos reales.
+- No se ha aplicado el Writer al runtime ni modificado servicios, firewall, puertos o certificados desplegados.
+- Los PASS acreditan pruebas aisladas/sintéticas; no constituyen evidencia de operación real ni conectividad extremo a extremo.
+- Categorías/protocolos fuera del alcance v1 se excluyen y pueden producir `PARTIAL`; `BLOCKED` y `FAILED` conservan sus semánticas documentadas.
+- Se mantienen los límites de 10.000 entradas ZIP y 512 MiB.
+
+**Decisión:** Snapshot Writer v1 = **ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS**. Backup/restore integral y sus verificaciones reales permanecen pendientes y no se declaran aceptados por esta decisión. La Etapa 2 del proyecto permanece ABIERTA conforme a la regla de auditoría integral de cierre de etapas.
+
+
+La decisión se registró en los documentos de estado, continuidad, punto de control y plan técnico. La publicación se registra en el commit de esta entrada una vez sincronizado con GitHub.

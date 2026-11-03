@@ -2,7 +2,7 @@
 
 **Versión:** 1.15
 **Fecha:** 2026-11-03
-**Estado:** ALCANCE INCREMENTAL V1, MANIFIESTO V1, CONTENEDOR CIFRADO V1 Y CONTRATO TÉCNICO APROBADOS. API INCREMENTAL, ZIP STREAMING, SNAPSHOT WRITER BASE Y CORRECCIONES B-01/B-02/B-03/A-16 IMPLEMENTADOS, VERIFICADOS EN AISLAMIENTO Y PUBLICADOS. MATRIZ A-01–A-19 DOCUMENTADA; 10 NEGATIVOS ADICIONALES A-16 PUBLICADOS. SNAPSHOT WRITER V1 NO ACEPTADO FORMALMENTE.
+**Estado:** SNAPSHOT WRITER V1 IMPLEMENTADO, VERIFICADO EN AISLAMIENTO, PUBLICADO Y **ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS** (2026-11-03). MATRIZ A-01–A-19 PASS; B-01/B-02/B-03/A-16 CORREGIDOS. BACKUP/RESTORE INTEGRAL, BACKUP REAL Y RESTORE/VERIFY INDEPENDIENTE SIGUEN PENDIENTES; ETAPA 2 PERMANECE ABIERTA.
 **Ámbito:** contenedor criptográfico neutral y primera versión incremental de snapshot para VLESS/VMess/metadatos de identidades/certificados TLS centrales. Las categorías normativas no cubiertas se declaran explícitamente como no soportadas; extensible a protocolos futuros mediante adaptadores.
 
 ## 1. Objetivo
@@ -654,7 +654,7 @@ En la sesión del 2026-11-03 se ejecutaron después de añadir los diez casos: `
 
 Los PASS anteriores de A-01–A-15 y A-17–A-19 son evidencia de aceptación técnica aislada, no una prueba de backup real ni de restauración independiente. No se ejecutó backup real, no se leyó `master.key` ni secretos reales, no se ejecutó restore/verify independiente, no se aplicó runtime y no se modificó `Xray-Normativa/`. Esos trabajos permanecen fuera de la autorización de esta auditoría.
 
-**Estado:** matriz técnica A-01–A-19 documentada; A-16 reforzado y verificado; Snapshot Writer v1 continúa **NO ACEPTADO FORMALMENTE** hasta la decisión expresa del propietario.
+**Estado:** matriz técnica A-01–A-19 documentada y PASS; A-16 reforzado y verificado. La aceptación formal del Snapshot Writer v1 se registra en §10.22.
 
 
 ## 10.21. Publicación de la matriz de aceptación — 2026-11-03
@@ -662,3 +662,21 @@ Los PASS anteriores de A-01–A-15 y A-17–A-19 son evidencia de aceptación t�
 La matriz A-01–A-19, los diez negativos adicionales A-16 y las actualizaciones de continuidad se publicaron en `design/user-identity-association-v1`, commit `101853e6ef0990686128f45561b22e1cd4248aea` (`test(backup): expand snapshot writer acceptance evidence`). La VPS `/opt/xray-manager` y `origin/design/user-identity-association-v1` quedaron verificadas en el mismo SHA. La rama `main` no fue modificada y `Xray-Normativa/` permanece intacta.
 
 La publicación no equivale a aceptación formal. Snapshot Writer v1 permanece **NO ACEPTADO FORMALMENTE** hasta decisión expresa del propietario.
+
+
+## 10.22. Aceptación formal del Snapshot Writer v1 — 2026-11-03
+
+El propietario aceptó formalmente el **Snapshot Writer v1**, con las limitaciones expresamente documentadas en la matriz A-01–A-19 y en este plan. Esta aceptación cierra el componente Snapshot Writer v1; no equivale a certificar el flujo integral de backup/restore ni autoriza operaciones reales.
+
+**Alcance de la aceptación:** implementación v1 para las categorías soportadas y sus contratos de captura, manifiesto, ZIP streaming, cifrado, publicación, limpieza y recuperación; resultados A-01–A-19 PASS en pruebas aisladas/sintéticas; correcciones B-01/B-02/B-03 y A-16 incluidas.
+
+**Limitaciones que permanecen vigentes:**
+- No se ha ejecutado un backup real sobre datos del usuario.
+- No se ha ejecutado restore ni verify independiente de un backup real.
+- No se ha leído `master.key` ni secretos reales.
+- No se ha aplicado el Writer al runtime ni modificado servicios, firewall, puertos o certificados desplegados.
+- Los PASS acreditan pruebas aisladas/sintéticas; no constituyen evidencia de operación real ni conectividad extremo a extremo.
+- Categorías/protocolos fuera del alcance v1 se excluyen y pueden producir `PARTIAL`; `BLOCKED` y `FAILED` conservan sus semánticas documentadas.
+- Se mantienen los límites de 10.000 entradas ZIP y 512 MiB.
+
+**Decisión:** Snapshot Writer v1 = **ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS**. Backup/restore integral y sus verificaciones reales permanecen pendientes y no se declaran aceptados por esta decisión. La Etapa 2 del proyecto permanece ABIERTA conforme a la regla de auditoría integral de cierre de etapas.

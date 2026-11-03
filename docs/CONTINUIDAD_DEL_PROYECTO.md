@@ -1,9 +1,9 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> Los apartados cronológicos antiguos se conservan como historial. Para el estado actual y el punto de reanudación prevalece el bloque «Estado vigente — cierre técnico de aceptación A-01–A-19» al final del documento.
+> Los apartados cronológicos antiguos se conservan como historial. Para el estado actual y el punto de reanudación prevalece el bloque «Punto de reanudación posterior a la aceptación del Snapshot Writer v1» al final del documento.
 
-> Frente activo 2026-11-03: cierre técnico de la matriz A-01–A-19 del Snapshot Writer v1. La corrección A-16 y B-01/B-02/B-03 están publicadas; se añadieron diez negativos A-16 y una matriz de trazabilidad A-01–A-19 en §10.20. Última regresión: 49/49 scripts PASS; AST 16/16; bash -n 74 archivos; ShellCheck, shfmt y diff-check PASS. Writer NO ACEPTADO FORMALMENTE hasta decisión expresa del propietario. No crear backups reales ni leer secretos/master.key; no restore/verify independiente ni runtime apply. Xray-Normativa inmutable; no tocar VPS de pruebas.
-> HEAD remoto/local de partida de esta revisión: b1e2ef4537eafeacefd5584a7fde5c9fd02626a9 en design/user-identity-association-v1. Los cambios de la matriz y pruebas A-16 quedan pendientes de commit/publicación hasta completar controles finales; main permanece intacta.
+> Frente activo 2026-11-03: aceptación formal del Snapshot Writer v1 con limitaciones documentadas. La corrección A-16 y B-01/B-02/B-03 están publicadas; se añadieron diez negativos A-16 y una matriz de trazabilidad A-01–A-19 en §10.20. Última regresión: 49/49 scripts PASS; AST 16/16; bash -n 74 archivos; ShellCheck, shfmt y diff-check PASS. Writer ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS el 2026-11-03. No crear backups reales ni leer secretos/master.key; no restore/verify independiente ni runtime apply. Xray-Normativa inmutable; no tocar VPS de pruebas.
+> La aceptación formal y su actualización documental están registradas en la parte final de este archivo. La rama autorizada sigue siendo design/user-identity-association-v1; main y Xray-Normativa permanecen protegidas.
 
 
 > Registro histórico: la auditoría inicial de almacenes/certificados y el cierre del contrato se documentaron antes del primer bloque. Consultar los dos informes de implementación para el estado vigente.
@@ -720,3 +720,26 @@ Por autorización expresa del propietario, la corrección A-16, sus pruebas y la
 - Rama `design/user-identity-association-v1`; base verificada `b1e2ef4537eafeacefd5584a7fde5c9fd02626a9`. La matriz y los diez negativos A-16 se publicaron en `101853e6ef0990686128f45561b22e1cd4248aea`; el registro final de publicación quedó en `7f03efcf080465d8bced447549e29f8abb95248b`. VPS y GitHub comparten el HEAD final.
 - `Xray-Normativa/` no se modificó. No backup real, no acceso a `master.key`/secretos, no restore/verify independiente, no runtime apply.
 - Estado: A-01–A-19 PASS en pruebas aisladas/sintéticas; Snapshot Writer v1 **NO ACEPTADO FORMALMENTE**. La aceptación formal requiere decisión expresa del propietario y no se infiere de pruebas o publicación.
+
+
+## Punto de reanudación posterior a la aceptación del Snapshot Writer v1
+
+## Aceptación formal del Snapshot Writer v1 — 2026-11-03
+
+El propietario aceptó formalmente el **Snapshot Writer v1**, con las limitaciones expresamente documentadas en la matriz A-01–A-19 y en este plan. Esta aceptación cierra el componente Snapshot Writer v1; no equivale a certificar el flujo integral de backup/restore ni autoriza operaciones reales.
+
+**Alcance de la aceptación:** implementación v1 para las categorías soportadas y sus contratos de captura, manifiesto, ZIP streaming, cifrado, publicación, limpieza y recuperación; resultados A-01–A-19 PASS en pruebas aisladas/sintéticas; correcciones B-01/B-02/B-03 y A-16 incluidas.
+
+**Limitaciones que permanecen vigentes:**
+- No se ha ejecutado un backup real sobre datos del usuario.
+- No se ha ejecutado restore ni verify independiente de un backup real.
+- No se ha leído `master.key` ni secretos reales.
+- No se ha aplicado el Writer al runtime ni modificado servicios, firewall, puertos o certificados desplegados.
+- Los PASS acreditan pruebas aisladas/sintéticas; no constituyen evidencia de operación real ni conectividad extremo a extremo.
+- Categorías/protocolos fuera del alcance v1 se excluyen y pueden producir `PARTIAL`; `BLOCKED` y `FAILED` conservan sus semánticas documentadas.
+- Se mantienen los límites de 10.000 entradas ZIP y 512 MiB.
+
+**Decisión:** Snapshot Writer v1 = **ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS**. Backup/restore integral y sus verificaciones reales permanecen pendientes y no se declaran aceptados por esta decisión. La Etapa 2 del proyecto permanece ABIERTA conforme a la regla de auditoría integral de cierre de etapas.
+
+
+Siguiente trabajo permitido: continuar con el plan de backup/restore integral y sus componentes pendientes, siempre contrastando la normativa y solicitando autorización para cada nuevo alcance. La aceptación del Writer no autoriza backup real, restore/verify independiente ni cambios de runtime. Etapa 2 sigue ABIERTA.

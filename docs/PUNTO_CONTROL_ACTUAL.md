@@ -1,9 +1,9 @@
 # Punto de control actual — Xray Core Manager
 
-> Los puntos anteriores son registros históricos. El punto operativo vigente es el último bloque «Estado vigente — cierre técnico de aceptación A-01–A-19».
+> Los puntos anteriores son registros históricos. El punto operativo vigente es el último bloque «Estado vigente — después de aceptar Snapshot Writer v1».
 
 **Fecha del corte:** 2026-11-03
-**Tarea activa:** cierre técnico de aceptación A-01–A-19 del Snapshot Writer v1. Base, B-01/B-02/B-03 y A-16 publicadas; matriz de trazabilidad §10.20 añadida y diez negativos nuevos de marcador A-16 verificados localmente. La matriz y los diez negativos A-16 están publicados en `7f03efcf080465d8bced447549e29f8abb95248b`; VPS y GitHub sincronizados. Writer NO ACEPTADO FORMALMENTE. No crear backups reales ni tocar runtime/secretos. Límites del paquete: 10.000 entradas ZIP y 512 MiB. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
+**Tarea activa:** continuación del plan de backup/restore integral; Snapshot Writer v1 ya fue aceptado formalmente con limitaciones. Base, B-01/B-02/B-03 y A-16 publicadas; matriz de trazabilidad §10.20 añadida y diez negativos nuevos de marcador A-16 verificados localmente. La matriz y los diez negativos A-16 están publicados en `7f03efcf080465d8bced447549e29f8abb95248b`; VPS y GitHub sincronizados. Writer ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS (2026-11-03). No crear backups reales ni tocar runtime/secretos. Límites del paquete: 10.000 entradas ZIP y 512 MiB. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
 **Estado vigente:** contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
@@ -565,7 +565,7 @@ Estado: writer y correcciones locales, no publicados ni aceptados formalmente. H
 - Próximo paso permitido: presentar al propietario el estado publicado y esperar su decisión expresa sobre aceptación formal del Snapshot Writer v1 o nuevas observaciones. No ejecutar backup real, no leer secretos/master.key, no restore/verify independiente, no runtime apply y no modificar `Xray-Normativa/`.
 
 
-## Estado vigente — cierre técnico de aceptación A-01–A-19 (2026-11-03)
+## Registro de auditoría técnica A-01–A-19 (2026-11-03)
 
 - Matriz de trazabilidad completa documentada en `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` §10.20. Se recuperaron los nombres originales de los 19 criterios y se enlazaron con sus pruebas versionadas; A-01–A-15 y A-17–A-19 conservan su resultado PASS de la auditoría previa y la regresión actual volvió a ejecutarse.
 - A-16: diez negativos nuevos para marcador malformado/no canónico, hash/device/inode/tamaño alterados, campo extra, symlink, hardlink y modo inseguro. Cada caso confirma bloqueo fail-closed y preservación de la evidencia. No requirió modificar el código del writer.
@@ -573,3 +573,10 @@ Estado: writer y correcciones locales, no publicados ni aceptados formalmente. H
 - Rama `design/user-identity-association-v1`; base verificada `b1e2ef4537eafeacefd5584a7fde5c9fd02626a9`. La matriz y los diez negativos A-16 se publicaron en `101853e6ef0990686128f45561b22e1cd4248aea`; el registro final de publicación quedó en `7f03efcf080465d8bced447549e29f8abb95248b`. VPS y GitHub comparten el HEAD final.
 - `Xray-Normativa/` no se modificó. No backup real, no acceso a `master.key`/secretos, no restore/verify independiente, no runtime apply.
 - Estado: A-01–A-19 PASS en pruebas aisladas/sintéticas; Snapshot Writer v1 **NO ACEPTADO FORMALMENTE**. La aceptación formal requiere decisión expresa del propietario y no se infiere de pruebas o publicación.
+
+
+## Estado vigente — después de aceptar Snapshot Writer v1
+
+**Estado del componente:** Snapshot Writer v1 **ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS** por decisión expresa del propietario del 2026-11-03. La evidencia técnica A-01–A-19 permanece en §10.20 del plan; la aceptación y sus límites están en §10.22.
+
+**Siguiente punto de trabajo:** backup/restore integral, incluyendo diseño y validación del flujo de restauración y verify independiente, previa autorización y contraste normativo. No ejecutar backup real, restore, verify independiente, leer secretos/master.key ni aplicar cambios al runtime hasta que exista autorización específica. **Etapa 2 permanece ABIERTA**; esta aceptación es sólo del componente Snapshot Writer v1.
