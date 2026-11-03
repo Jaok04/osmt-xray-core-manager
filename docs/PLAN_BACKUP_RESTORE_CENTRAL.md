@@ -603,3 +603,55 @@ La matriz de aceptación histórica A-01–A-15 y A-17–A-19 mantiene sus resul
 ## 10.19. Publicación de la corrección A-16 — 2026-11-03
 
 Por autorización expresa del propietario, la corrección A-16, pruebas y documentación se publicaron en `design/user-identity-association-v1`, commit `40c907e2a9da639f3458547e09fec6f26fdac5e1`. SHA remoto confirmado; la VPS está sincronizada con el mismo HEAD. Esta publicación no cambia el estado de aceptación: Snapshot Writer v1 sigue **NO ACEPTADO FORMALMENTE** hasta decisión expresa del propietario.
+
+
+## 10.20. Matriz trazable de aceptación A-01–A-19 — 2026-11-03
+
+Esta matriz recupera los identificadores y nombres de criterio conservados en el registro de auditoría previo. Los resultados A-01–A-15 y A-17–A-19 proceden de la auditoría anterior; en esta sesión se volvió a ejecutar la regresión completa sobre el estado actual. La columna de evidencia apunta a las pruebas versionadas que ejercitan cada contrato. Los resultados PASS significan verificación en aislamiento con datos sintéticos/fixtures, no operación sobre datos reales.
+
+| ID | Criterio de aceptación | Evidencia versionada principal | Resultado |
+|---|---|---|---|
+| A-01 | Validación de solicitud, destino y passphrase antes de crear staging | `tests/shared_snapshot_writer.sh`: validación de timeout/CLI, prompt y política de passphrase; `scripts/shared_snapshot_writer.py:create_snapshot` | PASS |
+| A-02 | Orden de adquisición y liberación de locks de datos | `tests/shared_snapshot_writer.sh`: orden `lifecycle → integrity → catalog`, liberación inversa y contención | PASS |
+| A-03 | Timeout finito, timeout total y liberación de locks parciales | `tests/shared_snapshot_writer.sh`: timeout ocupado y contención real entre descriptores | PASS |
+| A-04 | Captura consistente, validación de revisiones y detección TOCTOU | `tests/shared_snapshot_writer.sh`: referencias vigentes, cambio de origen tras preflight y rechazo antes de publicar | PASS |
+| A-05 | Exclusión de credenciales, UUID y secretos; metadatos protegidos permitidos | `tests/shared_snapshot_writer.sh`: E2E VLESS/VMess, REALITY y TLS; comprobación de UUID/secret refs ausentes y `email`/`level` VMess preservados dentro del payload cifrado | PASS |
+| A-06 | Allowlist estricta de identidades y asociaciones | `tests/shared_snapshot_writer.sh`: campos permitidos, credencial saneada y campos inesperados rechazados | PASS |
+| A-07 | Exclusión íntegra de WireGuard y protocolos no soportados | `tests/shared_snapshot_writer.sh`: peer WireGuard no exportado, exclusión `unsupported_protocol`, `PARTIAL` y campos PSK/private-key rechazados | PASS |
+| A-08 | Contrato estricto del manifiesto v1 y coherencia de categorías/objetos | `tests/shared_snapshot_writer.sh`: versión, categorías, duplicados, estructura interna, recursos, miembros, exclusiones, dependencias y `source_snapshot` | PASS |
+| A-09 | ZIP `ZIP_STORED` determinista, paths seguros, CRC, hashes y canonicalización | `tests/shared_backup_zip.sh` y E2E del writer: ZIP reproducible, nombres/entradas validados, CRC y hashes | PASS |
+| A-10 | Límites estrictos de 10.000 entradas y 512 MiB | `tests/shared_backup_zip.sh` y `tests/shared_snapshot_writer.sh`: límites ejercidos tanto en ZIP como en `create_snapshot`, sin publicación parcial | PASS |
+| A-11 | Compatibilidad del contenedor criptográfico v1 entre API streaming y no streaming | `tests/shared_backup_format.sh`: cifrado legacy/streaming cruzado y verificación mutua con el mismo formato v1 | PASS |
+| A-12 | AES-256-GCM, AAD, tag, contraseña, truncamiento, alteración y bytes sobrantes | `tests/shared_backup_format.sh`: tampering de ciphertext/cabecera, contraseña incorrecta, tag, longitudes, trailing bytes y parámetros KDF | PASS |
+| A-13 | Publicación exclusiva y atómica; no sobrescribir destinos existentes | `tests/shared_snapshot_writer.sh`: destino existente, carrera de publicador, hard-link exclusivo y fallo pre/post-commit | PASS |
+| A-14 | Limpieza fail-closed; errores producen FAILED y preservan paquete ya publicado | `tests/shared_snapshot_writer.sh`: fallos inyectados de coordinación, unlink, rmdir y fsync; comprobación de cierre de descriptor y autenticidad del paquete conservado | PASS |
+| A-15 | Recuperación de staging huérfano y conservación de staging activo/inseguro | `tests/shared_snapshot_writer.sh`: owner lock activo/libre, estructura inesperada, temporales huérfanos y recuperación coordinada | PASS |
+| A-16 | Recuperación post-hard-link con vínculo exacto, marcador íntegro y reanudación idempotente | `tests/shared_snapshot_writer.sh`: crash después de `os.link`, autenticación AES-GCM, `nlink` final 1, crash del recuperador y negativos de hardlinks/marcadores (10 casos añadidos en esta revisión) | PASS |
+| A-17 | Interrupciones abruptas en fases críticas y recuperación/preservación resultante | `tests/shared_snapshot_writer.sh`: prompt, cifrado, antes del enlace y después del enlace antes de fsync; recuperación sintética del residuo | PASS |
+| A-18 | Streaming y memoria acotada en el camino ZIP → AES-GCM | `tests/shared_snapshot_writer.sh`: `tracemalloc` y RSS máximo en proceso aislado con miembro de 16 MiB | PASS |
+| A-19 | Regresión global y controles estáticos | 49 scripts `tests/*.sh`, AST Python, `bash -n`, ShellCheck, shfmt y `git diff --check` | PASS |
+
+### Evidencia adicional A-16 incorporada en esta revisión
+
+Se añadieron diez casos negativos independientes. Cada caso prepara únicamente archivos sintéticos y un staging post-link, invoca el recuperador real y exige `SnapshotBlocked` conservando staging, `package.tmp`, destino y el estado de dos enlaces:
+
+1. JSON malformado.
+2. JSON válido pero no canónico.
+3. SHA-256 registrado incorrecto.
+4. Inode registrado incorrecto.
+5. Device registrado incorrecto.
+6. Tamaño registrado incorrecto.
+7. Campo adicional no permitido.
+8. `publication.json` como symlink.
+9. `publication.json` con hardlink adicional.
+10. Permisos del marcador abiertos (`0644`).
+
+La prueba no cambia la política del recuperador: todo marcador no confiable bloquea y conserva evidencia. No se necesitó modificar `scripts/shared_snapshot_writer.py`; la corrección A-16 publicada ya rechazaba estos estados.
+
+### Resultado y límites de la auditoría
+
+En la sesión del 2026-11-03 se ejecutaron después de añadir los diez casos: `tests/*.sh` 49/49 PASS; AST Python 16/16 PASS; `bash -n` 74 archivos PASS; ShellCheck PASS sobre `tests/shared_snapshot_writer.sh`; shfmt focal PASS; `git diff --check` PASS. El RSS pico informado por la prueba focal fue 76.336 KiB. La documentación normativa se contrastó por SHA-256: 14/14 documentos normativos coinciden con `/root/Xray_Manager_Documentacion_Final_2026-10-31`; `README.md` es el archivo adicional de custodia y no forma parte de esos 14.
+
+Los PASS anteriores de A-01–A-15 y A-17–A-19 son evidencia de aceptación técnica aislada, no una prueba de backup real ni de restauración independiente. No se ejecutó backup real, no se leyó `master.key` ni secretos reales, no se ejecutó restore/verify independiente, no se aplicó runtime y no se modificó `Xray-Normativa/`. Esos trabajos permanecen fuera de la autorización de esta auditoría.
+
+**Estado:** matriz técnica A-01–A-19 documentada; A-16 reforzado y verificado; Snapshot Writer v1 continúa **NO ACEPTADO FORMALMENTE** hasta la decisión expresa del propietario.

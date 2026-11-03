@@ -1,6 +1,8 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1, API incremental, ZIP streaming y snapshot writer base IMPLEMENTADOS/VERIFICADOS en aislamiento; writer base PUBLICADO en la rama autorizada. Correcciones de aceptación B-01/B-02/B-03 y A-16 IMPLEMENTADAS/VERIFICADAS y PUBLICADAS en la rama autorizada (49/49 scripts); Snapshot Writer v1 continúa NO ACEPTADO FORMALMENTE. Manifiesto v1, formato ZIP/JSON y contrato técnico APROBADOS. Backup real, restore y verify independiente pendientes. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md.
+> Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
+
+**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1, API incremental, ZIP streaming y snapshot writer IMPLEMENTADOS/VERIFICADOS en aislamiento y PUBLICADOS en la rama autorizada. Correcciones B-01/B-02/B-03 y A-16 publicadas; matriz A-01–A-19 documentada y diez negativos adicionales A-16 verificados en esta revisión (49/49 scripts). Snapshot Writer v1 continúa NO ACEPTADO FORMALMENTE. Manifiesto v1, formato ZIP/JSON y contrato técnico APROBADOS. Backup real, restore y verify independiente pendientes. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -593,7 +595,7 @@ Por autorización expresa del propietario se corrigieron los hallazgos B-01, B-0
 **Estado separado:** base del writer PUBLICADA en commit ae8a7a089809e2e1913c14a714f45d956f8a5a1d; correcciones B-01/B-02/B-03 y pruebas actuales IMPLEMENTADAS/VERIFICADAS localmente en /opt/xray-manager, pero SIN COMMIT, SIN PUSH y SIN SINCRONIZACIÓN. El writer sigue **NO ACEPTADO FORMALMENTE** hasta revisión y aprobación expresa del propietario. No se creó backup real, no se leyó master.key ni secretos reales, no se ejecutó restore/verify independiente y no se tocó runtime. Xray-Normativa permanece intacta.
 
 
-## Estado de publicación y bloqueo A-16 — 2026-11-03
+## Registro histórico SUPERADO — publicación B-01/B-02/B-03 y bloqueo A-16 — 2026-11-03
 
 - Autorización expresa recibida para publicar B-01/B-02/B-03 en `design/user-identity-association-v1`, manteniendo Snapshot Writer v1 como **NO ACEPTADO**.
 - A-16 bloquea la aceptación: tras `os.link(package.tmp, final_path)`, el inode legítimo tiene `st_nlink == 2`; `_recover_orphan_staging()` exige 1 y rechaza la recuperación del staging post-publicación. La prueba sintética reprodujo el rechazo conservando staging y paquete final.
@@ -616,3 +618,13 @@ Por autorización expresa del propietario se corrigieron los hallazgos B-01, B-0
 - Publicación verificada por SHA remoto; `/opt/xray-manager` corresponde al mismo HEAD y está limpio.
 - Writer: IMPLEMENTADO / VERIFICADO EN AISLAMIENTO / PUBLICADO / SINCRONIZADO / NO ACEPTADO FORMALMENTE.
 - No se modificó `main` ni `Xray-Normativa/`. No backup real, secretos/master.key, restore/verify independiente ni runtime apply.
+
+
+## Estado vigente — cierre técnico de aceptación A-01–A-19 (2026-11-03)
+
+- Matriz de trazabilidad completa documentada en `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` §10.20. Se recuperaron los nombres originales de los 19 criterios y se enlazaron con sus pruebas versionadas; A-01–A-15 y A-17–A-19 conservan su resultado PASS de la auditoría previa y la regresión actual volvió a ejecutarse.
+- A-16: diez negativos nuevos para marcador malformado/no canónico, hash/device/inode/tamaño alterados, campo extra, symlink, hardlink y modo inseguro. Cada caso confirma bloqueo fail-closed y preservación de la evidencia. No requirió modificar el código del writer.
+- Verificación actual: 49/49 scripts PASS; AST 16/16; `bash -n` 74 archivos; ShellCheck PASS; shfmt PASS; `git diff --check` PASS; RSS focal 76.336 KiB. Normativa 14/14 hashes coincidentes con la copia maestra; `README.md` es archivo adicional no normativo.
+- Rama `design/user-identity-association-v1`; base verificada `b1e2ef4537eafeacefd5584a7fde5c9fd02626a9`. Los cambios de esta revisión quedan pendientes de commit/publicación hasta completar la validación final de diff y controles.
+- `Xray-Normativa/` no se modificó. No backup real, no acceso a `master.key`/secretos, no restore/verify independiente, no runtime apply.
+- Estado: A-01–A-19 PASS en pruebas aisladas/sintéticas; Snapshot Writer v1 **NO ACEPTADO FORMALMENTE**. La aceptación formal requiere decisión expresa del propietario y no se infiere de pruebas o publicación.

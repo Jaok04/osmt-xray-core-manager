@@ -1,7 +1,9 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> Frente activo 2026-11-03: segunda revisión de aceptación del snapshot writer v1. La base del writer se publicó en ae8a7a089809e2e1913c14a714f45d956f8a5a1d; las correcciones B-01/B-02/B-03 y las pruebas ampliadas están implementadas y verificadas localmente en la VPS, pero aún no publicadas. Writer NO ACEPTADO FORMALMENTE. Regresión 49/49 PASS; AST 16/16; bash -n 74 archivos; ShellCheck, shfmt y diff-check PASS. No crear backups reales ni leer secretos/master.key; no restore/verify independiente ni runtime apply. Xray-Normativa inmutable; no tocar VPS Vps de Pruebas.
-> HEAD remoto/local de partida verificado: ae8a7a089809e2e1913c14a714f45d956f8a5a1d en design/user-identity-association-v1. Las correcciones actuales son cambios locales sin commit/push; main permanece intacta. scripts/__pycache__/ preexistente se conserva sin seguimiento.
+> Los apartados cronológicos antiguos se conservan como historial. Para el estado actual y el punto de reanudación prevalece el bloque «Estado vigente — cierre técnico de aceptación A-01–A-19» al final del documento.
+
+> Frente activo 2026-11-03: cierre técnico de la matriz A-01–A-19 del Snapshot Writer v1. La corrección A-16 y B-01/B-02/B-03 están publicadas; se añadieron diez negativos A-16 y una matriz de trazabilidad A-01–A-19 en §10.20. Última regresión: 49/49 scripts PASS; AST 16/16; bash -n 74 archivos; ShellCheck, shfmt y diff-check PASS. Writer NO ACEPTADO FORMALMENTE hasta decisión expresa del propietario. No crear backups reales ni leer secretos/master.key; no restore/verify independiente ni runtime apply. Xray-Normativa inmutable; no tocar VPS de pruebas.
+> HEAD remoto/local de partida de esta revisión: b1e2ef4537eafeacefd5584a7fde5c9fd02626a9 en design/user-identity-association-v1. Los cambios de la matriz y pruebas A-16 quedan pendientes de commit/publicación hasta completar controles finales; main permanece intacta.
 
 
 > Registro histórico: la auditoría inicial de almacenes/certificados y el cierre del contrato se documentaron antes del primer bloque. Consultar los dos informes de implementación para el estado vigente.
@@ -687,7 +689,7 @@ Verificación ejecutada en esta sesión: 49/49 scripts PASS; AST 16/16; bash -n 
 **Punto exacto de reanudación:** revisar diff y documentación técnica actualizados; ejecutar auditoría de aceptación final. No aceptar el writer ni publicar estas correcciones hasta decisión expresa del propietario. Base publicada: ae8a7a089809e2e1913c14a714f45d956f8a5a1d; cambios actuales locales no committeados. No backup real, master.key, secretos, restore/verify independiente ni runtime.
 
 
-## Continuidad — publicación de B-01/B-02/B-03 con bloqueo A-16 (2026-11-03)
+## Registro histórico SUPERADO — publicación B-01/B-02/B-03 con bloqueo A-16 (2026-11-03)
 
 El propietario autorizó publicar las correcciones B-01/B-02/B-03 en la rama autorizada, sin aceptar Snapshot Writer v1. La publicación debe incluir este estado de auditoría: **A-16 BLOQUEANTE / WRITER NO ACEPTADO**.
 
@@ -708,3 +710,13 @@ No crear backup real, no leer master.key/secretos, no restore/verify independien
 ## Publicación y sincronización A-16 — 2026-11-03
 
 Por autorización expresa del propietario, la corrección A-16, sus pruebas y la documentación afectada quedaron publicadas en `design/user-identity-association-v1`, commit `40c907e2a9da639f3458547e09fec6f26fdac5e1`. `git ls-remote` confirmó el mismo SHA en GitHub; el checkout de `/opt/xray-manager` coincide con el commit y quedó limpio. La rama `main` y `Xray-Normativa/` no se modificaron. Snapshot Writer v1 continúa NO ACEPTADO FORMALMENTE: publicar/sincronizar no equivale a aceptación.
+
+
+## Estado vigente — cierre técnico de aceptación A-01–A-19 (2026-11-03)
+
+- Matriz de trazabilidad completa documentada en `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` §10.20. Se recuperaron los nombres originales de los 19 criterios y se enlazaron con sus pruebas versionadas; A-01–A-15 y A-17–A-19 conservan su resultado PASS de la auditoría previa y la regresión actual volvió a ejecutarse.
+- A-16: diez negativos nuevos para marcador malformado/no canónico, hash/device/inode/tamaño alterados, campo extra, symlink, hardlink y modo inseguro. Cada caso confirma bloqueo fail-closed y preservación de la evidencia. No requirió modificar el código del writer.
+- Verificación actual: 49/49 scripts PASS; AST 16/16; `bash -n` 74 archivos; ShellCheck PASS; shfmt PASS; `git diff --check` PASS; RSS focal 76.336 KiB. Normativa 14/14 hashes coincidentes con la copia maestra; `README.md` es archivo adicional no normativo.
+- Rama `design/user-identity-association-v1`; base verificada `b1e2ef4537eafeacefd5584a7fde5c9fd02626a9`. Los cambios de esta revisión quedan pendientes de commit/publicación hasta completar la validación final de diff y controles.
+- `Xray-Normativa/` no se modificó. No backup real, no acceso a `master.key`/secretos, no restore/verify independiente, no runtime apply.
+- Estado: A-01–A-19 PASS en pruebas aisladas/sintéticas; Snapshot Writer v1 **NO ACEPTADO FORMALMENTE**. La aceptación formal requiere decisión expresa del propietario y no se infiere de pruebas o publicación.

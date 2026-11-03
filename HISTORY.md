@@ -694,3 +694,14 @@ Verificación posterior: tests/*.sh 49/49 PASS; AST 16/16; bash -n 74 archivos; 
 ## Publicación — corrección A-16 (2026-11-03)
 
 Por autorización expresa del propietario, se publicó la corrección A-16 y la documentación/pruebas asociadas en `design/user-identity-association-v1`. Commit: `40c907e2a9da639f3458547e09fec6f26fdac5e1` (`fix(backup): recover verified post-publication staging`). GitHub confirmó el mismo SHA mediante `git ls-remote`; la VPS permanece en ese HEAD y el checkout está limpio. Snapshot Writer v1 sigue NO ACEPTADO FORMALMENTE; la publicación no equivale a aceptación. No se modificó `main` ni `Xray-Normativa/`.
+
+
+## 2026-11-03 — Matriz A-01–A-19 trazable y negativos adicionales A-16
+
+Se recuperaron los nombres originales de los criterios A-01–A-19 desde el registro de auditoría previo y se documentó su trazabilidad en `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` §10.20, con archivos/pruebas principales, resultado y límites de la evidencia. No se inventaron nuevos criterios ni se convirtió la prueba sintética en prueba operativa.
+
+Se añadieron diez negativos A-16 que ejercitan el recuperador real con marcadores JSON malformados/no canónicos, hash/device/inode/tamaño incorrectos, campo extra, symlink, hardlink adicional y permisos abiertos. Todos exigen bloqueo fail-closed y preservación de staging, temporal y destino. La implementación del writer no necesitó cambios.
+
+Regresión actual: 49/49 scripts PASS; AST Python 16/16; `bash -n` 74 archivos; ShellCheck, shfmt y `git diff --check` PASS; RSS focal 76.336 KiB. SHA-256 normativa 14/14 coincidente con la copia maestra; `README.md` es archivo adicional no normativo. Se rotularon como históricos/superados los apartados de continuidad que todavía describían A-16 como pendiente.
+
+Estado: matriz A-01–A-19 documentada y verificada en aislamiento; Snapshot Writer v1 continúa NO ACEPTADO FORMALMENTE. No backup real, no acceso a master.key/secretos, no restore/verify independiente, no runtime apply y no modificación de `Xray-Normativa/`.

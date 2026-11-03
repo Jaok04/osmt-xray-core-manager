@@ -3,6 +3,7 @@ set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHONDONTWRITEBYTECODE=1 python3 -B - "$ROOT" <<'PY'
 import copy
+import json
 import os
 import sys
 import tempfile
@@ -271,6 +272,91 @@ with tempfile.TemporaryDirectory(prefix="xrm-orphan-third-hardlink-") as raw:
         assert package.stat().st_nlink == 3
     finally:
         os.close(coordination_fd)
+
+# A-16: los marcadores alterados/inseguros deben bloquear sin retirar evidencia.
+def assert_invalid_publication_marker(label, mutate):
+    with tempfile.TemporaryDirectory(prefix=f"xrm-marker-{label}-") as raw:
+        parent = Path(raw)
+        os.chmod(parent, 0o700)
+        stage = parent / f".xrm-snapshot-{label}"
+        stage.mkdir(mode=0o700)
+        owner = stage / "owner.lock"
+        owner.touch(mode=0o600)
+        os.chmod(owner, 0o600)
+        package = stage / "package.tmp"
+        package.write_bytes(f"synthetic-marker-{label}".encode())
+        os.chmod(package, 0o600)
+        final_path = parent / f"{label}.xrm"
+        writer._write_publication_marker(package, final_path)
+        marker_path = stage / "publication.json"
+        os.link(package, final_path)
+        mutate(marker_path, parent, final_path)
+        coordination_fd = writer._acquire_coordination_lock(parent, 1.0)
+        try:
+            blocked(writer._recover_orphan_staging, parent)
+            assert stage.exists() and package.exists() and final_path.exists(), label
+            assert package.stat().st_nlink == 2, label
+            assert marker_path.is_symlink() or marker_path.exists(), label
+        finally:
+            os.close(coordination_fd)
+
+
+def rewrite_marker(marker_path, change):
+    marker = json.loads(marker_path.read_text(encoding="utf-8"))
+    change(marker)
+    marker_path.write_text(
+        json.dumps(marker, ensure_ascii=False, sort_keys=True, separators=(",", ":")),
+        encoding="utf-8",
+    )
+    os.chmod(marker_path, 0o600)
+
+
+assert_invalid_publication_marker(
+    "malformed-json",
+    lambda marker, parent, final: marker.write_text("{not-json", encoding="utf-8"),
+)
+assert_invalid_publication_marker(
+    "noncanonical-json",
+    lambda marker, parent, final: marker.write_text(
+        json.dumps(json.loads(marker.read_text(encoding="utf-8")), indent=2), encoding="utf-8"
+    ),
+)
+assert_invalid_publication_marker(
+    "wrong-hash",
+    lambda marker, parent, final: rewrite_marker(marker, lambda data: data.update(sha256="0" * 64)),
+)
+assert_invalid_publication_marker(
+    "wrong-inode",
+    lambda marker, parent, final: rewrite_marker(marker, lambda data: data.update(inode=data["inode"] + 1)),
+)
+assert_invalid_publication_marker(
+    "wrong-device",
+    lambda marker, parent, final: rewrite_marker(marker, lambda data: data.update(device=data["device"] + 1)),
+)
+assert_invalid_publication_marker(
+    "wrong-size",
+    lambda marker, parent, final: rewrite_marker(marker, lambda data: data.update(size=data["size"] + 1)),
+)
+assert_invalid_publication_marker(
+    "extra-field",
+    lambda marker, parent, final: rewrite_marker(marker, lambda data: data.update(unexpected=True)),
+)
+
+# El marcador no puede ser symlink, hardlink ni tener permisos más abiertos.
+assert_invalid_publication_marker(
+    "marker-symlink",
+    lambda marker, parent, final: (
+        marker.unlink(), marker.symlink_to(parent / "external-marker")
+    ),
+)
+assert_invalid_publication_marker(
+    "marker-hardlink",
+    lambda marker, parent, final: os.link(marker, parent / "marker-extra-link"),
+)
+assert_invalid_publication_marker(
+    "marker-mode",
+    lambda marker, parent, final: os.chmod(marker, 0o644),
+)
 
 # SW-03: un padre ausente no debe crearse para alojar un lock.
 with tempfile.TemporaryDirectory(prefix="xrm-lock-test-") as raw:

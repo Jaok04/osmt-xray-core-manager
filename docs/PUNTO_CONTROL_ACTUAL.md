@@ -1,7 +1,9 @@
 # Punto de control actual — Xray Core Manager
 
+> Los puntos anteriores son registros históricos. El punto operativo vigente es el último bloque «Estado vigente — cierre técnico de aceptación A-01–A-19».
+
 **Fecha del corte:** 2026-11-03
-**Tarea activa:** segunda revisión de aceptación del snapshot writer v1. Base del writer publicada; correcciones B-01/B-02/B-03 y matriz ampliada implementadas/verificadas localmente. Writer NO ACEPTADO FORMALMENTE. No crear backups reales ni tocar runtime/secretos. Límites del paquete: 10.000 entradas ZIP y 512 MiB. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
+**Tarea activa:** cierre técnico de aceptación A-01–A-19 del Snapshot Writer v1. Base, B-01/B-02/B-03 y A-16 publicadas; matriz de trazabilidad §10.20 añadida y diez negativos nuevos de marcador A-16 verificados localmente. Cambios de esta revisión pendientes de publicación tras controles finales. Writer NO ACEPTADO FORMALMENTE. No crear backups reales ni tocar runtime/secretos. Límites del paquete: 10.000 entradas ZIP y 512 MiB. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
 **Estado vigente:** contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
@@ -530,7 +532,7 @@ Estado: writer y correcciones locales, no publicados ni aceptados formalmente. H
 - Próximo paso: revisar el diff completo y la matriz de aceptación; presentar conclusión y esperar aceptación expresa. No crear backup real, no leer master.key/secretos, no restore/verify independiente ni runtime apply. Xray-Normativa permanece inmutable.
 
 
-## Punto de control — publicación B-01/B-02/B-03 y bloqueo A-16 (2026-11-03)
+## Registro histórico SUPERADO — publicación B-01/B-02/B-03 y bloqueo A-16 (2026-11-03)
 
 **Estado:** B-01/B-02/B-03 autorizados para publicación; Snapshot Writer v1 **NO ACEPTADO** por bloqueo A-16.
 
@@ -561,3 +563,13 @@ Estado: writer y correcciones locales, no publicados ni aceptados formalmente. H
 - Commit: `40c907e2a9da639f3458547e09fec6f26fdac5e1`.
 - SHA remoto confirmado mediante `git ls-remote`; `/opt/xray-manager` está en el mismo HEAD y limpio.
 - Próximo paso permitido: presentar al propietario el estado publicado y esperar su decisión expresa sobre aceptación formal del Snapshot Writer v1 o nuevas observaciones. No ejecutar backup real, no leer secretos/master.key, no restore/verify independiente, no runtime apply y no modificar `Xray-Normativa/`.
+
+
+## Estado vigente — cierre técnico de aceptación A-01–A-19 (2026-11-03)
+
+- Matriz de trazabilidad completa documentada en `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` §10.20. Se recuperaron los nombres originales de los 19 criterios y se enlazaron con sus pruebas versionadas; A-01–A-15 y A-17–A-19 conservan su resultado PASS de la auditoría previa y la regresión actual volvió a ejecutarse.
+- A-16: diez negativos nuevos para marcador malformado/no canónico, hash/device/inode/tamaño alterados, campo extra, symlink, hardlink y modo inseguro. Cada caso confirma bloqueo fail-closed y preservación de la evidencia. No requirió modificar el código del writer.
+- Verificación actual: 49/49 scripts PASS; AST 16/16; `bash -n` 74 archivos; ShellCheck PASS; shfmt PASS; `git diff --check` PASS; RSS focal 76.336 KiB. Normativa 14/14 hashes coincidentes con la copia maestra; `README.md` es archivo adicional no normativo.
+- Rama `design/user-identity-association-v1`; base verificada `b1e2ef4537eafeacefd5584a7fde5c9fd02626a9`. Los cambios de esta revisión quedan pendientes de commit/publicación hasta completar la validación final de diff y controles.
+- `Xray-Normativa/` no se modificó. No backup real, no acceso a `master.key`/secretos, no restore/verify independiente, no runtime apply.
+- Estado: A-01–A-19 PASS en pruebas aisladas/sintéticas; Snapshot Writer v1 **NO ACEPTADO FORMALMENTE**. La aceptación formal requiere decisión expresa del propietario y no se infiere de pruebas o publicación.
