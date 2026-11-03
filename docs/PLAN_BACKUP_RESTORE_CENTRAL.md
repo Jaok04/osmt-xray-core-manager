@@ -655,3 +655,10 @@ En la sesión del 2026-11-03 se ejecutaron después de añadir los diez casos: `
 Los PASS anteriores de A-01–A-15 y A-17–A-19 son evidencia de aceptación técnica aislada, no una prueba de backup real ni de restauración independiente. No se ejecutó backup real, no se leyó `master.key` ni secretos reales, no se ejecutó restore/verify independiente, no se aplicó runtime y no se modificó `Xray-Normativa/`. Esos trabajos permanecen fuera de la autorización de esta auditoría.
 
 **Estado:** matriz técnica A-01–A-19 documentada; A-16 reforzado y verificado; Snapshot Writer v1 continúa **NO ACEPTADO FORMALMENTE** hasta la decisión expresa del propietario.
+
+
+## 10.21. Publicación de la matriz de aceptación — 2026-11-03
+
+La matriz A-01–A-19, los diez negativos adicionales A-16 y las actualizaciones de continuidad se publicaron en `design/user-identity-association-v1`, commit `101853e6ef0990686128f45561b22e1cd4248aea` (`test(backup): expand snapshot writer acceptance evidence`). La VPS `/opt/xray-manager` y `origin/design/user-identity-association-v1` quedaron verificadas en el mismo SHA. La rama `main` no fue modificada y `Xray-Normativa/` permanece intacta.
+
+La publicación no equivale a aceptación formal. Snapshot Writer v1 permanece **NO ACEPTADO FORMALMENTE** hasta decisión expresa del propietario.

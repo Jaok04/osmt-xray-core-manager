@@ -705,3 +705,8 @@ Se añadieron diez negativos A-16 que ejercitan el recuperador real con marcador
 Regresión actual: 49/49 scripts PASS; AST Python 16/16; `bash -n` 74 archivos; ShellCheck, shfmt y `git diff --check` PASS; RSS focal 76.336 KiB. SHA-256 normativa 14/14 coincidente con la copia maestra; `README.md` es archivo adicional no normativo. Se rotularon como históricos/superados los apartados de continuidad que todavía describían A-16 como pendiente.
 
 Estado: matriz A-01–A-19 documentada y verificada en aislamiento; Snapshot Writer v1 continúa NO ACEPTADO FORMALMENTE. No backup real, no acceso a master.key/secretos, no restore/verify independiente, no runtime apply y no modificación de `Xray-Normativa/`.
+
+
+## 2026-11-03 — Publicación de la matriz A-01–A-19 y negativos A-16
+
+Se publicó la matriz de trazabilidad A-01–A-19, diez casos negativos adicionales A-16, las actualizaciones de `PROJECT_STATE.md`, continuidad, punto de control y plan técnico. Commit `101853e6ef0990686128f45561b22e1cd4248aea` (`test(backup): expand snapshot writer acceptance evidence`) en `design/user-identity-association-v1`. `git ls-remote` confirmó el mismo SHA; la VPS quedó sincronizada y el worktree limpio. `main` no se modificó y `Xray-Normativa/` permanece intacta. La publicación no implica aceptación formal del Snapshot Writer v1.
