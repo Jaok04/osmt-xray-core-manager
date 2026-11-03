@@ -508,3 +508,11 @@ Se implementó localmente la coordinación de modules/uninstall.sh con catalog.l
 tests/uninstall.sh prueba que el lock ocupado impide la operación y que, durante la confirmación de eliminación de certificados, otro adquirente no puede tomar catalog.lock. La suite completa tests/*.sh, Bash syntax, ShellCheck del módulo modificado, py_compile y git diff check pasaron.
 
 La auditoría de todos los mutadores/locks sigue abierta y no debe darse por concluida a partir de este arreglo. Próximo: completar el inventario y revisar los órdenes de adquisición restantes; después cerrar schema de manifiesto y snapshot lógico. El writer sigue bloqueado hasta concluir esos puntos.
+
+## Continuidad — ubicación estable de catalog.lock (2026-11-03)
+
+Se corrigió una segunda condición necesaria para que el lock de desinstalación sea efectivo: el archivo no puede vivir dentro del directorio que se elimina. Default único actualizado a /run/xray-manager-certificate-locks/catalog.lock, fuera de /var/lib/xray-manager. certificate_store.py crea/valida el directorio padre root-only; certificate_resolver.py utiliza el mismo acquire_lock. uninstall.sh prepara el padre como root:root 0700 y comprueba ese modo antes de tomar el lock.
+
+Defaults CLI, paths centrales, asistentes VLESS/VMess, desinstalación y docs quedaron alineados. tests/certificate_store.sh valida defaults de ambos CLI; tests/uninstall.sh valida contención del lock y supervivencia fuera del árbol borrado. La suite completa debe volver a ejecutarse tras estos cambios.
+
+No se movió ni eliminó ningún lock real, no se aplicó runtime ni se tocaron datos persistentes. La auditoría global de todos los mutadores sigue abierta.

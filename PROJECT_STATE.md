@@ -416,3 +416,10 @@ VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servi
 - Verificación: todos los tests/*.sh PASS; bash -n PASS; ShellCheck del módulo modificado PASS; git diff --check PASS; py_compile scripts/*.py PASS.
 - La auditoría global de locks sigue ABIERTA: aún falta inventariar y contrastar exhaustivamente todos los mutadores/órdenes y ampliar pruebas de concurrencia. No comenzar writer compartido todavía.
 - Sin cambios en Xray-Normativa, datos persistentes, certificados reales, master key, runtime, servicios ni firewall. Cambios de código/docs locales hasta su publicación.
+
+## Ruta estable del bloqueo TLS — 2026-11-03
+
+- Hallazgo: el lock anterior dentro de /var/lib/xray-manager/certificates se eliminaba junto con el árbol; mantener flock sobre un inode desvinculado no protege frente a procesos que creen un archivo nuevo.
+- Nuevo default único: /run/xray-manager-certificate-locks/catalog.lock. Fuera del árbol de datos persistentes que desinstalación elimina; certificate_store crea/valida su padre root-only y resolver reutiliza el acquire_lock central. uninstall.sh prepara el padre como root:root 0700.
+- Alineados config/paths.sh, defaults de certificate_store.py y certificate_resolver.py, fallbacks en asistentes VLESS/VMess, uninstall.sh y documentación. Pruebas parser y supervivencia del lock añadidas.
+- No se movió/eliminó ningún lock real en la VPS ni se ejecutó runtime apply. Auditoría global de mutadores sigue abierta.

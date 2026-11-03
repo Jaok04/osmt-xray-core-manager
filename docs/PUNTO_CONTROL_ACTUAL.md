@@ -336,3 +336,13 @@ Contrato: docs/PLAN_BACKUP_RESTORE_CENTRAL.md v1.3, §10.1.
 **Alcance/limitación:** corrección del flujo de desinstalación, no auditoría global concluida. Falta inventario exhaustivo de todos los mutadores, validación de sus órdenes y pruebas adicionales de concurrencia. No iniciar writer compartido hasta cerrar esos puntos.
 
 **Sin tocar:** Xray-Normativa/, datos persistentes, master key, certificados reales, runtime, servicios, firewall, puertos ni VPS de pruebas.
+
+## 15. Ubicación estable de catalog.lock — 2026-11-03
+
+**Decisión técnica:** el default pasa a /run/xray-manager-certificate-locks/catalog.lock. La ubicación anterior estaba dentro del árbol que se elimina y podía dejar procesos bloqueando un inode desvinculado mientras otros abrían un archivo nuevo.
+
+**Cambios locales:** config/paths.sh, defaults de certificate_store.py y certificate_resolver.py, fallbacks VLESS/VMess, uninstall.sh y documentación. El padre se crea/valida root-only mediante safe_dir del almacén. Tests añadidos para defaults CLI y supervivencia del lock fuera del árbol eliminado.
+
+**No ejecutado:** no se movieron ni borraron locks reales, no se aplicó runtime ni se modificaron datos persistentes.
+
+**Pendiente:** repetir la suite completa tras esta segunda corrección y continuar la auditoría global de todos los mutadores/locks. No iniciar writer de backup compartido hasta cerrar la auditoría y contrato de snapshot.

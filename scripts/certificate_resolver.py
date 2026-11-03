@@ -469,7 +469,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--certificate-catalog", default="/var/lib/xray-manager/certificates/catalog.json")
     parser.add_argument("--managed-dir", default="/var/lib/xray-manager/certificates/managed")
     parser.add_argument("--certificate-secrets-dir", default="/var/lib/xray-manager/certificates/secrets")
-    parser.add_argument("--certificate-lock", default="/var/lib/xray-manager/certificates/catalog.lock")
+    parser.add_argument("--certificate-lock", default="/run/xray-manager-certificate-locks/catalog.lock")
     parser.add_argument("--master-key", default="/etc/xray-manager/keys/master.key")
     parser.add_argument("--runtime-root", default="/run/xray-manager-certificates")
     parser.add_argument("--service-unit", default="xray.service")

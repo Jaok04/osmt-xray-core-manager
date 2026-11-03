@@ -490,7 +490,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--managed-dir", default="/var/lib/xray-manager/certificates/managed")
     parser.add_argument("--secrets-dir", default="/var/lib/xray-manager/certificates/secrets")
     parser.add_argument("--master-key", default="/etc/xray-manager/keys/master.key")
-    parser.add_argument("--lock", default="/var/lib/xray-manager/certificates/catalog.lock")
+    parser.add_argument("--lock", default="/run/xray-manager-certificate-locks/catalog.lock")
     sub = parser.add_subparsers(dest="action", required=True)
     imp = sub.add_parser("import")
     imp.add_argument("--storage-type", choices=("managed", "reference"), required=True)

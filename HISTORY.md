@@ -495,3 +495,11 @@ No se probó lectura de lease por un servicio Xray real: la VPS de desarrollo ca
 - Verificación local: suite tests/*.sh completa PASS; bash -n, ShellCheck del módulo modificado, py_compile scripts/*.py y git diff --check PASS.
 - La auditoría global de locks continúa ABIERTA; este cambio corrige únicamente el camino de desinstalación y no autoriza iniciar el writer compartido.
 - Sin runtime, datos persistentes, certificados reales, master key, servicios, firewall ni cambios en Xray-Normativa/.
+
+## 2026-11-03 — Ruta estable externa para catalog.lock
+
+- Se detectó que borrar /var/lib/xray-manager/certificates también borraba catalog.lock aunque estuviera bloqueado, abriendo una carrera por cambio de inode.
+- Se trasladó el default de catalog.lock a /run/xray-manager-certificate-locks/catalog.lock, fuera del árbol de certificados y de los datos persistentes del Manager.
+- Alineados defaults CLI de certificate_store.py y certificate_resolver.py, config/paths.sh, fallbacks VLESS/VMess, desinstalación y documentación de implementación.
+- tests/certificate_store.sh valida defaults de ambos CLI; tests/uninstall.sh valida que el lock vive fuera y sobrevive al borrado de los datos de certificados.
+- Sin operaciones sobre archivos/locks reales, runtime, servicios, master key, datos persistentes ni Xray-Normativa/.

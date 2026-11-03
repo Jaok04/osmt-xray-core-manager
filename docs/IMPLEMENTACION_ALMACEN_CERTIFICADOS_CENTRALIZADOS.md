@@ -1,7 +1,7 @@
 # Implementación inicial — almacén central de certificados TLS
 
 **Fecha:** 2026-11-03
-**Versión:** 1.0
+**Versión:** 1.1
 **Estado:** IMPLEMENTADO Y VERIFICADO EN PRUEBAS AISLADAS; integración operativa pendiente
 **Rama:** `design/user-identity-association-v1`
 
@@ -32,7 +32,9 @@ Rutas definidas en `config/paths.sh`:
 - Certificados administrados: `/var/lib/xray-manager/certificates/managed`
 - Directorio reservado para referencias: `/var/lib/xray-manager/certificates/references`
 - Secretos cifrados: `/var/lib/xray-manager/certificates/secrets`
-- Bloqueo: `/var/lib/xray-manager/certificates/catalog.lock`
+- Bloqueo: `/run/xray-manager-certificate-locks/catalog.lock`
+
+El archivo de bloqueo se ubica deliberadamente fuera del árbol de datos que la desinstalación puede eliminar: /run/xray-manager-certificate-locks/catalog.lock. Su directorio padre se crea con los controles root-only de safe_dir; el flujo de desinstalación también lo prepara/valida como root:root 0700 antes de adquirirlo. No debe volver a colocarse dentro de /var/lib/xray-manager/certificates, porque borrar ese árbol mientras se mantiene flock desvincularía el inode y permitiría carreras con procesos que abran un nuevo archivo de bloqueo.
 
 El catálogo tiene `schema_version=1`, una revisión global y una colección de recursos. Cada registro contiene ID, tipo de almacenamiento, referencia al certificado público, referencia al secreto cifrado, huellas, sujeto/emisor, SAN DNS, vigencia, estado y revisión. No contiene PEM de clave privada ni plaintext.
 

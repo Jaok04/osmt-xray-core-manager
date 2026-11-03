@@ -3,7 +3,7 @@
 # El respaldo previo se verifica localmente y puede exportarse por SSH/SCP a otro host.
 UNINSTALL_LOCK="${XRAY_MANAGER_UNINSTALL_LOCK:-/run/lock/xray-manager-uninstall.lock}"
 UNINSTALL_DATA_LOCK="${XRAY_MANAGER_INTEGRITY_LOCK:-/run/xray-manager/integrity.lock}"
-UNINSTALL_CERTIFICATES_LOCK="${XRAY_MANAGER_CERTIFICATES_LOCK:-/var/lib/xray-manager/certificates/catalog.lock}"
+UNINSTALL_CERTIFICATES_LOCK="${XRAY_MANAGER_CERTIFICATES_LOCK:-/run/xray-manager-certificate-locks/catalog.lock}"
 UNINSTALL_XRAY_LOCK="${XRAY_ADMIN_LOCK:-/run/lock/xray-manager-xray-admin.lock}"
 UNINSTALL_BACKUP_STAGING_DIR="${UNINSTALL_BACKUP_STAGING_DIR:-/var/backups}"
 # shellcheck disable=SC1091
@@ -284,6 +284,17 @@ uninstall_menu_action() {
 	# Si el inventario incluye certificados, coordinar con import/list/audit/resolver.
 	# Orden global: lifecycle -> uninstall -> integrity -> catalog -> Xray.
 	if ((certificate_deletion)); then
+		local certificates_lock_dir
+		certificates_lock_dir="$(dirname -- "$UNINSTALL_CERTIFICATES_LOCK")"
+		if ! manager_lock_path_is_safe "$UNINSTALL_CERTIFICATES_LOCK" ||
+			! install -d -o root -g root -m 700 -- "$certificates_lock_dir" ||
+			[[ "$(stat -c '%u:%g:%a' "$certificates_lock_dir" 2>/dev/null)" != "0:0:700" ]] ||
+			! manager_lock_path_is_safe "$UNINSTALL_CERTIFICATES_LOCK"; then
+			uninstall_release_operation_locks "$lifecycle_fd" "$fd" "$data_fd" '' ''
+			printf 'No se pudo preparar de forma segura el directorio estable de catalog.lock.\n' >&2
+			ui_pause
+			return 1
+		fi
 		if ! manager_lock_acquire "$UNINSTALL_CERTIFICATES_LOCK" certificates_fd; then
 			uninstall_release_operation_locks "$lifecycle_fd" "$fd" "$data_fd" '' ''
 			printf 'Hay una operación de certificados en curso. La desinstalación se cancela.\n' >&2

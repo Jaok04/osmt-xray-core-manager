@@ -8,6 +8,22 @@ BASE="$TMP/certificates"; MANAGED="$BASE/managed"; SECRETS="$BASE/secrets"
 CATALOG="$BASE/catalog.json"; LOCK="$BASE/catalog.lock"; KEYDIR="$TMP/keys"; MASTER="$KEYDIR/master.key"
 mkdir -m 700 "$BASE" "$MANAGED" "$SECRETS" "$KEYDIR"
 head -c 32 /dev/urandom >"$MASTER"; chmod 600 "$MASTER"
+python3 - "$ROOT" <<'PYLOCK'
+import sys
+from pathlib import Path
+root = Path(sys.argv[1])
+sys.path.insert(0, str(root / "scripts"))
+import certificate_store
+import certificate_resolver
+expected = "/run/xray-manager-certificate-locks/catalog.lock"
+store_args = certificate_store.build_parser().parse_args(["list"])
+resolver_args = certificate_resolver.build_parser().parse_args(["cleanup", "--lease-id", "lease-test"])
+assert store_args.lock == expected, store_args.lock
+assert resolver_args.certificate_lock == expected, resolver_args.certificate_lock
+assert not expected.startswith("/var/lib/xray-manager/certificates/")
+print("OK: el lock TLS usa una ruta estable fuera del árbol de datos.")
+PYLOCK
+
 STORE=(python3 "$ROOT/scripts/certificate_store.py" --base "$BASE" --catalog "$CATALOG" --managed-dir "$MANAGED" --secrets-dir "$SECRETS" --master-key "$MASTER" --lock "$LOCK")
 openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/key1.pem" -out "$TMP/cert1.pem" -days 2 -subj "/CN=managed.test.invalid" -addext "subjectAltName=DNS:managed.test.invalid" >/dev/null 2>&1
 chmod 600 "$TMP/key1.pem"; chmod 644 "$TMP/cert1.pem"

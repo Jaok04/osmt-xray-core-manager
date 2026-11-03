@@ -489,7 +489,7 @@ reset_uninstall_ui() {
     uninstall_service_guard() { return 0; }
     UNINSTALL_LOCK="$tmp/category-uninstall.lock"
     UNINSTALL_DATA_LOCK="$tmp/category-integrity.lock"
-    UNINSTALL_CERTIFICATES_LOCK="$tmp/category-catalog.lock"
+    UNINSTALL_CERTIFICATES_LOCK="$tmp/category-locks/catalog.lock"
     UNINSTALL_XRAY_LOCK="$tmp/category-xray.lock"
     UNINSTALL_BACKUP_STAGING_DIR="$tmp/category-staging"
 }
@@ -528,6 +528,9 @@ run_selected_category 2 users "$XRAY_MANAGER_USERS_DIR"
 run_selected_category 2 connections "$XRAY_MANAGER_CONNECTIONS_DIR" "$XRAY_MANAGER_VMESS_DIR"
 run_selected_category 2 domains "$XRAY_MANAGER_DOMAINS_DIR"
 run_selected_category 2 certificates "$XRAY_MANAGER_CERTIFICATES_DIR"
+# El lock vive fuera del árbol eliminado y debe sobrevivir a esa eliminación.
+[[ -f "$tmp/category-locks/catalog.lock" ]]
+[[ "$(stat -c '%a' "$tmp/category-locks")" == "700" ]]
 run_selected_category 2 backups "$XRAY_MANAGER_BACKUP_DIR"
 run_selected_category 2 preferences "$XRAY_MANAGER_CONFIG_DIR"
 run_selected_category 2 logs "$XRAY_MANAGER_LOG_DIR"
