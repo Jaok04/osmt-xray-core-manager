@@ -42,6 +42,18 @@ def vmess_tls(cid, port):
     return entry
 
 
+def vmess_tls_central(cid, port):
+    entry={'id':cid,'name':cid,'protocol_id':'vmess_tcp_tls','port':port,'max_users':1,'state':'draft','runtime_applied':False,
+           'vmess_configuration_schema_version':1,'vmess_configuration_revision':1,
+           'vmess_configuration_ref':f'configurations/{cid}.r000001.json','vmess_secret_ref':None}
+    config={'schema_version':1,'connection_id':cid,'protocol':'vmess','mode_id':'vmess_tcp_tls','transport':'raw','security':'tls',
+            'listen_address':'127.0.0.1','listen_port':port,'transport_options':{},
+            'security_options':{'certificate_id':'cert-restore-central'},
+            'users':[{'id':'123e4567-e89b-42d3-a456-426614174002','level':0,'email':cid+'@test.invalid'}]}
+    entry['_test_config']=config
+    return entry
+
+
 def install_vmess_config(case, entry):
     config=entry.pop('_test_config', None); secret=entry.pop('_test_secret', None)
     if config is not None:
@@ -163,4 +175,37 @@ except OSError as exc: assert 'simulado' in str(exc)
 else: raise AssertionError('debió fallar la escritura staging')
 assert (base/'connections.json').read_bytes()==before and not (backups/'RESTORE_IN_PROGRESS.json').exists()
 print('PASS: fallo de escritura del catálogo combinado no modifica el catálogo activo')
+# 6. VLESS restore validates central VMess TLS references against the live certificate catalog.
+central = vmess_tls_central('vmess-central-tls', 63501)
+case,base,secrets,backups=setup('central-tls',[vless('central-snapshot',63500)])
+created=backup(base,secrets,backups); backup_dir=pathlib.Path(created['path'])
+install_vmess_config(case,central)
+cert_dir=case/'certificates'; cert_dir.mkdir(mode=0o700); cert_dir.chmod(0o700)
+record={'certificate_id':'cert-restore-central','storage_type':'managed','certificate_source':'managed/cert-restore-central.pem',
+        'secret_ref':'secrets/cert-restore-central.r000001.bin','fingerprint_sha256':'a'*64,
+        'public_key_fingerprint_sha256':'b'*64,'subject':'CN=restore-test','issuer':'CN=restore-test',
+        'sans':['restore.test.invalid'],'not_before':'2026-01-01T00:00:00Z','not_after':'2027-01-01T00:00:00Z',
+        'status':'active','revision':1,'created_at':'2026-11-03T00:00:00Z','updated_at':'2026-11-03T00:00:00Z'}
+write(cert_dir/'catalog.json',json.dumps({'schema_version':1,'revision':1,'certificates':[record]})+'\n')
+write(base/'connections.json',json.dumps([central])+'\n')
+result=restore(base,secrets,backups,backup_dir)
+assert result['vmess_connections_preserved']==1
+preserved=next(e for e in read_catalog(base) if e['id']=='vmess-central-tls')
+assert preserved['vmess_secret_ref'] is None
+cfg=json.loads((case/'vmess'/'configurations'/'vmess-central-tls.r000001.json').read_text())
+assert cfg['security_options']=={'certificate_id':'cert-restore-central'}
+print('PASS: restore VLESS conserva VMess TLS central solo con referencia activa en catálogo de certificados')
+
+case,base,secrets,backups=setup('central-tls-missing-catalog',[vless('central-missing-snapshot',63600)])
+created=backup(base,secrets,backups); backup_dir=pathlib.Path(created['path'])
+missing=vmess_tls_central('vmess-central-missing',63601)
+install_vmess_config(case,missing)
+write(base/'connections.json',json.dumps([missing])+'\n')
+before=(base/'connections.json').read_bytes()
+try: restore(base,secrets,backups,backup_dir)
+except mod.BackupError as exc: assert 'certificado central ausente o inactivo' in str(exc)
+else: raise AssertionError('debió rechazar referencia a certificado central ausente')
+assert (base/'connections.json').read_bytes()==before
+print('PASS: referencia TLS central sin catálogo/registro activo rechazada sin alterar catálogo')
+
 PY

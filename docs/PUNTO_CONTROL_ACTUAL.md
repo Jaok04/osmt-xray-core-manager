@@ -237,3 +237,42 @@ Siguiente paso: integrar el nuevo contrato de forma versionada en VMess, primero
 - No tocar `Xray-Normativa/`, runtime, servicios, firewall, puertos ni VPS de pruebas.
 
 **Siguiente acción:** integrar generador VMess con resolutor; continuar las pruebas de extremo a extremo del asistente sin desplegar runtime.
+
+
+## 19. VMess TLS centralizado — endurecimiento del lease (2026-11-03)
+
+- Adaptador `modules/vmess_xray_26_10_31.sh`: TLS exige lease central; no acepta rutas libres. Nuevo `scripts/vmess_tls_lease_check.py` valida manifest, identidad de conexión/protocolo/certificado y permisos root:<grupo-servicio> 0750/0640.
+- Asistente VMess: pasa `--runtime-root` explícito, lee contra el catálogo central y limpia leases en éxito/fallo. La recuperación TLS histórica se detiene y requiere migración controlada; no se reescriben datos históricos.
+- Restore VLESS: las entradas VMess TLS central preservadas deben referenciar un certificado activo del catálogo central. El backup VLESS sigue sin incluir almacén VMess ni catálogo de certificados.
+- Suite completa: 43/43 PASS. Xray 26.10.31 valida 14/14 modalidades con leases de fixture. Recuperación/cleanup del asistente probada con resolutor/Xray simulados. ShellCheck warning, Bash syntax, py_compile y diff check PASS.
+- Sin servicio/usuario/grupo Xray en VPS desarrollo: no se probó lectura de lease por proceso real. Sin runtime apply, despliegue, firewall, puertos, certificados reales ni migración. VLESS y backup compartido pendientes.
+- Estado: IMPLEMENTADO PARCIALMENTE / VERIFICADO EN FIXTURES / NO PUBLICADO / NO SINCRONIZADO / NO ACEPTADO. `main` y `Xray-Normativa/` intactas.
+- Informe actualizado: `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
+
+
+## 20. Integración VLESS TLS centralizado — punto de control (2026-11-03)
+
+**Estado:** IMPLEMENTADO PARCIALMENTE / VERIFICADO EN FIXTURES / NO PUBLICADO / NO SINCRONIZADO / NO ACEPTADO. Etapa 2 continúa ABIERTA.
+
+- Nuevas revisiones TLS VLESS persisten exclusivamente `certificate_id`; el catálogo central valida existencia, estado activo y tipo `managed`/`reference`. No se crea secreto TLS por conexión.
+- Las revisiones históricas `{certificate_file, secret_ref}` siguen siendo legibles/auditables. No se migran ni eliminan automáticamente. REALITY conserva su secreto individual.
+- Preparador y adaptador VLESS actualizados. El adaptador exige lease autorizado y rechaza rutas libres. Nuevo `scripts/vless_tls_lease_check.py` valida asociación, protocolo, revisión, fingerprint, identidad y permisos.
+- El asistente VLESS solicita ID central, guarda el borrador bajo consentimiento, solicita lease y limpia en éxito/fallo. La recuperación TLS central también usa lease. Las revisiones TLS históricas fallan cerradas hasta migración controlada.
+- Backup/restore VLESS documenta `certificate_id` como dependencia externa y exige que el catálogo central/recurso estén activos antes de publicar restauración. No empaqueta el catálogo ni sus secretos.
+- Suite completa `tests/*.sh`: 45/45 PASS. Xray 26.10.31 validó 9/9 modalidades VLESS con leases de fixture. `tests/vless_tls_lease_assistant.sh` simula `systemctl`/Xray, verifica lectura POSIX como `www-data` y cleanup en éxito/fallo; no prueba Xray real. `bash -n` global, `py_compile scripts/*.py`, `install.sh --check`, ShellCheck warning de modificados y `git diff --check`: PASS.
+- Limitación: VPS desarrollo sin unidad Xray con `User`/`Group` explícitos y no privilegiados. Resolutor CLI falla cerrado; no se probó lectura por proceso Xray real. No runtime apply, despliegue, firewall, puertos, certificados reales ni VPS de pruebas.
+- Informe: `docs/IMPLEMENTACION_VLESS_TLS_CENTRALIZADO_PARCIAL.md`.
+
+**Siguiente paso:** ampliar la matriz integrada de recuperación/cleanup para WS, gRPC y XHTTP TLS; después diseñar migración histórica y backup/restore compartido. No declarar completa la integración hasta auditoría integral, trazabilidad y aceptación expresa.
+
+
+## 21. Matriz VLESS TLS y propuestas de migración/backup (2026-11-03)
+
+- Corregido adaptador VLESS-WS-TLS para aceptar `path` junto con las rutas exactas del lease; RAW/TCP, gRPC y XHTTP mantienen contratos específicos.
+- `tests/vless_tls_lease_assistant.sh` valida creación RAW/TCP y recuperación TLS de RAW/TCP, WS, gRPC y XHTTP, cleanup tras éxito/fallo, con `systemctl`/Xray simulados y lectura POSIX como `www-data`. No demuestra lectura por Xray real.
+- Asistentes VMess y VLESS pasan rutas configurables completas al resolutor. Validadores VMess/VLESS equivalentes, con comprobación del protocolo del manifest.
+- Suite completa `tests/*.sh`: 45/45 PASS.
+- Diseños nuevos: `docs/PLAN_MIGRACION_TLS_HISTORICO.md` y `docs/PLAN_BACKUP_RESTORE_CENTRAL.md`. Ambos son propuestas; no hay CLI de migración ni backup compartido implementados.
+- No se migraron datos históricos ni se borraron blobs. No runtime apply, servicio, firewall, puertos, certificados reales, VPS pruebas ni cambios a normativa. No commit/push.
+
+**Decisiones requeridas antes de seguir:** aprobar alcance inicial de migración (VLESS/VMess/ambos), política `managed` vs `reference`, retención de blobs históricos; y aprobar re-envoltura de secretos centrales para backup/restore o escrow externo de master key, además de política para dependencias `reference` ausentes y merge con datos posteriores al snapshot.

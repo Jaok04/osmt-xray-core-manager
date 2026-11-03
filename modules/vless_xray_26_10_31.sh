@@ -4,11 +4,11 @@
 # No escribe archivos, no genera credenciales y no aplica configuraciones.
 
 vless_xray_26_10_31_build() {
-	[[ "$#" -eq 2 ]] || {
-		printf 'Uso: vless_xray_26_10_31_build <modelo.json> <opciones.json>\n' >&2
+	[[ "$#" -ge 2 && "$#" -le 3 ]] || {
+		printf 'Uso: vless_xray_26_10_31_build <modelo.json> <opciones.json> [lease-id|-]\n' >&2
 		return 2
 	}
-	local model_file="$1" options_file="$2" mode transport security
+	local model_file="$1" options_file="$2" lease_id="${3:--}" mode transport security
 	command -v jq >/dev/null 2>&1 || {
 		printf 'Se requiere jq.\n' >&2
 		return 1
@@ -41,6 +41,10 @@ vless_xray_26_10_31_build() {
 		return 2
 	}
 
+	if [[ "$security" != tls && "$lease_id" != - ]]; then
+		printf 'Un lease TLS no puede utilizarse con una modalidad sin TLS o REALITY.\n' >&2
+		return 2
+	fi
 	case "$mode" in
 	vless_ws)
 		jq -e 'keys == ["path"] and (.path | type == "string" and startswith("/") and length > 1)' "$options_file" >/dev/null || {
@@ -68,8 +72,12 @@ vless_xray_26_10_31_build() {
 		local cert key
 		cert="$(jq -r '.certificate_file' "$options_file")"
 		key="$(jq -r '.key_file' "$options_file")"
-		[[ -r "$cert" && -r "$key" ]] || {
-			printf 'No se puede leer el certificado o la clave TLS.\n' >&2
+		[[ -n "$lease_id" && "$lease_id" != - ]] || {
+			printf 'TLS requiere un lease central autorizado.\n' >&2
+			return 2
+		}
+		python3 "${APP_ROOT:-/opt/xray-manager}/scripts/vless_tls_lease_check.py" "${XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR:-/run/xray-manager-certificates}" "$lease_id" "$cert" "$key" "$(jq -r '.connection_id' "$model_file")" >/dev/null || {
+			printf 'El lease TLS no corresponde a esta conexión VLESS o no cumple los permisos.\n' >&2
 			return 2
 		}
 		;;
@@ -88,19 +96,16 @@ vless_xray_26_10_31_build() {
 		}
 		;;
 	vless_tcp_tls | vless_ws_tls)
-		jq -e 'keys == ["certificate_file","key_file"] and
-                (.certificate_file | type == "string" and length > 0) and
-                (.key_file | type == "string" and length > 0)' "$options_file" >/dev/null || {
-			printf 'TLS requiere certificate_file y key_file explícitos.\n' >&2
-			return 2
-		}
+		if [[ "$mode" == vless_tcp_tls ]]; then
+			jq -e 'keys == ["certificate_file","key_file"] and (.certificate_file | type == "string" and length > 0) and (.key_file | type == "string" and length > 0)' "$options_file" >/dev/null || { printf 'TCP+TLS requiere certificate_file y key_file.\n' >&2; return 2; }
+		else
+			jq -e 'keys == ["certificate_file","key_file","path"] and (.certificate_file | type == "string" and length > 0) and (.key_file | type == "string" and length > 0) and (.path | type == "string" and startswith("/") and length > 1)' "$options_file" >/dev/null || { printf 'WebSocket+TLS requiere path, certificate_file y key_file.\n' >&2; return 2; }
+		fi
 		local cert key
 		cert="$(jq -r '.certificate_file' "$options_file")"
 		key="$(jq -r '.key_file' "$options_file")"
-		[[ -r "$cert" && -r "$key" ]] || {
-			printf 'No se puede leer el certificado o la clave TLS.\n' >&2
-			return 2
-		}
+		[[ -n "$lease_id" && "$lease_id" != - ]] || { printf 'TLS requiere un lease central autorizado.\n' >&2; return 2; }
+		python3 "${APP_ROOT:-/opt/xray-manager}/scripts/vless_tls_lease_check.py" "${XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR:-/run/xray-manager-certificates}" "$lease_id" "$cert" "$key" "$(jq -r '.connection_id' "$model_file")" >/dev/null || { printf 'El lease TLS no corresponde a esta conexión VLESS o no cumple los permisos.\n' >&2; return 2; }
 		;;
 	vless_grpc_tls)
 		jq -e 'keys == ["certificate_file","key_file","service_name"] and
@@ -113,8 +118,12 @@ vless_xray_26_10_31_build() {
 		local cert key
 		cert="$(jq -r '.certificate_file' "$options_file")"
 		key="$(jq -r '.key_file' "$options_file")"
-		[[ -r "$cert" && -r "$key" ]] || {
-			printf 'No se puede leer el certificado o la clave TLS.\n' >&2
+		[[ -n "$lease_id" && "$lease_id" != - ]] || {
+			printf 'TLS requiere un lease central autorizado.\n' >&2
+			return 2
+		}
+		python3 "${APP_ROOT:-/opt/xray-manager}/scripts/vless_tls_lease_check.py" "${XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR:-/run/xray-manager-certificates}" "$lease_id" "$cert" "$key" "$(jq -r '.connection_id' "$model_file")" >/dev/null || {
+			printf 'El lease TLS no corresponde a esta conexión VLESS o no cumple los permisos.\n' >&2
 			return 2
 		}
 		;;

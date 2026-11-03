@@ -422,3 +422,33 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Pendiente: adaptación segura de `modules/vmess_xray_26_10_31.sh`, cobertura integral del asistente/lease/cleanup/restore, revisión completa de backup/restore y regresión global. La VPS de desarrollo carece de Xray service/user/group; no hay prueba de lectura real de lease por Xray.
 - No se modificó runtime, servicio, firewall, puertos, certificados desplegados, VPS de pruebas ni `Xray-Normativa/`. No se migraron secretos históricos ni se importaron certificados reales.
 - Informe: `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`. Estado: IMPLEMENTADO PARCIALMENTE / PRUEBAS FOCALES PASS / ACEPTACIÓN PENDIENTE.
+
+
+## 2026-11-03 — VMess TLS centralizado: adaptación por lease y recuperación
+
+Se endureció `modules/vmess_xray_26_10_31.sh`: el adaptador ahora exige un lease `resolve-*` para TLS y comprueba que el manifiesto, conexión, protocolo, certificado, revisión, huella, UID/GID y permisos correspondan al material temporal del resolutor. Se añadió `scripts/vmess_tls_lease_check.py`; el adaptador rechaza rutas externas, leases de otra conexión y manifests alterados. La clave privada temporal conserva `root:<grupo-servicio> 0640`, que permite lectura al servicio Xray sin relajar el almacén central.
+
+Se completó la recuperación TLS central del asistente con `--runtime-root` explícito, lectura del catálogo central, uso del lease y limpieza en éxito/fallo. El restore de revisiones TLS históricas falla cerrado hasta migración controlada; no se modifica ni elimina el histórico. Se amplió el restore VLESS para validar que los `certificate_id` TLS centrales VMess preservados existan y estén activos en el catálogo central, sin incluir ni modificar el almacén VMess.
+
+Pruebas: suite completa 43/43 PASS; Xray-core 26.10.31 14/14 modalidades con fixtures de lease; test de recuperación/cleanup del asistente con resolutor y Xray simulados; restauración VLESS con certificado central activo/ausente; ShellCheck warning, `bash -n`, `py_compile` y `git diff --check` PASS.
+
+No se probó lectura de lease por un servicio Xray real: la VPS de desarrollo carece de `xray.service` y usuario/grupo Xray. No se tocó runtime, servicio, firewall, puertos, VPS de pruebas, certificados reales ni `Xray-Normativa/`. Esta actualización permanece local, sin commit/push; `main` intacta. Bloque 3 continúa parcial y Etapa 2 abierta.
+
+
+## 2026-11-03 — Integración VLESS TLS centralizado parcial
+
+- Nuevas revisiones TLS VLESS guardan sólo `certificate_id`; el store valida certificado central activo `managed`/`reference` y rechaza secreto/ruta TLS por conexión. Lectura/auditoría conservan compatibilidad histórica sin migración automática. REALITY permanece separado.
+- `vless_prepare_config.py`, `vless_xray_26_10_31.sh` y `vless_assistant.sh` integrados parcialmente con el resolutor y leases. El adaptador rechaza rutas libres y valida manifest, conexión, protocolo, certificado, revisión, fingerprint, UID/GID y permisos. Cleanup en éxito/fallo.
+- `vless_backup.py` registra `certificate_id` como dependencia externa y valida catálogo/recurso activo antes de restaurar; no empaqueta el almacén central.
+- Nuevas pruebas `tests/vless_tls_central_backup.sh` y `tests/vless_tls_lease_assistant.sh`; pruebas de store/asistente/Xray ampliadas. Suite global: 45/45 PASS; Xray 26.10.31 9/9 modalidades VLESS. La prueba de lease usa `systemctl`/Xray simulados y verifica permisos de lectura con UID/GID `www-data` y cleanup en éxito/fallo; no es una prueba con Xray real. Bash syntax, py_compile, install check, ShellCheck warning de modificados y diff check PASS.
+- Limitación: VPS desarrollo sin unidad Xray con identidad explícita no privilegiada; resolutor CLI falla cerrado y no se probó lectura por Xray real. No runtime apply ni despliegue.
+- Estado: IMPLEMENTADO PARCIALMENTE / VERIFICADO EN FIXTURES / NO PUBLICADO / NO SINCRONIZADO / NO ACEPTADO. Sin cambios a `Xray-Normativa/`, `main`, servicios, firewall, puertos, certificados desplegados o VPS de pruebas. Ver `docs/IMPLEMENTACION_VLESS_TLS_CENTRALIZADO_PARCIAL.md`.
+
+
+## 2026-11-03 — Matriz de recuperación VLESS y diseños de continuidad
+
+- Corregido adaptador VLESS-WS-TLS para aceptar `path` más certificado/clave del lease; el contrato RAW/TCP sigue sin opciones de transporte adicionales.
+- Prueba integrada del asistente amplía recuperación a RAW/TCP, WS, gRPC y XHTTP y verifica cleanup en éxito/fallo mediante `systemctl`/Xray simulados y usuario `www-data`. No es prueba con Xray real. Suite completa: 45/45 PASS.
+- Auditoría cruzada: validadores de lease VMess/VLESS equivalentes salvo el protocolo; asistentes VMess ahora pasan explícitamente todos los paths del almacén central al resolutor.
+- Nuevos documentos de propuesta: `docs/PLAN_MIGRACION_TLS_HISTORICO.md` y `docs/PLAN_BACKUP_RESTORE_CENTRAL.md`. No se implementaron migración ni backup compartido.
+- Sin cambios a datos históricos, runtime, servicios, firewall, puertos, certificados desplegados, VPS de pruebas o `Xray-Normativa/`; sin commit/push.

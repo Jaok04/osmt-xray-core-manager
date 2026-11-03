@@ -1,8 +1,8 @@
 # Arquitectura de certificados TLS centralizados
 
-**Versión:** 1.1 — contrato con primer almacén y resolutor parciales
+**Versión:** 1.2 — contrato con integración VMess/VLESS parcial
 **Fecha:** 2026-11-03
-**Estado:** DISEÑO APROBADO; almacén y resolutor IMPLEMENTADOS PARCIALMENTE; integración VMess/VLESS pendiente
+**Estado:** DISEÑO APROBADO; almacén/resolutor IMPLEMENTADOS PARCIALMENTE; integración VMess/VLESS PARCIAL y no aceptada
 **Rama:** `design/user-identity-association-v1`
 **Normativa funcional de referencia:** `Xray-Normativa/04_Certificados_Dominios/Etapa_4_Certificados_Dominios.md` v1.1 (inmutable)
 
@@ -145,7 +145,7 @@ El resolutor no modifica por sí mismo conexiones, certificados externos, config
 
 Implementación parcial documentada en docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md: scripts/certificate_resolver.py valida la asociación exacta connection_id/certificate_id, consulta catálogos/configuraciones versionados, verifica el recurso central, prepara un lease temporal con archivos root:<grupo-servicio> y permite limpieza controlada.
 
-El contrato TLS central (security_options exactamente {certificate_id}) aún no está admitido por los almacenes actuales VMess/VLESS. Las pruebas usan fixtures de ese contrato; no prueban integración de asistentes/generadores ni lectura por un Xray real. La CLI obtiene User/Group de systemd y falla cerrada si no hay unidad/identidad explícita. En la VPS de desarrollo no existe xray.service ni cuenta/grupo xray.
+El contrato TLS central (security_options exactamente {certificate_id}) ya está admitido por los stores VMess/VLESS para nuevas revisiones. Los asistentes y adaptadores tienen integración parcial mediante leases; el flujo VMess/VLESS permanece sujeto a auditoría y aceptación. Las pruebas usan fixtures y no demuestran lectura por un Xray real. La CLI obtiene User/Group de systemd y falla cerrada si no hay unidad/identidad explícita. En la VPS de desarrollo no existe una unidad Xray con User/Group explícitos y no privilegiados.
 
 Los temporales se preparan bajo /run/xray-manager-certificates, raíz/lease root:<grupo-servicio> 0750, archivos 0640. La clave se mantiene temporalmente en memoria y en el archivo que el servicio debe leer. El runtime path es volátil; la futura integración deberá recrearlo antes de validar/iniciar Xray.
 
@@ -226,11 +226,11 @@ Un test de JSON válido o `xray run -test` no demuestra conectividad extremo a e
 |---|---|---|
 | 1 | Contrato arquitectónico, esquema y decisiones de seguridad | DOCUMENTADO; revisión evolutiva pendiente |
 | 2 | Catálogo central y almacén cifrado | IMPLEMENTADO PARCIALMENTE; import/list/show/audit |
-| 3 | Resolutor TLS y posterior integración VMess | RESOLUTOR PARCIAL IMPLEMENTADO; integración pendiente |
-| 4 | Integración VLESS | PENDIENTE |
+| 3 | Resolutor TLS e integración VMess | RESOLUTOR IMPLEMENTADO PARCIALMENTE; integración VMess PARCIAL, no aceptada |
+| 4 | Integración VLESS | PARCIAL IMPLEMENTADA Y VERIFICADA EN FIXTURES; no aceptada |
 | 5 | Migración versionada y reversible | PENDIENTE |
-| 6 | Backup/restore central compartido | PENDIENTE |
-| 7 | Pruebas cruzadas, aislamiento y regresión | PARCIAL; pruebas focales y regresión base |
+| 6 | Backup/restore central compartido | PENDIENTE; backups de protocolo documentan/validan dependencias centrales |
+| 7 | Pruebas cruzadas, aislamiento y regresión | PARCIAL; suite global y pruebas focales PASS, sin lectura por Xray real |
 | 8 | Auditoría integral, documentación final y continuidad | PENDIENTE |
 
 Cada etapa tendrá inventario, trazabilidad, pruebas y evidencia. Ninguna etapa se cerrará sin auditoría integral y aceptación formal del propietario.
@@ -248,7 +248,7 @@ Los primeros bloques cerraron las decisiones siguientes:
 
 Continúan pendientes antes de integrar y usar el resolutor en producción:
 
-- Cambiar contratos de configuración, catálogos, asistentes y generadores VMess/VLESS para guardar/consumir certificate_id.
+- Completar auditoría de los stores, asistentes y adaptadores VMess/VLESS que ya guardan/consumen `certificate_id` y leases; cerrar cobertura por modalidad.
 - Confirmar la unidad systemd instalada y su usuario/grupo efectivos en un entorno donde Xray exista; probar lectura real dentro de sus restricciones (ProtectSystem, PrivateTmp).
 - Resolver el ciclo de vida de leases al aplicar/reiniciar Xray y recrear temporales después de reinicio.
 - Diseñar publicación atómica de configuración y rollback de runtime en un bloque independiente, con autorización expresa.

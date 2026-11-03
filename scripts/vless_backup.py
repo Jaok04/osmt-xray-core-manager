@@ -141,8 +141,12 @@ def inspect_catalog(base: Path):
             cfg=base/e['configuration_ref']
             safe_regular(cfg,256*1024)
             c=json.loads(cfg.read_text(encoding='utf-8'))
-            cert=c.get('security_options',{}).get('certificate_file')
-            if isinstance(cert,str) and cert.startswith('/'):
+            security_options=c.get('security_options',{})
+            cert=security_options.get('certificate_file') if isinstance(security_options,dict) else None
+            certificate_id=security_options.get('certificate_id') if isinstance(security_options,dict) else None
+            if isinstance(certificate_id,str):
+                certs.append({'connection_id':e['id'],'certificate_id':certificate_id,'source':'central_certificate_catalog','included':False})
+            elif isinstance(cert,str) and cert.startswith('/'):
                 certs.append({'connection_id':e['id'],'certificate_path':cert,'included':False})
     if len(ids)!=len(set(ids)): raise BackupError('IDs duplicados en catálogo')
     return data, revisions, certs
@@ -377,8 +381,11 @@ def validate_payload(archive: bytes, manifest: dict, key: bytes):
             if blob is None: raise BackupError('blob cifrado referenciado ausente')
             crypto.decrypt_secret(blob,key,e['id'],1)
             if sec.get('secret_ref')!=secret_ref: raise BackupError('referencia de secreto no coincide con configuración')
+        elif cfg.get('security') == 'tls' and set(sec) == {'certificate_id'}:
+            if not isinstance(sec.get('certificate_id'),str) or not re.fullmatch(r'cert-[A-Za-z0-9][A-Za-z0-9_.-]{0,120}',sec['certificate_id']):
+                raise BackupError('referencia a certificado TLS central no válida')
         elif cfg.get('security') in ('tls','reality'):
-            raise BackupError('configuración TLS/REALITY sin secreto cifrado')
+            raise BackupError('configuración TLS histórica/REALITY sin secreto cifrado')
     manifest_ids=manifest.get('connection_ids',[])
     if sorted(e['id'] for e in catalog)!=manifest_ids: raise BackupError('IDs de catálogo no coinciden con manifiesto')
     return extracted
@@ -414,6 +421,33 @@ def merge_current_vmess_entries(stage_base: Path, live_base: Path):
         restored_ids.add(entry['id'])
         vless_entries.append(entry)
 
+    central_certificate_ids = set()
+    for entry in vless_entries:
+        ref = entry.get('configuration_ref')
+        if ref is None:
+            continue
+        match = re.fullmatch(rf'configurations/{re.escape(entry["id"])}\.r([0-9]{{6}})\.json', ref if isinstance(ref,str) else '')
+        if not match:
+            raise BackupError('referencia de configuración VLESS inválida al restaurar')
+        config_path = stage_base / 'configurations' / f'{entry["id"]}.r{int(match.group(1)):06d}.json'
+        safe_regular(config_path, 256 * 1024)
+        config = json.loads(config_path.read_text(encoding='utf-8'))
+        security_options = config.get('security_options', {})
+        if config.get('security') == 'tls' and isinstance(security_options, dict) and set(security_options) == {'certificate_id'}:
+            central_certificate_ids.add(security_options['certificate_id'])
+    if central_certificate_ids:
+        try:
+            import importlib
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            certificate_store = importlib.import_module('certificate_store')
+            cert_catalog = certificate_store.load_catalog(live_base.parent / 'certificates' / 'catalog.json')
+        except Exception as exc:
+            raise BackupError('catálogo central de certificados requerido por VLESS no disponible o inválido') from exc
+        for certificate_id in central_certificate_ids:
+            matches = [item for item in cert_catalog['certificates'] if item.get('certificate_id') == certificate_id]
+            if len(matches) != 1 or matches[0].get('status') != 'active' or matches[0].get('storage_type') not in ('managed', 'reference'):
+                raise BackupError('referencia VLESS a certificado central ausente o inactivo: ' + certificate_id)
+
     current_vmess = []
     if live_base.is_symlink():
         raise BackupError('symlink en el directorio del catálogo actual')
@@ -429,6 +463,7 @@ def merge_current_vmess_entries(stage_base: Path, live_base: Path):
         all_current_ids = set()
         vmess_root = live_base.parent / 'vmess'
         vmess_store = None
+        certificate_store = None
         for entry in live_catalog:
             if not isinstance(entry, dict) or not isinstance(entry.get('id'), str) or not ID_RE.fullmatch(entry['id']):
                 raise BackupError('registro inválido en catálogo actual')
@@ -467,6 +502,20 @@ def merge_current_vmess_entries(stage_base: Path, live_base: Path):
                         vmess_store.validate(config, entry, secret_ref, allow_legacy_tls=True)
                     except Exception as exc:
                         raise BackupError('configuración VMess actual inválida') from exc
+                    security_options = config.get('security_options', {})
+                    if config.get('security') == 'tls' and isinstance(security_options, dict) and set(security_options) == {'certificate_id'}:
+                        if certificate_store is None:
+                            import importlib
+                            sys.path.insert(0, str(Path(__file__).resolve().parent))
+                            certificate_store = importlib.import_module('certificate_store')
+                        try:
+                            cert_catalog = certificate_store.load_catalog(live_base.parent / 'certificates' / 'catalog.json')
+                        except Exception as exc:
+                            raise BackupError('catálogo central de certificados VMess inválido') from exc
+                        cert_matches = [item for item in cert_catalog['certificates'] if item.get('certificate_id') == security_options['certificate_id']]
+                        if (len(cert_matches) != 1 or cert_matches[0].get('status') != 'active'
+                                or cert_matches[0].get('storage_type') not in ('managed', 'reference')):
+                            raise BackupError('referencia VMess a certificado central ausente o inactivo')
                     if secret_ref is not None:
                         secret_match = re.fullmatch(rf'secrets/{re.escape(cid)}\.r([0-9]{{6}})\.bin', secret_ref if isinstance(secret_ref, str) else '')
                         if not secret_match or int(secret_match.group(1)) != int(config_match.group(1)):

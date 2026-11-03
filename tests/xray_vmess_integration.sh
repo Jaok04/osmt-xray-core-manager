@@ -10,14 +10,33 @@ source "$ROOT/modules/vmess_model.sh"
 source "$ROOT/modules/vmess_xray_26_10_31.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
+mkdir -p "$TMP/runtime"
+chgrp 65534 "$TMP/runtime"
+chmod 750 "$TMP/runtime"
 openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/tls.key" -out "$TMP/tls.crt" -days 1 -subj '/CN=localhost' >/dev/null 2>&1
 chmod 600 "$TMP/tls.key"
 REALITY_KEY="$("$XRAY" x25519 | sed -n 's/^PrivateKey: //p')"
 printf '%s\n' '[{"id":"11111111-1111-4111-8111-111111111111","level":0,"email":"vmess-test@example.test"}]' >"$TMP/users.json"
 validate() {
-    local mode="$1" options="$2"
+    local mode="$1" options="$2" lease_id='-'
     vmess_model_build "test-$mode" "$mode" 127.0.0.1 62001 "$TMP/users.json" >"$TMP/model.json"
-    vmess_xray_26_10_31_build "$TMP/model.json" "$options" >"$TMP/config.json"
+    if [[ "$mode" == *_tls ]]; then
+        lease_id="resolve-$(printf '%032d' "$(( $(date +%s) % 100000000000000000000000000000000 ))")"
+        local lease_dir="$TMP/runtime/$lease_id" gid=65534
+        mkdir -p "$lease_dir"
+        cp "$TMP/tls.crt" "$lease_dir/certificate.pem"
+        cp "$TMP/tls.key" "$lease_dir/private-key.pem"
+        chgrp "$gid" "$lease_dir" "$lease_dir/certificate.pem" "$lease_dir/private-key.pem"
+        chmod 750 "$lease_dir"; chmod 640 "$lease_dir/certificate.pem" "$lease_dir/private-key.pem"
+        jq -n --arg lease_id "$lease_id" --arg connection_id "test-$mode" --argjson gid "$gid" '{lease_id:$lease_id,connection_id:$connection_id,protocol:"vmess",certificate_id:"cert-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",certificate_revision:1,certificate_fingerprint_sha256:("a"*64),service_uid:1,service_gid:$gid}' >"$lease_dir/manifest.json"
+        chgrp "$gid" "$lease_dir/manifest.json"; chmod 640 "$lease_dir/manifest.json"
+        jq --arg cert "$lease_dir/certificate.pem" --arg key "$lease_dir/private-key.pem" '. + {certificate_file:$cert,key_file:$key}' "$options" >"$TMP/options-lease.json"
+        options="$TMP/options-lease.json"
+        LAST_LEASE_ID="$lease_id"
+        LAST_LEASE_DIR="$lease_dir"
+        LAST_LEASE_OPTIONS="$options"
+    fi
+    XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR="$TMP/runtime" vmess_xray_26_10_31_build "$TMP/model.json" "$options" "$lease_id" >"$TMP/config.json"
     "$XRAY" run -test -config "$TMP/config.json" >/dev/null
     printf 'PASS %s\n' "$mode"
 }
@@ -49,10 +68,36 @@ validate vmess_xhttp_tls "$TMP/xhttp-tls.json"
 validate vmess_xhttp_reality "$TMP/xhttp-reality.json"
 validate vmess_mkcp "$TMP/mkcp.json"
 validate vmess_mkcp_tls "$TMP/mkcp-tls.json"
+
+# El lease no puede reutilizarse para otra conexión ni para rutas externas.
+vmess_model_build lease_wrong_connection vmess_tcp_tls 127.0.0.1 62005 "$TMP/users.json" >"$TMP/lease-wrong-connection.json"
+if XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR="$TMP/runtime" vmess_xray_26_10_31_build "$TMP/lease-wrong-connection.json" "$LAST_LEASE_OPTIONS" "$LAST_LEASE_ID" >/dev/null 2>&1; then
+    echo 'ERROR: el adaptador reutilizó un lease de otra conexión.' >&2
+    exit 1
+fi
+echo 'PASS rechazo lease asociado a otra conexión'
+vmess_model_build "test-vmess_mkcp_tls" vmess_mkcp_tls 127.0.0.1 62005 "$TMP/users.json" >"$TMP/lease-correct-model.json"
+jq -n --arg certificate_file "$TMP/tls.crt" --arg key_file "$TMP/tls.key" '{header_type:"none",seed:"",certificate_file:$certificate_file,key_file:$key_file}' >"$TMP/lease-external-paths.json"
+if XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR="$TMP/runtime" vmess_xray_26_10_31_build "$TMP/lease-correct-model.json" "$TMP/lease-external-paths.json" "$LAST_LEASE_ID" >/dev/null 2>&1; then
+    echo 'ERROR: el adaptador aceptó rutas TLS externas al lease.' >&2
+    exit 1
+fi
+echo 'PASS rechazo rutas TLS externas aunque se proporcione un lease válido'
+cp "$LAST_LEASE_DIR/manifest.json" "$TMP/manifest.good.json"
+jq '.protocol="vless"' "$TMP/manifest.good.json" >"$LAST_LEASE_DIR/manifest.json"
+chgrp 65534 "$LAST_LEASE_DIR/manifest.json"; chmod 640 "$LAST_LEASE_DIR/manifest.json"
+if XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR="$TMP/runtime" vmess_xray_26_10_31_build "$TMP/lease-correct-model.json" "$LAST_LEASE_OPTIONS" "$LAST_LEASE_ID" >/dev/null 2>&1; then
+    echo 'ERROR: el adaptador aceptó un lease con protocolo incorrecto.' >&2
+    exit 1
+fi
+echo 'PASS rechazo manifest de lease con protocolo incorrecto'
+mv "$TMP/manifest.good.json" "$LAST_LEASE_DIR/manifest.json"
+chgrp 65534 "$LAST_LEASE_DIR/manifest.json"; chmod 640 "$LAST_LEASE_DIR/manifest.json"
+
 expect_adapter_reject() {
     local label="$1" mode="$2" options="$3"
     vmess_model_build "negative-$label" "$mode" 127.0.0.1 62002 "$TMP/users.json" >"$TMP/negative-model.json"
-    if vmess_xray_26_10_31_build "$TMP/negative-model.json" "$options" >"$TMP/negative-config.json" 2>/dev/null; then
+    if vmess_xray_26_10_31_build "$TMP/negative-model.json" "$options" - >"$TMP/negative-config.json" 2>/dev/null; then
         printf 'ERROR: el adaptador aceptó un caso inválido: %s\n' "$label" >&2
         exit 1
     fi
@@ -68,7 +113,7 @@ expect_adapter_reject tls_symlink_key vmess_tcp_tls "$TMP/tls-symlink.json"
 printf 'not-a-certificate\n' >"$TMP/invalid.crt"
 jq -n --arg certificate_file "$TMP/invalid.crt" --arg key_file "$TMP/tls.key" '{certificate_file:$certificate_file,key_file:$key_file}' >"$TMP/tls-invalid-cert.json"
 vmess_model_build negative_tls_cert vmess_tcp_tls 127.0.0.1 62002 "$TMP/users.json" >"$TMP/negative-model.json"
-if vmess_xray_26_10_31_build "$TMP/negative-model.json" "$TMP/tls-invalid-cert.json" >"$TMP/negative-config.json" 2>/dev/null; then
+if vmess_xray_26_10_31_build "$TMP/negative-model.json" "$TMP/tls-invalid-cert.json" - >"$TMP/negative-config.json" 2>/dev/null; then
     echo 'ERROR: el adaptador aceptó un certificado TLS inválido.' >&2
     exit 1
 fi
@@ -115,7 +160,7 @@ echo 'PASS prepare_config emite certificate_id, no crea secreto TLS y rechaza ru
 # The adapter independently rejects duplicate emails even if a model file is supplied directly.
 vmess_model_build duplicate_email_adapter vmess_ws 127.0.0.1 62004 "$TMP/users.json" >"$TMP/duplicate-email-model.json"
 jq '.users[0].email="duplicate@example.test" | .users += [(.users[0] | .id="22222222-2222-4222-8222-222222222222")]' "$TMP/duplicate-email-model.json" >"$TMP/duplicate-email-model-bad.json"
-if vmess_xray_26_10_31_build "$TMP/duplicate-email-model-bad.json" "$TMP/ws.json" >/dev/null 2>&1; then
+if vmess_xray_26_10_31_build "$TMP/duplicate-email-model-bad.json" "$TMP/ws.json" - >/dev/null 2>&1; then
     echo 'ERROR: el adaptador aceptó emails VMess duplicados.' >&2
     exit 1
 fi
@@ -128,7 +173,7 @@ jq -n --arg target 'localhost:443' --arg private_key "$REALITY_KEY" '{target:$ta
 expect_adapter_reject reality_invalid_short_id vmess_reality "$TMP/reality-invalid-short-id.json"
 jq -n --arg target 'localhost:443' '{target:$target,private_key:"not-a-real-x25519-key",server_names:["example.com"],short_ids:["0123456789abcdef"]}' >"$TMP/reality-invalid-key.json"
 vmess_model_build negative_reality_key vmess_reality 127.0.0.1 62002 "$TMP/users.json" >"$TMP/negative-model.json"
-vmess_xray_26_10_31_build "$TMP/negative-model.json" "$TMP/reality-invalid-key.json" >"$TMP/negative-config.json"
+vmess_xray_26_10_31_build "$TMP/negative-model.json" "$TMP/reality-invalid-key.json" - >"$TMP/negative-config.json"
 if "$XRAY" run -test -config "$TMP/negative-config.json" >/dev/null 2>&1; then
     echo 'ERROR: Xray aceptó una clave privada REALITY inválida.' >&2
     exit 1
@@ -142,7 +187,7 @@ jq -n '{path:"/ws",host:"",unexpected:true}' >"$TMP/unknown-transport-field.json
 expect_adapter_reject unknown_transport_field vmess_ws "$TMP/unknown-transport-field.json"
 vmess_model_build negative_mode vmess_ws 127.0.0.1 62002 "$TMP/users.json" >"$TMP/negative-model.json"
 jq '.security="tls"' "$TMP/negative-model.json" >"$TMP/negative-mismatch.json"
-if vmess_xray_26_10_31_build "$TMP/negative-mismatch.json" "$TMP/ws.json" >/dev/null 2>&1; then
+if vmess_xray_26_10_31_build "$TMP/negative-mismatch.json" "$TMP/ws.json" - >/dev/null 2>&1; then
     echo 'ERROR: el adaptador aceptó una combinación modelo/transporte/seguridad inconsistente.' >&2
     exit 1
 fi

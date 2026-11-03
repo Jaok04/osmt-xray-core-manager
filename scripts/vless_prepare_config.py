@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Convierte modelo/opciones temporales del asistente en esquema persistente neutral."""
-import argparse, json, os, stat, tempfile
+import argparse, json, os, re, tempfile
 from pathlib import Path
 
 MODES = {
@@ -29,6 +29,7 @@ def main():
     p.add_argument('--output', required=True); p.add_argument('--secret-output', required=True)
     a=p.parse_args()
     model=json.loads(Path(a.model).read_text()); options=json.loads(Path(a.options).read_text())
+    if not isinstance(model, dict) or not isinstance(options, dict): raise ValueError('modelo y opciones deben ser objetos JSON')
     mode=model.get('mode_id'); cid=model.get('connection_id')
     if mode not in MODES or (model.get('transport'),model.get('security')) != MODES[mode]: raise ValueError('modelo VLESS inválido')
     transport={}; security={}; secret=None; secret_type=None
@@ -36,20 +37,12 @@ def main():
     elif mode.startswith('vless_xhttp'): transport={'path':options['path'],'mode':options['mode']}
     elif mode.startswith('vless_grpc'): transport={'service_name':options['service_name']}
     if model['security']=='tls':
-        security={'certificate_file':options['certificate_file']}
-        secret_type='tls_private_key'
-        key_path=Path(options['key_file'])
-        fd=os.open(key_path, os.O_RDONLY | getattr(os, 'O_CLOEXEC', 0))
-        try:
-            st=os.fstat(fd)
-            if not stat.S_ISREG(st.st_mode) or st.st_uid != 0 or st.st_mode & 0o022:
-                raise ValueError('la clave TLS debe ser archivo regular de root y no permitir escritura a grupo/otros')
-            with os.fdopen(fd, 'rb') as stream:
-                fd=-1
-                secret=stream.read(512 * 1024 + 1)
-            if len(secret) > 512 * 1024: raise ValueError('clave TLS supera el tamaño permitido')
-        finally:
-            if fd >= 0: os.close(fd)
+        transport_keys = {'path', 'mode'} if mode == 'vless_xhttp_tls' else ({'path'} if mode == 'vless_ws_tls' else ({'service_name'} if mode == 'vless_grpc_tls' else set()))
+        if (set(options) != transport_keys | {'certificate_id'}
+                or not isinstance(options.get('certificate_id'), str)
+                or not re.fullmatch(r'cert-[A-Za-z0-9][A-Za-z0-9_.-]{0,120}', options['certificate_id'])):
+            raise ValueError('TLS requiere un certificate_id central válido y sólo las opciones de transporte de su modalidad')
+        security={'certificate_id':options['certificate_id']}
     elif model['security']=='reality':
         security={'target':options['target'],'server_names':options['server_names'],'short_ids':options['short_ids']}
         secret_type='reality_private_key'; secret=options['private_key'].encode()

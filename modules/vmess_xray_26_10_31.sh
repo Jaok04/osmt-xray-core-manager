@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Adaptador estricto VMess -> Xray-core v26.10.31.
 vmess_xray_26_10_31_validate_tls_pair() {
-    [[ $# -eq 2 ]] || return 2
-    python3 - "$1" "$2" <<'PY'
+    [[ $# -eq 3 ]] || return 2
+    python3 - "$1" "$2" "$3" <<'PY'
 import os
 import stat
 import sys
@@ -17,8 +17,9 @@ def read_regular(path, private_key=False):
         st = os.fstat(fd)
         if not stat.S_ISREG(st.st_mode):
             raise ValueError("not a regular file")
-        if private_key and (st.st_uid != 0 or st.st_gid != 0 or stat.S_IMODE(st.st_mode) != 0o600 or st.st_nlink != 1):
-            raise ValueError("private key must be root:root mode 0600 with one hard link")
+        expected_gid = int(sys.argv[3])
+        if st.st_uid != 0 or st.st_gid != expected_gid or stat.S_IMODE(st.st_mode) != 0o640 or st.st_nlink != 1:
+            raise ValueError("lease files must be root:service-group mode 0640 with one hard link")
         with os.fdopen(fd, "rb") as stream:
             fd = -1
             return stream.read(4 * 1024 * 1024 + 1)
@@ -43,11 +44,11 @@ PY
 }
 
 vmess_xray_26_10_31_build() {
-    [[ $# -eq 2 ]] || {
-        printf 'Uso: vmess_xray_26_10_31_build <modelo.json> <opciones.json>\n' >&2
+    [[ $# -eq 3 ]] || {
+        printf 'Uso: vmess_xray_26_10_31_build <modelo.json> <opciones.json> <lease-id|->\n' >&2
         return 2
     }
-    local model_file="$1" options_file="$2" mode transport security cert key
+    local model_file="$1" options_file="$2" lease_id="$3" mode transport security cert key service_gid runtime_root script_root="${APP_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}"
     command -v jq >/dev/null 2>&1 || return 1
     [[ -r "$model_file" && -r "$options_file" ]] || return 2
     jq -e 'type=="object" and .schema_version==1 and .protocol=="vmess" and
@@ -104,13 +105,18 @@ vmess_xray_26_10_31_build() {
     } ;;
     tls)
         jq -e 'has("certificate_file") and has("key_file") and (has("private_key")|not) and (has("target")|not) and (has("server_names")|not) and (has("short_ids")|not) and (.certificate_file|type=="string" and startswith("/")) and (.key_file|type=="string" and startswith("/"))' "$options_file" >/dev/null || return 2
-        cert="$(jq -r '.certificate_file' "$options_file")"
-        key="$(jq -r '.key_file' "$options_file")"
-        [[ -f "$cert" && -r "$cert" && ! -L "$cert" && -f "$key" && -r "$key" && ! -L "$key" ]] || {
-            printf 'Certificado/clave TLS no legibles o no regulares.\n' >&2
+        [[ "$lease_id" =~ ^resolve-[a-f0-9]{32}$ ]] || {
+            printf 'TLS requiere un lease válido del resolutor central.\n' >&2
             return 2
         }
-        vmess_xray_26_10_31_validate_tls_pair "$cert" "$key" >/dev/null 2>&1 || {
+        cert="$(jq -r '.certificate_file' "$options_file")"
+        key="$(jq -r '.key_file' "$options_file")"
+        runtime_root="${XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR:-/run/xray-manager-certificates}"
+        service_gid="$(python3 "$script_root/scripts/vmess_tls_lease_check.py" "$runtime_root" "$lease_id" "$cert" "$key" "$(jq -r '.connection_id' "$model_file")")" || {
+            printf 'Lease TLS ausente, inseguro o no autorizado para esta conexión.\n' >&2
+            return 2
+        }
+        vmess_xray_26_10_31_validate_tls_pair "$cert" "$key" "$service_gid" >/dev/null 2>&1 || {
             printf 'Certificado TLS o clave privada PEM inválidos, o no corresponden entre sí.\n' >&2
             return 2
         }
@@ -126,6 +132,10 @@ vmess_xray_26_10_31_build() {
         }
         ;;
     esac
+    if [[ "$security" != tls && "$lease_id" != "-" ]]; then
+        printf 'No-TLS no debe recibir un lease TLS.\n' >&2
+        return 2
+    fi
     jq -n --slurpfile m "$model_file" --slurpfile o "$options_file" '
 		($m[0]) as $m | ($o[0]) as $o |
 		{
