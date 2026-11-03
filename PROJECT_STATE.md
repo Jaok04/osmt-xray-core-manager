@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-03 — VMess técnicamente preparado para aceptación (VM-48 pendiente); iniciado el diseño documentado de certificados TLS centralizados. Contrato inicial en `docs/ARQUITECTURA_CERTIFICADOS_CENTRALIZADOS.md`; implementación de almacén/resolutor/migración aún pendiente.
+**Corte de estado:** 2026-11-03 — VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén y resolutor implementados parcialmente; Bloque 3 VMess en integración parcial. Ver `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -11,6 +11,15 @@
 > **Regla obligatoria permanente:** antes de implementar cualquier etapa o funcionalidad, contrastar el proyecto con la documentación preliminar aprobada en `Xray-Normativa/` del repositorio (respaldo original en `/root/Xray_Manager_Documentacion_Final_2026-10-31`). Las mejoras requieren informe previo y autorización expresa del propietario. Ver `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md` y `AGENTS.md`.
 
 > **Segunda regla obligatoria permanente:** ninguna etapa se declara TERMINADA/COMPLETADA sin auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos, matriz de trazabilidad, pruebas y aceptación formal expresa. Cerrar un módulo no cierra su etapa. Ver `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md` y `AGENTS.md`.
+
+## Estado actualizado — integración VMess TLS centralizado (2026-11-03)
+
+- Bloque 1 (catálogo/almacén) y Bloque 2 (resolutor) están publicados; sus límites están documentados en `docs/IMPLEMENTACION_ALMACEN_CERTIFICADOS_CENTRALIZADOS.md` y `docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md`.
+- Bloque 3 está PARCIAL: el store VMess y el preparador admiten `certificate_id` para nuevas configuraciones TLS; REALITY conserva secretos por conexión; las configuraciones TLS históricas siguen siendo legibles sin migración automática.
+- Adaptación inicial del asistente VMess iniciada; generador Xray y cobertura integral de los flujos TLS aún pendientes. No afirmar integración completa ni validación runtime.
+- Pruebas focales de persistencia VMess, backup/restore VLESS, almacén y resolutor PASS; no se ha ejecutado todavía la regresión global posterior al cambio.
+- La VPS de desarrollo carece de unidad/cuenta/grupo Xray, por lo que el resolutor CLI falla cerrado y no se ha probado lectura de leases por el proceso Xray real.
+- No se modificaron runtime, servicios, firewall, puertos, certificados desplegados, VPS de pruebas ni `Xray-Normativa/`.
 
 ## 1. Referencias oficiales
 

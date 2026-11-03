@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> Frente activo 2026-11-03: modelo TLS centralizado aprobado. Catálogo/crypto y resolutor parcial implementados; informes: docs/IMPLEMENTACION_ALMACEN_CERTIFICADOS_CENTRALIZADOS.md y docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md. Suite 42/42 PASS. Stores/asistentes/generadores VMess/VLESS aún no admiten certificate_id; integración pendiente. No hay unidad/cuenta Xray en VPS de desarrollo: resolver CLI falla cerrada. No tocar Xray-Normativa ni VPS Vps de Pruebas.
+> Frente activo 2026-11-03: integración VMess TLS centralizado en avance parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 42/42 PASS. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
 > HEAD publicado y sincronizado: d9a0542 (Implementación parcial del resolutor TLS centralizado) en design/user-identity-association-v1. main permanece intacta. El working tree conserva únicamente scripts/__pycache__/ preexistente sin seguimiento; no se incorporó.
 
 
@@ -378,3 +378,19 @@ Se documentaron con supresión local SC2034 tres variables globales intencionale
 La documentación normativa `Xray-Normativa/` se comparó con el respaldo `/root/Xray_Manager_Documentacion_Final_2026-10-31`: 14 archivos originales coincidentes; no se modificó ninguno. No se tocó runtime, firewall, puertos, certificados desplegados ni servicio.
 
 **Punto exacto de reanudación:** expediente técnico VMess listo para que el propietario emita o deniegue la aceptación formal VM-48. Cliente externo/WAN no probado y no requerido por el diseño aprobado. Etapa 2 permanece ABIERTA; no iniciar Trojan antes de la aceptación formal de VMess y del contraste normativo específico de Trojan.
+
+
+## 2026-11-03 — Punto de reanudación: integración VMess TLS centralizado parcial
+
+La integración del Bloque 3 comenzó y se publicó como avance intermedio; no se debe confundir con su cierre. Consultar primero `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
+
+- `scripts/vmess_config_store.py`: nuevas revisiones TLS guardan sólo `certificate_id`, exigen certificado central existente/activo y no crean secretos TLS por conexión. REALITY conserva su secreto individual.
+- TLS histórico `{certificate_file, secret_ref}` sigue siendo legible para compatibilidad, sin migración ni borrado automático. Nuevas revisiones TLS deben usar el formato central.
+- `scripts/vmess_prepare_config.py` emite el contrato TLS central; `scripts/vless_backup.py` conserva la lectura/validación de VMess TLS histórico al restaurar VLESS.
+- `modules/vmess_assistant.sh` tiene adaptación preliminar para seleccionar ID central y pedir lease. El flujo interactivo TLS no tiene todavía cobertura integral y no debe considerarse terminado.
+- `modules/vmess_xray_26_10_31.sh` aún requiere adaptación/endurecimiento para impedir rutas TLS arbitrarias y consumir sólo leases del resolutor.
+- Pruebas focales: persistencia VMess, restauración VLESS preservando VMess, almacén central, resolutor, modelo, creación y aislamiento backup PASS. Sintaxis/compilación y `git diff --check` PASS. La suite global no se ha reejecutado tras este cambio.
+- En VPS desarrollo no existe unidad/cuenta/grupo Xray; CLI real del resolutor falla cerrada. No se ha probado lectura de lease por Xray real.
+- No se migraron históricos, no se importaron certificados reales, no se modificó runtime/servicios/firewall/puertos, no se tocó VPS de pruebas ni `Xray-Normativa/`.
+
+**Siguiente paso exacto:** adaptar el generador VMess Xray al lease autorizado, después completar y probar asistente/recuperación/cleanup y backup/restore, ejecutar regresión integral y actualizar trazabilidad. No declarar Bloque 3 completado hasta cubrir todo lo anterior.

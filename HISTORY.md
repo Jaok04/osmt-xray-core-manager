@@ -410,3 +410,15 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Regresión completa: 42/42 scripts PASS. bash -n, py_compile, ShellCheck de ambas pruebas y git diff --check PASS.
 - Los stores VMess/VLESS y sus asistentes/generadores aún no admiten el contrato certificate_id; la integración está pendiente. No se cambió runtime, servicio, VPS Vps de Pruebas, firewall, puertos, certificados desplegados, secretos históricos, REALITY ni Xray-Normativa.
 - Documentación: docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md; arquitectura, estado y continuidad actualizados.
+
+
+## 2026-11-03 — Bloque 3 VMess TLS centralizado: persistencia parcial
+
+- Se actualizó `scripts/vmess_config_store.py`: nuevas revisiones TLS VMess requieren `certificate_id` válido y activo en el catálogo central; se rechazan rutas TLS libres y secretos TLS por conexión. Lectura/auditoría validan la referencia central. REALITY mantiene su secreto individual cifrado.
+- Compatibilidad histórica: el store puede leer/validar TLS legacy `{certificate_file, secret_ref}` como revisión previa, sin migrar ni borrar archivos. Nuevas revisiones deben usar `certificate_id`.
+- `scripts/vmess_prepare_config.py` emite el contrato TLS central sin extraer clave privada por conexión. `scripts/vless_backup.py` conserva validación de configuraciones VMess TLS históricas durante restauración VLESS.
+- Adaptación preliminar de `modules/vmess_assistant.sh` para solicitar `certificate_id` y pedir un lease al resolutor; el flujo interactivo no tiene cobertura integral y permanece incompleto.
+- Pruebas focales PASS: `vmess_persistence_hardening.sh`, `vless_restore_preserves_vmess.sh`, `certificate_store.sh`, `certificate_resolver.sh`, `vmess_model.sh`, `vmess_creation_flow.sh`, `vmess_vless_backup_isolation.sh` y prueba existente `vmess_assistant.sh`. Sintaxis Bash, py_compile y `git diff --check`: PASS. La suite completa no se reejecutó después de estos cambios.
+- Pendiente: adaptación segura de `modules/vmess_xray_26_10_31.sh`, cobertura integral del asistente/lease/cleanup/restore, revisión completa de backup/restore y regresión global. La VPS de desarrollo carece de Xray service/user/group; no hay prueba de lectura real de lease por Xray.
+- No se modificó runtime, servicio, firewall, puertos, certificados desplegados, VPS de pruebas ni `Xray-Normativa/`. No se migraron secretos históricos ni se importaron certificados reales.
+- Informe: `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`. Estado: IMPLEMENTADO PARCIALMENTE / PRUEBAS FOCALES PASS / ACEPTACIÓN PENDIENTE.

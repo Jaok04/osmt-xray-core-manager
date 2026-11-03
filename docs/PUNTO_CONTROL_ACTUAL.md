@@ -1,7 +1,7 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-03
-**Tarea activa:** diseño e implementación progresiva del modelo centralizado de certificados TLS, iniciado con el contrato arquitectónico. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
+**Tarea activa:** Bloque 3 — integración VMess con el almacén y resolutor TLS centralizados, actualmente parcial. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
 **Estado vigente:** F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
@@ -223,3 +223,17 @@ Este punto sustituye el siguiente paso anterior de diseño del resolutor, pero n
 - Informe: docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md.
 
 Siguiente paso: integrar el nuevo contrato de forma versionada en VMess, primero store y generador, sin tocar los secretos históricos ni runtime. Después VLESS en un bloque separado y con regresión cruzada.
+
+
+## 10. Bloque 3 — integración VMess TLS centralizado (avance intermedio, 2026-11-03)
+
+- Estado: PARCIAL; persistencia central y preparación TLS implementadas con pruebas focales. No equivale a integración completa ni aceptación.
+- Nuevas configuraciones VMess TLS usan `certificate_id` y no almacenan una clave privada cifrada por conexión. El certificado debe existir y estar activo en el catálogo central.
+- REALITY mantiene el secreto cifrado individual. Las configuraciones TLS históricas continúan siendo legibles; no se migran ni eliminan automáticamente.
+- Preparador VMess y compatibilidad de restore VLESS actualizados. El asistente tiene adaptación preliminar, sin prueba integral del flujo TLS.
+- Pendiente: endurecer `modules/vmess_xray_26_10_31.sh` para consumir sólo lease autorizado, completar asistente/restore/cleanup y backup/restore, y ejecutar suite completa.
+- No hay Xray service/user/group en VPS de desarrollo; no se ha probado lease con proceso Xray real.
+- Regresión completa `tests/*.sh`: 42/42 PASS; ShellCheck (severidad warning), sintaxis Bash, py_compile y `git diff --check` PASS.
+- No tocar `Xray-Normativa/`, runtime, servicios, firewall, puertos ni VPS de pruebas.
+
+**Siguiente acción:** integrar generador VMess con resolutor; continuar las pruebas de extremo a extremo del asistente sin desplegar runtime.
