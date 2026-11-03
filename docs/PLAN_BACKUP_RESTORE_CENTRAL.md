@@ -1,8 +1,8 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.7
+**Versión:** 1.8
 **Fecha:** 2026-11-03
-**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / CONTRATO DE MANIFIESTO EN DISEÑO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
+**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTRATO DE MANIFIESTO V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / FORMATO LÓGICO DE PAQUETE PENDIENTE / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
 **Ámbito:** contenedor criptográfico neutral y primera versión incremental de snapshot para VLESS/VMess/metadatos de identidades/certificados TLS centrales. Las categorías normativas no cubiertas se declaran explícitamente como no soportadas; extensible a protocolos futuros mediante adaptadores.
 
 ## 1. Objetivo
@@ -261,9 +261,9 @@ Se conserva la decisión VMess de §10.1: `email` y `level` son metadatos dentro
 
 **Límite de esta aprobación:** aprueba el alcance funcional incremental, no el schema definitivo, el código writer, la creación de paquetes reales, la inclusión de secretos, el restore ni cambios de runtime.
 
-## 10.6. Borrador del contrato lógico de manifiesto — pendiente de aprobación
+## 10.6. Contrato lógico de manifiesto — aprobado (2026-11-03)
 
-El manifiesto residirá dentro del payload cifrado por el contenedor compartido v1. No habrá manifiesto de contenido en claro junto al paquete. Este borrador define semántica y campos requeridos; no es aún un schema JSON congelado.
+El manifiesto residirá dentro del payload cifrado por el contenedor compartido v1. No habrá manifiesto de contenido en claro junto al paquete. La estructura y semántica de este contrato quedan aprobadas; la estructura JSON concreta y sus reglas están desarrolladas en §10.7.
 
 | Campo lógico | Contenido/contrato |
 |---|---|
@@ -284,12 +284,12 @@ Los miembros se identificarán por hashes SHA-256 y nombres lógicos normalizado
 
 **Reglas de estado propuestas:** `COMPLETE` significa que todo lo solicitado está incluido y restaurable; `PARTIAL` significa que el paquete íntegro contiene omisiones declaradas (categorías no soportadas, secretos excluidos o dependencias no satisfechas); `BLOCKED` es un resultado del preflight y significa que no se publica paquete porque falló una validación de seguridad/consistencia. La integridad criptográfica del contenedor es independiente de la completitud funcional.
 
-**Pendiente de aprobación:** nombres/tipos exactos, enums, cardinalidades, relación recurso-miembro, codificación canónica, formato de timestamps, reglas de paths lógicos, límite de entradas/expansión y validaciones cruzadas. No implementar writer hasta congelar este contrato y sus pruebas sintéticas.
+**Aprobado:** nombres y relaciones lógicas de los campos, enums de estado, cardinalidades conceptuales, referencias recurso-miembro, timestamp UTC, paths lógicos relativos, exclusión de credenciales y validaciones cruzadas descritas en §10.7. La codificación canónica y el empaquetado físico permanecen pendientes; no implementar writer hasta cerrar esos contratos y sus pruebas sintéticas.
 
 
-## 10.7. Propuesta de estructura JSON del manifiesto — pendiente de aprobación
+## 10.7. Estructura JSON del manifiesto — aprobada (2026-11-03)
 
-La siguiente estructura concreta desarrolla §10.6. Es un ejemplo de contrato, no un manifiesto real ni un JSON Schema definitivo. Los identificadores y hashes son marcadores ilustrativos; no deben copiarse como valores reales.
+La siguiente estructura concreta desarrolla §10.6 y queda aprobada como contrato lógico v1. El ejemplo no es un manifiesto real ni sustituye un JSON Schema formal; los identificadores y hashes son marcadores ilustrativos y no deben copiarse como valores reales.
 
 ```json
 {
@@ -377,7 +377,7 @@ La siguiente estructura concreta desarrolla §10.6. Es un ejemplo de contrato, n
 }
 ```
 
-### Reglas de validación propuestas
+### Reglas de validación aprobadas
 
 1. `manifest_version` es entero positivo; `backup_id` es UUID aleatorio; `created_at` es timestamp UTC RFC 3339 terminado en `Z`.
 2. `selection_mode` sólo admite `selective` o `all_available`. `requested_categories` no puede estar vacío y no puede contener duplicados.
@@ -392,12 +392,19 @@ La siguiente estructura concreta desarrolla §10.6. Es un ejemplo de contrato, n
 11. El manifiesto se serializa como UTF-8 JSON estricto, sin claves duplicadas, NaN/Infinity ni tipos ambiguos; la canonicalización exacta debe fijarse antes del writer. El manifiesto y el índice de miembros permanecen dentro del payload AES-GCM.
 12. El tamaño total del payload lógico (manifiesto, índice y miembros) nunca supera el límite de 512 MiB del contenedor compartido v1. El límite de cantidad de miembros y el formato de empaquetado se fijarán antes de implementar el writer.
 
-### Decisiones que se solicitan al propietario
+### Decisiones aprobadas por el propietario
 
-- Aprobar o corregir la estructura de campos y sus relaciones.
-- Aprobar los estados globales `COMPLETE`/`PARTIAL`, dejando `BLOCKED` como resultado de preflight sin paquete.
-- Aprobar que `logical_path` sea un nombre relativo interno y que no se exporten rutas host-specific.
-- Aprobar la regla de que el manifiesto nunca contiene `email` VMess ni credenciales, aunque esos metadatos puedan existir en miembros cifrados.
-- Dejar para la siguiente decisión el formato de empaquetado (ZIP almacenado u otra estructura), el límite de cantidad de miembros y la canonicalización JSON exacta.
+- Estructura de campos y sus relaciones: APROBADA.
+- Estados globales `COMPLETE`/`PARTIAL`; `BLOCKED` sólo como resultado de preflight sin paquete: APROBADOS.
+- `logical_path` como nombre relativo interno sin rutas host-specific: APROBADO.
+- Manifiesto sin `email` VMess ni credenciales, aunque esos metadatos puedan existir en miembros cifrados: APROBADO.
+- Formato de empaquetado, límite de cantidad de miembros y canonicalización JSON exacta: quedan como siguiente decisión técnica independiente.
 
-**No implementar writer, verify ni restore hasta recibir aprobación expresa de este contrato.**
+**La aprobación del manifiesto no autoriza writer, verify, restore, creación de paquetes reales ni runtime apply.**
+
+
+## 10.8. Aprobación del contrato de manifiesto — 2026-11-03
+
+El propietario aprobó expresamente §10.6 y §10.7: estructura lógica y JSON, relaciones y referencias, campos, estados, reglas de completitud, nombres lógicos relativos, validación de miembros/hashes y ausencia de credenciales/email VMess en el manifiesto. `COMPLETE` y `PARTIAL` son estados de paquete; `BLOCKED` es sólo un resultado de preflight que aborta sin publicar paquete.
+
+El contrato de manifiesto v1 queda **APROBADO**. No se cambia el alcance funcional aprobado en §10.5. La aprobación no incluye el formato físico de empaquetado, límite final de miembros, canonicalización JSON exacta, writer, verify, restore, inclusión de secretos ni runtime apply. Esos puntos requieren cierre técnico separado antes de implementar.
