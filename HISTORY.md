@@ -395,3 +395,4 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - No se importaron certificados al almacén real ni se tocaron asistentes/generadores/stores VMess/VLESS históricos, migración, backup/restore, runtime, servicio, firewall, puertos o certificados desplegados. La VPS Vps de Pruebas no fue utilizada. Xray-Normativa no fue modificada.
 - La VPS de desarrollo no tiene Xray instalado ni unidad/cuenta/grupo xray; permisos de resolución y runtime siguen pendientes. La etapa de catálogo/almacén queda IMPLEMENTADA PARCIALMENTE y VERIFICADA en pruebas; aceptación global pendiente.
 - Documentación: docs/IMPLEMENTACION_ALMACEN_CERTIFICADOS_CENTRALIZADOS.md; contrato y continuidad actualizados.
+- Commit de implementación: c720fbf4d65f61e5b7d3dc8a9cb5c69639eb628f en design/user-identity-association-v1. La publicación remota y el cotejo de hashes se registrarán tras completar push y verificación.
