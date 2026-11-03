@@ -543,3 +543,10 @@ El plan pasa a v1.8 y el contrato de manifiesto v1 queda APROBADO. Empaquetado f
 
 
 **Publicación de aprobación del manifiesto:** commit `000eb537fbb11c9870b6bef917769b1ca8448c66` (`docs(backup): approve shared manifest contract v1`) publicado en `origin/design/user-identity-association-v1`; HEAD local/remoto verificado idéntico en ese commit. Sólo documentación; `Xray-Normativa/` intacta. El writer sigue sin implementarse.
+
+
+## 2026-11-03 — Aprobación del formato lógico ZIP y canonicalización JSON v1
+
+El propietario aprobó empaquetado ZIP con `ZIP_STORED`, estructura interna `manifest.json`/`index.json`, entradas deterministas, validaciones estrictas de rutas y tipos, hashes/tamaños/CRC, límite total de 512 MiB y perfil JSON canónico propio (UTF-8 sin BOM, claves ordenadas, compactación, sin duplicados ni floats/valores no finitos, enteros interoperables y comparación de bytes canónicos). No se afirma compatibilidad RFC 8785/JCS. El máximo de cantidad de miembros queda pendiente.
+
+`docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.9. Es una aprobación de diseño; no autoriza writer, verify, restore, paquetes reales, inclusión de secretos ni runtime apply. `Xray-Normativa/` no se modificó.

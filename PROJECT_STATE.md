@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; orquestación backup/restore pendiente. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
+**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; manifiesto v1 y formato lógico ZIP/JSON APROBADOS; orquestación backup/restore pendiente. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -465,3 +465,11 @@ El plan pasa a v1.8 y el contrato de manifiesto v1 queda APROBADO. Empaquetado f
 
 
 **Publicación de aprobación del manifiesto:** commit `000eb537fbb11c9870b6bef917769b1ca8448c66` (`docs(backup): approve shared manifest contract v1`) publicado en `origin/design/user-identity-association-v1`; HEAD local/remoto verificado idéntico en ese commit. Sólo documentación; `Xray-Normativa/` intacta. El writer sigue sin implementarse.
+
+
+## Estado actualizado — formato lógico de paquete compartido v1 (2026-11-03)
+
+- Aprobado ZIP interno con `ZIP_STORED`, `manifest.json` e `index.json`; sólo archivos regulares y validación de rutas, duplicados, miembros indexados, tamaño y SHA-256.
+- Aprobado perfil JSON canónico propio: UTF-8 estricto sin BOM, claves ordenadas, separadores compactos, sin claves duplicadas ni floats/valores no finitos, enteros interoperables y comparación byte-a-byte con serialización canónica. No se declara RFC 8785/JCS.
+- Límite del ZIP completo: 512 MiB. Máximo de cantidad de miembros sigue pendiente. Plan `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` actualizado a v1.9.
+- Decisión de diseño/documentación solamente. No hay writer, verify, restore ni paquete real; no se incluyeron secretos ni se ejecutó runtime apply. `Xray-Normativa/` permanece intacta.

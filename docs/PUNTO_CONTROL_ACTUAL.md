@@ -1,7 +1,7 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-03
-**Tarea activa:** backup/restore compartido — contenedor criptográfico neutral v1 implementado y probado; siguiente bloque: snapshot lógico, manifiesto y adaptadores por protocolo. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
+**Tarea activa:** backup/restore compartido — contenedor criptográfico neutral v1 implementado y probado; alcance incremental, contrato de manifiesto y formato ZIP/JSON lógico v1 aprobados; pendiente cerrar máximo de miembros y diseño de writer/snapshot. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
 **Estado vigente:** contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
@@ -390,3 +390,11 @@ El plan pasa a v1.8 y el contrato de manifiesto v1 queda APROBADO. Empaquetado f
 
 
 **Publicación de aprobación del manifiesto:** commit `000eb537fbb11c9870b6bef917769b1ca8448c66` (`docs(backup): approve shared manifest contract v1`) publicado en `origin/design/user-identity-association-v1`; HEAD local/remoto verificado idéntico en ese commit. Sólo documentación; `Xray-Normativa/` intacta. El writer sigue sin implementarse.
+
+
+## Actualización del punto de control — ZIP/JSON lógico v1 aprobado (2026-11-03)
+
+- ZIP interno con `ZIP_STORED`; `manifest.json` e `index.json`; sólo archivos regulares. Rechazo de rutas inseguras, duplicados, symlinks/tipos especiales, métodos distintos, entradas no indexadas/ausentes y discrepancias de tamaño/hash.
+- Canonicalización JSON propia: UTF-8 estricto sin BOM, claves ordenadas, separadores compactos, sin claves duplicadas, floats ni valores no finitos, enteros interoperables; comparación de bytes con serialización canónica. No se afirma RFC 8785/JCS.
+- Límite del ZIP completo: 512 MiB. Máximo de miembros todavía pendiente.
+- `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` v1.9. `Xray-Normativa/` intacta. No writer/verify/restore, no paquete real, no secretos ni runtime apply.

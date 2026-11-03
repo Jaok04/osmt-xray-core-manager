@@ -1,8 +1,8 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.8
+**Versión:** 1.9
 **Fecha:** 2026-11-03
-**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTRATO DE MANIFIESTO V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / FORMATO LÓGICO DE PAQUETE PENDIENTE / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
+**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTRATO DE MANIFIESTO V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / FORMATO LÓGICO DE PAQUETE V1 APROBADO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
 **Ámbito:** contenedor criptográfico neutral y primera versión incremental de snapshot para VLESS/VMess/metadatos de identidades/certificados TLS centrales. Las categorías normativas no cubiertas se declaran explícitamente como no soportadas; extensible a protocolos futuros mediante adaptadores.
 
 ## 1. Objetivo
@@ -111,9 +111,26 @@ optional-secrets/             # sólo con selección/autorización adicional
   <protocol-or-resource>/<logical-id>.bin
 ```
 
-Los nombres y directorios son ilustrativos y no constituyen aún un contrato congelado ni rutas actuales confirmadas. El paquete debe tener límites de tamaño/entradas, nombres lógicos normalizados, hashes, identificación de backup y versión de esquema. El manifiesto y el índice viajan dentro del contenedor cifrado. Las claves privadas TLS y los secretos REALITY no aparecen en la estructura por defecto; la sección opcional sólo se materializa tras selección y autorización adicionales.
+Los nombres y directorios anteriores son nombres lógicos internos, no rutas actuales confirmadas del host. El paquete lógico v1 se empaqueta como archivo ZIP usando exclusivamente `ZIP_STORED` (sin compresión). `manifest.json` e `index.json` son entradas de primer nivel y permanecen dentro del payload cifrado por el contenedor compartido; no se publica un índice de contenido en claro junto al contenedor. Los miembros de datos conservan paths POSIX relativos normalizados definidos por el manifiesto/índice.
 
-`external-dependencies.json` debe enumerar recursos `reference` con `certificate_id`, fingerprint, path esperado, conexión(es) dependientes y validación requerida. Las rutas son datos no confiables: nunca seguir symlinks durante restore.
+El ZIP sólo puede contener entradas de archivos regulares. Se rechazan nombres duplicados, rutas absolutas, `..`, separadores alternativos, NUL, colisiones tras normalización, symlinks y tipos especiales; no se extrae siguiendo rutas ni enlaces del archivo. Cada miembro debe corresponder exactamente a una entrada del índice y validar tamaño y SHA-256 sobre sus bytes. Se rechazan métodos de compresión distintos de `ZIP_STORED`, miembros no indexados e índices que apunten a miembros ausentes.
+
+El límite total del archivo ZIP lógico es 512 MiB, sin exceder el límite de payload del contenedor cifrado v1; el writer deberá contabilizar también cabeceras y directorio central antes de publicar. El máximo de cantidad de miembros queda pendiente de una decisión independiente y no se inventa un valor en esta aprobación. Las claves privadas TLS y secretos REALITY no aparecen por defecto; la sección opcional sólo se materializa tras selección y autorización adicionales.
+
+`external-dependencies.json` enumera recursos `reference` con `certificate_id`, fingerprint, path esperado, conexiones dependientes y validación requerida. Las rutas son datos no confiables: nunca seguir symlinks durante restore.
+
+### Canonicalización JSON v1
+
+`manifest.json`, `index.json` y cualquier JSON estructural del paquete usan un único perfil canónico:
+
+- UTF-8 estricto, sin BOM; no se admiten sustitutos Unicode aislados ni secuencias inválidas.
+- Objetos con claves ordenadas lexicográficamente por sus cadenas Unicode; no se admiten claves duplicadas.
+- Sin espacios insignificantes: separadores compactos `,` y `:`; sin espacios ni saltos de línea añadidos fuera de strings.
+- No se admiten números de punto flotante, NaN, Infinity ni -Infinity. Los números permitidos son enteros JSON dentro del rango interoperable exacto `-(2^53-1)` a `2^53-1`; cantidades y tamaños no pueden ser negativos.
+- Strings se codifican como JSON UTF-8; se escapan comillas, barra inversa y caracteres de control según JSON, sin escapar innecesariamente caracteres Unicode imprimibles.
+- El parser debe rechazar claves duplicadas, tipos inesperados, valores no finitos, trailing data y cualquier representación no conforme. La validación de canonicalidad compara los bytes originales con la serialización canónica del objeto parseado; no basta con que el JSON sea parseable.
+
+Esta política define el perfil de canonicalización propio del formato lógico Xray Manager v1; no se declara compatibilidad automática con RFC 8785/JCS.
 
 ## 6. Preflight de restauración
 
@@ -187,9 +204,9 @@ Un registro VMess cuyo UUID se excluya debe marcarse como incompleto/no restaura
 
 ## 11. Estado y siguiente diseño
 
-El alcance incremental del snapshot v1 está aprobado en §10.5. El contrato del contenedor cifrado v1 está implementado y probado en aislamiento. El borrador lógico de manifiesto está en §10.6 y requiere aprobación de sus tipos/campos y reglas exactas antes de congelarlo. El inventario estático de locks y el orden `lifecycle → integrity → catalog` constan en §10.4; falta stress testing de concurrencia y la futura implementación deberá usar timeout finito. La detección de conflictos del restore, el schema definitivo y las pruebas sintéticas del snapshot siguen pendientes. La política de campos VMess queda definida en §10.1: excluir UUID por defecto y conservar email y level como metadatos dentro del payload cifrado. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
+El alcance incremental del snapshot v1 está aprobado en §10.5. El contenedor cifrado v1 está implementado y probado en aislamiento; el contrato lógico/JSON del manifiesto está aprobado en §10.6–§10.8 y el formato ZIP/canonicalización JSON está aprobado en §5 y §10.9. El inventario estático de locks y el orden `lifecycle → integrity → catalog` constan en §10.4; falta stress testing de concurrencia y la futura implementación deberá usar timeout finito. La detección de conflictos del restore, el schema formal ejecutable, las pruebas sintéticas del snapshot y el máximo de cantidad de miembros siguen pendientes. La política de campos VMess queda definida en §10.1: excluir UUID por defecto y conservar email y level como metadatos dentro del payload cifrado. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
 
-**Estado:** contenedor criptográfico neutral v1 IMPLEMENTADO y VERIFICADO con prueba aislada; alcance incremental APROBADO; manifiesto en BORRADOR; snapshot, adaptadores VLESS/VMess/identidades/certificados, backup, verify, restore, journal y rollback aún NO IMPLEMENTADOS. No se ha creado ni restaurado un backup compartido.
+**Estado:** contenedor criptográfico neutral v1 IMPLEMENTADO y VERIFICADO con prueba aislada; alcance incremental, contrato de manifiesto y formato lógico ZIP/JSON APROBADOS; snapshot, adaptadores VLESS/VMess/identidades/certificados, backup, verify, restore, journal y rollback aún NO IMPLEMENTADOS. El máximo de cantidad de miembros y el schema formal ejecutable siguen pendientes. No se ha creado ni restaurado un backup compartido.
 
 ## 10.2. Coordinación de desinstalación y catálogo TLS — 2026-11-03
 
@@ -284,7 +301,7 @@ Los miembros se identificarán por hashes SHA-256 y nombres lógicos normalizado
 
 **Reglas de estado propuestas:** `COMPLETE` significa que todo lo solicitado está incluido y restaurable; `PARTIAL` significa que el paquete íntegro contiene omisiones declaradas (categorías no soportadas, secretos excluidos o dependencias no satisfechas); `BLOCKED` es un resultado del preflight y significa que no se publica paquete porque falló una validación de seguridad/consistencia. La integridad criptográfica del contenedor es independiente de la completitud funcional.
 
-**Aprobado:** nombres y relaciones lógicas de los campos, enums de estado, cardinalidades conceptuales, referencias recurso-miembro, timestamp UTC, paths lógicos relativos, exclusión de credenciales y validaciones cruzadas descritas en §10.7. La codificación canónica y el empaquetado físico permanecen pendientes; no implementar writer hasta cerrar esos contratos y sus pruebas sintéticas.
+**Aprobado:** nombres y relaciones lógicas de los campos, enums de estado, cardinalidades conceptuales, referencias recurso-miembro, timestamp UTC, paths lógicos relativos, exclusión de credenciales y validaciones cruzadas descritas en §10.7. En la fecha de esta aprobación inicial, codificación canónica y empaquetado físico permanecían pendientes; se cerraron posteriormente en §10.9. El writer continúa pendiente.
 
 
 ## 10.7. Estructura JSON del manifiesto — aprobada (2026-11-03)
@@ -389,8 +406,8 @@ La siguiente estructura concreta desarrolla §10.6 y queda aprobada como contrat
 8. El estado global `COMPLETE` exige que todas las categorías solicitadas estén incluidas, todos los recursos solicitados sean completos y no haya exclusiones/dependencias pendientes que afecten la restauración. Cualquier omisión declarada fuerza `PARTIAL`.
 9. `BLOCKED` es un resultado de preflight, no un paquete publicable: fallo de seguridad, consistencia, permisos, integridad o referencias aborta la creación sin publicar artefacto.
 10. El manifiesto no contiene UUID, contraseñas, claves privadas, secretos REALITY, email VMess, rutas absolutas, contenido de credenciales ni valores de la master key. `email` y `level` VMess permanecen en los miembros de configuración protegidos, no en el manifiesto.
-11. El manifiesto se serializa como UTF-8 JSON estricto, sin claves duplicadas, NaN/Infinity ni tipos ambiguos; la canonicalización exacta debe fijarse antes del writer. El manifiesto y el índice de miembros permanecen dentro del payload AES-GCM.
-12. El tamaño total del payload lógico (manifiesto, índice y miembros) nunca supera el límite de 512 MiB del contenedor compartido v1. El límite de cantidad de miembros y el formato de empaquetado se fijarán antes de implementar el writer.
+11. El manifiesto, índice y JSON estructural se serializan conforme al perfil canónico de §5: UTF-8 estricto sin BOM, claves ordenadas, separadores compactos, sin claves duplicadas, floats ni valores no finitos; el parser compara los bytes con la serialización canónica. Manifiesto e índice permanecen dentro del payload AES-GCM.
+12. El ZIP lógico completo, incluyendo metadatos ZIP, nunca supera 512 MiB ni el límite del payload del contenedor compartido v1. El máximo de cantidad de miembros sigue pendiente de decisión separada.
 
 ### Decisiones aprobadas por el propietario
 
@@ -398,7 +415,8 @@ La siguiente estructura concreta desarrolla §10.6 y queda aprobada como contrat
 - Estados globales `COMPLETE`/`PARTIAL`; `BLOCKED` sólo como resultado de preflight sin paquete: APROBADOS.
 - `logical_path` como nombre relativo interno sin rutas host-specific: APROBADO.
 - Manifiesto sin `email` VMess ni credenciales, aunque esos metadatos puedan existir en miembros cifrados: APROBADO.
-- Formato de empaquetado, límite de cantidad de miembros y canonicalización JSON exacta: quedan como siguiente decisión técnica independiente.
+- Formato ZIP con `ZIP_STORED`, estructura `manifest.json` + `index.json`, validaciones de entradas (paths seguros, sin duplicados, symlinks ni tipos especiales; miembros identificados por SHA-256) y perfil canónico JSON de §5: APROBADOS en §10.9.
+- Máximo de cantidad de miembros: PENDIENTE de decisión independiente.
 
 **La aprobación del manifiesto no autoriza writer, verify, restore, creación de paquetes reales ni runtime apply.**
 
@@ -407,4 +425,13 @@ La siguiente estructura concreta desarrolla §10.6 y queda aprobada como contrat
 
 El propietario aprobó expresamente §10.6 y §10.7: estructura lógica y JSON, relaciones y referencias, campos, estados, reglas de completitud, nombres lógicos relativos, validación de miembros/hashes y ausencia de credenciales/email VMess en el manifiesto. `COMPLETE` y `PARTIAL` son estados de paquete; `BLOCKED` es sólo un resultado de preflight que aborta sin publicar paquete.
 
-El contrato de manifiesto v1 queda **APROBADO**. No se cambia el alcance funcional aprobado en §10.5. La aprobación no incluye el formato físico de empaquetado, límite final de miembros, canonicalización JSON exacta, writer, verify, restore, inclusión de secretos ni runtime apply. Esos puntos requieren cierre técnico separado antes de implementar.
+El contrato de manifiesto v1 quedó **APROBADO** en esa decisión. No se cambia el alcance funcional aprobado en §10.5. En ese momento no se incluían formato físico, límite final de miembros ni canonicalización exacta; el empaquetado ZIP y la canonicalización se aprobaron posteriormente en §10.9. La aprobación del manifiesto no autorizó writer, verify, restore, inclusión de secretos ni runtime apply.
+
+
+## 10.9. Aprobación del empaquetado ZIP y canonicalización JSON — 2026-11-03
+
+El propietario aprobó el formato lógico ZIP con `ZIP_STORED` (sin compresión) y la política de canonicalización JSON definida en §5. Quedan aprobados el contenedor ZIP interno al payload cifrado, `manifest.json` e `index.json`, admisión exclusiva de archivos regulares, rechazo de rutas inseguras, duplicados, symlinks/tipos especiales, métodos distintos de `ZIP_STORED`, entradas ausentes/no indexadas y verificación de tamaño/SHA-256.
+
+La canonicalización aprobada requiere UTF-8 estricto sin BOM, claves lexicográficamente ordenadas, separadores compactos, sin claves duplicadas, sin floats/valores no finitos, enteros dentro del rango interoperable exacto y comparación de bytes originales contra la serialización canónica. Es un perfil propio del formato Xray Manager v1; no se afirma compatibilidad RFC 8785/JCS. El límite del ZIP completo es 512 MiB. El máximo de cantidad de miembros permanece pendiente y deberá cerrarse antes del writer.
+
+Esta aprobación sólo congela las decisiones descritas. No autoriza implementar writer, verify, restore, crear paquetes/backups reales, incluir secretos ni ejecutar runtime apply. El alcance incremental sigue siendo el aprobado en §10.5 y la normativa `Xray-Normativa/` permanece inmutable.

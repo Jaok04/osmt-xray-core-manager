@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> Frente activo 2026-11-03: contenedor cifrado compartido v1 implementado y verificado en aislamiento; siguiente tarea: snapshot lógico/manifiesto y adaptadores VLESS/VMess/certificados. La integración VMess/VLESS TLS centralizado continúa parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 47/47 PASS tras incorporar `tests/shared_backup_format.sh`. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
+> Frente activo 2026-11-03: contenedor cifrado compartido v1 implementado/verificado; alcance, manifiesto y formato lógico ZIP/JSON v1 aprobados; siguiente tarea: cerrar máximo de miembros y diseño de writer/snapshot antes de implementar. La integración VMess/VLESS TLS centralizado continúa parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 47/47 PASS tras incorporar `tests/shared_backup_format.sh`. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
 > HEAD publicado y sincronizado tras el bloque de contenedor cifrado: 164f91f (164f91f9c9be8ab275da0b28a53b2314a636f1e2) en design/user-identity-association-v1. `main` permanece intacta. `scripts/__pycache__/` permanece sin seguimiento y excluido.
 
 
@@ -556,3 +556,10 @@ El plan pasa a v1.8 y el contrato de manifiesto v1 queda APROBADO. Empaquetado f
 
 
 **Publicación de aprobación del manifiesto:** commit `000eb537fbb11c9870b6bef917769b1ca8448c66` (`docs(backup): approve shared manifest contract v1`) publicado en `origin/design/user-identity-association-v1`; HEAD local/remoto verificado idéntico en ese commit. Sólo documentación; `Xray-Normativa/` intacta. El writer sigue sin implementarse.
+
+
+## 2026-11-03 — Aprobación de formato lógico ZIP/JSON v1
+
+El propietario aprobó ZIP con `ZIP_STORED`, `manifest.json` e `index.json`, validación estricta de paths/tipos/duplicados/miembros indexados/tamaño/SHA-256. Límite total ZIP: 512 MiB. Canonicalización JSON propia: UTF-8 estricto sin BOM, claves ordenadas lexicográficamente, separadores compactos, sin duplicados, floats ni valores no finitos, enteros interoperables y comparación byte-a-byte con serialización canónica. No se declara RFC 8785/JCS. Máximo de cantidad de miembros pendiente.
+
+El plan es v1.9. No existe writer, verify, restore ni paquete real; esta aprobación no autoriza su implementación ni runtime apply. `Xray-Normativa/` permanece intacta.
