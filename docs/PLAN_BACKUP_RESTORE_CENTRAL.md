@@ -1,9 +1,9 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.1
+**Versión:** 1.2
 **Fecha:** 2026-11-03
-**Estado:** CRITERIOS APROBADOS / DISEÑO CRIPTOGRÁFICO EN REVISIÓN / IMPLEMENTACIÓN PENDIENTE
-**Ámbito:** backup consistente de conexiones VLESS/VMess y catálogo central TLS.
+**Estado:** CRITERIOS APROBADOS / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
+**Ámbito:** contenedor criptográfico neutral y futuro backup consistente de VLESS/VMess/certificados; extensible a protocolos futuros mediante adaptadores.
 
 ## 1. Objetivo
 
@@ -11,13 +11,13 @@ Añadir un flujo coordinado que respalde/restaure en conjunto:
 
 - catálogo de conexiones y revisiones VLESS;
 - catálogo de conexiones y revisiones VMess;
-- blobs cifrados REALITY históricos/actuales de ambos protocolos;
+- blobs REALITY actualmente referenciados por ambos protocolos, sujetos a selección/autorización expresa para incluir secretos;
 - catálogo central de certificados TLS;
 - certificados públicos `managed`;
-- blobs cifrados de claves privadas centrales;
+- claves privadas centrales, sólo si el operador las selecciona y autoriza expresamente con confirmación adicional;
 - manifiesto de dependencias externas para certificados `reference`.
 
-Los backups de protocolo existentes deben seguir siendo compatibles y no deben incorporar silenciosamente el almacén central ni alterar su contrato. El backup compartido será un artefacto/versionado distinto o una capa orquestadora explícita.
+Los backups de protocolo existentes deben seguir siendo compatibles y no deben incorporar silenciosamente el almacén central ni alterar su contrato. El backup compartido será un artefacto/versionado distinto o una capa orquestadora explícita. El snapshot contiene únicamente la revisión actualmente referenciada por cada conexión; no empaqueta el historial de revisiones/validaciones/logs.
 
 ## 2. Qué se incluye y qué no
 
@@ -25,10 +25,10 @@ Los backups de protocolo existentes deben seguir siendo compatibles y no deben i
 |---|---|
 | Catálogo VLESS y revisiones referenciadas | Incluir snapshot validado |
 | Catálogo VMess y revisiones referenciadas | Incluir snapshot validado |
-| Blobs REALITY por conexión | Incluir cifrados, con metadatos y referencias verificadas |
+| Blobs REALITY por conexión | Excluir por defecto; incluir sólo con selección, autorización y confirmación adicional; reenvolver dentro del contenedor |
 | Catálogo central TLS | Incluir snapshot |
 | Certificados públicos `managed` | Incluir |
-| Blobs privados centrales cifrados | Incluir en forma cifrada y autenticada |
+| Claves privadas TLS centrales | Excluir por defecto; inclusión sólo con selección, autorización y confirmación adicional; cifrado integral del paquete |
 | Certificados `reference` | No copiar automáticamente; registrar ruta, fingerprint y dependencia |
 | Clave maestra `/etc/xray-manager/keys/master.key` | No incluir en el mismo backup |
 | `/run/xray-manager-certificates` y leases | Excluir: son temporales y regenerables |
@@ -50,6 +50,22 @@ Los blobs del catálogo central están cifrados con la clave maestra del host. C
 - No guardar contraseña ni clave derivada en el manifiesto. Fallar cerrado ante contraseña incorrecta, tag/hash inválido, KDF no admitido, clave maestra destino ausente/inválida o formato incompatible.
 
 Este mecanismo es nuevo para el backup compartido; no modifica retroactivamente el formato VLESS actual ni sus herramientas legacy.
+
+## 3.1 Contenedor criptográfico compartido v1 — implementado
+
+La especificación binaria y la implementación están documentadas en `docs/FORMATO_CIFRADO_COMPARTIDO_V1.md` y `scripts/shared_backup_format.py`. El módulo cifra bytes opacos y no conoce protocolos ni escribe archivos.
+
+- Magic `XRMGSBKP`, longitud de cabecera de 4 bytes big-endian, JSON canónico y ciphertext AES-GCM.
+- Scrypt fijo `N=2^15, r=8, p=1`, salida 32 bytes, límite de memoria 64 MiB; salt aleatorio de 16 bytes.
+- AES-256-GCM, nonce aleatorio de 12 bytes, tag de 16 bytes. AAD cubre magic, longitud y bytes exactos de la cabecera.
+- Cabecera declara formato/versión, algoritmo, KDF/perfil, salt, nonce y longitud cifrada. Perfil KDF fijo: no se aceptan parámetros arbitrarios del paquete.
+- Contraseña UTF-8: mínimo 12 caracteres y 16 bytes, máximo 1024 bytes; no se normaliza ni se acepta NUL. Se solicitará interactivamente en la futura integración, nunca como argumento/variable/archivo.
+- Payload máximo 512 MiB; cabecera máxima 4096 bytes. Validación estricta de magic, versión, estructura canónica, claves duplicadas, longitudes, truncamiento, bytes sobrantes y tag.
+- La master key no forma parte del paquete. Este módulo no crea staging, no serializa catálogos, no descifra envelopes de protocolos, no verifica referencias ni restaura datos.
+
+La neutralidad permite que VLESS, VMess, Trojan y futuros protocolos utilicen el mismo contenedor. Cada protocolo requiere su propio adaptador de snapshot/validación y su backend nativo de re-envoltura; no se reutilizan envelopes ni AAD entre protocolos.
+
+**Límite de memoria:** el módulo trabaja con bytes en memoria. Python no garantiza zeroization de objetos `bytes` inmutables; la futura orquestación debe minimizar copias y evitar logs, temporales en claro, core dumps y exposición por swap.
 
 ## 4. Consistencia del snapshot
 
@@ -147,6 +163,6 @@ La falta de una dependencia `reference` bloquea por defecto el restore completo;
 
 ## 11. Estado y siguiente diseño
 
-Los criterios funcionales anteriores están aprobados. Antes de escribir el backup compartido se debe cerrar y probar el contrato de cifrado integral descrito en §3, el formato del manifiesto externo/interno, el orden real de locks y la detección de conflictos del restore. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
+Los criterios funcionales anteriores están aprobados. El contrato del contenedor cifrado v1 ya está implementado y probado en aislamiento. Antes de escribir el orquestador de backup compartido se deben cerrar el manifiesto interno, el orden real de locks y la detección de conflictos del restore. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
 
-**Estado:** criterios aprobados; implementación compartida no iniciada. No se ha creado ni restaurado un backup compartido.
+**Estado:** contenedor criptográfico neutral v1 IMPLEMENTADO y VERIFICADO con prueba aislada; snapshot, manifiesto, adaptadores VLESS/VMess/certificados, backup, verify, restore, journal y rollback aún NO IMPLEMENTADOS. No se ha creado ni restaurado un backup compartido.

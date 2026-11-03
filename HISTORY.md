@@ -466,3 +466,15 @@ No se probó lectura de lease por un servicio Xray real: la VPS de desarrollo ca
 - Sin runtime, servicio, firewall, puertos, certificados desplegados, VPS pruebas ni cambios a `Xray-Normativa/`. Pendiente backup compartido y migración escritora. Cambios aún locales, no commit/push.
 
 **Publicación:** commit `631d7eda11615b692557a2e0958a8f318b81c223` sincronizado con GitHub en `design/user-identity-association-v1`. `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`; `Xray-Normativa/` sin cambios.
+
+
+## 2026-11-03 — Contenedor cifrado compartido v1
+
+- Contraste normativo de Etapa 5: secretos/credenciales y claves privadas excluidos por defecto; inclusión requiere selección expresa, autorización y confirmación adicional. Historiales de versiones/modificaciones, validaciones, informes y logs excluidos. La futura orquestación debe aplicar estas reglas.
+- Nuevo `scripts/shared_backup_format.py`: contenedor binario neutral para bytes opacos, magic `XRMGSBKP`, cabecera JSON canónica, scrypt fijo `N=2^15/r=8/p=1` (64 MiB maxmem), AES-256-GCM, salt 16 bytes, nonce 12 bytes, tag 16 bytes y AAD que autentica cabecera completa. Límites de payload/cabecera/paquete y rechazo fail-closed de parámetros KDF no admitidos, truncamiento, bytes sobrantes, contraseña errónea y manipulación.
+- Passphrase UTF-8: mínimo 12 caracteres/16 bytes, máximo 1024 bytes. No se persiste, no se acepta por argumento ni variable de entorno. El módulo no crea archivos ni staging.
+- Nuevo `tests/shared_backup_format.sh`; nuevo `docs/FORMATO_CIFRADO_COMPARTIDO_V1.md`; `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` actualizado a v1.2.
+- La envoltura es independiente del protocolo y reutilizable por VLESS, VMess, Trojan y futuros adaptadores; cada protocolo conserva su backend/AAD nativo para re-envoltura.
+- Pruebas actuales: `tests/*.sh` 47/47 PASS; `python3 -m py_compile scripts/*.py`, `bash -n` de shell modules/scripts, ShellCheck warning y shfmt focal, `git diff --check` PASS.
+- No se creó snapshot ni backup real; no se implementó writer, verify, restore, journal o rollback compartido. No se leyó/modificó master key ni datos persistentes; runtime, servicios, firewall, puertos, certificados desplegados, VPS de pruebas y `Xray-Normativa/` intactos.
+- Estado del bloque: IMPLEMENTADO / VERIFICADO en aislamiento; publicación/sincronización y aceptación formal pendientes de cierre.

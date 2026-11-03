@@ -1,8 +1,8 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-03
-**Tarea activa:** Bloque 3 — integración VMess con el almacén y resolutor TLS centralizados, actualmente parcial. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
-**Estado vigente:** F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
+**Tarea activa:** backup/restore compartido — contenedor criptográfico neutral v1 implementado y probado; siguiente bloque: snapshot lógico, manifiesto y adaptadores por protocolo. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
+**Estado vigente:** contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -295,3 +295,19 @@ Siguiente paso: integrar el nuevo contrato de forma versionada en VMess, primero
 ### Publicación del punto 22
 
 Commit `631d7eda11615b692557a2e0958a8f318b81c223` (`feat(tls): add read-only historical migration preflight`) publicado y verificado en `origin/design/user-identity-association-v1`; HEAD local/remoto idéntico. `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`. Sin cambios en `Xray-Normativa/`.
+
+
+## 12. Contenedor cifrado compartido v1 — 2026-11-03
+
+**Estado:** IMPLEMENTADO y VERIFICADO en aislamiento; NO PUBLICADO hasta completar el ciclo documental y commit; NO ACEPTADO formalmente.
+
+- Nuevo `scripts/shared_backup_format.py`: contenedor neutral de bytes opacos, independiente de protocolos. Magic `XRMGSBKP`, cabecera JSON canónica, scrypt fijo `N=2^15/r=8/p=1`, AES-256-GCM y AAD sobre cabecera completa. Salt/nonce aleatorios; límites de tamaño y parámetros KDF cerrados.
+- Passphrase UTF-8 con mínimo 12 caracteres/16 bytes, máximo 1024 bytes; el módulo no recibe secretos por CLI ni persiste contraseña.
+- Nuevo `tests/shared_backup_format.sh`: round-trip, aleatoriedad, contraseña incorrecta, manipulación de cabecera/ciphertext, truncamiento, bytes sobrantes, magic inválido, contraseña débil y payload inválido.
+- Nuevo `docs/FORMATO_CIFRADO_COMPARTIDO_V1.md`; `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` actualizado a v1.2.
+- Contraste normativo: Etapa 5 exige excluir credenciales/claves privadas por defecto y pedir selección, autorización y confirmación adicional para incluirlas; la futura interfaz/orquestador deberá imponerlo. También exige excluir historiales/logs. El contenedor no decide qué datos se incluyen.
+- El contenedor es reutilizable por VLESS, VMess, Trojan y otros protocolos, pero cada protocolo necesitará un adaptador independiente y re-envoltura con su backend/AAD nativo.
+- Regresión `tests/*.sh`: 47/47 PASS. `py_compile scripts/*.py`, `bash -n` de shell modules/scripts, ShellCheck warning y shfmt de la nueva prueba, `git diff --check`: PASS.
+- No se creó backup real, snapshot, staging, archivo temporal con plaintext, journal ni restore. No se leyó/modificó la master key ni datos persistentes; no se tocó runtime, servicios, firewall, puertos, certificados desplegados, VPS de pruebas ni `Xray-Normativa/`.
+
+**Siguiente paso:** diseñar y probar el manifiesto interno y el snapshot lógico actual (sin historiales), resolver el orden global de locks y definir adaptadores de exportación/re-envoltura para VLESS, VMess y certificados. Después implementar el backup writer; no iniciar restore real ni migración TLS escritora sin autorización específica.

@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> Frente activo 2026-11-03: integración VMess TLS centralizado en avance parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 42/42 PASS. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
+> Frente activo 2026-11-03: contenedor cifrado compartido v1 implementado y verificado en aislamiento; siguiente tarea: snapshot lógico/manifiesto y adaptadores VLESS/VMess/certificados. La integración VMess/VLESS TLS centralizado continúa parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 47/47 PASS tras incorporar `tests/shared_backup_format.sh`. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
 > HEAD publicado y sincronizado: d9a0542 (Implementación parcial del resolutor TLS centralizado) en design/user-identity-association-v1. main permanece intacta. El working tree conserva únicamente scripts/__pycache__/ preexistente sin seguimiento; no se incorporó.
 
 
@@ -471,3 +471,18 @@ Documentos actualizados: `docs/PLAN_MIGRACION_TLS_HISTORICO.md` v1.1, `docs/PLAN
 ## Publicación del preflight de migración TLS — 2026-11-03
 
 El bloque anterior quedó publicado y sincronizado en GitHub y VPS de implementación: commit `631d7eda11615b692557a2e0958a8f318b81c223` (`feat(tls): add read-only historical migration preflight`), rama `design/user-identity-association-v1`. `origin/main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`. El commit no contiene cambios en `Xray-Normativa/`; `git diff HEAD^ HEAD -- Xray-Normativa/` está vacío. `scripts/__pycache__/` permanece no rastreado y excluido.
+
+
+## Continuidad — formato cifrado compartido v1 (2026-11-03)
+
+El contenedor neutral se implementó en `scripts/shared_backup_format.py`; contrato detallado en `docs/FORMATO_CIFRADO_COMPARTIDO_V1.md` y plan actualizado en `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` v1.2.
+
+El módulo sólo cifra/descifra bytes opacos y no conoce protocolos ni escribe archivos. Usa scrypt fijo `N=2^15/r=8/p=1`, AES-256-GCM, salt 16 bytes, nonce 12 bytes, tag 16 bytes y AAD que autentica cabecera completa. El payload máximo es 512 MiB. La contraseña no se persiste ni se pasa por CLI.
+
+**Compatibilidad futura:** VLESS, VMess, Trojan y otros protocolos pueden transportar su snapshot por el mismo contenedor. Cada protocolo debe tener un adaptador de snapshot/validación y usar su backend/AAD nativo para re-envolver secretos bajo la master key destino. No reutilizar sobres entre protocolos.
+
+**Restricción normativa:** credenciales y claves privadas excluidas por defecto; incluir requiere selección, autorización y confirmación adicional. Historiales, validaciones, informes y logs excluidos. La futura UI/orquestación deberá hacer cumplir estas reglas.
+
+**Verificación actual:** 47/47 `tests/*.sh` PASS; `py_compile scripts/*.py`, `bash -n` de shell modules/scripts, ShellCheck warning y shfmt focal, `git diff --check` PASS. No se ha generado un backup real ni se ha implementado snapshot/restore. No hubo cambios en runtime, servicios, firewall, puertos, master key, datos persistentes ni `Xray-Normativa/`.
+
+**Siguiente punto:** definir el manifiesto interno y el snapshot lógico de datos actuales, resolver orden global de locks y diseñar adaptadores por protocolo antes de implementar el writer.

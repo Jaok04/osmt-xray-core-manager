@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-03 — VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
+**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; orquestación backup/restore pendiente. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -11,6 +11,17 @@
 > **Regla obligatoria permanente:** antes de implementar cualquier etapa o funcionalidad, contrastar el proyecto con la documentación preliminar aprobada en `Xray-Normativa/` del repositorio (respaldo original en `/root/Xray_Manager_Documentacion_Final_2026-10-31`). Las mejoras requieren informe previo y autorización expresa del propietario. Ver `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md` y `AGENTS.md`.
 
 > **Segunda regla obligatoria permanente:** ninguna etapa se declara TERMINADA/COMPLETADA sin auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos, matriz de trazabilidad, pruebas y aceptación formal expresa. Cerrar un módulo no cierra su etapa. Ver `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md` y `AGENTS.md`.
+
+
+## Estado actualizado — formato cifrado compartido v1 (2026-11-03)
+
+- `scripts/shared_backup_format.py` implementa un contenedor binario neutral, sin dependencias de protocolo: scrypt perfil fijo + AES-256-GCM, salt/nonce aleatorios y AAD de cabecera.
+- `tests/shared_backup_format.sh` pasa pruebas de round-trip, aleatoriedad, autenticación, alteración, truncamiento, trailing bytes, parámetros/contraseña inválidos.
+- `docs/FORMATO_CIFRADO_COMPARTIDO_V1.md` define el contrato; `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` está en v1.2.
+- La misma envoltura puede transportar snapshots de VLESS, VMess, Trojan y futuros protocolos mediante adaptadores separados. No se comparte la lógica de envelopes/AAD internos de cada protocolo.
+- La normativa exige que credenciales/claves privadas estén excluidas por defecto; su inclusión futura requiere selección, autorización y confirmación adicional. Los historiales y logs quedan excluidos.
+- Regresión actual `tests/*.sh`: 47/47 PASS; `py_compile`, `bash -n`, ShellCheck/shfmt focal y `git diff --check`: PASS.
+- No existe todavía snapshot/orquestador, backup generado, verify, restore, journal o rollback compartido. Sin secretos en disco ni cambios runtime.
 
 ## Estado actualizado — integración VMess TLS centralizado (2026-11-03)
 
