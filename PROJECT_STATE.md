@@ -407,3 +407,12 @@ VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servi
 - Los registros sin UUID quedan incompletos/no restaurables íntegramente hasta recibir la credencial por un flujo autorizado. La inclusión de UUID exige selección, autorización y confirmación adicional.
 - Detalle contractual: docs/PLAN_BACKUP_RESTORE_CENTRAL.md §10.1 (v1.3).
 - No se modificó el esquema operativo VMess ni se creó backup/snapshot real. El contenedor v1 sigue siendo la única pieza implementada del backup compartido; snapshot, manifiesto y orquestación siguen pendientes.
+
+## Desinstalación coordinada con catálogo TLS — 2026-11-03
+
+- IMPLEMENTADO localmente: modules/uninstall.sh adquiere catalog.lock cuando la política/selección elimina certificados; orden en ese flujo: lifecycle → uninstall → integrity → catalog → Xray.
+- Si catalog.lock está ocupado, aborta antes del respaldo/eliminación. Si lo obtiene, lo mantiene durante confirmación, respaldo y borrado; libera en retorno.
+- Tests tests/uninstall.sh: lock ocupado bloquea la operación y conserva datos; caso de categoría certificates verifica que el lock permanece ocupado durante confirmación.
+- Verificación: todos los tests/*.sh PASS; bash -n PASS; ShellCheck del módulo modificado PASS; git diff --check PASS; py_compile scripts/*.py PASS.
+- La auditoría global de locks sigue ABIERTA: aún falta inventariar y contrastar exhaustivamente todos los mutadores/órdenes y ampliar pruebas de concurrencia. No comenzar writer compartido todavía.
+- Sin cambios en Xray-Normativa, datos persistentes, certificados reales, master key, runtime, servicios ni firewall. Cambios de código/docs locales hasta su publicación.

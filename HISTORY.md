@@ -486,3 +486,12 @@ No se probó lectura de lease por un servicio Xray real: la VPS de desarrollo ca
 - Los registros cuyo UUID se excluya se marcarán incompletos/no restaurables íntegramente hasta aportar la credencial mediante flujo autorizado. Incluir UUID requiere selección, autorización y confirmación adicional.
 - Actualizado docs/PLAN_BACKUP_RESTORE_CENTRAL.md a v1.3 y registrados los límites en PROJECT_STATE.md, docs/CONTINUIDAD_DEL_PROYECTO.md y docs/PUNTO_CONTROL_ACTUAL.md.
 - No se modificó el esquema operativo VMess, el código, la normativa, los datos persistentes ni runtime. No se generó backup ni snapshot real.
+
+## 2026-11-03 — Desinstalación coordinada con catálogo TLS
+
+- Se corrigió modules/uninstall.sh: si la política elimina certificados, adquiere catalog.lock después de integrity.lock y antes del bloqueo Xray. Orden del flujo: lifecycle → uninstall → integrity → catalog → Xray.
+- Si el catálogo está ocupado, la desinstalación se cancela antes de respaldar o eliminar; si se adquiere, el lock se mantiene durante confirmación, respaldo y eliminación.
+- Se amplió tests/uninstall.sh para probar contención de catalog.lock y que el bloqueo se mantiene durante la confirmación de eliminación de certificados.
+- Verificación local: suite tests/*.sh completa PASS; bash -n, ShellCheck del módulo modificado, py_compile scripts/*.py y git diff --check PASS.
+- La auditoría global de locks continúa ABIERTA; este cambio corrige únicamente el camino de desinstalación y no autoriza iniciar el writer compartido.
+- Sin runtime, datos persistentes, certificados reales, master key, servicios, firewall ni cambios en Xray-Normativa/.

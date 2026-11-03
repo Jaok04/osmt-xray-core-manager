@@ -144,6 +144,7 @@ mkdir -p "$APP_ROOT"
 printf 'manager fixture\n' >"$APP_ROOT/marker.txt"
 UNINSTALL_LOCK="$tmp/uninstall-flow.lock"
 UNINSTALL_DATA_LOCK="$tmp/integrity.lock"
+UNINSTALL_CERTIFICATES_LOCK="$tmp/catalog.lock"
 UNINSTALL_XRAY_LOCK="$tmp/xray-admin.lock"
 UNINSTALL_BACKUP_STAGING_DIR="$tmp/staging"
 mkdir -p "$APP_ROOT"
@@ -243,6 +244,7 @@ reset_uninstall_ui() {
 }
 UNINSTALL_LOCK="$tmp/uninstall-final-cancel.lock"
 UNINSTALL_DATA_LOCK="$tmp/integrity-final-cancel.lock"
+UNINSTALL_CERTIFICATES_LOCK="$tmp/catalog-final-cancel.lock"
 UNINSTALL_XRAY_LOCK="$tmp/xray-final-cancel.lock"
 XRAY_MANAGER_LIFECYCLE_LOCK="$tmp/lifecycle-final-cancel.lock"
 UNINSTALL_BACKUP_STAGING_DIR="$tmp/staging-final-cancel"
@@ -279,6 +281,7 @@ mkdir -p "$APP_ROOT"
 printf 'keep during lock contention\n' >"$APP_ROOT/marker.txt"
 UNINSTALL_LOCK="$tmp/uninstall-busy.lock"
 UNINSTALL_DATA_LOCK="$tmp/integrity-busy.lock"
+UNINSTALL_CERTIFICATES_LOCK="$tmp/catalog-busy.lock"
 UNINSTALL_XRAY_LOCK="$tmp/xray-busy.lock"
 UNINSTALL_BACKUP_STAGING_DIR="$tmp/staging-busy"
 exec {busy_fd}>"$UNINSTALL_DATA_LOCK"
@@ -297,10 +300,35 @@ grep -Fq "Hay una operación de usuarios o conexiones en curso" "$tmp/uninstall-
 flock -u "$busy_fd"
 exec {busy_fd}>&-
 
+# Si la desinstalación incluye certificados, debe respetar catalog.lock.
+mkdir -p "$APP_ROOT"
+printf 'keep during certificate lock contention\n' >"$APP_ROOT/marker.txt"
+UNINSTALL_LOCK="$tmp/uninstall-catalog-busy.lock"
+UNINSTALL_DATA_LOCK="$tmp/integrity-catalog-busy.lock"
+UNINSTALL_CERTIFICATES_LOCK="$tmp/catalog-busy.lock"
+UNINSTALL_XRAY_LOCK="$tmp/xray-catalog-busy.lock"
+UNINSTALL_BACKUP_STAGING_DIR="$tmp/staging-catalog-busy"
+exec {busy_catalog_fd}>"$UNINSTALL_CERTIFICATES_LOCK"
+flock -x "$busy_catalog_fd"
+confirm_count=0
+ui_confirm() {
+	((confirm_count += 1))
+	return 0
+}
+if printf '2\n2\n' | uninstall_menu_action >"$tmp/uninstall-catalog-lock-busy.out" 2>&1; then
+	printf 'ERROR: se desinstalaron certificados mientras catalog.lock estaba ocupado.\n' >&2
+	exit 1
+fi
+[[ -s "$tmp/uninstall-catalog-lock-busy.out" ]]
+[[ -f "$APP_ROOT/marker.txt" ]]
+flock -u "$busy_catalog_fd"
+exec {busy_catalog_fd}>&-
+
 # Una exportación remota exitosa debe quedar reflejada como verificada en el resumen.
 source "$ROOT/modules/uninstall.sh"
 UNINSTALL_LOCK="$tmp/uninstall-export.lock"
 UNINSTALL_DATA_LOCK="$tmp/integrity-export.lock"
+UNINSTALL_CERTIFICATES_LOCK="$tmp/catalog-export.lock"
 UNINSTALL_XRAY_LOCK="$tmp/xray-export.lock"
 UNINSTALL_BACKUP_STAGING_DIR="$tmp/staging-export"
 mkdir -p "$APP_ROOT"
@@ -461,6 +489,7 @@ reset_uninstall_ui() {
     uninstall_service_guard() { return 0; }
     UNINSTALL_LOCK="$tmp/category-uninstall.lock"
     UNINSTALL_DATA_LOCK="$tmp/category-integrity.lock"
+    UNINSTALL_CERTIFICATES_LOCK="$tmp/category-catalog.lock"
     UNINSTALL_XRAY_LOCK="$tmp/category-xray.lock"
     UNINSTALL_BACKUP_STAGING_DIR="$tmp/category-staging"
 }
@@ -475,7 +504,15 @@ run_selected_category() {
     fi
     ui_confirm() {
         ((count += 1))
-        if [[ "$category" == certificates && "$count" -eq 1 ]]; then return 0; fi
+        if [[ "$category" == certificates && "$count" -eq 1 ]]; then
+            local probe_fd
+            if manager_lock_acquire "$UNINSTALL_CERTIFICATES_LOCK" probe_fd; then
+                manager_lock_release "$probe_fd"
+                printf 'ERROR: catalog.lock no se mantuvo durante la confirmación de certificados.\n' >&2
+                exit 1
+            fi
+            return 0
+        fi
         # Para certificados, primera confirmación: aviso; luego no respaldar y confirmar.
         if [[ "$category" == certificates ]]; then [[ "$count" -eq 3 ]]; else [[ "$count" -eq 2 ]]; fi
     }

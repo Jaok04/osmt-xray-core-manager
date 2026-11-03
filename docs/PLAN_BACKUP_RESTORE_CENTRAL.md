@@ -1,6 +1,6 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.3
+**Versión:** 1.4
 **Fecha:** 2026-11-03
 **Estado:** CRITERIOS APROBADOS / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
 **Ámbito:** contenedor criptográfico neutral y futuro backup consistente de VLESS/VMess/certificados; extensible a protocolos futuros mediante adaptadores.
@@ -177,6 +177,16 @@ Un registro VMess cuyo UUID se excluya debe marcarse como incompleto/no restaura
 
 ## 11. Estado y siguiente diseño
 
-Los criterios funcionales anteriores están aprobados. El contrato del contenedor cifrado v1 ya está implementado y probado en aislamiento. Antes de escribir el orquestador de backup compartido se deben cerrar el manifiesto interno, el orden real de locks y la detección de conflictos del restore. La política de campos VMess queda definida en §10.1: excluir UUID por defecto y conservar email y level como metadatos dentro del payload cifrado. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
+Los criterios funcionales anteriores están aprobados. El contrato del contenedor cifrado v1 ya está implementado y probado en aislamiento. Antes de escribir el orquestador de backup compartido se deben cerrar el manifiesto interno, el orden real de locks y la detección de conflictos del restore. La política de campos VMess queda definida en §10.1: excluir UUID por defecto y conservar email y level como metadatos dentro del payload cifrado. La desinstalación que incluya certificados ahora adquiere catalog.lock después de integrity.lock y lo mantiene durante el respaldo/confirmación/eliminación; la auditoría global de locks sigue abierta. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
 
 **Estado:** contenedor criptográfico neutral v1 IMPLEMENTADO y VERIFICADO con prueba aislada; snapshot, manifiesto, adaptadores VLESS/VMess/certificados, backup, verify, restore, journal y rollback aún NO IMPLEMENTADOS. No se ha creado ni restaurado un backup compartido.
+
+## 10.2. Coordinación de desinstalación y catálogo TLS — 2026-11-03
+
+Se corrigió modules/uninstall.sh para que, cuando la selección incluya la categoría certificates (incluidas las políticas all para Manager o ambos componentes), adquiera el bloqueo central catalog.lock antes de respaldar/eliminar las rutas. La adquisición se hace después de integrity.lock y antes del bloqueo de administración Xray. Orden en este flujo: lifecycle.lock → uninstall.lock → integrity.lock → catalog.lock (si se eliminan certificados) → bloqueo Xray.
+
+Los bloqueos se adquieren de forma no bloqueante mediante manager_lock_acquire. Si catalog.lock está ocupado, la desinstalación se cancela antes de crear el respaldo o eliminar rutas. Cuando se obtiene, se mantiene durante la confirmación, el respaldo previo y la eliminación; el trap de retorno libera los bloqueos en orden inverso. Si no se seleccionan certificados, no se solicita catalog.lock.
+
+Pruebas añadidas a tests/uninstall.sh: una operación concurrente que mantiene catalog.lock impide la desinstalación y conserva los datos; el caso de eliminación de la categoría certificates verifica que el lock sigue ocupado durante la confirmación. La suite completa de scripts shell pasó tras el cambio, junto con Bash syntax, ShellCheck del módulo modificado y git diff --check.
+
+**Límite de auditoría:** esto corrige el camino de desinstalación y prueba la coordinación con el lock del catálogo; no certifica todavía que se hayan inspeccionado todos los mutadores ni que el orden global esté completamente cerrado. La auditoría estática y pruebas más amplias de concurrencia siguen pendientes antes del writer compartido.

@@ -500,3 +500,11 @@ La decisión del propietario queda registrada en docs/PLAN_BACKUP_RESTORE_CENTRA
 - Marcar los registros sin UUID como incompletos/no restaurables íntegramente hasta que la credencial se aporte mediante flujo autorizado. Incluir UUID exige selección, autorización y confirmación adicional.
 
 No se ha cambiado el esquema VMess ni se ha creado snapshot/backup real. El siguiente trabajo es cerrar el contrato del manifiesto y del snapshot lógico, además de completar la auditoría del orden global de locks. El writer compartido no debe comenzar hasta cerrar esos contratos y sus pruebas sintéticas.
+
+## Continuidad — lock TLS en desinstalación (2026-11-03)
+
+Se implementó localmente la coordinación de modules/uninstall.sh con catalog.lock cuando la desinstalación incluye certificados. Orden del flujo: lifecycle.lock → uninstall.lock → integrity.lock → catalog.lock (sólo si aplica) → bloqueo Xray. La adquisición es no bloqueante; si falla, se aborta sin crear backup ni eliminar rutas. Si se adquiere, se mantiene durante confirmación, respaldo y eliminación, y se libera en retorno.
+
+tests/uninstall.sh prueba que el lock ocupado impide la operación y que, durante la confirmación de eliminación de certificados, otro adquirente no puede tomar catalog.lock. La suite completa tests/*.sh, Bash syntax, ShellCheck del módulo modificado, py_compile y git diff check pasaron.
+
+La auditoría de todos los mutadores/locks sigue abierta y no debe darse por concluida a partir de este arreglo. Próximo: completar el inventario y revisar los órdenes de adquisición restantes; después cerrar schema de manifiesto y snapshot lógico. El writer sigue bloqueado hasta concluir esos puntos.

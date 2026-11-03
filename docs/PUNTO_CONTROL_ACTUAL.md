@@ -326,3 +326,13 @@ Contrato: docs/PLAN_BACKUP_RESTORE_CENTRAL.md v1.3, §10.1.
 **Estado:** decisión DOCUMENTADA; no cambia código ni esquema operativo. No hay snapshot ni backup compartido real.
 
 **Siguiente paso exacto:** diseñar el schema del manifiesto interno y el snapshot lógico actual, definiendo cómo se representan las exclusiones y la completitud por elemento. En paralelo, completar la auditoría estática de todos los mutadores/locks y documentar cualquier ruta no inspeccionable. No implementar writer ni restore hasta cerrar esos contratos y pruebas sintéticas.
+
+## 14. Lock de catálogo TLS en desinstalación — 2026-11-03
+
+**IMPLEMENTADO localmente:** modules/uninstall.sh adquiere catalog.lock cuando se selecciona eliminar certificados, tras integrity.lock y antes del lock Xray. Orden en este flujo: lifecycle → uninstall → integrity → catalog → Xray. Si el lock está ocupado, cancela antes del backup/borrado; si se adquiere, lo mantiene durante confirmación, backup y eliminación.
+
+**Pruebas:** tests/uninstall.sh cubre lock ocupado y conservación de datos, además de verificar que el lock sigue tomado durante la confirmación. Todos los tests/*.sh PASS; Bash syntax PASS; ShellCheck del módulo PASS; py_compile scripts/*.py PASS; git diff --check PASS.
+
+**Alcance/limitación:** corrección del flujo de desinstalación, no auditoría global concluida. Falta inventario exhaustivo de todos los mutadores, validación de sus órdenes y pruebas adicionales de concurrencia. No iniciar writer compartido hasta cerrar esos puntos.
+
+**Sin tocar:** Xray-Normativa/, datos persistentes, master key, certificados reales, runtime, servicios, firewall, puertos ni VPS de pruebas.
