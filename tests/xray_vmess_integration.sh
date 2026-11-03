@@ -90,30 +90,27 @@ if [[ "$(id -u)" -eq 0 ]] && chgrp 65534 "$TMP/tls.key" 2>/dev/null; then
     chgrp 0 "$TMP/tls.key"
 fi
 vmess_model_build prepare_tls_permissions vmess_tcp_tls 127.0.0.1 62003 "$TMP/users.json" >"$TMP/prepare-model.json"
-chmod 644 "$TMP/tls.key"
-if python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/tcp-tls.json" --output "$TMP/unsafe-prepared.json" --secret-output "$TMP/unsafe-secret.bin" >/dev/null 2>&1; then
-    echo 'ERROR: prepare_config aceptó una clave TLS 0644.' >&2
+mkdir -m 700 "$TMP/certificate-store"
+head -c 32 /dev/urandom >"$TMP/certificate-store.master"
+chmod 600 "$TMP/certificate-store.master"
+python3 "$ROOT/scripts/certificate_store.py" --base "$TMP/certificate-store" --catalog "$TMP/certificate-store/catalog.json" --managed-dir "$TMP/certificate-store/managed" --secrets-dir "$TMP/certificate-store/secrets" --master-key "$TMP/certificate-store.master" --lock "$TMP/certificate-store/catalog.lock" import --storage-type managed --certificate-file "$TMP/tls.crt" --private-key-file "$TMP/tls.key" >"$TMP/certificate-import.json"
+CERTIFICATE_ID="$(jq -er '.certificate_id' "$TMP/certificate-import.json")"
+jq -n --arg certificate_id "$CERTIFICATE_ID" '{certificate_id:$certificate_id}' >"$TMP/central-tls-options.json"
+# The preparer must reject path-based TLS input and emit only the central reference.
+if python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/tcp-tls.json" --output "$TMP/legacy-path-prepared.json" >/dev/null 2>&1; then
+    echo 'ERROR: prepare_config aceptó rutas TLS libres.' >&2
     exit 1
 fi
-chmod 600 "$TMP/tls.key"
-if [[ "$(id -u)" -eq 0 ]] && chgrp 65534 "$TMP/tls.key" 2>/dev/null; then
-    if python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/tcp-tls.json" --output "$TMP/group-prepared.json" --secret-output "$TMP/group-secret.bin" >/dev/null 2>&1; then
-        echo 'ERROR: prepare_config aceptó una clave TLS cuyo grupo no es root.' >&2
-        exit 1
-    fi
-    chgrp 0 "$TMP/tls.key"
-fi
-ln "$TMP/tls.key" "$TMP/tls-hardlink.key"
-jq -n --arg certificate_file "$TMP/tls.crt" --arg key_file "$TMP/tls-hardlink.key" '{certificate_file:$certificate_file,key_file:$key_file}' >"$TMP/tls-hardlink-options.json"
-expect_adapter_reject tls_key_hardlink vmess_tcp_tls "$TMP/tls-hardlink-options.json"
-if python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/tls-hardlink-options.json" --output "$TMP/hardlink-prepared.json" --secret-output "$TMP/hardlink-secret.bin" >/dev/null 2>&1; then
-    echo 'ERROR: prepare_config aceptó una clave TLS con enlace duro adicional.' >&2
+jq -n --arg certificate_id "$CERTIFICATE_ID" --arg certificate_file "$TMP/tls.crt" '{certificate_id:$certificate_id,certificate_file:$certificate_file}' >"$TMP/tls-path-injection.json"
+if python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/tls-path-injection.json" --output "$TMP/path-injection-prepared.json" >/dev/null 2>&1; then
+    echo 'ERROR: prepare_config aceptó inyección de ruta TLS.' >&2
     exit 1
 fi
-rm "$TMP/tls-hardlink.key"
-python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/tcp-tls.json" --output "$TMP/safe-prepared.json" --secret-output "$TMP/safe-secret.bin" >/dev/null
-[[ -s "$TMP/safe-prepared.json" && -s "$TMP/safe-secret.bin" ]]
-echo 'PASS rechazo de permisos TLS 0644/0640/0400 en adaptador y prepare_config; 0600 aceptado'
+python3 "$ROOT/scripts/vmess_prepare_config.py" --model "$TMP/prepare-model.json" --options "$TMP/central-tls-options.json" --output "$TMP/safe-prepared.json" >"$TMP/prepare-meta.json"
+[[ -s "$TMP/safe-prepared.json" && ! -e "$TMP/safe-secret.bin" ]]
+jq -e --arg certificate_id "$CERTIFICATE_ID" '.security_options=={certificate_id:$certificate_id}' "$TMP/safe-prepared.json" >/dev/null
+jq -e '.has_secret==false and .secret_type==null' "$TMP/prepare-meta.json" >/dev/null
+echo 'PASS prepare_config emite certificate_id, no crea secreto TLS y rechaza rutas/inyección'
 
 # The adapter independently rejects duplicate emails even if a model file is supplied directly.
 vmess_model_build duplicate_email_adapter vmess_ws 127.0.0.1 62004 "$TMP/users.json" >"$TMP/duplicate-email-model.json"

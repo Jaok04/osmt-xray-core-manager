@@ -26,7 +26,7 @@ def private_write(path: Path, data: bytes) -> None:
 def main():
  p=argparse.ArgumentParser()
  p.add_argument("--model",required=True); p.add_argument("--options",required=True)
- p.add_argument("--output",required=True); p.add_argument("--secret-output",required=True)
+ p.add_argument("--output",required=True); p.add_argument("--secret-output")
  a=p.parse_args()
  model=json.loads(Path(a.model).read_text()); options=json.loads(Path(a.options).read_text())
  mode=model.get("mode_id")
@@ -38,20 +38,14 @@ def main():
  elif t=="xhttp": transport={"path":options["path"],"mode":options["mode"]}
  elif t=="mkcp": transport={"header_type":options["header_type"],"seed":options.get("seed","")}
  if model["security"]=="tls":
-  cert=options["certificate_file"]; key_path=Path(options["key_file"])
-  if not isinstance(cert,str) or not cert.startswith("/") or not key_path.is_absolute(): raise ValueError("rutas TLS deben ser absolutas")
-  fd=os.open(key_path,os.O_RDONLY|getattr(os,"O_NOFOLLOW",0)|getattr(os,"O_CLOEXEC",0))
-  try:
-   st=os.fstat(fd)
-   if not stat.S_ISREG(st.st_mode) or st.st_uid!=0 or st.st_gid!=0 or stat.S_IMODE(st.st_mode)!=0o600 or st.st_nlink!=1: raise ValueError("la clave TLS debe ser archivo regular root:root, modo 0600 y un solo enlace duro")
-   with os.fdopen(fd,"rb") as stream:
-    fd=-1; secret=stream.read(512*1024+1)
-   if len(secret)>512*1024: raise ValueError("clave TLS supera el tamaño permitido")
-  finally:
-   if fd>=0: os.close(fd)
-  if not secret: raise ValueError("clave TLS vacía")
-  security={"certificate_file":cert}; secret_type="tls_private_key"
+  certificate_id=options.get("certificate_id")
+  if not isinstance(certificate_id,str) or not __import__("re").fullmatch(r"cert-[A-Za-z0-9][A-Za-z0-9_.-]{0,120}",certificate_id):
+   raise ValueError("TLS requiere certificate_id del catálogo central")
+  if set(options)-({"certificate_id","path","host","service_name","mode","header_type","seed"}):
+   raise ValueError("opciones TLS contienen campos no admitidos")
+  security={"certificate_id":certificate_id}
  elif model["security"]=="reality":
+  if not a.secret_output: raise ValueError("REALITY requiere --secret-output")
   secret=options["private_key"].encode()
   if not secret or len(secret)>512*1024: raise ValueError("clave REALITY vacía o demasiado grande")
   security={"target":options["target"],"server_names":options["server_names"],"short_ids":options["short_ids"]}
@@ -62,7 +56,7 @@ def main():
          "users":model["users"]}
  private_write(Path(a.output),(json.dumps(config,ensure_ascii=False,sort_keys=True,separators=(",",":"))+"\n").encode())
  if secret is None:
-  Path(a.secret_output).unlink(missing_ok=True)
+  if a.secret_output: Path(a.secret_output).unlink(missing_ok=True)
   print(json.dumps({"secret_type":None,"has_secret":False}))
  else:
   private_write(Path(a.secret_output),secret)

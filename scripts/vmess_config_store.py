@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse, base64, fcntl, json, os, re, secrets, stat, sys, tempfile
 from pathlib import Path
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import certificate_store
 
 ID_RE=re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 MODES={
@@ -116,7 +117,7 @@ def validate_users(users,max_users):
   if not isinstance(u["email"],str) or not 1<=len(u["email"])<=255: raise StoreError("email VMess inválido")
   if u["email"] in emails: raise StoreError("email VMess duplicado")
   emails.add(u["email"])
-def validate(config,entry,secret_ref):
+def validate(config,entry,secret_ref,allow_legacy_tls=False):
  required={"schema_version","connection_id","protocol","mode_id","transport","security","listen_address","listen_port","transport_options","security_options","users"}
  if not isinstance(config,dict) or set(config)!=required: raise StoreError("esquema VMess incompleto o con campos desconocidos")
  cid=safe_id(config["connection_id"]); mode=config["mode_id"]
@@ -139,7 +140,11 @@ def validate(config,entry,secret_ref):
  elif transport=="raw" and t: raise StoreError("RAW no admite opciones")
  sec=MODES[mode][1]
  if sec=="tls":
-  if set(s)!={"certificate_file","secret_ref"} or not isinstance(s["certificate_file"],str) or not s["certificate_file"].startswith("/") or s["secret_ref"]!=secret_ref or not isinstance(secret_ref,str): raise StoreError("referencia TLS inválida")
+  if set(s)=={"certificate_id"} and secret_ref is None:
+   if not isinstance(s["certificate_id"],str) or not certificate_store.ID_RE.fullmatch(s["certificate_id"]): raise StoreError("ID de certificado central inválido")
+  elif allow_legacy_tls and set(s)=={"certificate_file","secret_ref"} and isinstance(s["certificate_file"],str) and s["certificate_file"].startswith("/") and s["secret_ref"]==secret_ref and isinstance(secret_ref,str):
+   pass
+  else: raise StoreError("TLS nuevo requiere únicamente certificate_id del catálogo central")
  elif sec=="reality":
   if set(s)!={"target","server_names","short_ids","secret_ref"} or not isinstance(s["target"],str) or not re.fullmatch(r".+:[0-9]{1,5}",s["target"]) or not 1<=int(s["target"].rsplit(":",1)[1])<=65535 or not isinstance(s["server_names"],list) or not s["server_names"] or not all(isinstance(x,str) and x for x in s["server_names"]) or not isinstance(s["short_ids"],list) or not s["short_ids"] or not all(isinstance(x,str) and re.fullmatch(r"[0-9a-fA-F]{0,16}",x) for x in s["short_ids"]) or s["secret_ref"]!=secret_ref or not isinstance(secret_ref,str): raise StoreError("referencia REALITY inválida")
  elif s or secret_ref is not None: raise StoreError("modalidad sin secreto contiene referencia")
@@ -160,7 +165,9 @@ def validate_catalog_metadata(entry, config_ref, config=None, secret_ref=None):
    raise StoreError("versión de esquema del documento no coincide con el catálogo")
   mode=config.get("mode_id")
   security=MODES.get(mode,(None,None))[1]
-  if security in ("tls","reality"):
+  if security=="tls" and isinstance(config.get("security_options"),dict) and set(config["security_options"])=={"certificate_id"}:
+   if secret_ref is not None: raise StoreError("TLS central no admite secreto por conexión")
+  elif security in ("tls","reality"):
    sm=re.fullmatch(rf"secrets/{re.escape(cid)}\.r([0-9]{{6}})\.bin",secret_ref if isinstance(secret_ref,str) else "")
    if not sm or int(sm.group(1))!=ref_revision:
     raise StoreError("revisión de referencia de secreto no coincide")
@@ -198,12 +205,20 @@ def run(a):
     previous=json.loads(read_regular(conf/f"{cid}.r{current:06d}.json",MAX_CONFIG))
     previous_secret=entry.get("vmess_secret_ref")
     validate_catalog_metadata(entry,existing_ref,previous,previous_secret)
-    validate(previous,entry,previous_secret)
+    validate(previous,entry,previous_secret,allow_legacy_tls=True)
    revision=current+1; cfgname=f"{cid}.r{revision:06d}.json"; cfgpath=conf/cfgname
    secret_ref=None; secret_path=secdir/f"{cid}.r{revision:06d}.bin"
    security=MODES.get(config.get("mode_id"),(None,None))[1]; plain=None
-   if security in ("tls","reality"):
-    if not a.secret_input or a.secret_type!=("tls_private_key" if security=="tls" else "reality_private_key"): raise StoreError("secreto requerido o tipo incorrecto")
+   if security=="tls":
+    if a.secret_input or a.secret_type: raise StoreError("TLS central no admite secreto por conexión")
+    certificate_id=config.get("security_options",{}).get("certificate_id") if isinstance(config.get("security_options"),dict) else None
+    if not isinstance(certificate_id,str) or not certificate_store.ID_RE.fullmatch(certificate_id): raise StoreError("TLS requiere certificate_id válido")
+    cert_catalog=certificate_store.load_catalog(Path(a.certificate_catalog).absolute())
+    matches=[item for item in cert_catalog["certificates"] if item.get("certificate_id")==certificate_id]
+    if len(matches)!=1 or matches[0].get("status")!="active" or matches[0].get("storage_type") not in ("managed","reference"):
+     raise StoreError("certificado central inexistente, inactivo o incompatible")
+   elif security=="reality":
+    if not a.secret_input or a.secret_type!="reality_private_key": raise StoreError("secreto REALITY requerido o tipo incorrecto")
     if secret_path.exists() or secret_path.is_symlink(): raise StoreError("colisión de blob; no se sobrescribe")
     plain=read_regular(Path(a.secret_input),MAX_SECRET); secret_ref=f"secrets/{cid}.r{revision:06d}.bin"
     config["security_options"]["secret_ref"]=secret_ref
@@ -228,7 +243,12 @@ def run(a):
    config=json.loads(read_regular(conf/f"{cid}.r{int(m.group(1)):06d}.json",MAX_CONFIG))
    secret_ref=entry.get("vmess_secret_ref")
    validate_catalog_metadata(entry,ref,config,secret_ref)
-   validate(config,entry,secret_ref); written=False
+   validate(config,entry,secret_ref,allow_legacy_tls=True)
+   if MODES.get(config.get("mode_id"),(None,None))[1]=="tls" and isinstance(config.get("security_options"),dict) and set(config["security_options"])=={"certificate_id"}:
+    cert_catalog=certificate_store.load_catalog(Path(a.certificate_catalog).absolute())
+    certs=[item for item in cert_catalog["certificates"] if item.get("certificate_id")==config["security_options"]["certificate_id"]]
+    if len(certs)!=1 or certs[0].get("status")!="active": raise StoreError("certificado central ausente o inactivo")
+   written=False
    if secret_ref is not None:
     sm=re.fullmatch(rf"secrets/{re.escape(cid)}\.r([0-9]{{6}})\.bin",secret_ref)
     if not sm: raise StoreError("referencia de secreto inválida")
@@ -237,7 +257,7 @@ def run(a):
      out=Path(a.secret_output).absolute()
      if out.exists() or out.is_symlink(): raise StoreError("destino de secreto ya existe")
      atomic_write(out,plain); written=True
-   elif a.secret_output and MODES[config["mode_id"]][1] in ("tls","reality"): raise StoreError("secreto ausente")
+   elif a.secret_output and MODES[config["mode_id"]][1]=="reality": raise StoreError("secreto ausente")
    return {"status":"ok","configuration":config,"secret_written":written}
   if a.action=="audit":
    referenced=set(); secret_refs=set(); broken=[]
@@ -253,12 +273,19 @@ def run(a):
     try:
      sr=entry.get("vmess_secret_ref"); config=json.loads(read_regular(conf/fn,MAX_CONFIG))
      validate_catalog_metadata(entry,ref,config,sr)
-     validate(config,entry,sr)
+     validate(config,entry,sr,allow_legacy_tls=True)
+     central_tls=(MODES.get(config.get("mode_id"),(None,None))[1]=="tls" and isinstance(config.get("security_options"),dict) and set(config["security_options"])=={"certificate_id"})
      if sr:
       sm=re.fullmatch(rf"secrets/{re.escape(cid)}\.r([0-9]{{6}})\.bin",sr)
       if not sm: raise StoreError("referencia secreta inválida")
       sf=f"{cid}.r{int(sm.group(1)):06d}.bin"; secret_refs.add(sf)
       decrypt(read_regular(secdir/sf,1024*1024),master_key(a.master_key,False),cid)
+     elif MODES.get(config.get("mode_id"),(None,None))[1]=="tls" and not central_tls:
+      raise StoreError("referencia TLS histórica ausente")
+     if central_tls:
+      cc=certificate_store.load_catalog(Path(a.certificate_catalog).absolute())
+      certs=[x for x in cc["certificates"] if x.get("certificate_id")==config["security_options"]["certificate_id"]]
+      if len(certs)!=1 or certs[0].get("status")!="active": raise StoreError("certificado central ausente o inactivo")
     except Exception: broken.append({"id":cid,"issue":"missing_or_invalid_reference"})
    orphans=[]; secret_orphans=[]; unsafe_entries=[]
    for directory,label,suffix,known in ((conf,"configurations",".json",referenced),(secdir,"secrets",".bin",secret_refs)):
@@ -278,6 +305,7 @@ def main():
  p.add_argument("--lock",default="/run/xray-manager/integrity.lock"); p.add_argument("--connection-id"); p.add_argument("--input")
  p.add_argument("--secret-input"); p.add_argument("--secret-type",choices=("tls_private_key","reality_private_key")); p.add_argument("--secret-output")
  p.add_argument("--secrets-dir",default="/var/lib/xray-manager/vmess/secrets"); p.add_argument("--master-key",default="/etc/xray-manager/keys/master.key")
+ p.add_argument("--certificate-catalog",default="/var/lib/xray-manager/certificates/catalog.json")
  a=p.parse_args()
  if a.action in ("store","read") and not a.connection_id: p.error("--connection-id requerido")
  if a.action=="store" and not a.input: p.error("--input requerido")

@@ -86,8 +86,8 @@ connections_vmess_print_review() {
     case "$security" in
     tls)
         printf 'Parámetros TLS:\n'
-        printf '  Certificado: %s\n' "$cert"
-        printf '  Clave privada: %s (contenido no mostrado; si guardas el borrador, se almacenará cifrado).\n' "$key"
+        printf '  ID de certificado central: %s\n' "$cert"
+        printf '  Clave privada: administrada una sola vez en el almacén central.\n'
         ;;
     reality)
         printf 'Parámetros REALITY:\n'
@@ -128,7 +128,7 @@ connections_vmess_users_json() {
 connections_vmess_assistant() (
     [[ $# -eq 2 ]] || return 2
     local cid="$1" mode="$2" address port max_users count tmp model options config users
-    local path='' host='' service='' xmode='' header_type='none' seed='' cert='' key='' target='' names='' ids='' private=''
+    local path='' host='' service='' xmode='' header_type='none' seed='' cert='' key='' certificate_id='' target='' names='' ids='' private=''
     local prepared secret meta secret_type choice secret_present=false xray_bin="${XRAY_VALIDATION_BINARY:-/var/cache/xray-manager/validation/v26.10.31/xray}"
     local -a store_args=()
     command -v jq >/dev/null 2>&1 && command -v uuidgen >/dev/null 2>&1 || {
@@ -185,8 +185,8 @@ connections_vmess_assistant() (
     esac
     case "$mode" in
     vmess_tcp_tls | vmess_ws_tls | vmess_grpc_tls | vmess_httpupgrade_tls | vmess_xhttp_tls | vmess_mkcp_tls)
-        connections_vmess_read_required 'Ruta absoluta del certificado TLS: ' cert || return 1
-        connections_vmess_read_required 'Ruta absoluta de la clave privada TLS: ' key || return 1
+        connections_vmess_read_required 'ID del certificado TLS central (cert-...): ' certificate_id || return 1
+        cert="$certificate_id"
         ;;
     vmess_reality | vmess_grpc_reality | vmess_xhttp_reality)
         connections_vmess_read_required 'Target REALITY (host:puerto): ' target || return 1
@@ -212,7 +212,7 @@ connections_vmess_assistant() (
     esac
     case "$mode" in
     *_tls)
-        jq --arg certificate_file "$cert" --arg key_file "$key" '. + {certificate_file:$certificate_file,key_file:$key_file}' "$options" >"$options.next" && mv "$options.next" "$options"
+        jq --arg certificate_id "$certificate_id" '. + {certificate_id:$certificate_id}' "$options" >"$options.next" && mv "$options.next" "$options"
         ;;
     vmess_reality | vmess_grpc_reality | vmess_xhttp_reality)
         printf '%s' "$private" >"$tmp/reality.private"
@@ -223,19 +223,23 @@ connections_vmess_assistant() (
     esac
     chmod 600 "$options" "$users"
     vmess_model_build "$cid" "$mode" "$address" "$port" "$users" >"$model" || return 1
-    vmess_xray_26_10_31_build "$model" "$options" >"$config" || {
-        printf 'No se pudo construir configuración VMess.\n'
-        return 1
-    }
-    if [[ -x "$xray_bin" ]]; then
-        "$xray_bin" run -test -config "$config" || {
-            printf 'Xray rechazó el borrador temporal.\n'
+    if [[ "$mode" == *_tls ]]; then
+        printf '\nLa validación Xray TLS se realizará después de guardar, usando un lease temporal del resolutor central.\n'
+    else
+        vmess_xray_26_10_31_build "$model" "$options" >"$config" || {
+            printf 'No se pudo construir configuración VMess.\n'
             return 1
         }
-        printf '\nVALIDACIÓN CORRECTA: Xray aceptó la configuración temporal.\n'
-    else
-        printf 'No se encontró el binario de validación: %s\n' "$xray_bin"
-        return 1
+        if [[ -x "$xray_bin" ]]; then
+            "$xray_bin" run -test -config "$config" || {
+                printf 'Xray rechazó el borrador temporal.\n'
+                return 1
+            }
+            printf '\nVALIDACIÓN CORRECTA: Xray aceptó la configuración temporal.\n'
+        else
+            printf 'No se encontró el binario de validación: %s\n' "$xray_bin"
+            return 1
+        fi
     fi
     [[ -s "$tmp/reality.private" ]] && secret_present=true
     connections_vmess_print_review "$cid" "$mode" "$address" "$port" "$count" "$max_users" "$model" "$users" "$options" "$cert" "$key" "$target" "$names" "$ids" "$secret_present" || {
@@ -251,12 +255,32 @@ connections_vmess_assistant() (
         meta="$tmp/meta.json"
         python3 "$APP_ROOT/scripts/vmess_prepare_config.py" --model "$model" --options "$options" --output "$prepared" --secret-output "$secret" >"$meta" || return 1
         secret_type="$(jq -r '.secret_type // empty' "$meta")"
-        store_args=(store --connection-id "$cid" --input "$prepared" --base "${XRAY_MANAGER_VMESS_DIR:-/var/lib/xray-manager/vmess}" --catalog "$CONNECTION_DATA_FILE" --lock "$CONNECTION_LOCK" --secrets-dir "${XRAY_MANAGER_VMESS_SECRETS_DIR:-${XRAY_MANAGER_VMESS_DIR:-/var/lib/xray-manager/vmess}/secrets}" --master-key "${XRAY_MANAGER_MASTER_KEY_FILE:-/etc/xray-manager/keys/master.key}")
+        store_args=(store --connection-id "$cid" --input "$prepared" --base "${XRAY_MANAGER_VMESS_DIR:-/var/lib/xray-manager/vmess}" --catalog "$CONNECTION_DATA_FILE" --lock "$CONNECTION_LOCK" --secrets-dir "${XRAY_MANAGER_VMESS_SECRETS_DIR:-${XRAY_MANAGER_VMESS_DIR:-/var/lib/xray-manager/vmess}/secrets}" --master-key "${XRAY_MANAGER_MASTER_KEY_FILE:-/etc/xray-manager/keys/master.key}" --certificate-catalog "${XRAY_MANAGER_CERTIFICATES_CATALOG_FILE:-/var/lib/xray-manager/certificates/catalog.json}")
         if [[ -n "$secret_type" ]]; then store_args+=(--secret-input "$secret" --secret-type "$secret_type"); fi
         python3 "$APP_ROOT/scripts/vmess_config_store.py" "${store_args[@]}" || {
             printf 'No se pudo guardar.\n'
             return 1
         }
+        if [[ "$mode" == *_tls ]]; then
+            local resolve_result lease_id resolved_cert resolved_key
+            resolve_result="$tmp/resolver.json"
+            python3 "$APP_ROOT/scripts/certificate_resolver.py" --connections-catalog "$CONNECTION_DATA_FILE" --vmess-base "${XRAY_MANAGER_VMESS_DIR:-/var/lib/xray-manager/vmess}" --connection-lock "$CONNECTION_LOCK" --certificate-catalog "${XRAY_MANAGER_CERTIFICATES_CATALOG_FILE:-/var/lib/xray-manager/certificates/catalog.json}" prepare --connection-id "$cid" --certificate-id "$certificate_id" >"$resolve_result" || {
+                printf 'Borrador guardado, pero el resolutor TLS no pudo preparar un lease. No se modificó el runtime.\n'
+                return 1
+            }
+            lease_id="$(jq -er '.lease_id' "$resolve_result")" || return 1
+            resolved_cert="$(jq -er '.certificate_file' "$resolve_result")"
+            resolved_key="$(jq -er '.key_file' "$resolve_result")"
+            jq --arg certificate_file "$resolved_cert" --arg key_file "$resolved_key" 'del(.certificate_id) + {certificate_file:$certificate_file,key_file:$key_file}' "$options" >"$options.next" && mv "$options.next" "$options"
+            if vmess_xray_26_10_31_build "$model" "$options" >"$config" && [[ -x "$xray_bin" ]] && "$xray_bin" run -test -config "$config"; then
+                printf '\nVALIDACIÓN CORRECTA: Xray aceptó la configuración con el lease TLS central.\n'
+            else
+                python3 "$APP_ROOT/scripts/certificate_resolver.py" --runtime-root "${XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR:-/run/xray-manager-certificates}" cleanup --lease-id "$lease_id" >/dev/null 2>&1 || true
+                printf 'Borrador guardado, pero la validación Xray TLS falló. Runtime intacto.\n'
+                return 1
+            fi
+            python3 "$APP_ROOT/scripts/certificate_resolver.py" --runtime-root "${XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR:-/run/xray-manager-certificates}" cleanup --lease-id "$lease_id" >/dev/null || return 1
+        fi
         printf '\nConfiguración VMess guardada como borrador. Runtime intacto.\n'
         ;;
     *) printf '\nNo se guardó la configuración.\n'; ui_pause; return 3 ;;
@@ -265,7 +289,7 @@ connections_vmess_assistant() (
 )
 connections_vmess_assistant_restore() (
     [[ $# -eq 2 ]] || return 2
-    local cid="$1" mode="$2" tmp persisted secret model options config address port security path host service xmode seed cert target names ids xray_bin
+    local cid="$1" mode="$2" tmp persisted secret model options config address port security path host service xmode seed cert target names ids xray_bin lease_id certificate_id
     tmp="$(mktemp -d "${TMPDIR:-/tmp}/xray-vmess-restore.XXXXXX")" || return 1
     chmod 700 "$tmp"
     trap 'rm -rf "$tmp"' EXIT
@@ -287,8 +311,20 @@ connections_vmess_assistant_restore() (
     jq '.configuration.transport_options' "$persisted" >"$options"
     case "$security" in
     tls)
-        cert="$(jq -r '.configuration.security_options.certificate_file' "$persisted")"
-        jq --arg certificate_file "$cert" --arg key_file "$secret" '. + {certificate_file:$certificate_file,key_file:$key_file}' "$options" >"$options.next" && mv "$options.next" "$options"
+        certificate_id="$(jq -r '.configuration.security_options.certificate_id // empty' "$persisted")"
+        if [[ -n "$certificate_id" ]]; then
+            local resolve_result resolved_cert resolved_key
+            resolve_result="$tmp/resolver.json"
+            python3 "$APP_ROOT/scripts/certificate_resolver.py" --connections-catalog "$CONNECTION_DATA_FILE" --vmess-base "${XRAY_MANAGER_VMESS_DIR:-/var/lib/xray-manager/vmess}" --connection-lock "$CONNECTION_LOCK" --certificate-catalog "${XRAY_MANAGER_CERTIFICATES_CATALOG_FILE:-/var/lib/xray-manager/certificates/catalog.json}" prepare --connection-id "$cid" --certificate-id "$certificate_id" >"$resolve_result" || return 1
+            lease_id="$(jq -er '.lease_id' "$resolve_result")" || return 1
+            resolved_cert="$(jq -er '.certificate_file' "$resolve_result")"
+            resolved_key="$(jq -er '.key_file' "$resolve_result")"
+            jq --arg certificate_file "$resolved_cert" --arg key_file "$resolved_key" '. + {certificate_file:$certificate_file,key_file:$key_file}' "$options" >"$options.next" && mv "$options.next" "$options"
+        else
+            cert="$(jq -r '.configuration.security_options.certificate_file' "$persisted")"
+            python3 "$APP_ROOT/scripts/vmess_config_store.py" read --connection-id "$cid" --base /var/lib/xray-manager/vmess --catalog "$CONNECTION_DATA_FILE" --lock "$CONNECTION_LOCK" --secrets-dir /var/lib/xray-manager/vmess/secrets --master-key /etc/xray-manager/keys/master.key --secret-output "$secret" >/dev/null || return 1
+            jq --arg certificate_file "$cert" --arg key_file "$secret" '. + {certificate_file:$certificate_file,key_file:$key_file}' "$options" >"$options.next" && mv "$options.next" "$options"
+        fi
         ;;
     reality)
         jq -r '.configuration.security_options.target' "$persisted" >"$tmp/target"
@@ -299,7 +335,11 @@ connections_vmess_assistant_restore() (
     esac
     vmess_xray_26_10_31_build "$model" "$options" >"$config" || return 1
     xray_bin="${XRAY_VALIDATION_BINARY:-/var/cache/xray-manager/validation/v26.10.31/xray}"
-    "$xray_bin" run -test -config "$config" || return 1
+    "$xray_bin" run -test -config "$config" || {
+        if [[ -n "$lease_id" ]]; then python3 "$APP_ROOT/scripts/certificate_resolver.py" --runtime-root "${XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR:-/run/xray-manager-certificates}" cleanup --lease-id "$lease_id" >/dev/null 2>&1 || true; fi
+        return 1
+    }
+    if [[ -n "$lease_id" ]]; then python3 "$APP_ROOT/scripts/certificate_resolver.py" --runtime-root "${XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR:-/run/xray-manager-certificates}" cleanup --lease-id "$lease_id" >/dev/null || return 1; fi
     printf 'Configuración VMess recuperada y validada; catálogo y runtime no fueron modificados.\n'
     ui_pause
 )

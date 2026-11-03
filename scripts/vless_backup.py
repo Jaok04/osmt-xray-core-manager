@@ -464,7 +464,7 @@ def merge_current_vmess_entries(stage_base: Path, live_base: Path):
                     safe_regular(config_path, vmess_store.MAX_CONFIG)
                     config = json.loads(config_path.read_text(encoding='utf-8'))
                     try:
-                        vmess_store.validate(config, entry, secret_ref)
+                        vmess_store.validate(config, entry, secret_ref, allow_legacy_tls=True)
                     except Exception as exc:
                         raise BackupError('configuración VMess actual inválida') from exc
                     if secret_ref is not None:
