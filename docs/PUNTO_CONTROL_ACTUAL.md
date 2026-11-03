@@ -1,7 +1,7 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-03
-**Tarea activa:** backup/restore compartido — contenedor criptográfico neutral v1 implementado y probado; alcance incremental, manifiesto, ZIP/JSON y contrato técnico del snapshot writer v1 aprobados. API de cifrado incremental y generador ZIP determinista en streaming IMPLEMENTADOS/VERIFICADOS en aislamiento. Siguiente: snapshot writer/orquestador y adaptadores; sin crear backups reales ni tocar runtime/secretos. Límites: 10.000 entradas ZIP y 512 MiB. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
+**Tarea activa:** segunda revisión de aceptación del snapshot writer v1. Base del writer publicada; correcciones B-01/B-02/B-03 y matriz ampliada implementadas/verificadas localmente. Writer NO ACEPTADO FORMALMENTE. No crear backups reales ni tocar runtime/secretos. Límites del paquete: 10.000 entradas ZIP y 512 MiB. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
 **Estado vigente:** contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
@@ -509,8 +509,33 @@ Estado: writer y correcciones locales, no publicados ni aceptados formalmente. H
 **Estado:** IMPLEMENTADO / VERIFICADO EN AISLAMIENTO / PUBLICADO / NO ACEPTADO FORMALMENTE.
 
 - Rama: design/user-identity-association-v1.
-- Commit de publicación: 520cf6481962121eb1dd4ae7a9a77ccd6be7ff33.
+- Commit de publicación: ae8a7a089809e2e1913c14a714f45d956f8a5a1d.
 - Se publicaron writer, suite de pruebas, dependencias ZIP/API y documentación técnica. scripts/__pycache__/ fue excluido.
 - Verificación previa: 49/49 scripts PASS; AST 16/16; bash -n, ShellCheck, shfmt, git diff --check PASS; normativa 14/14 hashes coincidentes.
 - Siguiente paso: revisión de aceptación integral contra §10.11.8 / plan v1.14 y decisión expresa del propietario.
 - No crear backup real, no leer secretos/master.key, no implementar restore/verify independiente ni tocar runtime, servicios, firewall, puertos, certificados desplegados o VPS de pruebas.
+
+
+## Punto de control — correcciones de segunda revisión del snapshot writer (2026-11-03)
+
+**Estado:** BASE IMPLEMENTADA / VERIFICADA EN AISLAMIENTO / PUBLICADA; CORRECCIONES B-01/B-02/B-03 IMPLEMENTADAS Y VERIFICADAS LOCALMENTE / NO PUBLICADAS / NO ACEPTADO FORMALMENTE.
+
+- **B-01:** allowlist estricta de identidades/asociaciones; sólo VLESS/VMess se preservan saneados. WireGuard y otros protocolos fuera del alcance v1 se excluyen íntegramente y se trazan como unsupported_protocol, causando PARTIAL. Campos inesperados/sensibles bloquean.
+- **B-02:** cleanup fail-closed; owner_fd siempre se cierra. Fallos de lock de coordinación, unlink, rmdir o fsync no se silencian y producen FAILED. Si el enlace final ya existe, el paquete se conserva y el error distingue publicación de limpieza.
+- **B-03:** sólo manifest_version: 1; included ∪ unsupported == requested y conjuntos disjuntos. Estructura exacta validada para resources/members/exclusions/dependencies/source_snapshot.
+- **Crash matrix:** prompt antes de staging, cifrado, antes del enlace y después del enlace exclusivo antes de fsync de directorio.
+- **Verificación ejecutada:** 49/49 tests/*.sh PASS; AST 16/16; bash -n 74 archivos; ShellCheck focal PASS; shfmt focal PASS; git diff --check PASS.
+- Normativa: 14/14 hashes SHA-256 coinciden con la copia maestra.
+- Rama: design/user-identity-association-v1. HEAD remoto y local de partida: ae8a7a089809e2e1913c14a714f45d956f8a5a1d. Correcciones y documentación actuales permanecen locales, sin commit/push/sync.
+- Próximo paso: revisar el diff completo y la matriz de aceptación; presentar conclusión y esperar aceptación expresa. No crear backup real, no leer master.key/secretos, no restore/verify independiente ni runtime apply. Xray-Normativa permanece inmutable.
+
+
+## Punto de control — publicación B-01/B-02/B-03 y bloqueo A-16 (2026-11-03)
+
+**Estado:** B-01/B-02/B-03 autorizados para publicación; Snapshot Writer v1 **NO ACEPTADO** por bloqueo A-16.
+
+- A-16 reproducido en VPS con entorno sintético: tras el hard link de publicación, `package.tmp` y `final_path` comparten inode (`st_nlink == 2`); `_recover_orphan_staging()` exige `st_nlink == 1`, lanza `SnapshotBlocked` y conserva staging y destino.
+- Los tests actuales simulan el crash post-link pero eliminan staging manualmente; no prueban `_recover_orphan_staging()` sobre el residuo real. Los fallos de cleanup tampoco demuestran recuperabilidad.
+- La publicación de B-01/B-02/B-03 no corrige ni exonera A-16. No marcar writer como aceptado.
+- Siguiente paso: después de publicar/sincronizar, solicitar autorización específica para corregir recuperación post-link sin relajar la política contra hardlinks arbitrarios; añadir pruebas de recuperación tras crash post-link, unlink fallido y coordinación fallida. Ejecutar matriz completa y nueva auditoría.
+- Restricciones: no backup real, no `master.key`/secretos, no restore/verify independiente, no runtime apply, no cambios a `Xray-Normativa/`.

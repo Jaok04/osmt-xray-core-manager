@@ -1,7 +1,7 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> Frente activo 2026-11-03: contenedor cifrado compartido v1 implementado/verificado; alcance, manifiesto, ZIP/JSON y contrato técnico del snapshot writer v1 aprobados; API de cifrado incremental y generador ZIP determinista en streaming IMPLEMENTADOS/VERIFICADOS en aislamiento; siguiente tarea: implementar el snapshot writer/orquestador y adaptadores, con pruebas sintéticas. No crear backups reales ni tocar runtime/secretos. El máximo ZIP es 10.000 entradas y 512 MiB. La integración VMess/VLESS TLS centralizado continúa parcial. Store/preparador VMess ya admiten certificate_id; compatibilidad TLS histórica preservada; REALITY separado. Adaptación inicial del asistente en curso; generador VMess y flujo integral aún pendientes. Suite 47/47 PASS tras incorporar `tests/shared_backup_format.sh`. La VPS de desarrollo no tiene unidad/cuenta/grupo Xray: resolutor CLI falla cerrado y no hay prueba de lectura por Xray real. Consultar docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md. No tocar Xray-Normativa ni VPS Vps de Pruebas.
-> HEAD publicado y sincronizado tras la aprobación del límite de entradas ZIP: ea26dacc69a1cc513946bbacda23c25f3dd664f0 en design/user-identity-association-v1. `main` permanece intacta. `scripts/__pycache__/` permanece sin seguimiento y excluido.
+> Frente activo 2026-11-03: segunda revisión de aceptación del snapshot writer v1. La base del writer se publicó en ae8a7a089809e2e1913c14a714f45d956f8a5a1d; las correcciones B-01/B-02/B-03 y las pruebas ampliadas están implementadas y verificadas localmente en la VPS, pero aún no publicadas. Writer NO ACEPTADO FORMALMENTE. Regresión 49/49 PASS; AST 16/16; bash -n 74 archivos; ShellCheck, shfmt y diff-check PASS. No crear backups reales ni leer secretos/master.key; no restore/verify independiente ni runtime apply. Xray-Normativa inmutable; no tocar VPS Vps de Pruebas.
+> HEAD remoto/local de partida verificado: ae8a7a089809e2e1913c14a714f45d956f8a5a1d en design/user-identity-association-v1. Las correcciones actuales son cambios locales sin commit/push; main permanece intacta. scripts/__pycache__/ preexistente se conserva sin seguimiento.
 
 
 > Registro histórico: la auditoría inicial de almacenes/certificados y el cierre del contrato se documentaron antes del primer bloque. Consultar los dos informes de implementación para el estado vigente.
@@ -671,6 +671,28 @@ Estado: IMPLEMENTADO LOCALMENTE / VERIFICADO EN AISLAMIENTO / NO PUBLICADO / NO 
 
 ## Continuidad — publicación del snapshot writer v1 (2026-11-03)
 
-Se publicó el código local del snapshot writer v1, las pruebas, dependencias de ZIP streaming/API y documentos técnicos en la rama autorizada design/user-identity-association-v1. Commit local: 520cf6481962121eb1dd4ae7a9a77ccd6be7ff33 (verificar HEAD remoto antes de continuar).
+Se publicó el código local del snapshot writer v1, las pruebas, dependencias de ZIP streaming/API y documentos técnicos en la rama autorizada design/user-identity-association-v1. Commit publicado: ae8a7a089809e2e1913c14a714f45d956f8a5a1d, verificado como HEAD remoto el 2026-11-03.
 
 La regresión local previa a publicar pasó: 49/49 scripts; AST 16/16; bash -n, ShellCheck, shfmt y git diff --check. La normativa mantiene 14/14 hashes coincidentes con la copia maestra. scripts/__pycache__/ quedó fuera del commit. El writer sigue NO ACEPTADO FORMALMENTE; publicar no equivale a aceptar. Próximo paso: revisión de aceptación contra §10.11.8 y plan v1.14. No ejecutar backup real, restore/verify independiente, ni tocar secretos/master.key/runtime.
+
+
+## Continuidad — correcciones de la segunda revisión del snapshot writer (2026-11-03)
+
+El propietario autorizó corregir B-01/B-02/B-03 manteniendo el writer NO ACEPTADO. Se implementó allowlist de identidades/asociaciones y exclusión íntegra de WireGuard/protocolos no soportados; limpieza fail-closed con cierre garantizado de owner_fd y reporte FAILED cuando falla cleanup; validación estricta de versión v1, conjuntos de categorías y estructura de objetos del manifiesto.
+
+La suite focal añade pruebas sintéticas para claves privadas/PSK, campos desconocidos, versión 2, categorías extra/omitidas/duplicadas, objetos internos incompletos, fallos de coordinación/unlink/rmdir/fsync y crash tras el enlace final antes del fsync del directorio.
+
+Verificación ejecutada en esta sesión: 49/49 scripts PASS; AST 16/16; bash -n 74 archivos; ShellCheck focal, shfmt focal y git diff --check PASS. SHA-256 de la documentación normativa: 14/14 coincidentes con /root/Xray_Manager_Documentacion_Final_2026-10-31.
+
+**Punto exacto de reanudación:** revisar diff y documentación técnica actualizados; ejecutar auditoría de aceptación final. No aceptar el writer ni publicar estas correcciones hasta decisión expresa del propietario. Base publicada: ae8a7a089809e2e1913c14a714f45d956f8a5a1d; cambios actuales locales no committeados. No backup real, master.key, secretos, restore/verify independiente ni runtime.
+
+
+## Continuidad — publicación de B-01/B-02/B-03 con bloqueo A-16 (2026-11-03)
+
+El propietario autorizó publicar las correcciones B-01/B-02/B-03 en la rama autorizada, sin aceptar Snapshot Writer v1. La publicación debe incluir este estado de auditoría: **A-16 BLOQUEANTE / WRITER NO ACEPTADO**.
+
+A-16: `_recover_orphan_staging()` rechaza un staging post-publicación legítimo porque `os.link(package.tmp, final_path)` deja temporal y destino apuntando al mismo inode (`st_nlink == 2`), mientras el recuperador exige `st_nlink == 1`. La reproducción sintética produjo `SnapshotBlocked` y conservó ambos nombres. Los tests de crash/cleanup no ejecutan recuperación sobre ese estado.
+
+Siguiente paso tras publicar/sincronizar: diseñar y solicitar autorización para una corrección fail-closed que reconozca sólo el hardlink post-link demostrablemente correspondiente al paquete final; mantener rechazo de hardlinks arbitrarios, staging activo, symlinks, tipos especiales y metadatos inseguros. Añadir tests de recuperación tras crash post-link, unlink fallido y fallo de coordinación, comprobando integridad/preservación del paquete final y conservación de staging ambiguos. Repetir auditoría antes de proponer aceptación.
+
+No ejecutar backup real, no leer `master.key`/secretos, no restore/verify independiente, no runtime apply ni modificar `Xray-Normativa/`.

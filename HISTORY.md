@@ -654,8 +654,29 @@ Estado: cambios locales IMPLEMENTADOS/VERIFICADOS, writer NO PUBLICADO y NO ACEP
 
 ## 2026-11-03 — Publicación del snapshot writer v1
 
-Se publicó en design/user-identity-association-v1 el snapshot writer compartido v1, su suite de pruebas, los cambios de soporte del ZIP streaming/API y la documentación técnica asociada. Commit: 520cf6481962121eb1dd4ae7a9a77ccd6be7ff33.
+Se publicó en design/user-identity-association-v1 el snapshot writer compartido v1, su suite de pruebas, los cambios de soporte del ZIP streaming/API y la documentación técnica asociada. Commit: ae8a7a089809e2e1913c14a714f45d956f8a5a1d.
 
 Verificación previa a publicación: regresión completa 49/49 scripts PASS; AST Python 16/16; bash -n, ShellCheck, shfmt y git diff --check PASS; 14/14 archivos normativos comparados por SHA-256 con la copia maestra. scripts/__pycache__/ fue excluido. Xray-Normativa/ no se modificó.
 
 Estado separado: IMPLEMENTADO / VERIFICADO EN AISLAMIENTO / PUBLICADO; NO ACEPTADO FORMALMENTE. No se creó backup real ni se accedió a secretos/master.key; no restore/verify independiente ni runtime apply.
+
+
+## 2026-11-03 — Correcciones de segunda revisión del snapshot writer v1
+
+Por autorización expresa del propietario se implementaron las correcciones de aceptación B-01, B-02 y B-03, manteniendo el writer NO ACEPTADO FORMALMENTE.
+
+- B-01: se aplicó allowlist estricta a identidades/asociaciones. Sólo se conservan metadatos saneados de asociaciones VLESS/VMess; WireGuard y protocolos fuera del alcance v1 se excluyen íntegramente y se registran como unsupported_protocol/PARTIAL. Campos desconocidos o sensibles (private key, preshared key, PSK y variantes) bloquean fail-closed.
+- B-02: se eliminó el silenciamiento de errores de cleanup. El descriptor de owner.lock se cierra incluso ante fallos; errores de coordinación, unlink, rmdir o fsync producen FAILED. Cuando el hard-link final ya se publicó, se conserva el paquete y el mensaje distingue publicación de limpieza fallida.
+- B-03: el manifiesto sólo admite versión 1; categorías incluidas/no soportadas deben ser disjuntas y resolver exactamente la solicitud. Se valida la estructura de todos los objetos internos antes de acceder a campos.
+- Se amplió la matriz de terminaciones abruptas con el prompt (sin staging), cifrado, antes de publicación y después del enlace exclusivo pero antes del fsync del directorio.
+
+Verificación ejecutada en VPS: suite completa tests/*.sh 49/49 PASS; AST Python 16/16; bash -n 74 archivos; ShellCheck focal PASS; shfmt focal PASS; git diff --check PASS. Normativa 14/14 SHA-256 idénticos a la copia maestra.
+
+La base del writer permanece publicada en ae8a7a089809e2e1913c14a714f45d956f8a5a1d. Las correcciones y actualizaciones documentales de esta revisión están sólo en /opt/xray-manager: sin commit, push ni sincronización. No se creó backup real ni se leyó master.key/secretos reales; no restore/verify independiente ni runtime apply. Xray-Normativa intacta.
+
+
+## 2026-11-03 — Auditoría de aceptación A-16 y autorización de publicación B-01/B-02/B-03
+
+La auditoría de aceptación identificó A-16 como bloqueo: `_recover_orphan_staging()` exige `st_nlink == 1`, pero el intervalo legítimo posterior a `os.link(package.tmp, final_path)` y anterior al unlink de `package.tmp` deja ambos nombres sobre el mismo inode (`st_nlink == 2`). La recuperación rechaza ese staging residual y lo conserva, aunque el paquete final permanezca intacto. La prueba sintética en VPS reprodujo `SnapshotBlocked`, staging y destino presentes, mismo inode y `nlink == 2`. Los tests de crash/cleanup actuales no invocan el recuperador sobre ese estado.
+
+El propietario autorizó publicar B-01/B-02/B-03 manteniendo el writer NO ACEPTADO y documentando A-16 como pendiente bloqueante. Esta publicación no corrige A-16 ni constituye aceptación. La corrección propuesta deberá reconocer exclusivamente el hardlink legítimo demostrable hacia el artefacto final, sin relajar globalmente el rechazo de hardlinks arbitrarios, y añadir pruebas reales de recuperación.

@@ -322,6 +322,30 @@ broken_catalog = {
 }
 blocked(writer._validate_identity_catalog, broken_catalog, {"vmess-1": {"id": "vmess-1", "protocol_id": "vmess_ws"}})
 
+# WireGuard no se exporta en snapshot v1: el peer completo queda fuera y se
+# declara como exclusión PARTIAL. Campos de claves/PSK desconocidos bloquean.
+wg_assoc = {
+    "id": "123e4567-e89b-12d3-a456-426614174002",
+    "identity_id": identity_id, "connection_id": "wg-1", "protocol": "wireguard",
+    "credential": {"type": "public_key", "value": "SYNTHETIC-WG-PUBLIC-KEY"},
+    "alias": "WG synthetic peer", "created_at": "2026-11-03T00:00:00Z",
+}
+wg_clean, wg_exclusions = writer._validate_identity_catalog(
+    {"schema_version": 2, "identities": catalog["identities"], "associations": [wg_assoc]},
+    {"wg-1": {"id": "wg-1", "protocol_id": "wireguard"}},
+)
+assert wg_clean["associations"] == []
+assert wg_exclusions == [(wg_assoc["id"], "wireguard_peer_keys", "unsupported_protocol", "wg-1", identity_id)]
+for sensitive_field in ("private_key", "preshared_key", "psk", "peer_private_key"):
+    unsafe_wg = {**wg_assoc, sensitive_field: "SYNTHETIC-DO-NOT-EXPORT"}
+    blocked(
+        writer._validate_identity_catalog,
+        {"schema_version": 2, "identities": catalog["identities"], "associations": [unsafe_wg]},
+        {"wg-1": {"id": "wg-1", "protocol_id": "wireguard"}},
+    )
+unsafe_identity = {"schema_version": 2, "identities": [{**catalog["identities"][0], "notes": "unknown"}], "associations": []}
+blocked(writer._validate_identity_catalog, unsafe_identity, {})
+
 # VMess conserva email/level protegidos y excluye UUID; VLESS REALITY elimina
 # referencias de secreto y declara la exclusión correspondiente.
 vmess_clean, vmess_exclusions, _ = writer._sanitize_protocol_config(
@@ -532,6 +556,41 @@ with tempfile.TemporaryDirectory(prefix="xrm-snapshot-e2e-") as raw:
         invalid = copy.deepcopy(manifest)
         invalid["manifest_version"] = True
         invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["manifest_version"] = 2
+        invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["categories"]["included"].append("profiles")
+        invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["categories"]["unsupported"].append("profiles")
+        invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["categories"]["included"] = []
+        invalid["categories"]["unsupported"] = []
+        invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["request"]["requested_categories"] = ["profiles"]
+        invalid["categories"] = {"included": ["profiles"], "unsupported": []}
+        invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["categories"]["included"].append(invalid["categories"]["included"][0])
+        invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["resources"][0].pop("resource_type")
+        invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["members"][0].pop("sha256")
+        invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["exclusions"].append({"exclusion_id": "incomplete"})
+        invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["dependencies"].append({"dependency_id": "incomplete"})
+        invalid_manifests.append(invalid)
+        invalid = copy.deepcopy(manifest)
+        invalid["source_snapshot"]["catalogs"][0].pop("sha256")
+        invalid_manifests.append(invalid)
         for invalid_manifest in invalid_manifests:
             blocked(writer._validate_manifest_contract, invalid_manifest)
         external_doc = json.loads(archive.read("external-dependencies.json"))
@@ -597,8 +656,88 @@ with tempfile.TemporaryDirectory(prefix="xrm-snapshot-e2e-") as raw:
         writer.crypto.verify_package_stream(stream, "Synthetic-Only-Password-123!")
     assert not list(dirs["output"].glob(".xrm-snapshot-*"))
 
-    # Terminaciones abruptas (sin finally) en tres fases. No publican destino;
-    # cualquier residuo queda cifrado o incompleto dentro de staging root-only.
+    # Cualquier fallo de cleanup debe cambiar el resultado a FAILED. Si el
+    # paquete ya se publicó, se conserva y se informa expresamente.
+    import fcntl
+
+    def assert_cleanup_failed(destination, patcher, expect_residue):
+        try:
+            with patcher:
+                writer.create_snapshot(destination, "Synthetic-Only-Password-123!", paths=paths)
+        except writer.SnapshotError as exc:
+            assert "fue publicado" in str(exc) and "limpieza del staging" in str(exc), str(exc)
+        else:
+            raise AssertionError("cleanup fallido devolvió éxito CREATED_*")
+        assert destination.exists()
+        with destination.open("rb") as stream:
+            writer.crypto.verify_package_stream(stream, "Synthetic-Only-Password-123!")
+        leftovers = list(dirs["output"].glob(".xrm-snapshot-*"))
+        assert len(leftovers) == (1 if expect_residue else 0), leftovers
+        if leftovers:
+            owner_path = leftovers[0] / "owner.lock"
+            if owner_path.exists():
+                fd = os.open(owner_path, os.O_RDWR)
+                try:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    fcntl.flock(fd, fcntl.LOCK_UN)
+                finally:
+                    os.close(fd)
+            writer.shutil.rmtree(leftovers[0])
+
+    # 1) No se pudo adquirir el lock de coordinación para limpiar.
+    real_coord_lock = writer._acquire_coordination_lock
+    coord_calls = []
+    def fail_cleanup_coordination(parent, timeout):
+        coord_calls.append(parent)
+        if len(coord_calls) == 2:
+            raise OSError("synthetic cleanup coordination failure")
+        return real_coord_lock(parent, timeout)
+    assert_cleanup_failed(
+        dirs["output"] / "cleanup-coordination.xrm",
+        mock.patch.object(writer, "_acquire_coordination_lock", side_effect=fail_cleanup_coordination),
+        True,
+    )
+
+    # 2) unlink de package.tmp falla: owner_fd debe cerrarse aunque quede staging.
+    real_unlink = Path.unlink
+    def fail_package_unlink(path, *args, **kwargs):
+        if path.name == "package.tmp":
+            raise OSError("synthetic cleanup unlink failure")
+        return real_unlink(path, *args, **kwargs)
+    assert_cleanup_failed(
+        dirs["output"] / "cleanup-unlink.xrm",
+        mock.patch.object(Path, "unlink", fail_package_unlink),
+        True,
+    )
+
+    # 3) rmdir falla después de retirar package.tmp y owner.lock.
+    real_rmdir = Path.rmdir
+    def fail_staging_rmdir(path, *args, **kwargs):
+        if path.name.startswith(".xrm-snapshot-"):
+            raise OSError("synthetic cleanup rmdir failure")
+        return real_rmdir(path, *args, **kwargs)
+    assert_cleanup_failed(
+        dirs["output"] / "cleanup-rmdir.xrm",
+        mock.patch.object(Path, "rmdir", fail_staging_rmdir),
+        True,
+    )
+
+    # 4) fsync final del directorio falla después de retirar staging.
+    real_fsync = writer.os.fsync
+    cleanup_fsync_calls = []
+    def fail_cleanup_fsync(fd):
+        cleanup_fsync_calls.append(fd)
+        if len(cleanup_fsync_calls) == 3:
+            raise OSError("synthetic cleanup directory fsync failure")
+        return real_fsync(fd)
+    assert_cleanup_failed(
+        dirs["output"] / "cleanup-fsync.xrm",
+        mock.patch.object(writer.os, "fsync", side_effect=fail_cleanup_fsync),
+        False,
+    )
+
+    # Terminaciones abruptas en cuatro puntos: prompt sin staging, cifrado,
+    # antes del enlace final y después del enlace pero antes del fsync del padre.
     crash_program = r'''import os, sys
 from pathlib import Path
 sys.path.insert(0, sys.argv[3])
@@ -625,30 +764,57 @@ elif phase == "encrypt-crash":
     writer.crypto.encrypt_payload_stream = stop_during_encryption
 elif phase == "publish-crash":
     writer.os.link = lambda *args, **kwargs: os._exit(83)
+elif phase == "post-link-crash":
+    original_fsync = writer.os.fsync
+    fsync_count = 0
+    def crash_after_exclusive_link(fd):
+        global fsync_count
+        fsync_count += 1
+        if fsync_count == 2:
+            os._exit(84)
+        return original_fsync(fd)
+    writer.os.fsync = crash_after_exclusive_link
 writer.create_snapshot(destination, None if phase == "prompt-crash" else "Synthetic-Only-Password-123!", paths=paths)
 '''
     import subprocess
-    for phase, expected_code in (("encrypt-crash", 82), ("publish-crash", 83)):
+    child = subprocess.run(
+        [sys.executable, "-c", crash_program, str(base), "prompt-crash", str(root / "scripts")],
+        capture_output=True, text=True,
+        env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
+    )
+    assert child.returncode == 81, ("prompt-crash", child.returncode, child.stderr)
+    assert not (dirs["output"] / "prompt-crash.xrm").exists()
+    assert not list(dirs["output"].glob(".xrm-snapshot-*"))
+
+    for phase, expected_code in (
+        ("encrypt-crash", 82), ("publish-crash", 83), ("post-link-crash", 84)
+    ):
         child = subprocess.run(
             [sys.executable, "-c", crash_program, str(base), phase, str(root / "scripts")],
             capture_output=True, text=True,
             env={**os.environ, "PYTHONDONTWRITEBYTECODE": "1"},
         )
         assert child.returncode == expected_code, (phase, child.returncode, child.stderr)
-        assert not (dirs["output"] / f"{phase}.xrm").exists()
+        final_path = dirs["output"] / f"{phase}.xrm"
+        if phase == "post-link-crash":
+            assert final_path.exists()
+            with final_path.open("rb") as stream:
+                writer.crypto.verify_package_stream(stream, "Synthetic-Only-Password-123!")
+        else:
+            assert not final_path.exists()
         leftovers = list(dirs["output"].glob(".xrm-snapshot-*"))
         assert len(leftovers) == 1
         stage_stat = leftovers[0].lstat()
         assert stage_stat.st_uid == 0 and stage_stat.st_gid == 0 and (stage_stat.st_mode & 0o777) == 0o700
         partial = leftovers[0] / "package.tmp"
-        if phase == "prompt-crash":
-            assert not partial.exists()
+        partial_stat = partial.lstat()
+        assert partial_stat.st_uid == 0 and partial_stat.st_gid == 0
+        assert (partial_stat.st_mode & 0o777) == 0o600
+        assert partial.read_bytes().startswith(writer.crypto.MAGIC)
+        if phase == "post-link-crash":
+            assert partial_stat.st_nlink == 2  # hard-link publicado + staging pendiente
         else:
-            partial_stat = partial.lstat()
-            assert partial_stat.st_uid == 0 and partial_stat.st_gid == 0
-            assert (partial_stat.st_mode & 0o777) == 0o600 and partial_stat.st_nlink == 1
-            if phase in ("encrypt-crash", "publish-crash"):
-                assert partial.read_bytes().startswith(writer.crypto.MAGIC)
+            assert partial_stat.st_nlink == 1
         writer.shutil.rmtree(leftovers[0])
 
 # E2E de adaptadores VLESS/VMess e identidades con datos sintéticos. Comprueba

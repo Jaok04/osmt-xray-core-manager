@@ -1,8 +1,8 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.14
+**Versión:** 1.15
 **Fecha:** 2026-11-03
-**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTRATO DE MANIFIESTO V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / FORMATO LÓGICO DE PAQUETE V1 APROBADO / CONTRATO TÉCNICO DEL SNAPSHOT WRITER V1 APROBADO / API DE CIFRADO INCREMENTAL V1 Y ZIP STREAMING DETERMINISTA IMPLEMENTADOS Y VERIFICADOS EN AISLAMIENTO / SNAPSHOT WRITER IMPLEMENTADO Y VERIFICADO LOCALMENTE (PENDIENTE ACEPTACIÓN FORMAL)
+**Estado:** ALCANCE INCREMENTAL V1 APROBADO / CONTRATO DE MANIFIESTO V1 APROBADO / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / FORMATO LÓGICO DE PAQUETE V1 APROBADO / CONTRATO TÉCNICO DEL SNAPSHOT WRITER V1 APROBADO / API DE CIFRADO INCREMENTAL V1, ZIP STREAMING Y SNAPSHOT WRITER BASE IMPLEMENTADOS, VERIFICADOS EN AISLAMIENTO Y PUBLICADOS / CORRECCIONES DE SEGUNDA REVISIÓN B-01/B-02/B-03 IMPLEMENTADAS Y VERIFICADAS LOCALMENTE (NO PUBLICADAS; WRITER NO ACEPTADO FORMALMENTE)
 **Ámbito:** contenedor criptográfico neutral y primera versión incremental de snapshot para VLESS/VMess/metadatos de identidades/certificados TLS centrales. Las categorías normativas no cubiertas se declaran explícitamente como no soportadas; extensible a protocolos futuros mediante adaptadores.
 
 ## 1. Objetivo
@@ -541,3 +541,43 @@ Se amplió `_validate_manifest_contract()` para validar estructura raíz, versi�
 Pruebas añadidas: hardlink/symlink/FIFO/modo inseguro del lock de coordinación, preservación de metadatos y contenido del inode compartido, contención/timeout del lock, y rechazo de UUID/timestamps/categorías/versión inválidos del manifiesto. Suite focal `tests/shared_snapshot_writer.sh` PASS; regresión completa `tests/*.sh` PASS (49 scripts); AST Python 16/16; `bash -n`, ShellCheck, shfmt y `git diff --check` PASS. RSS aislado medido en la última prueba focal: 75.120 KiB.
 
 **Estado:** correcciones IMPLEMENTADAS LOCALMENTE y VERIFICADAS en pruebas sintéticas. El writer sigue NO PUBLICADO y NO ACEPTADO FORMALMENTE hasta una nueva revisión del propietario. No se creó backup real ni se accedió a datos secretos; no se ejecutó restore/verify independiente ni runtime apply. `Xray-Normativa/` permanece inmutable.
+
+
+## 10.15. Correcciones de segunda revisión de aceptación del snapshot writer — 2026-11-03
+
+Tras la segunda revisión de aceptación, el propietario autorizó corregir B-01, B-02 y B-03 sin aceptar formalmente el writer.
+
+### 10.15.1. Allowlist de identidades y asociaciones (B-01)
+
+El catálogo de identidades v2 se sanea mediante allowlist explícita. La identidad sólo admite id y created_at. La asociación admite únicamente los campos definidos por el modelo v2 y sus metadatos funcionales conocidos; los campos desconocidos o no previstos bloquean fail-closed antes de serializar.
+
+Snapshot v1 sólo preserva metadatos saneados de asociaciones VLESS/VMess. Las asociaciones WireGuard se excluyen íntegramente porque la Etapa 3 asigna claves y parámetros técnicos propios a cada peer y clasifica las claves privadas como sensibles. La exclusión se registra como wireguard_peer_keys con razón unsupported_protocol; la asociación no aparece en el miembro protegido. Los protocolos fuera del alcance v1 reciben tratamiento equivalente como asociaciones no soportadas. Estas exclusiones provocan PARTIAL, nunca COMPLETE. Se amplió además la lista de nombres sensibles para variantes de private key, preshared key y PSK.
+
+### 10.15.2. Limpieza fail-closed y resultado operativo (B-02)
+
+La limpieza de staging ya no descarta silenciosamente errores. _cleanup_snapshot_staging() consume/cierra siempre el descriptor owner_fd, incluso cuando no se adquiere coordinación o falla unlink/rmdir/fsync. El caller convierte cualquier error de cleanup en SnapshotError/FAILED; no puede devolver CREATED_COMPLETE ni CREATED_PARTIAL si no completó la limpieza solicitada.
+
+Si el enlace exclusivo final ya se creó, el paquete publicado se conserva. El mensaje indica expresamente que el paquete fue publicado pero falló la limpieza; el staging residual permanece privado para recuperación segura. Si el fallo ocurre antes de publicar, se informa que no se publicó paquete. Las pruebas inyectan fallos de lock de coordinación, unlink de package.tmp, rmdir del staging y fsync final del directorio, y verifican que el descriptor de propietario queda liberado.
+
+### 10.15.3. Contrato estricto del manifiesto (B-03)
+
+manifest_version debe ser exactamente el entero 1; se rechaza cualquier versión futura o tipo distinto, incluido booleano. Los conjuntos included y unsupported deben ser disjuntos y su unión debe coincidir exactamente con requested_categories; se rechazan categorías extra, omitidas o duplicadas. Además, included sólo puede contener categorías de SUPPORTED_CATEGORIES y unsupported sólo categorías fuera de ese catálogo.
+
+Antes de indexar o dereferenciar campos se valida la forma de cada objeto resource, member, exclusion, dependency y registro source_snapshot. Los manifiestos incompletos o malformados se convierten en SnapshotBlocked controlado y no deben filtrar KeyError/TypeError como resultado accidental.
+
+### 10.15.4. Interrupciones y pruebas de aceptación ampliadas
+
+La matriz de terminaciones abruptas ejecuta: interrupción durante el prompt (antes de crear staging, por lo que no debe quedar residuo), durante el cifrado, antes del enlace final y después del enlace exclusivo pero antes del fsync del directorio. En el último caso se verifica que el destino publicado es un paquete cifrado válido y que el staging conserva temporalmente el hard-link privado.
+
+Verificación ejecutada en VPS: tests/*.sh 49/49 PASS; AST Python 16/16; bash -n 74 archivos; ShellCheck focal PASS; shfmt focal PASS; git diff --check PASS. La prueba focal cubre también los casos WireGuard/PSK, versión de manifiesto 2, categorías adicionales/omitidas/duplicadas, objetos internos incompletos y fallos de cleanup.
+
+**Estado:** correcciones IMPLEMENTADAS y VERIFICADAS localmente en pruebas sintéticas y regresión global. La base del writer permanece publicada en ae8a7a089809e2e1913c14a714f45d956f8a5a1d; las correcciones de esta sección no están publicadas. El writer sigue NO ACEPTADO FORMALMENTE hasta revisión y aprobación expresa del propietario. No se creó backup real, no se leyó master.key ni secretos reales, no se ejecutó restore/verify independiente ni runtime apply. Xray-Normativa permanece inmutable.
+
+
+## 10.16. Hallazgo bloqueante de aceptación A-16 — recuperación post-publicación (2026-11-03)
+
+La auditoría de aceptación detectó que `_recover_orphan_staging()` exige `st_nlink == 1` para `package.tmp`. La publicación atómica usa `os.link(package.tmp, final_path)` y existe una ventana legítima entre la creación del enlace final y el unlink del nombre temporal en la que ambos nombres apuntan al mismo inode y `st_nlink == 2`. Si el proceso termina en esa ventana, el recuperador rechaza el staging con `SnapshotBlocked`, aunque el paquete final permanezca intacto. La reproducción sintética confirmó el mismo inode, `nlink == 2`, rechazo del recuperador y conservación de ambos nombres.
+
+Los tests actuales de terminación post-link verifican el paquete final y el staging residual, pero eliminan el staging manualmente; no llaman al recuperador sobre ese estado. Los tests de fallos de cleanup tampoco demuestran recuperación posterior. Por tanto, A-16 **FAIL/BLOQUEANTE** y el writer permanece **NO ACEPTADO**.
+
+La corrección futura deberá reconocer sólo el caso legítimo cuando pueda demostrarse de forma segura que el segundo enlace es exactamente el artefacto final correspondiente, validando inode, propietario, permisos, tipo regular, ubicación y estructura. Sólo podrá retirar el nombre temporal; nunca eliminar ni modificar el paquete final. Se mantendrá el rechazo de hardlinks arbitrarios, staging activo, symlinks, archivos especiales y metadatos inseguros. Se requieren pruebas de recuperación post-link, tras unlink fallido y tras fallo de coordinación. Esta sección documenta el bloqueo; no autoriza por sí sola su implementación.

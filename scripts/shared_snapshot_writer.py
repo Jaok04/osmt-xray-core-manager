@@ -43,7 +43,9 @@ SUPPORTED_CATEGORIES = {
 DEFAULT_CATEGORIES = sorted(SUPPORTED_CATEGORIES)
 SENSITIVE_KEYS = {
     "uuid", "password", "private_key", "privatekey", "secret", "secret_value",
-    "token", "api_key", "access_token", "refresh_token",
+    "token", "api_key", "access_token", "refresh_token", "preshared_key",
+    "pre_shared_key", "presharedkey", "psk", "peer_private_key",
+    "wireguard_private_key", "wg_private_key", "peer_key",
 }
 
 
@@ -339,7 +341,8 @@ def _sanitize_protocol_config(
 
 def _validate_identity_catalog(
     value: Any, connections_by_id: dict[str, dict[str, Any]]
-) -> tuple[dict[str, Any], list[tuple[str, str, str, str]]]:
+) -> tuple[dict[str, Any], list[tuple[str, str, str, str, str]]]:
+    """Exporta sólo metadatos permitidos; peers WireGuard/protocolos ajenos a v1 se excluyen."""
     if value == []:
         return {"schema_version": 2, "identities": [], "associations": []}, []
     if not isinstance(value, dict) or set(value) != {"schema_version", "identities", "associations"} or value.get("schema_version") != 2:
@@ -348,34 +351,51 @@ def _validate_identity_catalog(
     associations = value.get("associations")
     if not isinstance(identities, list) or not isinstance(associations, list):
         raise SnapshotBlocked("identities/associations deben ser arreglos")
+
+    identity_fields = {"id", "created_at"}
+    association_fields = {
+        "id", "identity_id", "connection_id", "alias", "protocol", "credential",
+        "created_at", "duration", "expires_at", "suspended_at", "remaining_seconds",
+        "traffic_limit_bytes", "simultaneous_connection_limit", "state",
+        "provisioning_status", "runtime",
+    }
     identity_ids: set[str] = set()
+    clean_identities: list[dict[str, Any]] = []
     for identity in identities:
-        if not isinstance(identity, dict) or not isinstance(identity.get("id"), str) or not UUID_RE.fullmatch(identity["id"]):
+        if not isinstance(identity, dict) or set(identity) != identity_fields:
+            raise SnapshotBlocked("identidad contiene campos no permitidos o estructura incompleta")
+        if not isinstance(identity.get("id"), str) or not UUID_RE.fullmatch(identity["id"]):
             raise SnapshotBlocked("ID de identidad inválido")
-        if identity["id"] in identity_ids or not isinstance(identity.get("created_at"), str):
+        if identity["id"] in identity_ids or not isinstance(identity.get("created_at"), str) or not identity["created_at"]:
             raise SnapshotBlocked("identidad duplicada o metadatos inválidos")
         identity_ids.add(identity["id"])
+        clean_identities.append({"id": identity["id"], "created_at": identity["created_at"]})
+
     association_ids: set[str] = set()
     seen_identity_connection: set[tuple[str, str]] = set()
     sanitized_associations: list[dict[str, Any]] = []
-    exclusions: list[tuple[str, str, str, str]] = []
+    exclusions: list[tuple[str, str, str, str, str]] = []
     for original in associations:
-        if not isinstance(original, dict):
-            raise SnapshotBlocked("asociación no es objeto")
-        assoc = copy.deepcopy(original)
-        aid = assoc.get("id")
-        iid = assoc.get("identity_id")
-        cid = assoc.get("connection_id")
-        protocol = assoc.get("protocol")
-        credential = assoc.get("credential")
+        if not isinstance(original, dict) or not set(original).issubset(association_fields):
+            raise SnapshotBlocked("asociación contiene campos no permitidos; se bloquea para evitar fuga de credenciales")
+        required = {"id", "identity_id", "connection_id", "alias", "protocol", "credential", "created_at"}
+        if not required.issubset(original):
+            raise SnapshotBlocked("asociación incompleta")
+        aid, iid, cid = original["id"], original["identity_id"], original["connection_id"]
+        protocol, credential = original["protocol"], original["credential"]
         if not isinstance(aid, str) or not UUID_RE.fullmatch(aid) or aid in association_ids:
             raise SnapshotBlocked("ID de asociación inválido o duplicado")
-        if iid not in identity_ids or not isinstance(cid, str) or cid not in connections_by_id:
+        if not isinstance(iid, str) or iid not in identity_ids or not isinstance(cid, str) or cid not in connections_by_id:
             raise SnapshotBlocked("asociación referencia identidad/conexión inexistente")
+        if not isinstance(original["alias"], str) or not original["alias"] or len(original["alias"]) > 64:
+            raise SnapshotBlocked("alias de asociación inválido")
+        if not isinstance(original["created_at"], str) or not original["created_at"]:
+            raise SnapshotBlocked("fecha de creación de asociación inválida")
         if not isinstance(protocol, str) or not isinstance(credential, dict) or set(credential) != {"type", "value"}:
             raise SnapshotBlocked("credencial/asociación inválida")
-        if not isinstance(credential.get("type"), str) or not isinstance(credential.get("value"), str) or not credential["value"]:
+        if not isinstance(credential.get("type"), str) or not credential["type"] or not isinstance(credential.get("value"), str) or not credential["value"]:
             raise SnapshotBlocked("valor de credencial de asociación inválido")
+
         protocol_id = connections_by_id[cid].get("protocol_id")
         if isinstance(protocol_id, str) and protocol_id.startswith("vless_"):
             expected_protocol = "vless"
@@ -385,25 +405,71 @@ def _validate_identity_catalog(
             expected_protocol = protocol_id
         if protocol != expected_protocol:
             raise SnapshotBlocked("protocolo de asociación no coincide con la conexión")
+
+        if "duration" in original:
+            duration = original["duration"]
+            if not isinstance(duration, dict) or duration.get("kind") not in ("unlimited", "custom"):
+                raise SnapshotBlocked("duración de asociación inválida")
+            if set(duration) - {"kind", "value", "unit"}:
+                raise SnapshotBlocked("duración contiene campos no permitidos")
+            if duration["kind"] == "custom" and (
+                type(duration.get("value")) is not int or duration["value"] <= 0
+                or duration.get("unit") not in ("days", "hours", "minutes")
+                or set(duration) != {"kind", "value", "unit"}
+            ):
+                raise SnapshotBlocked("duración personalizada inválida")
+            if duration["kind"] == "unlimited" and set(duration) != {"kind"}:
+                raise SnapshotBlocked("duración ilimitada inválida")
+        for field in ("expires_at", "suspended_at"):
+            if field in original and original[field] is not None and not isinstance(original[field], str):
+                raise SnapshotBlocked(f"{field} inválido")
+        if "remaining_seconds" in original and original["remaining_seconds"] is not None and (
+            type(original["remaining_seconds"]) is not int or original["remaining_seconds"] < 0
+        ):
+            raise SnapshotBlocked("remaining_seconds inválido")
+        for field in ("traffic_limit_bytes", "simultaneous_connection_limit"):
+            if field in original and original[field] is not None and (
+                type(original[field]) is not int or original[field] <= 0
+            ):
+                raise SnapshotBlocked(f"{field} inválido")
+        if "state" in original and original["state"] not in ("active", "suspended", "expired"):
+            raise SnapshotBlocked("estado de asociación inválido")
+        if "provisioning_status" in original and original["provisioning_status"] not in ("draft", "pending", "applied", "failed"):
+            raise SnapshotBlocked("provisioning_status inválido")
+        if "runtime" in original:
+            runtime = original["runtime"]
+            if (
+                not isinstance(runtime, dict) or set(runtime) != {"status", "last_applied_at"}
+                or runtime.get("status") not in ("not_applied", "applied", "unknown", "pending", "failed")
+                or (runtime.get("last_applied_at") is not None and not isinstance(runtime["last_applied_at"], str))
+            ):
+                raise SnapshotBlocked("metadatos runtime de asociación inválidos")
+
+        association_ids.add(aid)
         key = (iid, cid)
         if protocol != "wireguard" and key in seen_identity_connection:
             raise SnapshotBlocked("asociación identidad/conexión duplicada")
         seen_identity_connection.add(key)
-        association_ids.add(aid)
-        credential_type = credential["type"]
-        assoc.pop("credential", None)
-        assoc["credential_type"] = credential_type
-        sanitized_associations.append(assoc)
-        if protocol == "vless" and credential_type == "uuid":
-            secret_class = "vless_uuid"
-        elif isinstance(protocol, str) and protocol.startswith("vmess_") and credential_type == "uuid":
-            secret_class = "vmess_uuid"
-        else:
-            secret_class = "association_credential"
-        exclusions.append((aid, secret_class, "excluded_by_default", cid, iid))
+
+        supported = protocol == "vless" or (
+            protocol.startswith("vmess_") and protocol_id in vmess_config_store.MODES
+        )
+        if protocol == "wireguard" or not supported:
+            secret_class = "wireguard_peer_keys" if protocol == "wireguard" else "unsupported_association"
+            exclusions.append((aid, secret_class, "unsupported_protocol", cid, iid))
+            continue
+
+        if credential["type"] != "uuid":
+            raise SnapshotBlocked("tipo de credencial no admitido para asociación VLESS/VMess")
+        clean_assoc = {key: copy.deepcopy(item) for key, item in original.items() if key != "credential"}
+        clean_assoc["credential_type"] = credential["type"]
+        _check_sensitive_keys(clean_assoc, context="asociación")
+        sanitized_associations.append(clean_assoc)
+        exclusions.append((aid, "vless_uuid" if protocol == "vless" else "vmess_uuid", "excluded_by_default", cid, iid))
+
     sanitized = {
         "schema_version": 2,
-        "identities": copy.deepcopy(identities),
+        "identities": clean_identities,
         "associations": sanitized_associations,
     }
     _check_sensitive_keys(sanitized, context="catálogo de identidades")
@@ -881,7 +947,10 @@ def _build_snapshot_members(
                 identity_id=identity_id, connection_id=connection_id,
             )
             identity_exclusion_ids.append(exclusion_id)
-            reasons.add("secret_excluded")
+            if reason == "unsupported_protocol":
+                reasons.add("unsupported_association_protocol")
+            else:
+                reasons.add("secret_excluded")
             connection_entry = connections_by_id[connection_id]
             protocol = _catalog_entry_protocol(connection_entry)
             connection_resource_id = f"{protocol}:connection:{connection_id}" if protocol else f"connection:{connection_id}"
@@ -1073,8 +1142,8 @@ def _validate_manifest_contract(manifest: dict[str, Any]) -> None:
         raise SnapshotBlocked("estructura raíz del manifiesto inválida")
     if manifest["manifest_format"] != "xray-manager-shared-snapshot":
         raise SnapshotBlocked("formato de manifiesto desconocido")
-    if type(manifest["manifest_version"]) is not int or manifest["manifest_version"] < 1:
-        raise SnapshotBlocked("versión de manifiesto inválida")
+    if type(manifest["manifest_version"]) is not int or manifest["manifest_version"] != 1:
+        raise SnapshotBlocked("sólo se admite manifest_version 1")
     backup_id = manifest["backup_id"]
     try:
         parsed_backup_id = uuid.UUID(backup_id)
@@ -1083,9 +1152,7 @@ def _validate_manifest_contract(manifest: dict[str, Any]) -> None:
     if str(parsed_backup_id) != backup_id or parsed_backup_id.version != 4 or parsed_backup_id.variant != uuid.RFC_4122:
         raise SnapshotBlocked("backup_id debe ser UUID v4 canónico")
     created_at = manifest["created_at"]
-    if not isinstance(created_at, str) or not re.fullmatch(
-        r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z", created_at
-    ):
+    if not isinstance(created_at, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z", created_at):
         raise SnapshotBlocked("created_at debe ser timestamp UTC RFC 3339 terminado en Z")
     try:
         parsed_created_at = datetime.fromisoformat(created_at[:-1] + "+00:00")
@@ -1093,6 +1160,7 @@ def _validate_manifest_contract(manifest: dict[str, Any]) -> None:
         raise SnapshotBlocked("created_at contiene una fecha/hora inválida") from exc
     if parsed_created_at.utcoffset() != timezone.utc.utcoffset(parsed_created_at):
         raise SnapshotBlocked("created_at no está expresado en UTC")
+
     source = manifest["source"]
     if not isinstance(source, dict) or set(source) != {"manager_version", "xray_version"} or any(
         value is not None and not isinstance(value, str) for value in source.values()
@@ -1110,6 +1178,7 @@ def _validate_manifest_contract(manifest: dict[str, Any]) -> None:
         or len(set(requested_categories)) != len(requested_categories)
     ):
         raise SnapshotBlocked("requested_categories debe ser una lista no vacía y sin duplicados")
+
     categories = manifest["categories"]
     if not isinstance(categories, dict) or set(categories) != {"included", "unsupported"}:
         raise SnapshotBlocked("categories del manifiesto inválido")
@@ -1121,16 +1190,67 @@ def _validate_manifest_contract(manifest: dict[str, Any]) -> None:
             or len(set(values)) != len(values)
         ):
             raise SnapshotBlocked(f"categories.{field} inválido o duplicado")
+
     for field in ("resources", "members", "exclusions", "dependencies"):
         if not isinstance(manifest[field], list):
             raise SnapshotBlocked(f"{field} debe ser una lista")
+
+    resource_fields = {"resource_id", "resource_type", "protocol", "completeness", "member_ids", "dependency_ids", "exclusion_ids"}
+    for item in manifest["resources"]:
+        if (
+            not isinstance(item, dict) or set(item) != resource_fields
+            or not isinstance(item.get("resource_id"), str) or not item["resource_id"]
+            or not isinstance(item.get("resource_type"), str) or not item["resource_type"]
+            or (item.get("protocol") is not None and not isinstance(item["protocol"], str))
+            or item.get("completeness") not in ("COMPLETE", "PARTIAL")
+        ):
+            raise SnapshotBlocked("objeto resource incompleto o inválido")
+        for field in ("member_ids", "dependency_ids", "exclusion_ids"):
+            values = item[field]
+            if not isinstance(values, list) or any(not isinstance(v, str) or not v for v in values) or len(values) != len(set(values)):
+                raise SnapshotBlocked(f"{field} de recurso inválidos o duplicados")
+
+    member_fields = {"member_id", "logical_path", "category", "media_type", "size_bytes", "sha256"}
+    for item in manifest["members"]:
+        if (
+            not isinstance(item, dict) or set(item) != member_fields
+            or any(not isinstance(item.get(field), str) or not item[field] for field in (
+                "member_id", "logical_path", "category", "media_type", "sha256"
+            ))
+            or type(item.get("size_bytes")) is not int or item["size_bytes"] < 0
+        ):
+            raise SnapshotBlocked("objeto member incompleto o inválido")
+
+    exclusion_required = {"exclusion_id", "resource_id", "secret_class", "reason"}
+    exclusion_allowed = exclusion_required | {"association_id", "identity_id", "connection_id"}
+    for item in manifest["exclusions"]:
+        if (
+            not isinstance(item, dict) or not exclusion_required.issubset(item)
+            or not set(item).issubset(exclusion_allowed)
+            or any(not isinstance(item.get(field), str) or not item[field] for field in exclusion_required)
+        ):
+            raise SnapshotBlocked("objeto exclusion incompleto o inválido")
+
+    dependency_fields = {"dependency_id", "dependency_type", "resource_id", "fingerprint_sha256", "required", "validation", "dependent_connections"}
+    for item in manifest["dependencies"]:
+        if (
+            not isinstance(item, dict) or set(item) != dependency_fields
+            or any(not isinstance(item.get(field), str) or not item[field] for field in (
+                "dependency_id", "dependency_type", "resource_id", "validation"
+            ))
+            or (item.get("fingerprint_sha256") is not None and not isinstance(item["fingerprint_sha256"], str))
+            or item.get("required") is not True
+            or not isinstance(item.get("dependent_connections"), list)
+            or any(not isinstance(cid, str) or not cid for cid in item["dependent_connections"])
+            or len(item["dependent_connections"]) != len(set(item["dependent_connections"]))
+        ):
+            raise SnapshotBlocked("objeto dependency incompleto o inválido")
+
     source_snapshot = manifest["source_snapshot"]
     if not isinstance(source_snapshot, dict) or set(source_snapshot) != {"catalogs"} or not isinstance(source_snapshot["catalogs"], list):
         raise SnapshotBlocked("source_snapshot inválido")
     completeness = manifest["completeness"]
-    if not isinstance(completeness, dict) or set(completeness) != {
-        "status", "reasons", "complete_resources", "partial_resources"
-    }:
+    if not isinstance(completeness, dict) or set(completeness) != {"status", "reasons", "complete_resources", "partial_resources"}:
         raise SnapshotBlocked("completeness del manifiesto inválido")
     if completeness["status"] not in ("COMPLETE", "PARTIAL"):
         raise SnapshotBlocked("estado global de completitud inválido")
@@ -1144,10 +1264,8 @@ def _validate_manifest_contract(manifest: dict[str, Any]) -> None:
         if type(completeness[field]) is not int or completeness[field] < 0:
             raise SnapshotBlocked("contadores de completitud inválidos")
 
-    resources = manifest["resources"]
-    members = manifest["members"]
-    exclusions = manifest["exclusions"]
-    dependencies = manifest["dependencies"]
+    resources, members = manifest["resources"], manifest["members"]
+    exclusions, dependencies = manifest["exclusions"], manifest["dependencies"]
     resource_map = {item["resource_id"]: item for item in resources}
     member_map = {item["member_id"]: item for item in members}
     exclusion_map = {item["exclusion_id"]: item for item in exclusions}
@@ -1156,108 +1274,93 @@ def _validate_manifest_contract(manifest: dict[str, Any]) -> None:
         raise SnapshotBlocked("IDs duplicados en recursos/miembros del manifiesto")
     if len(exclusion_map) != len(exclusions) or len(dependency_map) != len(dependencies):
         raise SnapshotBlocked("IDs duplicados en exclusiones/dependencias del manifiesto")
+
     logical_paths: set[str] = set()
     for member in members:
-        digest = member.get("sha256")
-        if not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest):
-            raise SnapshotBlocked("SHA-256 de miembro inválido")
-        if member.get("member_id") != "sha256:" + digest:
-            raise SnapshotBlocked("member_id no deriva de SHA-256")
-        if type(member.get("size_bytes")) is not int or member["size_bytes"] < 0:
-            raise SnapshotBlocked("size_bytes de miembro inválido")
-        if any(not isinstance(member.get(field), str) or not member[field] for field in ("category", "media_type")):
-            raise SnapshotBlocked("categoría/media_type de miembro inválidos")
-        package_zip.validate_logical_path(member["logical_path"])
+        digest = member["sha256"]
+        if not re.fullmatch(r"[0-9a-f]{64}", digest) or member["member_id"] != "sha256:" + digest:
+            raise SnapshotBlocked("SHA-256/member_id de miembro inválido")
+        if not re.fullmatch(r"[A-Za-z0-9_.:-]+", member["category"]):
+            raise SnapshotBlocked("categoría de miembro inválida")
+        if member["media_type"] not in ("application/json", "application/x-pem-file"):
+            raise SnapshotBlocked("media_type de miembro no admitido")
+        try:
+            package_zip.validate_logical_path(member["logical_path"])
+        except package_zip.SharedBackupZipError as exc:
+            raise SnapshotBlocked("logical_path de miembro inválido") from exc
         if member["logical_path"] in logical_paths:
             raise SnapshotBlocked("logical_path duplicado en manifiesto")
         logical_paths.add(member["logical_path"])
     if "external-dependencies.json" not in logical_paths:
         raise SnapshotBlocked("falta external-dependencies.json dentro del paquete protegido")
+
     for resource in resources:
-        if resource["completeness"] not in ("COMPLETE", "PARTIAL"):
-            raise SnapshotBlocked("completitud de recurso inválida")
-        for field in ("member_ids", "dependency_ids", "exclusion_ids"):
-            values = resource.get(field)
-            if not isinstance(values, list) or len(values) != len(set(values)) or any(not isinstance(item, str) for item in values):
-                raise SnapshotBlocked(f"{field} de recurso inválidos o duplicados")
+        for field, lookup in (("member_ids", member_map), ("dependency_ids", dependency_map), ("exclusion_ids", exclusion_map)):
+            if any(value not in lookup for value in resource[field]):
+                raise SnapshotBlocked(f"{field} referencia objeto inexistente")
         if resource["completeness"] == "COMPLETE" and (
-            resource["exclusion_ids"]
-            or any(dependency_map[item]["validation"] != "included" for item in resource["dependency_ids"] if item in dependency_map)
+            resource["exclusion_ids"] or any(dependency_map[item]["validation"] != "included" for item in resource["dependency_ids"])
         ):
             raise SnapshotBlocked("recurso con exclusiones/dependencias pendientes no puede ser COMPLETE")
-        if any(member_id not in member_map for member_id in resource["member_ids"]):
-            raise SnapshotBlocked("recurso referencia miembro inexistente")
-        if any(exclusion_id not in exclusion_map for exclusion_id in resource["exclusion_ids"]):
-            raise SnapshotBlocked("recurso referencia exclusión inexistente")
-        if any(dependency_id not in dependency_map for dependency_id in resource["dependency_ids"]):
-            raise SnapshotBlocked("recurso referencia dependencia inexistente")
+
     for exclusion in exclusions:
         if exclusion["resource_id"] not in resource_map:
             raise SnapshotBlocked("exclusión referencia recurso inexistente")
-        if "association_id" in exclusion:
-            if not UUID_RE.fullmatch(exclusion["association_id"]):
-                raise SnapshotBlocked("exclusión referencia asociación inválida")
-            if not UUID_RE.fullmatch(exclusion.get("identity_id", "")):
-                raise SnapshotBlocked("exclusión referencia identidad inválida")
-            if not ID_RE.fullmatch(exclusion.get("connection_id", "")):
-                raise SnapshotBlocked("exclusión referencia conexión inválida")
+        for field, pattern in (("association_id", UUID_RE), ("identity_id", UUID_RE), ("connection_id", ID_RE)):
+            if field in exclusion and (not isinstance(exclusion[field], str) or not pattern.fullmatch(exclusion[field])):
+                raise SnapshotBlocked(f"exclusión referencia {field} inválido")
+
     for dependency in dependencies:
         if dependency["resource_id"] not in resource_map:
             raise SnapshotBlocked("dependencia referencia recurso inexistente")
-        if not isinstance(dependency.get("dependency_id"), str) or not dependency["dependency_id"]:
-            raise SnapshotBlocked("ID de dependencia inválido")
-        if dependency.get("dependency_type") not in (
-            "connection_reference", "tls_certificate", "tls_reference", "tls_legacy_reference"
-        ):
+        if dependency["dependency_type"] not in ("connection_reference", "tls_certificate", "tls_reference", "tls_legacy_reference"):
             raise SnapshotBlocked("tipo de dependencia no admitido")
-        if dependency.get("required") is not True or dependency.get("validation") not in (
-            "included", "pending_restore_preflight", "not_included", "missing_source_resource"
-        ):
+        if dependency["validation"] not in ("included", "pending_restore_preflight", "not_included", "missing_source_resource"):
             raise SnapshotBlocked("estado de validación de dependencia inválido")
-        fingerprint = dependency.get("fingerprint_sha256")
-        if fingerprint is not None and (
-            not isinstance(fingerprint, str) or not re.fullmatch(r"[0-9a-f]{64}", fingerprint)
-        ):
+        fingerprint = dependency["fingerprint_sha256"]
+        if fingerprint is not None and not re.fullmatch(r"[0-9a-f]{64}", fingerprint):
             raise SnapshotBlocked("fingerprint de dependencia inválido")
-        dependent_connections = dependency.get("dependent_connections")
-        if (
-            not isinstance(dependent_connections, list)
-            or any(not isinstance(cid, str) or not ID_RE.fullmatch(cid) for cid in dependent_connections)
-            or len(set(dependent_connections)) != len(dependent_connections)
-        ):
-            raise SnapshotBlocked("conexiones dependientes inválidas")
+        if any(not ID_RE.fullmatch(cid) for cid in dependency["dependent_connections"]):
+            raise SnapshotBlocked("conexión dependiente inválida")
         if dependency["dependency_type"] == "tls_reference" and fingerprint is None:
             raise SnapshotBlocked("dependencia TLS reference sin fingerprint")
-    requested = set(manifest["request"]["requested_categories"])
-    included = set(manifest["categories"]["included"])
-    unsupported = set(manifest["categories"]["unsupported"])
-    if included & unsupported or requested - included - unsupported:
-        raise SnapshotBlocked("categorías solicitadas no resueltas de forma explícita")
+
+    requested, included, unsupported = set(requested_categories), set(categories["included"]), set(categories["unsupported"])
+    if included & unsupported or included | unsupported != requested:
+        raise SnapshotBlocked("included/unsupported deben resolver exactamente las categorías solicitadas")
+    if included - SUPPORTED_CATEGORIES or unsupported & SUPPORTED_CATEGORIES:
+        raise SnapshotBlocked("categorías incluidas/no soportadas no coinciden con el catálogo de soporte v1")
     if completeness["status"] == "COMPLETE" and (unsupported or exclusions or any(
-        dependency.get("validation") != "included" for dependency in dependencies
+        dependency["validation"] != "included" for dependency in dependencies
     )):
         raise SnapshotBlocked("COMPLETE no admite categorías omitidas, exclusiones ni dependencias pendientes")
     complete_count = sum(item["completeness"] == "COMPLETE" for item in resources)
     partial_count = len(resources) - complete_count
-    completeness = manifest["completeness"]
     if completeness["complete_resources"] != complete_count or completeness["partial_resources"] != partial_count:
         raise SnapshotBlocked("contadores de completitud incoherentes")
     expected = "PARTIAL" if partial_count or unsupported else "COMPLETE"
     if completeness["status"] != expected:
         raise SnapshotBlocked("estado global de completitud incoherente")
+
+    catalog_fields = {"catalog_id", "schema_version", "revision", "sha256", "present"}
     catalog_ids: set[str] = set()
-    for catalog in manifest["source_snapshot"]["catalogs"]:
-        if set(catalog) != {"catalog_id", "schema_version", "revision", "sha256", "present"}:
-            raise SnapshotBlocked("metadatos incompletos de source_snapshot")
+    for catalog in source_snapshot["catalogs"]:
+        if (
+            not isinstance(catalog, dict) or set(catalog) != catalog_fields
+            or not isinstance(catalog.get("catalog_id"), str) or not catalog["catalog_id"]
+            or not isinstance(catalog.get("present"), bool)
+            or not isinstance(catalog.get("sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", catalog["sha256"])
+        ):
+            raise SnapshotBlocked("metadatos incompletos o inválidos de source_snapshot")
         if catalog["catalog_id"] in catalog_ids:
             raise SnapshotBlocked("catálogo duplicado en source_snapshot")
         catalog_ids.add(catalog["catalog_id"])
-        if not isinstance(catalog["present"], bool) or not re.fullmatch(r"[0-9a-f]{64}", catalog["sha256"]):
-            raise SnapshotBlocked("hash/presencia de catálogo inválidos en source_snapshot")
         for field in ("schema_version", "revision"):
             value = catalog[field]
             if value is not None and (type(value) is not int or value < 0):
                 raise SnapshotBlocked("schema/revision inválida en source_snapshot")
+
     _check_sensitive_keys(manifest, context="manifiesto")
     def reject_absolute(value: Any) -> None:
         if isinstance(value, str) and value.startswith("/"):
@@ -1407,14 +1510,26 @@ def _prepare_snapshot_staging(parent: Path, timeout: float) -> tuple[Path, int]:
         owner_fd = None
         return result
     finally:
+        cleanup_errors: list[OSError] = []
         if owner_fd is not None:
-            os.close(owner_fd)
+            try:
+                os.close(owner_fd)
+            except OSError as exc:
+                cleanup_errors.append(exc)
         if staging_dir is not None:
             try:
                 shutil.rmtree(staging_dir)
-            except OSError:
-                pass
-        os.close(coordination_fd)
+            except OSError as exc:
+                cleanup_errors.append(exc)
+        try:
+            os.close(coordination_fd)
+        except OSError as exc:
+            cleanup_errors.append(exc)
+        if cleanup_errors:
+            raise SnapshotError(
+                "falló la limpieza/cierre de staging durante la preparación; "
+                "el temporal se conserva para recuperación segura"
+            ) from cleanup_errors[0]
 
 
 
@@ -1422,13 +1537,16 @@ def _cleanup_snapshot_staging(
     parent: Path, staging_dir: Path, staging_file: Path | None,
     owner_fd: int, timeout: float,
 ) -> None:
-    coordination_fd = _acquire_coordination_lock(parent, timeout)
+    """Limpia staging bajo coordinación y siempre consume/cierra owner_fd."""
+    coordination_fd: int | None = None
+    owner_closed = False
     try:
+        coordination_fd = _acquire_coordination_lock(parent, timeout)
         if staging_file is not None:
             staging_file.unlink(missing_ok=True)
         os.close(owner_fd)
-        owner_path = staging_dir / "owner.lock"
-        owner_path.unlink(missing_ok=True)
+        owner_closed = True
+        (staging_dir / "owner.lock").unlink(missing_ok=True)
         staging_dir.rmdir()
         parent_fd = os.open(
             parent,
@@ -1439,7 +1557,19 @@ def _cleanup_snapshot_staging(
         finally:
             os.close(parent_fd)
     finally:
-        os.close(coordination_fd)
+        close_errors: list[OSError] = []
+        if not owner_closed:
+            try:
+                os.close(owner_fd)
+            except OSError as exc:
+                close_errors.append(exc)
+        if coordination_fd is not None:
+            try:
+                os.close(coordination_fd)
+            except OSError as exc:
+                close_errors.append(exc)
+        if close_errors:
+            raise close_errors[0]
 
 
 def create_snapshot(
@@ -1574,22 +1704,18 @@ def create_snapshot(
         raise SnapshotError("fallo operativo durante creación del snapshot; no se publicó paquete") from exc
     finally:
         if staging_dir is not None and owner_fd is not None:
+            cleanup_fd = owner_fd
+            owner_fd = None
             try:
                 _cleanup_snapshot_staging(
-                    destination.parent, staging_dir, staging_file, owner_fd, lock_timeout
+                    destination.parent, staging_dir, staging_file, cleanup_fd, lock_timeout
                 )
-                owner_fd = None
-                staging_dir = None
-                staging_file = None
-            except OSError:
-                pass
-            except SnapshotError:
-                pass
-        elif staging_dir is not None:
-            try:
-                shutil.rmtree(staging_dir)
-            except OSError:
-                pass
+            except Exception as cleanup_exc:
+                publication_state = "el paquete fue publicado" if published else "no se publicó paquete"
+                raise SnapshotError(
+                    f"{publication_state}, pero falló la limpieza del staging; "
+                    "el residuo se conserva privado para recuperación segura"
+                ) from cleanup_exc
 
 
 def main() -> int:

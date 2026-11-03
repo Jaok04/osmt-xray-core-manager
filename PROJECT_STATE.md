@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1, API incremental y generador ZIP streaming IMPLEMENTADOS/VERIFICADOS en aislamiento; snapshot writer IMPLEMENTADO, VERIFICADO EN AISLAMIENTO y PUBLICADO en la rama autorizada; NO ACEPTADO FORMALMENTE; manifiesto v1, formato ZIP/JSON y contrato técnico APROBADOS. Writer NO PUBLICADO; backup real, restore y verify independiente pendientes. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
+**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1, API incremental, ZIP streaming y snapshot writer base IMPLEMENTADOS/VERIFICADOS en aislamiento; writer base PUBLICADO en la rama autorizada. Correcciones de aceptación B-01/B-02/B-03 y ampliación de pruebas IMPLEMENTADAS/VERIFICADAS localmente en la VPS (49/49 scripts); todavía NO PUBLICADAS y el writer continúa NO ACEPTADO FORMALMENTE. Manifiesto v1, formato ZIP/JSON y contrato técnico APROBADOS. Backup real, restore y verify independiente pendientes. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -573,6 +573,30 @@ Se corrigió localmente el lock de coordinación para rechazar archivos inseguro
 
 ## Publicación del snapshot writer v1 — 2026-11-03
 
-El snapshot writer, su suite de pruebas, las ampliaciones requeridas del ZIP streaming/API y los documentos técnicos de continuidad se publicaron en design/user-identity-association-v1, commit 520cf6481962121eb1dd4ae7a9a77ccd6be7ff33 (pendiente de verificación remota final en esta actualización).
+El snapshot writer, su suite de pruebas, las ampliaciones requeridas del ZIP streaming/API y los documentos técnicos de continuidad se publicaron en design/user-identity-association-v1, commit ae8a7a089809e2e1913c14a714f45d956f8a5a1d, verificado como HEAD remoto el 2026-11-03.
 
 La publicación no equivale a aceptación formal. El writer permanece NO ACEPTADO hasta completar la revisión de aceptación y obtener aprobación expresa. Regresión local: 49/49 scripts PASS; AST 16/16; bash -n, ShellCheck, shfmt y git diff --check PASS. Xray-Normativa/ permanece intacta; scripts/__pycache__/ se excluyó del commit.
+
+
+## Actualización — segunda revisión de aceptación del snapshot writer (2026-11-03)
+
+Por autorización expresa del propietario se corrigieron los hallazgos B-01, B-02 y B-03:
+
+- **B-01:** allowlist estricta para los campos de identidades/asociaciones. Snapshot v1 sólo conserva asociaciones VLESS/VMess saneadas; WireGuard y otros protocolos fuera del alcance se excluyen íntegramente y quedan identificadas como causa de PARTIAL; campos inesperados o sensibles (incluidas variantes de claves privadas y pre-shared keys) bloquean la operación.
+- **B-02:** la limpieza no silencia fallos. Se cierra el descriptor del propietario incluso cuando falla la limpieza y se informa FAILED, distinguiendo si el paquete ya alcanzó el punto de publicación.
+- **B-03:** el manifiesto sólo admite versión 1; included y unsupported deben resolver exactamente las categorías solicitadas. Se valida la estructura de resources, members, exclusions, dependencies y source_snapshot antes de acceder a sus campos.
+- **Interrupciones:** la matriz ejecuta el crash del prompt (sin staging), cifrado, antes del enlace final y después del enlace exclusivo pero antes del fsync del directorio.
+- **Pruebas de cleanup:** fallos inyectados de lock de coordinación, unlink, rmdir y fsync. Se comprueba cierre de owner_fd, preservación del paquete publicado y retorno FAILED.
+
+**Verificación ejecutada en VPS:** 49/49 tests/*.sh PASS; AST Python 16/16; bash -n en 74 archivos; ShellCheck focal PASS; shfmt focal PASS; git diff --check PASS. La comparación normativa sigue 14/14 hashes SHA-256 idénticos a la copia maestra.
+
+**Estado separado:** base del writer PUBLICADA en commit ae8a7a089809e2e1913c14a714f45d956f8a5a1d; correcciones B-01/B-02/B-03 y pruebas actuales IMPLEMENTADAS/VERIFICADAS localmente en /opt/xray-manager, pero SIN COMMIT, SIN PUSH y SIN SINCRONIZACIÓN. El writer sigue **NO ACEPTADO FORMALMENTE** hasta revisión y aprobación expresa del propietario. No se creó backup real, no se leyó master.key ni secretos reales, no se ejecutó restore/verify independiente y no se tocó runtime. Xray-Normativa permanece intacta.
+
+
+## Estado de publicación y bloqueo A-16 — 2026-11-03
+
+- Autorización expresa recibida para publicar B-01/B-02/B-03 en `design/user-identity-association-v1`, manteniendo Snapshot Writer v1 como **NO ACEPTADO**.
+- A-16 bloquea la aceptación: tras `os.link(package.tmp, final_path)`, el inode legítimo tiene `st_nlink == 2`; `_recover_orphan_staging()` exige 1 y rechaza la recuperación del staging post-publicación. La prueba sintética reprodujo el rechazo conservando staging y paquete final.
+- Los tests actuales no ejercitan el recuperador sobre el estado post-link ni demuestran recuperación tras fallos de cleanup equivalentes.
+- La corrección A-16 no está autorizada/implementada en este punto; requiere preservar el rechazo de hardlinks arbitrarios y validar de forma segura la correspondencia exacta entre staging y artefacto final.
+- No crear backup real, no leer `master.key`/secretos, no restore/verify independiente, no runtime apply. `Xray-Normativa/` permanece inmutable.
