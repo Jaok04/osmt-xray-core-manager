@@ -1,7 +1,7 @@
 # Protocolo de continuidad — Xray Core Manager
 
 > Frente activo 2026-11-03: modelo TLS centralizado aprobado. Catálogo/crypto y resolutor parcial implementados; informes: docs/IMPLEMENTACION_ALMACEN_CERTIFICADOS_CENTRALIZADOS.md y docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md. Suite 42/42 PASS. Stores/asistentes/generadores VMess/VLESS aún no admiten certificate_id; integración pendiente. No hay unidad/cuenta Xray en VPS de desarrollo: resolver CLI falla cerrada. No tocar Xray-Normativa ni VPS Vps de Pruebas.
-> HEAD publicado y sincronizado: 6d35b0dde502db66d9826bc4fb67e8500b6b4561 en design/user-identity-association-v1. main permanece intacta.
+> HEAD publicado y sincronizado: d9a0542 (Implementación parcial del resolutor TLS centralizado) en design/user-identity-association-v1. main permanece intacta. El working tree conserva únicamente scripts/__pycache__/ preexistente sin seguimiento; no se incorporó.
 
 
 > Registro histórico: la auditoría inicial de almacenes/certificados y el cierre del contrato se documentaron antes del primer bloque. Consultar los dos informes de implementación para el estado vigente.
