@@ -564,3 +564,10 @@ El propietario aprobó el contrato técnico del snapshot writer compartido v1 y 
 La interfaz incremental deberá conservar magic, cabecera/AAD, perfil scrypt, salt/nonce, AES-256-GCM y tag del formato v1, con compatibilidad cruzada respecto a la interfaz actual. El ZIP se emitirá en streaming al cifrador sin crear ZIP en claro en disco; el tamaño exacto del ZIP se calculará antes de fijar `ciphertext_length` y se contrastará con el flujo emitido.
 
 `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.11. La aprobación autoriza implementar writer y cifrado incremental en la rama autorizada, pero no crear backups reales, incluir secretos, implementar restore/verify independiente, leer/modificar master key ni tocar runtime/servicios/firewall/puertos/certificados desplegados/VPS de pruebas. `Xray-Normativa/` permanece inmutable.
+
+
+## 2026-11-03 — API incremental compatible con contenedor cifrado v1
+
+Se añadieron `encrypt_payload_stream()` y `verify_package_stream()` a `scripts/shared_backup_format.py`. El cifrado/verificador trabajan por bloques y conservan el formato binario v1, incluida cabecera/AAD, perfil scrypt, AES-256-GCM, salt/nonce y tag. Se mantienen las APIs de bytes existentes. El verificador incremental requiere un flujo seekable, descarta plaintext no autenticado y sólo confirma autenticidad después de validar el tag GCM.
+
+`tests/shared_backup_format.sh` amplía cobertura de compatibilidad cruzada, longitudes exactas, truncamiento, bytes sobrantes, alteración/tag y contraseña incorrecta. Prueba focal PASS; suite completa `tests/*.sh`: 47/47 PASS; pruebas adicionales de tamaños aleatorios, sintaxis Python y `git diff --check` PASS. ZIP streaming y snapshot writer siguen pendientes. No se creó backup real ni se tocaron secretos, master key o runtime.

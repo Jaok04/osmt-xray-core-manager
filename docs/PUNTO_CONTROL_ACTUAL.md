@@ -1,7 +1,7 @@
 # Punto de control actual — Xray Core Manager
 
 **Fecha del corte:** 2026-11-03
-**Tarea activa:** backup/restore compartido — contenedor criptográfico neutral v1 implementado y probado; alcance incremental, manifiesto, ZIP/JSON y contrato técnico del snapshot writer v1 aprobados. Siguiente: implementar writer y cifrado incremental compatible con v1 en la rama autorizada; sin crear backups reales ni tocar runtime/secretos. Límites: 10.000 entradas ZIP y 512 MiB. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
+**Tarea activa:** backup/restore compartido — contenedor criptográfico neutral v1 implementado y probado; alcance incremental, manifiesto, ZIP/JSON y contrato técnico del snapshot writer v1 aprobados. API de cifrado incremental compatible con v1 IMPLEMENTADA/VERIFICADA en aislamiento. Siguiente: implementar ZIP streaming/determinista y snapshot writer; sin crear backups reales ni tocar runtime/secretos. Límites: 10.000 entradas ZIP y 512 MiB. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
 **Estado vigente:** contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
@@ -412,3 +412,10 @@ El propietario aprobó el contrato técnico del snapshot writer compartido v1 y 
 La interfaz incremental deberá conservar magic, cabecera/AAD, perfil scrypt, salt/nonce, AES-256-GCM y tag del formato v1, con compatibilidad cruzada respecto a la interfaz actual. El ZIP se emitirá en streaming al cifrador sin crear ZIP en claro en disco; el tamaño exacto del ZIP se calculará antes de fijar `ciphertext_length` y se contrastará con el flujo emitido.
 
 `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.11. La aprobación autoriza implementar writer y cifrado incremental en la rama autorizada, pero no crear backups reales, incluir secretos, implementar restore/verify independiente, leer/modificar master key ni tocar runtime/servicios/firewall/puertos/certificados desplegados/VPS de pruebas. `Xray-Normativa/` permanece inmutable.
+
+
+## Actualización — API incremental del contenedor cifrado v1 (2026-11-03)
+
+- `scripts/shared_backup_format.py`: añadidas `encrypt_payload_stream()` y `verify_package_stream()` con AES-GCM por bloques, longitud conocida, autenticación de cabecera/AAD y tag final; el formato binario v1 no cambia y las APIs de bytes existentes se conservan.
+- Pruebas focales PASS; compatibilidad cruzada streaming/no streaming PASS; suite completa `tests/*.sh`: 47/47 PASS; sintaxis Python y `git diff --check` PASS.
+- Siguiente: ZIP `ZIP_STORED` determinista en streaming y snapshot writer. No se ha creado backup real ni se han tocado secretos, master key o runtime.

@@ -1,6 +1,6 @@
 # Xray Core Manager — Estado del proyecto
 
-**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; manifiesto v1 y formato lógico ZIP/JSON APROBADOS; orquestación backup/restore pendiente. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
+**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1 y API incremental IMPLEMENTADOS/VERIFICADOS en aislamiento; manifiesto v1, formato ZIP/JSON y contrato técnico del writer APROBADOS; ZIP streaming y snapshot writer pendientes. VMess técnicamente preparado para aceptación (VM-48 pendiente). Certificados TLS centralizados: almacén/resolutor parciales; integraciones VMess y VLESS parciales, verificadas en fixtures y no aceptadas. Ver `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -487,3 +487,12 @@ El propietario aprobó el contrato técnico del snapshot writer compartido v1 y 
 La interfaz incremental deberá conservar magic, cabecera/AAD, perfil scrypt, salt/nonce, AES-256-GCM y tag del formato v1, con compatibilidad cruzada respecto a la interfaz actual. El ZIP se emitirá en streaming al cifrador sin crear ZIP en claro en disco; el tamaño exacto del ZIP se calculará antes de fijar `ciphertext_length` y se contrastará con el flujo emitido.
 
 `docs/PLAN_BACKUP_RESTORE_CENTRAL.md` pasa a v1.11. La aprobación autoriza implementar writer y cifrado incremental en la rama autorizada, pero no crear backups reales, incluir secretos, implementar restore/verify independiente, leer/modificar master key ni tocar runtime/servicios/firewall/puertos/certificados desplegados/VPS de pruebas. `Xray-Normativa/` permanece inmutable.
+
+
+## 2026-11-03 — API incremental del contenedor compartido v1
+
+Se añadieron `encrypt_payload_stream()` y `verify_package_stream()` a `scripts/shared_backup_format.py`. La interfaz cifra y verifica por bloques, exige longitud conocida para la cabecera autenticada y conserva el formato binario v1; las APIs de bytes anteriores permanecen compatibles. El verificador descarta plaintext no autenticado y valida el tag antes de declarar éxito.
+
+Pruebas: `tests/shared_backup_format.sh` PASS con compatibilidad cruzada, truncamiento, bytes sobrantes, alteración/tag, contraseña incorrecta y longitudes incorrectas; pruebas adicionales de tamaños aleatorios PASS; suite completa `tests/*.sh` 47/47 PASS; sintaxis Python y `git diff --check` PASS.
+
+Estado: cifrado incremental IMPLEMENTADO/VERIFICADO en aislamiento. ZIP streaming y snapshot writer pendientes. No se creó backup real ni se tocaron secretos, master key, runtime o `Xray-Normativa/`.

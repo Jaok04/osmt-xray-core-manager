@@ -2,6 +2,7 @@
 set -Eeuo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 python3 - "$ROOT" <<'PY'
+import io
 import json
 import struct
 import sys
@@ -17,6 +18,41 @@ package = fmt.encrypt_payload(payload, password)
 assert package.startswith(fmt.MAGIC)
 assert fmt.decrypt_payload(package, password) == payload
 assert package != fmt.encrypt_payload(payload, password), "salt/nonce deben ser aleatorios"
+
+# Cifrado incremental compatible byte-format con el lector v1 existente.
+streamed = io.BytesIO()
+written = fmt.encrypt_payload_stream(io.BytesIO(payload), streamed, len(payload), password, chunk_size=37)
+streamed_package = streamed.getvalue()
+assert written == len(streamed_package)
+assert fmt.decrypt_payload(streamed_package, password) == payload
+assert fmt.verify_package_stream(io.BytesIO(streamed_package), password, chunk_size=29) == len(streamed_package)
+
+# El verificador incremental también acepta paquetes creados por la API v1.
+assert fmt.verify_package_stream(io.BytesIO(package), password, chunk_size=31) == len(package)
+
+# Fallos cerrados en longitudes y autenticación del flujo.
+stream_tampered = bytearray(streamed_package)
+stream_tampered[-17] ^= 0x80
+for candidate, phrase in [
+    (streamed_package[:-1], password),
+    (streamed_package + b"extra", password),
+    (bytes(stream_tampered), password),
+    (streamed_package, "Wrong password that is long enough"),
+]:
+    try:
+        fmt.verify_package_stream(io.BytesIO(candidate), phrase, chunk_size=17)
+    except fmt.SharedBackupFormatError:
+        pass
+    else:
+        raise AssertionError("el verificador incremental aceptó un paquete inválido")
+
+for source_data, declared_length in [(payload[:-1], len(payload)), (payload + b"x", len(payload))]:
+    try:
+        fmt.encrypt_payload_stream(io.BytesIO(source_data), io.BytesIO(), declared_length, password, chunk_size=19)
+    except fmt.SharedBackupFormatError:
+        pass
+    else:
+        raise AssertionError("el cifrador incremental aceptó longitud de entrada incorrecta")
 
 def must_fail(candidate, phrase=password):
     try:

@@ -2,7 +2,7 @@
 
 **Identificador:** `xray-manager-shared-backup`
 **Versión:** 1
-**Estado:** contrato criptográfico implementado y probado en aislamiento; integración de backup/restore pendiente.
+**Estado:** contrato criptográfico v1 y API incremental implementados/verificados en aislamiento; integración del snapshot writer y backup/restore pendiente.
 **Módulo:** `scripts/shared_backup_format.py`
 
 ## 1. Propósito y neutralidad
@@ -61,13 +61,15 @@ La versión 1 admite exclusivamente este perfil. Se rechazan parámetros KDF alt
 
 ## 5. Contrato de integración
 
-1. El futuro orquestador recopila un snapshot lógico consistente en memoria y genera un manifiesto interno con hashes y metadatos.
-2. El adaptador de cada protocolo valida y serializa su propio contenido. El contenedor no debe inferir el protocolo por el nombre de archivo.
-3. Se solicita la contraseña interactivamente mediante el futuro CLI/UI; nunca por argumento de proceso, variable de entorno, archivo de configuración ni manifiesto.
-4. El payload se cifra antes de persistir el paquete. No crear archivos temporales con el snapshot descifrado.
-5. En restore, descifrar y autenticar primero; después validar estructura, hashes, referencias y compatibilidad; solo entonces iniciar el preflight de conflictos.
-6. Cada backend vuelve a cifrar sus secretos bajo la master key existente del destino y su AAD nativo. No reutilizar envelopes entre VLESS, VMess y certificados.
-7. El restore requiere backup de seguridad legible, confirmación explícita, journal durable y rollback según el diseño aprobado. Este módulo no realiza ninguna de esas acciones.
+1. El futuro orquestador captura un snapshot lógico consistente y genera manifiesto/índice con hashes y metadatos.
+2. El adaptador de cada protocolo valida su propio contenido. El contenedor no infiere el protocolo por el nombre de archivo.
+3. Se solicita la contraseña interactivamente; nunca por argumento de proceso, variable de entorno, archivo de configuración ni manifiesto.
+4. `encrypt_payload_stream(source, destination, plaintext_length, passphrase)` cifra por bloques un flujo de longitud conocida y escribe el contenedor v1 directamente en el destino. El llamador debe limpiar el destino parcial si ocurre un error. La API exige conocer el tamaño exacto del payload antes de escribir la cabecera autenticada.
+5. `verify_package_stream(source, passphrase)` requiere un flujo seekable, autentica el contenedor por bloques y descarta el plaintext no autenticado; sólo termina correctamente después de validar el tag GCM. No extrae ni devuelve el payload.
+6. Las APIs incrementales conservan el mismo magic, cabecera, AAD, scrypt, AES-256-GCM, nonce/salt y tag que las APIs de bytes v1. Se prueban en ambas direcciones: el lector actual descifra paquetes incrementales y el verificador incremental acepta paquetes de la API actual.
+7. En restore, descifrar y autenticar primero; después validar estructura, hashes, referencias y compatibilidad; sólo entonces iniciar el preflight de conflictos.
+8. Cada backend vuelve a cifrar sus secretos bajo la master key existente del destino y su AAD nativo. No reutilizar envelopes entre VLESS, VMess y certificados.
+9. El restore requiere backup de seguridad legible, confirmación explícita, journal durable y rollback según el diseño aprobado. Este módulo no realiza ninguna de esas acciones.
 
 Python no garantiza el borrado seguro de objetos `bytes` inmutables de memoria. La integración debe minimizar copias, no registrar payloads y considerar el riesgo de swap/core dumps; no afirmar zeroization garantizada.
 
@@ -79,4 +81,4 @@ Los respaldos deben contener los datos/estados actuales seleccionados y excluir 
 
 ## 7. Pruebas
 
-`tests/shared_backup_format.sh` prueba round-trip, aleatoriedad, contraseña incorrecta, alteración de cabecera/ciphertext, truncamiento, bytes sobrantes, magic inválido, contraseñas débiles y payload inválido. Estas pruebas no equivalen a pruebas de backup/restore integral, migración, conflictos, journal o rollback.
+`tests/shared_backup_format.sh` prueba round-trip de APIs de bytes e incremental, compatibilidad cruzada, aleatoriedad, contraseña incorrecta, alteración de cabecera/ciphertext/tag, truncamiento, bytes sobrantes, magic inválido, contraseñas débiles, longitudes incorrectas y payload inválido. El verificador incremental se prueba con paquetes creados por ambas APIs. Estas pruebas no equivalen a pruebas de snapshot writer/backup/restore integral, migración, conflictos, journal o rollback.
