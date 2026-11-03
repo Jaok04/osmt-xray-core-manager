@@ -218,13 +218,13 @@ Un test de JSON válido o `xray run -test` no demuestra conectividad extremo a e
 
 | Etapa | Entregable | Estado |
 |---|---|---|
-| 1 | Contrato arquitectónico, esquema y decisiones de seguridad | EN DOCUMENTACIÓN |
-| 2 | Catálogo central y almacén cifrado | PENDIENTE |
+| 1 | Contrato arquitectónico, esquema y decisiones de seguridad | DOCUMENTADO; revisión evolutiva pendiente |
+| 2 | Catálogo central y almacén cifrado | IMPLEMENTADO PARCIALMENTE; import/list/show/audit |
 | 3 | Resolutor e integración VMess | PENDIENTE |
 | 4 | Integración VLESS | PENDIENTE |
 | 5 | Migración versionada y reversible | PENDIENTE |
 | 6 | Backup/restore central compartido | PENDIENTE |
-| 7 | Pruebas cruzadas, aislamiento y regresión | PENDIENTE |
+| 7 | Pruebas cruzadas, aislamiento y regresión | PARCIAL; pruebas focales y regresión base |
 | 8 | Auditoría integral, documentación final y continuidad | PENDIENTE |
 
 Cada etapa tendrá inventario, trazabilidad, pruebas y evidencia. Ninguna etapa se cerrará sin auditoría integral y aceptación formal del propietario.
@@ -258,3 +258,19 @@ Este documento registra el contrato arquitectónico aprobado, no una implementac
 - Aceptación de implementación: PENDIENTE.
 
 **Fin del contrato arquitectónico inicial.**
+
+
+## 16. Primer bloque implementado — catálogo y secreto central
+
+El primer bloque está implementado y documentado en docs/IMPLEMENTACION_ALMACEN_CERTIFICADOS_CENTRALIZADOS.md.
+
+- scripts/certificate_crypto.py: envelope AES-256-GCM con AAD por certificado/revisión; lectura estricta de la clave maestra existente, sin crearla ni regenerarla.
+- scripts/certificate_store.py: importación managed/reference, catálogo independiente, consulta/listado y auditoría de blobs, referencias y archivos huérfanos. No expone plaintext de clave privada.
+- config/paths.sh: rutas dedicadas para catálogo, managed, references (reservado), secretos y bloqueo.
+- tests/certificate_store.sh: casos positivos y negativos del almacén.
+- Suite completa ejecutada después de este bloque: 41/41 scripts PASS. bash -n, py_compile, ShellCheck de la prueba nueva y git diff --check: PASS.
+- Las pruebas usan fixtures y directorios temporales. No se importó ningún certificado al almacén persistente real.
+- No hay operación resolve, integración VMess/VLESS, migración ni backup/restore central.
+- No se modificaron runtime, servicio, firewall, puertos, certificados desplegados ni Xray-Normativa.
+
+Estado: catálogo/almacén IMPLEMENTADO PARCIALMENTE y VERIFICADO en pruebas aisladas y regresión del proyecto. Aceptación formal pendiente.

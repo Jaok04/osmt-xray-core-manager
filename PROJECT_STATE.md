@@ -311,3 +311,17 @@ VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servi
 - No se modificó `Xray-Normativa/`, ni la VPS `Vps de Pruebas`, ni runtime, certificados desplegados, firewall, puertos o servicio.
 - Etapa 4 funcional sigue sin implementación completa; este trabajo sólo establece el diseño técnico para el recurso de certificados compartidos.
 - Próximo paso: auditar los módulos criptográficos, catálogos y permisos/identidad efectiva del servicio Xray en la VPS de desarrollo; cerrar las decisiones de §14 antes de implementar el almacén central.
+
+
+## Implementación progresiva — certificados TLS centralizados (2026-11-03)
+
+- Contrato: docs/ARQUITECTURA_CERTIFICADOS_CENTRALIZADOS.md.
+- Informe del primer bloque: docs/IMPLEMENTACION_ALMACEN_CERTIFICADOS_CENTRALIZADOS.md.
+- Implementados: scripts/certificate_crypto.py, scripts/certificate_store.py, rutas dedicadas en config/paths.sh y tests/certificate_store.sh.
+- Funciones disponibles: importar certificado como managed o reference, listar, mostrar y auditar. La clave privada se cifra una sola vez por recurso con AES-256-GCM y AAD ligado a certificate_id + revisión.
+- La clave maestra existente /etc/xray-manager/keys/master.key se reutiliza sólo en lectura; no se creó, rotó ni modificó. Sólo se inspeccionaron sus metadatos.
+- Verificación ejecutada: suite completa 41/41 PASS; bash -n, py_compile, ShellCheck de prueba nueva y git diff --check: PASS.
+- No se importaron certificados reales al catálogo persistente. Las pruebas utilizaron certificados efímeros en directorios temporales.
+- Pendiente: resolutor, autorización por conexión, integración VMess/VLESS, migración histórica, backup/restore compartido, rotación y permisos de lectura por el servicio Xray.
+- En VPS de desarrollo no hay Xray instalado ni unidad/cuenta/grupo xray; la integración runtime no se puede validar allí actualmente.
+- No se tocó VPS Vps de Pruebas, runtime, servicio, firewall, puertos o certificados desplegados. Xray-Normativa sigue intacta.

@@ -383,3 +383,15 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Esta entrega sólo modifica documentación técnica/no normativa. No se modificó código de producción, `Xray-Normativa/`, catálogo/secretos live, configuración runtime, servicio, firewall, puertos ni certificados desplegados. La VPS `Vps de Pruebas` no fue utilizada.
 - La decisión arquitectónica está APROBADA y el contrato inicial DOCUMENTADO. El contrato requiere revisión técnica; §14 enumera decisiones pendientes antes de implementar el almacén central. No se declaran funcionalidades IMPLEMENTADAS ni VERIFICADAS por esta entrega.
 - Rama de trabajo: `design/user-identity-association-v1`; HEAD de partida local/remoto verificado: `ee694da113ebd0ab3f33285a2e0480c5efc10b52`. Contrato publicado en `e88f0c3`; actualización de continuidad publicada en `f97de26`. La verificación remota final se registra tras el push.
+
+
+## 2026-11-03 — Bloque inicial del almacén central de certificados TLS
+
+- Se implementó scripts/certificate_crypto.py: AES-256-GCM, nonce aleatorio de 12 bytes, envelope versionado y AAD ligado a certificate_id y revisión. Lee la clave maestra existente /etc/xray-manager/keys/master.key; no la crea, regenera ni modifica.
+- Se implementó scripts/certificate_store.py: importación managed/reference, catálogo separado, deduplicación por huella, validación PEM y correspondencia certificado/clave, verificación de vigencia, list, show y audit. No existe aún operación de resolución ni entrega de plaintext al servicio.
+- Se añadieron rutas de catálogo, managed, references (reservado), secretos y bloqueo a config/paths.sh; nueva prueba tests/certificate_store.sh.
+- Importación exige clave privada fuente root:root 0600 y rechaza symlinks/hardlinks; los secretos se cifran centralmente. managed copia el certificado público; reference conserva su ruta externa. La auditoría detecta referencias corruptas, blobs alterados, huérfanos y entradas inseguras; no borra automáticamente.
+- Pruebas ejecutadas en fixtures temporales: managed/reference, duplicados, mismatch de clave, symlink, alteración ciphertext/tag y ausencia de clave maestra. Focal PASS. Suite completa posterior: 41/41 PASS. bash -n, py_compile, ShellCheck de la prueba nueva y git diff --check: PASS.
+- No se importaron certificados al almacén real ni se tocaron asistentes/generadores/stores VMess/VLESS históricos, migración, backup/restore, runtime, servicio, firewall, puertos o certificados desplegados. La VPS Vps de Pruebas no fue utilizada. Xray-Normativa no fue modificada.
+- La VPS de desarrollo no tiene Xray instalado ni unidad/cuenta/grupo xray; permisos de resolución y runtime siguen pendientes. La etapa de catálogo/almacén queda IMPLEMENTADA PARCIALMENTE y VERIFICADA en pruebas; aceptación global pendiente.
+- Documentación: docs/IMPLEMENTACION_ALMACEN_CERTIFICADOS_CENTRALIZADOS.md; contrato y continuidad actualizados.

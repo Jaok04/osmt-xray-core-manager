@@ -181,3 +181,19 @@ VM-47 sigue probado en loopback local; WAN no probado y no requerido por el dise
 **Siguiente paso permitido:** inspección técnica read-only de `scripts/vmess_config_store.py`, `scripts/vless_config_store.py`, módulos crypto, generadores, backups, `config/paths.sh`, unidad systemd y permisos de la VPS de desarrollo. Cerrar las decisiones abiertas de §14 del contrato antes de crear el almacén central. No migrar datos reales ni tocar runtime.
 
 La Etapa 4 normativa permanece funcionalmente NO IMPLEMENTADA en su conjunto. Este contrato no constituye cierre de Etapa 4 ni aceptación de una funcionalidad operativa.
+
+
+## 16. Primer bloque de almacén central TLS — 2026-11-03
+
+Estado: catálogo y cifrado central IMPLEMENTADOS PARCIALMENTE; pruebas PASS. Aceptación global pendiente.
+
+- Archivos: scripts/certificate_crypto.py, scripts/certificate_store.py, config/paths.sh, tests/certificate_store.sh.
+- CLI: import, list, show, audit.
+- Contrato criptográfico: AES-256-GCM; AAD xray-manager:certificate-secret:v1:<certificate_id>:<revision>; clave maestra común existente sólo lectura.
+- Pruebas: focal tests/certificate_store.sh PASS; suite completa 41/41 PASS; bash -n, py_compile, ShellCheck de prueba nueva y git diff --check PASS.
+- No se importaron certificados reales; fixtures temporales solamente.
+- No se modificaron asistentes, generadores, modelos, stores históricos VMess/VLESS ni backup/restore. No hay resolutor ni migración.
+- El servicio Xray no está instalado en la VPS de desarrollo; identidad y permisos de runtime quedan pendientes. No tocar VPS Vps de Pruebas.
+- Informe: docs/IMPLEMENTACION_ALMACEN_CERTIFICADOS_CENTRALIZADOS.md.
+
+Siguiente paso: revisión de seguridad del almacén y diseño/implementación del resolutor TLS sin integración runtime; después integrar VMess y VLESS por separado. Mantener intactos secretos históricos y REALITY.
