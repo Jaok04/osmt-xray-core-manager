@@ -489,3 +489,14 @@ El módulo sólo cifra/descifra bytes opacos y no conoce protocolos ni escribe a
 
 
 **Publicación del contenedor v1:** commit `164f91f9c9be8ab275da0b28a53b2314a636f1e2` en `design/user-identity-association-v1`; HEAD local/remoto coincide. Sin cambios a `Xray-Normativa/` ni `main`.
+
+## Continuidad — política de metadatos VMess para backup compartido (2026-11-03)
+
+La decisión del propietario queda registrada en docs/PLAN_BACKUP_RESTORE_CENTRAL.md §10.1 (v1.3):
+
+- Excluir el UUID VMess por defecto porque es una credencial de autenticación.
+- Conservar email y level como metadatos/configuración dentro del payload cifrado. email no autentica ni es necesario para el cliente externo.
+- No exponer email en el manifiesto externo ni en logs.
+- Marcar los registros sin UUID como incompletos/no restaurables íntegramente hasta que la credencial se aporte mediante flujo autorizado. Incluir UUID exige selección, autorización y confirmación adicional.
+
+No se ha cambiado el esquema VMess ni se ha creado snapshot/backup real. El siguiente trabajo es cerrar el contrato del manifiesto y del snapshot lógico, además de completar la auditoría del orden global de locks. El writer compartido no debe comenzar hasta cerrar esos contratos y sus pruebas sintéticas.

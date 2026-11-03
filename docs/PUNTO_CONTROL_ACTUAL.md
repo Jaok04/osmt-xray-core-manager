@@ -316,3 +316,13 @@ Commit `631d7eda11615b692557a2e0958a8f318b81c223` (`feat(tls): add read-only his
 ### Publicación del contenedor cifrado compartido v1
 
 Commit `164f91f9c9be8ab275da0b28a53b2314a636f1e2` (`feat(backup): add protocol-neutral encrypted container v1`) publicado en `origin/design/user-identity-association-v1`. HEAD local/remoto verificado idéntico (`164f91f`). `main` no se modificó. `Xray-Normativa/` no tiene cambios. `scripts/__pycache__/` sigue sin seguimiento y quedó excluido.
+
+## 13. Política de metadatos VMess para backup compartido — 2026-11-03
+
+**Decisión registrada:** UUID VMess excluido por defecto como credencial; email y level conservados como metadatos/configuración dentro del payload cifrado. email no autentica ni es necesario para el cliente externo y no debe exponerse en manifiesto externo ni logs. Los registros sin UUID quedan incompletos/no restaurables íntegramente hasta que la credencial se aporte mediante flujo autorizado. Inclusión de UUID requiere selección, autorización y confirmación adicional.
+
+Contrato: docs/PLAN_BACKUP_RESTORE_CENTRAL.md v1.3, §10.1.
+
+**Estado:** decisión DOCUMENTADA; no cambia código ni esquema operativo. No hay snapshot ni backup compartido real.
+
+**Siguiente paso exacto:** diseñar el schema del manifiesto interno y el snapshot lógico actual, definiendo cómo se representan las exclusiones y la completitud por elemento. En paralelo, completar la auditoría estática de todos los mutadores/locks y documentar cualquier ruta no inspeccionable. No implementar writer ni restore hasta cerrar esos contratos y pruebas sintéticas.

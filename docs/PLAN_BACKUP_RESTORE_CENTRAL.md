@@ -1,6 +1,6 @@
 # Diseño de backup/restore compartido — conexiones y certificados centrales
 
-**Versión:** 1.2
+**Versión:** 1.3
 **Fecha:** 2026-11-03
 **Estado:** CRITERIOS APROBADOS / CONTENEDOR CIFRADO V1 IMPLEMENTADO Y VERIFICADO / ORQUESTACIÓN BACKUP-RESTORE PENDIENTE
 **Ámbito:** contenedor criptográfico neutral y futuro backup consistente de VLESS/VMess/certificados; extensible a protocolos futuros mediante adaptadores.
@@ -161,8 +161,22 @@ La falta de una dependencia `reference` bloquea por defecto el restore completo;
 4. **Retención/custodia:** contraseña no persistida en VPS ni manifiesto; el operador debe custodiarla y almacenar el paquete fuera de la VPS. Política de retención se fijará antes de habilitar producción.
 5. **Formato:** paquete compartido versionado y separado de backups legacy; compatibilidad legacy preservada.
 
+## 10.1. Decisión de metadatos VMess — 2026-11-03
+
+**Decisión del propietario:** adoptar la recomendación de conservar el campo email como metadato administrativo en el payload cifrado del backup compartido, mientras se excluye el UUID por defecto.
+
+| Campo | Tratamiento | Motivo |
+|---|---|---|
+| id (UUID VMess) | Excluir por defecto como secreto/credencial | Participa en la autenticación VMess; su inclusión requiere selección, autorización expresa y confirmación adicional conforme a la política general de secretos. |
+| email | Conservar como metadato administrativo dentro del payload cifrado | Identifica administrativamente al cliente/asociación y puede apoyar logs/estadísticas; no sustituye al UUID ni es necesario para que un cliente externo se conecte. |
+| level | Conservar como metadato de configuración | No es la credencial de autenticación y forma parte de la configuración del cliente VMess en Xray. |
+
+La conservación de email no significa que deba exponerse en el manifiesto externo ni en logs. Se mantiene dentro del contenido protegido por el contenedor AES-256-GCM. El manifiesto podrá indicar que la credencial UUID fue excluida, sin copiar su valor ni exponer innecesariamente el email.
+
+Un registro VMess cuyo UUID se excluya debe marcarse como incompleto/no restaurable íntegramente hasta que la credencial se aporte por un flujo explícito y autorizado. La presencia de email y level no permite reconstruir ni autenticar al usuario. Esta decisión no cambia el esquema operativo ni elimina campos del catálogo actual.
+
 ## 11. Estado y siguiente diseño
 
-Los criterios funcionales anteriores están aprobados. El contrato del contenedor cifrado v1 ya está implementado y probado en aislamiento. Antes de escribir el orquestador de backup compartido se deben cerrar el manifiesto interno, el orden real de locks y la detección de conflictos del restore. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
+Los criterios funcionales anteriores están aprobados. El contrato del contenedor cifrado v1 ya está implementado y probado en aislamiento. Antes de escribir el orquestador de backup compartido se deben cerrar el manifiesto interno, el orden real de locks y la detección de conflictos del restore. La política de campos VMess queda definida en §10.1: excluir UUID por defecto y conservar email y level como metadatos dentro del payload cifrado. La auditoría del código actual confirmó que el backup de datos VLESS no cifra el tar.gz completo; sólo los blobs de secretos usan cifrado bajo master key y el archivo de recuperación de master key se cifra aparte.
 
 **Estado:** contenedor criptográfico neutral v1 IMPLEMENTADO y VERIFICADO con prueba aislada; snapshot, manifiesto, adaptadores VLESS/VMess/certificados, backup, verify, restore, journal y rollback aún NO IMPLEMENTADOS. No se ha creado ni restaurado un backup compartido.

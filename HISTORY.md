@@ -478,3 +478,11 @@ No se probó lectura de lease por un servicio Xray real: la VPS de desarrollo ca
 - Pruebas actuales: `tests/*.sh` 47/47 PASS; `python3 -m py_compile scripts/*.py`, `bash -n` de shell modules/scripts, ShellCheck warning y shfmt focal, `git diff --check` PASS.
 - No se creó snapshot ni backup real; no se implementó writer, verify, restore, journal o rollback compartido. No se leyó/modificó master key ni datos persistentes; runtime, servicios, firewall, puertos, certificados desplegados, VPS de pruebas y `Xray-Normativa/` intactos.
 - Estado del bloque: IMPLEMENTADO / VERIFICADO en aislamiento / PUBLICADO / SINCRONIZADO; aceptación formal pendiente. Commit `164f91f9c9be8ab275da0b28a53b2314a636f1e2` en `design/user-identity-association-v1`; HEAD local/remoto verificado idéntico. `main` y `Xray-Normativa/` sin cambios.
+
+## 2026-11-03 — Política de campos VMess en backup compartido
+
+- El propietario adoptó la recomendación de excluir el UUID VMess por defecto como credencial y conservar email y level como metadatos/configuración dentro del payload cifrado.
+- Se documentó que email no autentica ni es necesario para la conexión del cliente externo; tampoco se debe exponer en el manifiesto externo ni en logs.
+- Los registros cuyo UUID se excluya se marcarán incompletos/no restaurables íntegramente hasta aportar la credencial mediante flujo autorizado. Incluir UUID requiere selección, autorización y confirmación adicional.
+- Actualizado docs/PLAN_BACKUP_RESTORE_CENTRAL.md a v1.3 y registrados los límites en PROJECT_STATE.md, docs/CONTINUIDAD_DEL_PROYECTO.md y docs/PUNTO_CONTROL_ACTUAL.md.
+- No se modificó el esquema operativo VMess, el código, la normativa, los datos persistentes ni runtime. No se generó backup ni snapshot real.

@@ -399,3 +399,11 @@ VM-47 VERIFICADO en loopback local: modelo y adaptador reales generaron el servi
 - Estado: PREFLIGHT IMPLEMENTADO/VERIFICADO EN FIXTURES; BACKUP COMPARTIDO Y FASE ESCRITORA DE MIGRACIÓN PENDIENTES. No runtime apply, servicios, firewall, puertos, certificados desplegados, VPS pruebas ni cambios normativos. No commit/push aún; `Xray-Normativa/` intacta.
 
 **Publicación:** commit `631d7eda11615b692557a2e0958a8f318b81c223` publicado en `design/user-identity-association-v1`; HEAD local/remoto coincide. `main` sin cambios (`656ecedc506a94a6461aee296b20871d51a38bf3`); `Xray-Normativa/` intacta.
+
+## Decisión de backup compartido — metadatos VMess (2026-11-03)
+
+- Decisión del propietario: excluir el UUID VMess por defecto como credencial; conservar email y level como metadatos/configuración dentro del payload cifrado.
+- email no es requisito de autenticación ni de conexión para el cliente externo. No debe exponerse en el manifiesto externo ni en logs.
+- Los registros sin UUID quedan incompletos/no restaurables íntegramente hasta recibir la credencial por un flujo autorizado. La inclusión de UUID exige selección, autorización y confirmación adicional.
+- Detalle contractual: docs/PLAN_BACKUP_RESTORE_CENTRAL.md §10.1 (v1.3).
+- No se modificó el esquema operativo VMess ni se creó backup/snapshot real. El contenedor v1 sigue siendo la única pieza implementada del backup compartido; snapshot, manifiesto y orquestación siguen pendientes.
