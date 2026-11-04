@@ -841,3 +841,10 @@ Se implementó en /opt/xray-manager sobre design/user-identity-association-v1 la
 Verificación: tests/*.sh 51/51 PASS; Python AST 18/18; bash -n; ShellCheck focal (SC2251/SC2034 preexistentes excluidos); shfmt focal; git diff --check. Las pruebas usan únicamente almacenes temporales y claves sintéticas. No se leyó master.key, no se creó/limpió almacén live y no se tocó runtime, systemd, firewall, puertos, certificados o red.
 
 Estado: cambios locales en VPS; revisión final y sincronización GitHub pendientes. No implica aceptación formal del almacén ni cierre de Etapa 5/Etapa 2.
+## 2026-11-04 — Endurecimiento de recuperación WAL de perfiles
+
+- Separada la validación integral del journal de la aplicación del rollback.
+- Validación previa de esquema, rutas permitidas, duplicados, snapshots Base64/límites, directorios padre, destinos existentes y directorios a retirar.
+- Rechazo de solapamientos entre destinos y directorios de rollback; journal inválido se conserva y falla cerrado sin rollback parcial.
+- Añadidas pruebas de entrada inválida tardía y lista de eliminación inválida, verificando catálogo byte a byte intacto.
+- PF-01/PF-02 corregidos dentro del alcance probado; PF-06 parcialmente cubierto; PF-07 pendiente. Sin aceptación formal ni cierre de Etapa 5/Etapa 2.

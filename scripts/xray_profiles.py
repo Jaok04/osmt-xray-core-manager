@@ -488,40 +488,40 @@ class ProfileStore:
             fail("Ruta transaccional no válida.")
         return relative.as_posix()
 
-    def recover_transaction(self) -> None:
-        """Idempotently roll back an interrupted multi-file transaction."""
-        if not (self.transaction_path.exists() or self.transaction_path.is_symlink()):
-            return
-        check_regular(self.transaction_path)
-        journal = strict_json(read_regular(self.transaction_path, 32 * 1024 * 1024), "Journal transaccional")
+    def _validate_transaction_journal(self, journal: object) -> tuple[list[tuple[pathlib.Path, bytes | None]], list[pathlib.Path]]:
+        """Validate the complete WAL and every target before any rollback mutation."""
         if (not isinstance(journal, dict) or set(journal) != {"schema_version", "changes", "remove_dirs"} or
                 type(journal.get("schema_version")) is not int or journal["schema_version"] != 1 or
                 not isinstance(journal.get("changes"), list) or not 1 <= len(journal["changes"]) <= 2 or
                 not isinstance(journal.get("remove_dirs"), list) or len(journal["remove_dirs"]) > 2):
             fail("Journal transaccional inválido; recuperación detenida de forma segura.")
-        seen_paths = set()
+
+        validated_changes: list[tuple[pathlib.Path, bytes | None]] = []
+        seen_paths: set[str] = set()
         for change in journal["changes"]:
             if (not isinstance(change, dict) or set(change) != {"path", "old"} or
                     not isinstance(change.get("path"), str)):
                 fail("Entrada de journal transaccional inválida.")
             relative = pathlib.PurePosixPath(change["path"])
-            if relative.as_posix() in seen_paths:
-                fail("Journal transaccional con destinos duplicados.")
-            seen_paths.add(relative.as_posix())
-            if relative.is_absolute() or not relative.parts or any(part in (".", "..") for part in relative.parts):
-                fail("Ruta inválida en journal transaccional.")
-            if not (relative.as_posix() == "catalog.json" or
-                    (len(relative.parts) == 3 and relative.parts[0] == "profiles" and
-                     TOKEN_RE.fullmatch(relative.parts[1]) and relative.parts[2] == "metadata.json")):
+            normalized = relative.as_posix()
+            if (normalized in seen_paths or relative.is_absolute() or not relative.parts or
+                    any(part in (".", "..") for part in relative.parts)):
+                fail("Ruta inválida o duplicada en journal transaccional.")
+            seen_paths.add(normalized)
+            allowed = (normalized == "catalog.json" or
+                       (len(relative.parts) == 3 and relative.parts[0] == "profiles" and
+                        TOKEN_RE.fullmatch(relative.parts[1]) and relative.parts[2] == "metadata.json"))
+            if not allowed:
                 fail("Destino no permitido en journal transaccional.")
             target = self.root.joinpath(*relative.parts)
             check_no_symlink_components(target)
+            parent_info = target.parent.lstat()
+            if (not stat.S_ISDIR(parent_info.st_mode) or parent_info.st_uid != 0 or
+                    stat.S_IMODE(parent_info.st_mode) != 0o700):
+                fail("Directorio padre inseguro en journal transaccional.")
             old = change["old"]
             if old is None:
-                if target.exists() or target.is_symlink():
-                    check_regular(target)
-                    target.unlink()
-                    self._fsync_dir(target.parent)
+                payload = None
             else:
                 if not isinstance(old, str):
                     fail("Snapshot inválido en journal transaccional.")
@@ -531,8 +531,18 @@ class ProfileStore:
                     fail("Snapshot corrupto en journal transaccional.")
                 if len(payload) > 4 * 1024 * 1024:
                     fail("Snapshot excesivo en journal transaccional.")
-                atomic_write(target, payload)
-        seen_dirs = set()
+            try:
+                target_info = target.lstat()
+            except FileNotFoundError:
+                target_info = None
+            if target_info is not None and (not stat.S_ISREG(target_info.st_mode) or
+                    target_info.st_uid != 0 or target_info.st_nlink != 1 or
+                    stat.S_IMODE(target_info.st_mode) != 0o600):
+                fail("Destino inseguro en journal transaccional.")
+            validated_changes.append((target, payload))
+
+        validated_dirs: list[pathlib.Path] = []
+        seen_dirs: set[str] = set()
         for item in journal["remove_dirs"]:
             if not isinstance(item, str) or item in seen_dirs:
                 fail("Directorio de rollback inválido o duplicado en journal transaccional.")
@@ -540,17 +550,56 @@ class ProfileStore:
             relative = pathlib.PurePosixPath(item)
             if relative.is_absolute() or not relative.parts or any(part in (".", "..") for part in relative.parts):
                 fail("Ruta de rollback inválida en journal transaccional.")
-            allowed_profile_dir = (len(relative.parts) == 2 and relative.parts[0] == "profiles" and
-                                   TOKEN_RE.fullmatch(relative.parts[1]))
-            allowed_revision_dir = (len(relative.parts) == 4 and relative.parts[0] == "profiles" and
-                                    TOKEN_RE.fullmatch(relative.parts[1]) and relative.parts[2] == "revisions" and
-                                    re.fullmatch(r"r[0-9]{6}", relative.parts[3]))
+            parts = relative.parts
+            allowed_profile_dir = (len(parts) == 2 and parts[0] == "profiles" and TOKEN_RE.fullmatch(parts[1]))
+            allowed_revision_dir = (len(parts) == 4 and parts[0] == "profiles" and
+                                    TOKEN_RE.fullmatch(parts[1]) and parts[2] == "revisions" and
+                                    re.fullmatch(r"r[0-9]{6}", parts[3]))
             if not (allowed_profile_dir or allowed_revision_dir):
                 fail("Directorio no permitido en rollback transaccional.")
-            target = self.root.joinpath(*relative.parts)
+            target = self.root.joinpath(*parts)
             check_no_symlink_components(target)
+            parent_info = target.parent.lstat()
+            if (not stat.S_ISDIR(parent_info.st_mode) or parent_info.st_uid != 0 or
+                    stat.S_IMODE(parent_info.st_mode) != 0o700):
+                fail("Directorio padre inseguro para rollback transaccional.")
+            try:
+                info = target.lstat()
+            except FileNotFoundError:
+                info = None
+            if info is not None and (not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or
+                    stat.S_IMODE(info.st_mode) != 0o700):
+                fail("Directorio de rollback inseguro en journal transaccional.")
+            validated_dirs.append(target)
+
+        change_paths = {path for path, _ in validated_changes}
+        for index, directory in enumerate(validated_dirs):
+            if any(path == directory or directory in path.parents for path in change_paths):
+                fail("El journal contiene destinos y directorios de rollback solapados.")
+            if any(directory in other.parents or other in directory.parents
+                   for other in validated_dirs[index + 1:]):
+                fail("El journal contiene directorios de rollback solapados.")
+        return validated_changes, validated_dirs
+
+    def recover_transaction(self) -> None:
+        """Validate the whole WAL before performing its idempotent rollback."""
+        if not (self.transaction_path.exists() or self.transaction_path.is_symlink()):
+            return
+        check_regular(self.transaction_path)
+        journal = strict_json(read_regular(self.transaction_path, 32 * 1024 * 1024), "Journal transaccional")
+        changes, remove_dirs = self._validate_transaction_journal(journal)
+
+        # No filesystem mutation occurs above this line: malformed later entries
+        # cannot leave an earlier target partially rolled back.
+        for target, payload in changes:
+            if payload is None:
+                if target.exists() or target.is_symlink():
+                    target.unlink()
+                    self._fsync_dir(target.parent)
+            else:
+                atomic_write(target, payload)
+        for target in remove_dirs:
             if target.exists():
-                check_dir(target)
                 import shutil
                 shutil.rmtree(target)
                 self._fsync_dir(target.parent)

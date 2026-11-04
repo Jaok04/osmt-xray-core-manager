@@ -182,3 +182,35 @@ La prueba focal tests/xray_profiles.sh pasó, incluidos SIGKILL real en procesos
 Toda la prueba de limpieza se ejecutó con almacenes temporales y claves sintéticas. No se leyó /etc/xray-manager/keys/master.key, no se creó ni limpió el almacén live /var/lib/xray-manager/profiles y no se modificó Xray runtime, systemd, firewall, puertos, certificados o red.
 
 Estado: fase implementada y verificada en la VPS de trabajo; revisión final del diff y sincronización GitHub pendientes. Esto no constituye aceptación formal del almacén de perfiles ni cierre de Etapa 5/Etapa 2.
+## 12. Revisión correctiva WAL y estado consolidado — 2026-11-04
+
+La remediación PF-01/PF-02 quedó implementada, probada y publicada en `design/user-identity-association-v1`. Los apartados históricos que describen esos hallazgos como abiertos reflejan el estado de la auditoría original y quedan superados por esta sección y por las secciones 10–11 de remediación.
+
+### 12.1 Endurecimiento adicional de recuperación
+
+Se separó la validación integral del journal de su aplicación:
+- `_validate_transaction_journal()` valida esquema/versión estricta, cantidad de entradas, rutas permitidas, duplicados, Base64 y límites de snapshots.
+- Verifica previamente componentes sin symlinks, directorios padre root-owned con modo 0700 y destinos existentes como archivos regulares root-owned, modo 0600 y `nlink == 1`.
+- Valida todas las rutas de directorios a retirar, su tipo/propietario/modo, duplicados y ausencia de solapamiento con destinos de archivos.
+- Sólo después de validar todas las entradas se inicia el rollback. Un journal inválido permanece intacto y no produce escrituras parciales de snapshots anteriores.
+
+### 12.2 Pruebas añadidas
+
+`tests/xray_profiles.sh` incluye dos casos de regresión: entrada inválida tardía después de una entrada válida, y lista de directorios de rollback inválida después de un snapshot válido. En ambos casos se comprueba que el catálogo permanece byte a byte igual y que el journal se conserva para diagnóstico. La prueba focal de perfiles pasó con estos casos y las pruebas existentes de recuperación/temporales.
+
+### 12.3 Estado de hallazgos
+
+| Hallazgo | Estado actualizado | Evidencia |
+|---|---|---|
+| PF-01 — consistencia catálogo/metadatos en update | CORREGIDO | WAL, rollback y fault injection |
+| PF-02 — transacciones multiarchivo | CORREGIDO en las operaciones enumeradas | WAL, recuperación idempotente y pruebas de interrupción |
+| Temporales huérfanos pre-WAL | CORREGIDO dentro de patrones/rutas documentados | limpieza limitada y pruebas SIGKILL |
+| Validación integral previa del WAL | CORREGIDO | preflight completo y pruebas de journal malformado |
+| PF-06 — cobertura criptográfica/fallos filesystem | PARCIALMENTE CUBIERTO | fault/crash recovery ampliado; no se afirma que toda combinación write/replace/fsync/unlink esté exhaustivamente probada |
+| PF-07 — esquema integral del catálogo | PENDIENTE DE REVISIÓN | fuera del alcance de este bloque |
+
+**Conclusión actual:** PF-01 y PF-02 dejan de ser bloqueos conocidos para la aceptación del núcleo de persistencia, dentro del alcance probado. No se declara el almacén formalmente aceptado. Persisten PF-06/PF-07 y los requisitos funcionales pendientes de Etapa 5. La aceptación del componente limitado requiere decisión expresa del propietario.
+
+### 12.4 Alcance y seguridad
+
+Pruebas con almacenes temporales y clave sintética. No se leyó `master.key`, no se creó ni modificó almacén/perfil live, no se modificó `Xray-Normativa/`, `main`, runtime, systemd, firewall, puertos, certificados o red. La Etapa 5 y la Etapa 2 permanecen ABIERTAS.

@@ -752,3 +752,10 @@ Pruebas: suite completa 51/51 PASS; AST Python 18/18; Bash syntax; ShellCheck fo
 Límites: no se leyó master.key; no se creó ni limpió almacén live; no runtime apply ni cambios en servicios, systemd, firewall, puertos, certificados o red. Xray-Normativa/ y main no se modifican.
 
 Siguiente paso: revisión del diff, comprobar estado Git y publicar únicamente en design/user-identity-association-v1. La aceptación formal del almacén y el cierre de etapas siguen pendientes.
+## Punto de control — WAL de perfiles endurecido (2026-11-04)
+
+La recuperación WAL ahora valida íntegramente el journal antes de aplicar cualquier rollback. Se validan todas las rutas permitidas, duplicados, snapshots Base64 y límites, directorios padre, destinos existentes, directorios a retirar y ausencia de solapamientos. Si cualquier entrada es inválida, el journal se conserva y no se modifica ningún destino.
+
+Pruebas nuevas demuestran que una entrada inválida tardía y una ruta de eliminación inválida no causan rollback parcial; el catálogo permanece byte a byte igual. La prueba focal `tests/xray_profiles.sh` PASS. PF-01/PF-02 se consideran corregidos dentro del alcance probado; PF-06 queda parcialmente cubierto y PF-07 sigue pendiente de revisión. Aceptación formal de perfiles pendiente; Etapa 5 y Etapa 2 abiertas.
+
+No se usó `master.key`, no se creó ni modificó almacén live, y no se tocó runtime/servicios/firewall/puertos/certificados/red. `main` y `Xray-Normativa/` permanecen protegidas.

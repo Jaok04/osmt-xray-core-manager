@@ -762,3 +762,12 @@ Se excluye deliberadamente `scripts/__pycache__/` por ser un artefacto local de 
 - Verificación: regresión tests/*.sh 51/51 PASS; Python AST 18/18; Bash syntax; ShellCheck focal (exclusiones SC2251/SC2034 preexistentes); shfmt focal; git diff --check.
 - Sin almacén live ni claves reales: no se accedió a master.key, no se creó/limpió /var/lib/xray-manager/profiles y no se modificó runtime, systemd, firewall, puertos, certificados o red.
 - Estado de publicación: cambios locales, revisión final y sincronización GitHub pendientes. No declarar aceptación formal de perfiles ni cierre de Etapa 5/Etapa 2.
+## Actualización de perfiles v1.1 — consolidación WAL (2026-11-04)
+
+- La remediación transaccional PF-01/PF-02 y la limpieza de temporales huérfanos están implementadas y publicadas en `design/user-identity-association-v1` (base publicada `4dc4570dd81d49a8201af62a66ca58b07c89dd99`).
+- Endurecimiento adicional local en curso: recuperación WAL con validación integral de todas las entradas, snapshots, destinos y directorios de rollback antes de cualquier mutación. Journals inválidos se conservan y fallan cerrados.
+- Pruebas añadidas: entrada inválida tardía y directorio de rollback inválido no deben causar rollback parcial; se comprueba conservación byte a byte del catálogo y del journal.
+- PF-01/PF-02: CORREGIDOS dentro del alcance probado. PF-06: cobertura ampliada pero no exhaustiva. PF-07: pendiente de revisión.
+- La auditoría formal se actualizó en `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`; el diseño en `docs/DISENO_IMPLEMENTACION_PERFILES.md`.
+- La aceptación formal del almacén de perfiles sigue pendiente de decisión expresa. No se cierra Etapa 5 ni Etapa 2.
+- Restricciones: no usar `master.key` real; no crear/alterar perfiles live; no tocar runtime, servicios, firewall, puertos, certificados, red, `main` o `Xray-Normativa/`.

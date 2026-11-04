@@ -414,7 +414,46 @@ finally:
     xp.atomic_write = original_atomic_write
 assert [x["name"] for x in restarted.list_profiles()] == ["Nombre inicial"]
 assert not restarted.transaction_path.exists()
-print("PASS: rollback rename/update/restore, WAL tras caída abrupta, recuperación al reabrir y limpieza create/duplicate.")
+# The entire journal must be validated before the first rollback write.
+from base64 import b64encode
+catalog_before = restarted.catalog_path.read_bytes()
+malformed_late_entry = {
+    "schema_version": 1,
+    "changes": [
+        {"path": "catalog.json", "old": b64encode(b'{"profiles":[]}').decode("ascii")},
+        {"path": "profiles/../escape/metadata.json", "old": None},
+    ],
+    "remove_dirs": [],
+}
+original_atomic_write(restarted.transaction_path, xp.json_bytes(malformed_late_entry))
+try:
+    restarted.recover_transaction()
+except xp.ProfileError:
+    pass
+else:
+    raise AssertionError("malformed later WAL entry was accepted")
+assert restarted.catalog_path.read_bytes() == catalog_before, "invalid WAL must not partially roll back earlier targets"
+assert restarted.transaction_path.exists(), "invalid WAL must be preserved for safe diagnosis"
+restarted.transaction_path.unlink()
+# Invalid removal targets must also be rejected before any valid snapshot is applied.
+malformed_removal = {
+    "schema_version": 1,
+    "changes": [
+        {"path": "catalog.json", "old": b64encode(b'{"profiles":[]}').decode("ascii")},
+    ],
+    "remove_dirs": ["profiles/../outside"],
+}
+original_atomic_write(restarted.transaction_path, xp.json_bytes(malformed_removal))
+try:
+    restarted.recover_transaction()
+except xp.ProfileError:
+    pass
+else:
+    raise AssertionError("malformed WAL removal was accepted")
+assert restarted.catalog_path.read_bytes() == catalog_before, "invalid removal list must not partially roll back changes"
+assert restarted.transaction_path.exists()
+restarted.transaction_path.unlink()
+print("PASS: rollback rename/update/restore, WAL tras caída abrupta, recuperación al reabrir, validación WAL completa antes de mutar y limpieza create/duplicate.")
 PYTXN
 
 # Limpieza de temporales huérfanos: sólo ubicaciones/patrones conocidos y artefactos root-only.
