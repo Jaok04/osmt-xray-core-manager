@@ -777,4 +777,4 @@ Se excluye deliberadamente `scripts/__pycache__/` por ser un artefacto local de 
 - `load_catalog()` valida esquema raíz, versión entera estricta (rechaza `bool`), lista acotada a 10000, campos exactos por registro, ID, nombre normalizado, timestamps UTC reales, orden temporal y unicidad de ID/nombre.
 - Se eliminaron coerciones de tipo que podían ocultar datos malformados y producir excepciones incidentales. Los errores de esquema se reportan como `ProfileError`; la lectura inválida no modifica el archivo.
 - Prueba focal ampliada con 18 casos malformados y control de preservación byte a byte.
-- PF-07: CORREGIDO dentro del contrato y pruebas documentados; regresión integral y publicación pendientes de verificación. No se declara aceptación formal ni cierre de Etapa 5/Etapa 2.
+- PF-07: CORREGIDO dentro del contrato y pruebas documentados. Verificación: 51/51 scripts, AST 18/18, bash -n, ShellCheck focal, shfmt y git diff --check PASS. Publicado y sincronizado en `85c637c93778780c98589dc2f791b190daeedfd6` sobre `design/user-identity-association-v1`; árbol limpio. No se declara aceptación formal ni cierre de Etapa 5/Etapa 2.
