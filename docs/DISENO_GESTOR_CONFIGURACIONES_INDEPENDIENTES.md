@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-04
 **Rama:** design/user-identity-association-v1
 **Normativa:** Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md §§ 2–5 y 14; YAML aprobado correspondiente.
-**Estado actualizado 2026-11-04:** C-01/C-02/C-03 aceptadas formalmente como componentes limitados; C-04A, C-04B y C-04C implementadas, auditadas, aceptadas formalmente y publicadas. La auditoría integral de C-04 no identificó defectos funcionales bloqueantes (regresión 56/56 PASS); el propietario aceptó formalmente su cierre integral el 2026-11-04. C-05 no está autorizada ni iniciada.
+**Estado actualizado 2026-11-04:** C-01/C-02/C-03 aceptadas formalmente como componentes limitados; C-04A/B/C implementadas, auditadas, aceptadas y publicadas; C-04 cerrada integralmente (56/56 PASS). El diseño técnico C-05 fue aprobado por el propietario y desglosado en C-05A–C-05F. C-05A (motor estático/nativo) y C-05B (almacén permanente de informes) están implementadas, auditadas, aceptadas y publicadas conjuntamente. C-05C (promoción controlada a Validada), C-05D (historial/comparación), C-05E (menú) y C-05F (auditoría integral) requieren autorizaciones independientes; ninguna está autorizada ni iniciada. Etapa 5 y Etapa 2 siguen ABIERTAS.
 
 ## 1. Objetivo y límites
 
@@ -342,3 +342,21 @@ El propietario acepta formalmente C-04C conforme a la auditoría `docs/AUDITORIA
 El propietario acepta formalmente el cierre integral de C-04 tras revisar el expediente de auditoría integral. C-04A (eliminación segura), C-04B (exportación múltiple) y C-04C (integración del menú Bash) quedan completadas dentro de sus alcances autorizados. La regresión integral fue **56/56 PASS** y las verificaciones estáticas documentadas fueron satisfactorias; no se identificaron defectos funcionales bloqueantes.
 
 La aceptación cierra únicamente C-04. No cierra Etapa 5 ni Etapa 2 y no autoriza C-05, activación/runtime, cambios de infraestructura, dependencias ni modificaciones de `main` o `Xray-Normativa/`. El registro de aceptación se encuentra pendiente de publicación independiente.
+
+
+## 16. Estado de implementación C-05 aprobado — 2026-11-04
+
+El diseño técnico C-05 fue aprobado por el propietario con estas decisiones: validación nativa Xray obligatoria; advertencias permitidas si no existen errores bloqueantes; alcance inicial limitado a configuraciones independientes; conservación permanente de informes. La matriz de fases es:
+
+| Fase | Alcance | Estado |
+|---|---|---|
+| C-05A | Motor de validación estática y nativa | Implementada, auditada, aceptada y publicada |
+| C-05B | Almacén permanente e inmutable de informes | Implementada, auditada, aceptada y publicada |
+| C-05C | Integración transaccional y promoción controlada a Validada | Pendiente de autorización |
+| C-05D | Historial y comparación de informes | Pendiente de autorización |
+| C-05E | Integración del menú Bash | Pendiente de autorización |
+| C-05F | Auditoría integral | Pendiente de autorización |
+
+C-05A ejecuta `xray run -test -config` sobre bytes exactos en un directorio temporal privado y verifica previamente el binario Xray. No inicia servicios ni modifica runtime. C-05B persiste informes append-only con integridad SHA-256, controles de filesystem, bloqueo, escrituras atómicas y recuperación WAL. Ambos componentes permanecen desacoplados: la integración futura debe verificar la identidad de configuración, revisión y hash antes de persistir y promover.
+
+La aceptación de C-05A/B no implica promoción a Validada ni autoriza C-05C/D/E/F. El almacén live no fue creado; la validación no demuestra conectividad ni funcionamiento runtime. Evidencias: `docs/IMPLEMENTACION_C05A_MOTOR_VALIDACION_2026-11-04.md`, `docs/AUDITORIA_C05A_MOTOR_VALIDACION_2026-11-04.md`, `docs/IMPLEMENTACION_C05B_ALMACEN_INFORMES_2026-11-04.md` y `docs/AUDITORIA_C05B_ALMACEN_INFORMES_2026-11-04.md`.

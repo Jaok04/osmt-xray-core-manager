@@ -68,3 +68,10 @@ No se identificaron defectos bloqueantes dentro del alcance de persistencia C-05
 - Se publicarán conjuntamente los archivos aceptados de C-05A y C-05B.
 - No se modificaron paquetes, servicios, certificados, puertos, firewall, configuración activa ni runtime.
 - No se leyó ni utilizó la clave maestra real.
+
+
+## Addendum — publicación posterior de C-05B (2026-11-04)
+
+La referencia a `2676b36403e414e9ece5e85250ce89e0b01185d3` corresponde al HEAD base previo a la publicación y se conserva como evidencia histórica. Tras la aceptación formal, C-05B se publicó junto con C-05A en `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25`; el registro de aceptación y continuidad quedó en `1815663438770a2271d769345adbc271714a6817`.
+
+Se verificó el mismo HEAD en GitHub y `/opt/xray-manager`, con árbol limpio. La publicación fue fast-forward; `main` y `Xray-Normativa/` permanecieron intactas. C-05B queda IMPLEMENTADA, VERIFICADA, AUDITADA, ACEPTADA, PUBLICADA y SINCRONIZADA. La promoción a Validada no forma parte de C-05B y C-05C requiere autorización independiente.

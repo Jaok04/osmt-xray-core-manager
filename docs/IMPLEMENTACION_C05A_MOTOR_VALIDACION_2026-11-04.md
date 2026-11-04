@@ -88,3 +88,10 @@ Estos puntos corresponden a fases posteriores del plan C-05 y no se implementaro
 - No se modificaron servicios, runtime, certificados, puertos, firewall, paquetes ni dependencias.
 - No se hizo commit, push ni publicación.
 - C-05A fue aceptada formalmente por el propietario el 2026-11-04. La fase queda cerrada; C-05B requiere autorización independiente.
+
+
+## Addendum — aceptación, publicación y sincronización (2026-11-04)
+
+El estado Git descrito en el apartado anterior corresponde al momento de implementación y aceptación local de C-05A; no describe la publicación posterior. C-05A fue aceptada formalmente y publicada conjuntamente con C-05B en el commit `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25`. El registro de aceptación y continuidad se publicó en el commit `1815663438770a2271d769345adbc271714a6817`.
+
+La rama `design/user-identity-association-v1` y `/opt/xray-manager` se verificaron en ese HEAD, con árbol limpio. La publicación fue fast-forward. `main` y `Xray-Normativa/` permanecieron intactas. C-05A está IMPLEMENTADA, VERIFICADA, AUDITADA, ACEPTADA, PUBLICADA y SINCRONIZADA. C-05B fue aceptada y publicada en el mismo cambio. C-05C requiere autorización independiente.

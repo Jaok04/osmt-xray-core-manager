@@ -74,3 +74,10 @@ No se identificaron defectos bloqueantes dentro del alcance autorizado de C-05A.
 - HEAD no cambió.
 - No se realizó commit, push ni publicación.
 - No se modificaron paquetes, servicios, certificados, puertos, firewall, configuración activa ni runtime.
+
+
+## Addendum — publicación posterior de C-05A (2026-11-04)
+
+El HEAD `2676b36403e414e9ece5e85250ce89e0b01185d3` citado arriba es la base histórica de la auditoría, anterior a la publicación; no es el HEAD actual. Tras la aceptación formal, C-05A se publicó junto con C-05B en `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25` (commit de implementación: `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25`). La actualización de continuidad se registró en `1815663438770a2271d769345adbc271714a6817`.
+
+La publicación se verificó en `design/user-identity-association-v1` y en `/opt/xray-manager`, con árbol limpio. `main` y `Xray-Normativa/` no se modificaron. La aceptación de C-05A se mantiene limitada a su alcance auditado; C-05B fue aceptada y publicada conjuntamente en el mismo commit de implementación. C-05C requiere autorización independiente.

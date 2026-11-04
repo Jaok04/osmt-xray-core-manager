@@ -954,3 +954,8 @@ La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una 
 - **Siguiente fase:** C-05C promoción controlada al estado Validada. NO autorizada ni iniciada. C-05D historial/comparación, C-05E menú y C-05F auditoría integral también requieren autorizaciones independientes.
 - **Límites:** C-05B aún no se integra con el motor ni modifica estado Validada; no se creó `/var/lib/xray-manager/validation`. No se leyó la clave maestra real ni se tocaron runtime, servicios, certificados, firewall, puertos, dependencias o configuración activa.
 - `main` y `Xray-Normativa/` permanecen intactas. Etapa 5 y Etapa 2 siguen ABIERTAS.
+
+
+## Verificación documental previa a reanudar — 2026-11-04
+
+Los documentos de continuidad y diseño se actualizaron para reflejar C-05A/C-05B aceptadas, publicadas y sincronizadas. Los expedientes de implementación/auditoría C-05A/B recibieron addenda que distinguen su estado histórico prepublicación de la publicación posterior. El HEAD verificado antes de esta actualización fue 1815663438770a2271d769345adbc271714a6817. La siguiente fase sigue siendo C-05C, no autorizada ni iniciada; no iniciar sin autorización expresa.

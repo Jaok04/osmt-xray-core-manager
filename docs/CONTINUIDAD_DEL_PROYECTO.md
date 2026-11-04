@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-04:** C-01 y C-02 del gestor de configuraciones independientes están aceptados formalmente como componentes limitados; C-03 (edición/diff/comparación) está aceptada formalmente como componente limitado conforme a su auditoría. Última regresión completa: 53/53 PASS. La sincronización GitHub/VPS se registra en el bloque final vigente de este documento. Etapa 5 y Etapa 2 permanecen ABIERTAS. No usar `master.key` real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o la VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
+> **Punto de reanudación vigente — 2026-11-04:** C-01, C-02 y C-03 del gestor de configuraciones independientes están aceptados formalmente como componentes limitados; C-04A/B/C están aceptadas y C-04 quedó cerrada integralmente; C-05A (motor de validación estática/nativa) y C-05B (almacén permanente de informes) están implementadas, auditadas, aceptadas formalmente, publicadas y sincronizadas. Última regresión focal combinada C-05A/B: 25/25 PASS; regresiones shell de C-01/C-02, C-03, C-04A/B/C y smoke general PASS según sus auditorías. HEAD sincronizado: `1815663438770a2271d769345adbc271714a6817` en `design/user-identity-association-v1`. Siguiente fase propuesta: C-05C (promoción transaccional y controlada a Validada), **NO autorizada ni iniciada**. C-05D/E/F también requieren autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS. No usar `master.key` real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o la VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -1089,3 +1089,17 @@ El propietario aceptó C-04C conforme a `docs/AUDITORIA_C04C_INTEGRACION_MENU_BA
 El propietario aceptó formalmente el cierre integral de C-04. C-04A (eliminación segura), C-04B (exportación múltiple) y C-04C (integración del menú Bash) están implementadas, auditadas, aceptadas y publicadas. La auditoría integral obtuvo 56/56 PASS en la regresión completa y no identificó defectos funcionales bloqueantes.
 
 Última publicación previa: `7f215b1dbfaa0b2dc7a2a3726a76dfa25b1cbb10` en `design/user-identity-association-v1`. El registro de cierre integral que se añade ahora es documental y permanece sin commit/push. C-05 no está autorizada ni iniciada. Etapa 5 y Etapa 2 siguen ABIERTAS. No se autoriza ni se realiza cambio de runtime, servicios, dependencias, certificados, firewall, puertos, red o VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
+
+
+## Punto de reanudación vigente — C-05A/C-05B publicadas y sincronizadas (2026-11-04)
+
+- Rama autorizada: `design/user-identity-association-v1`.
+- HEAD GitHub/VPS verificado: `1815663438770a2271d769345adbc271714a6817` (`Record accepted and published C-05A/C-05B`). Árbol de trabajo limpio.
+- C-05A: motor `scripts/xray_config_validator.py`, 17/17 pruebas focales PASS, Xray 26.10.31 real aceptó una configuración sintética válida y rechazó protocolo inexistente. Aceptada formalmente como componente limitado.
+- C-05B: almacén `scripts/xray_validation_store.py`, 8/8 pruebas focales PASS; informes permanentes/append-only, catálogo SHA-256, controles filesystem, lock, atomicidad, fsync y WAL. Aceptada formalmente.
+- Regresión focal combinada C-05A/B: 25/25 PASS. Regresión shell C-01/C-02, C-03, C-04A/B/C y smoke general PASS; Python compile, `bash -n modules/*.sh` y `git diff --check` PASS según registro publicado.
+- C-05A/B se publicaron en `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25`; aceptación y continuidad se registraron en `1815663438770a2271d769345adbc271714a6817`.
+- Próximo paso propuesto: C-05C, integración transaccional de motor/almacén y promoción controlada a Validada. **No autorizada ni iniciada.** Requiere autorización específica. C-05D, C-05E y C-05F también son independientes.
+- No se creó el almacén live `/var/lib/xray-manager/validation`; no se leyó `/etc/xray-manager/keys/master.key`; no se modificaron runtime, servicios, certificados, firewall, puertos, dependencias ni configuración activa.
+- `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`; `Xray-Normativa/` permanece intacta. Etapa 5 y Etapa 2 siguen ABIERTAS.
+- Para reanudar: leer primero `AGENTS.md`, `PROJECT_STATE.md`, este documento, `docs/PUNTO_CONTROL_ACTUAL.md` y `HISTORY.md`; después revisar el diseño C-05 aprobado, los informes C-05A/B y la normativa Etapa 5. Ejecutar auditoría de recuperación de solo lectura y esperar autorización expresa antes de implementar C-05C.

@@ -1016,3 +1016,10 @@ Verificación previa a publicar: 25/25 pruebas Python PASS (17 C-05A + 8 C-05B);
 El push fue fast-forward a `origin/design/user-identity-association-v1`, sin force push. El HEAD local de `/opt/xray-manager` y el HEAD remoto coincidieron en `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25` tras el push; el árbol quedó limpio. La rama `main` permaneció en `656ecedc506a94a6461aee296b20871d51a38bf3` y `Xray-Normativa/` no tuvo cambios.
 
 C-05A y C-05B quedan IMPLEMENTADAS, VERIFICADAS, AUDITADAS, ACEPTADAS, PUBLICADAS y SINCRONIZADAS. C-05C, C-05D, C-05E y C-05F no quedan autorizadas. No se creó el almacén live, no se leyó la clave maestra real, no se modificaron runtime, servicios, certificados, firewall, puertos, dependencias ni configuración activa.
+
+
+## 2026-11-04 — Actualización de continuidad y expedientes C-05A/C-05B
+
+Tras la auditoría de sincronización, se corrigió el encabezado de docs/CONTINUIDAD_DEL_PROYECTO.md, que aún mostraba C-01/C-02/C-03 como último punto de reanudación. Se actualizó el estado del diseño docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md para reflejar la aprobación de C-05 y el cierre aceptado/publicado de C-05A/B. Se añadieron addenda a los documentos de implementación y auditoría C-05A/B para conservar sus registros históricos de prepublicación y documentar los commits posteriores. PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md registran esta revisión documental.
+
+No se modificó código funcional, normativa, main ni infraestructura. La publicación se limita a la rama design/user-identity-association-v1. C-05C/D/E/F siguen sin autorización. La sincronización previa comprobada estaba en 1815663438770a2271d769345adbc271714a6817.

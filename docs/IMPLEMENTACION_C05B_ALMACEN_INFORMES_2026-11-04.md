@@ -88,3 +88,10 @@ Los informes quedan separados de las configuraciones y, por tanto, no dependen d
 - No se modificaron servicios, runtime, certificados, puertos, firewall, configuración activa ni infraestructura.
 - No se modificó `main` ni `Xray-Normativa/`.
 - No se realizó commit, push ni publicación durante la implementación. La publicación queda autorizada por el propietario tras la aceptación formal.
+
+
+## Addendum — aceptación, publicación y sincronización (2026-11-04)
+
+El apartado de estado Git anterior describe el momento de implementación, antes de la publicación. Tras la aceptación formal del propietario, C-05B se publicó conjuntamente con C-05A en el commit `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25`. El registro de aceptación y continuidad se publicó en `1815663438770a2271d769345adbc271714a6817`.
+
+GitHub y `/opt/xray-manager` se verificaron en el mismo HEAD, con árbol limpio y push fast-forward. C-05B está IMPLEMENTADA, VERIFICADA, AUDITADA, ACEPTADA, PUBLICADA y SINCRONIZADA. No se creó el almacén live. C-05C (integración y promoción a Validada) requiere autorización independiente.
