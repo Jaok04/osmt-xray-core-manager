@@ -55,7 +55,7 @@ Verificación posterior: los cinco archivos se recuperaron desde GitHub y se com
 - Las pruebas usan claves sintéticas temporales; no se lee ni modifica `master.key` real. Se confirmó que `/var/lib/xray-manager/profiles` no existe y no hay perfiles live que migrar.
 - Se actualizó `docs/DISENO_IMPLEMENTACION_PERFILES.md` y se incorporó el estado de esta decisión en los documentos de continuidad.
 - Verificación: `tests/*.sh` 51/51 PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck focal PASS; shfmt de los dos archivos nuevos PASS; `git diff --check` PASS. Pruebas sintéticas únicamente.
-- Commit de implementación publicado en la rama autorizada: `03b63ca109a2fabb262924daf5d2fe4a683b23d8` (`feat(profiles): encrypt versioned profile configs at rest`).
+- Primer commit de implementación publicado: `03b63ca109a2fabb262924daf5d2fe4a683b23d8`; se completará la reconciliación byte a byte con el checkout de la VPS.
 - No se modificaron `Xray-Normativa/`, `main`, runtime, systemd, firewall, puertos, certificados, red ni la conexión VLESS live.
 
 ## 2026-11-02 — Corrección de recuperación P4 y pruebas de interrupción
