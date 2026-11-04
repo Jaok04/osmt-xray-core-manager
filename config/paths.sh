@@ -26,6 +26,7 @@ readonly XRAY_MANAGER_CONNECTION_CONFIGS_DIR="/var/lib/xray-manager/connections/
 readonly XRAY_MANAGER_SECRETS_DIR="/var/lib/xray-manager/secrets"
 readonly XRAY_MANAGER_CONNECTIONS_FILE="/var/lib/xray-manager/connections/connections.json"
 readonly XRAY_MANAGER_PROFILES_DIR="/var/lib/xray-manager/profiles"
+readonly XRAY_MANAGER_PROFILE_VALIDATIONS_DIR="/var/lib/xray-manager/profile-validations"
 : "${XRAY_MANAGER_CONFIGURATIONS_DIR:=/var/lib/xray-manager/configurations}"
 readonly XRAY_MANAGER_CONFIGURATIONS_DIR
 : "${XRAY_MANAGER_VALIDATION_DIR:=/var/lib/xray-manager/validation}"

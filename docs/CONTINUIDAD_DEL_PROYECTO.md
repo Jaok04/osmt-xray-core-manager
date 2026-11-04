@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-04:** U-01 (integración Usuarios V2→VLESS) implementada, verificada, auditada, publicada y sincronizada; pendiente de aceptación formal. Commit `1c2cd12f15be75d9f3a080ce028951724618c492`. Diseño aprobado y autorización de implementación recibida. Regresión shell 58/58 PASS; Xray-core 26.10.31 aceptó un candidato VLESS con asociación V2 active/draft/not_applied. Etapa 2 y Etapa 5 permanecen ABIERTAS. Ver `docs/IMPLEMENTACION_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md` y `docs/AUDITORIA_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`. No usar clave maestra real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
+> **Punto de reanudación vigente — 2026-11-04:** U-01 aceptada formalmente; diseño runtime corregido y R-01 implementada, integrada en CLI/menú y verificada en fixtures. Validación de perfil/revisión exacta, informe SHA-256 y preflight read-only disponibles. R-01 focal 28/28 PASS; Python 108/108 PASS; shell 58/58 PASS. No se ejecutó sobre almacén/clave reales ni systemd real. R-02–R-05 no iniciadas; R-06/live no autorizada. Etapas 2, 3 y 5 permanecen ABIERTAS.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -1218,3 +1218,21 @@ Se preparó `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md`. Es una propuest
 El propietario aprobó el **reinicio controlado** mediante `systemctl restart xray.service` (sin asumir hot reload) y la estrategia de **rollback**: restaurar la configuración anterior de forma atómica y recuperar el estado previo del servicio; si estaba inactivo, no arrancarlo. Si no existe configuración previa, detenerse y requerir intervención controlada. Estas decisiones se incorporan a `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md`.
 
 La aprobación no autoriza todavía implementación R-01–R-05 ni ensayo live R-06. Siguen pendientes las decisiones sobre primera aplicación sin configuración anterior, señales locales de verificación y alcance aislado/live. No se modificó runtime ni infraestructura.
+
+
+## Continuidad vigente — R-01 runtime por perfil/revisión (2026-11-04)
+
+El propietario aprobó desarrollar R-01–R-05 exclusivamente en entornos aislados y aprobó corregir el diseño runtime para que toda identidad sea profile_id + revision, conforme a Etapa 5 §3.1. No usar informes C-05B/C-05C de configuraciones independientes como prueba de validación de perfiles.
+
+R-01 está implementada y verificada en fixtures:
+- scripts/xray_profile_validation_store.py: almacén independiente de informes de perfil, catálogo/hash y journal con recuperación.
+- scripts/xray_profile_validation.py: conecta el motor estático/nativo con el informe persistente; actualiza manifiesto de revisión y resumen de current_revision de forma transaccional.
+- modules/profiles.sh: opción 8 para elegir y validar una revisión exacta; no activa runtime.
+- scripts/xray_runtime_preflight.py: preflight read-only; verifica árbol del perfil, manifiesto, blob AES-GCM, hash de bytes descifrados, estado validado, informe PASS y hash del binario; recibe el estado de servicio mediante fixture root-owned, no consulta systemd.
+- tests/test_xray_runtime_preflight.py: 18/18 PASS; tests/test_xray_profile_validation.py: 10/10 PASS; total focal R-01: 28/28 PASS.
+- Regresión Python: 108/108 PASS; shell: 58/58 PASS. install.sh --check, py_compile, bash -n, ShellCheck focal y git diff --check PASS.
+- Documentos: docs/IMPLEMENTACION_R01_PREFLIGHT_PERFIL_2026-11-04.md y docs/AUDITORIA_R01_PREFLIGHT_PERFIL_2026-11-04.md.
+
+CLI y menú ya integrados. La validación estática/nativa genera informes persistentes ligados a profile_id + revision y actualiza manifiesto/metadata mediante transacción. No se han ejecutado sobre el almacén/clave reales; estado systemd mediante fixture. Siguiente paso: R-02, staging integrado con leases TLS y validación bajo identidad simulada. R-03–R-05 no iniciadas; R-06/live no autorizada.
+
+No leer la clave maestra real ni modificar almacenes live, runtime, /etc/xray/config.json, systemd real, certificados desplegados, firewall, puertos, red, dependencias, main, Xray-Normativa/ o VPS de pruebas. Etapas 2, 3 y 5 permanecen ABIERTAS.

@@ -617,9 +617,12 @@ class ProfileStore:
                     any(part in (".", "..") for part in relative.parts)):
                 fail("Ruta inválida o duplicada en journal transaccional.")
             seen_paths.add(normalized)
-            allowed = (normalized == "catalog.json" or
-                       (len(relative.parts) == 3 and relative.parts[0] == "profiles" and
-                        TOKEN_RE.fullmatch(relative.parts[1]) and relative.parts[2] == "metadata.json"))
+            allowed_metadata = (len(relative.parts) == 3 and relative.parts[0] == "profiles" and
+                                TOKEN_RE.fullmatch(relative.parts[1]) and relative.parts[2] == "metadata.json")
+            allowed_manifest = (len(relative.parts) == 5 and relative.parts[0] == "profiles" and
+                                TOKEN_RE.fullmatch(relative.parts[1]) and relative.parts[2] == "revisions" and
+                                re.fullmatch(r"r[0-9]{6}", relative.parts[3]) and relative.parts[4] == "manifest.json")
+            allowed = normalized == "catalog.json" or allowed_metadata or allowed_manifest
             if not allowed:
                 fail("Destino no permitido en journal transaccional.")
             target = self.root.joinpath(*relative.parts)
@@ -725,11 +728,13 @@ class ProfileStore:
         entries = []
         for target, new_data in changes.items():
             relative_target = self._relative_store_path(target)
-            allowed_target = (relative_target == "catalog.json" or
-                              (len(pathlib.PurePosixPath(relative_target).parts) == 3 and
-                               pathlib.PurePosixPath(relative_target).parts[0] == "profiles" and
-                               TOKEN_RE.fullmatch(pathlib.PurePosixPath(relative_target).parts[1]) and
-                               pathlib.PurePosixPath(relative_target).parts[2] == "metadata.json"))
+            target_parts = pathlib.PurePosixPath(relative_target).parts
+            allowed_metadata = (len(target_parts) == 3 and target_parts[0] == "profiles" and
+                                TOKEN_RE.fullmatch(target_parts[1]) and target_parts[2] == "metadata.json")
+            allowed_manifest = (len(target_parts) == 5 and target_parts[0] == "profiles" and
+                                TOKEN_RE.fullmatch(target_parts[1]) and target_parts[2] == "revisions" and
+                                re.fullmatch(r"r[0-9]{6}", target_parts[3]) and target_parts[4] == "manifest.json")
+            allowed_target = relative_target == "catalog.json" or allowed_metadata or allowed_manifest
             if not allowed_target or not isinstance(new_data, bytes) or len(new_data) > 4 * 1024 * 1024:
                 fail("Destino o contenido no permitido en transacción.")
             check_no_symlink_components(target)
@@ -1246,6 +1251,7 @@ class ProfileStore:
                 new_revision = revision
                 meta["current_revision"] = revision
                 meta["config_present"] = True
+                meta["last_validated_revision"] = None
                 meta["validation_status"] = "not_validated"
             meta["modified_at"] = utc_now()
             for item in catalog["profiles"]:
@@ -1283,6 +1289,7 @@ class ProfileStore:
             new_revision = self.add_revision(profile_id, data, source={"type": "restore", "revision": revision})
             meta["current_revision"] = new_revision
             meta["config_present"] = True
+            meta["last_validated_revision"] = None
             meta["validation_status"] = "not_validated"
             meta["modified_at"] = utc_now()
             catalog = self.load_catalog()

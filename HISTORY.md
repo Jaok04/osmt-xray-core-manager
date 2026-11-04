@@ -787,7 +787,7 @@ La regresión inicial detectó que tests/users.sh recargaba modules/users.sh con
 
 ### Verificación final del staging runtime
 
-Regresión completa 50/50 PASS; AST Python 17/17 PASS; bash -n en todos los archivos shell PASS; ShellCheck/shfmt focal PASS; git diff --check PASS. Xray-core 26.10.31 real validó candidato sintético temporal y lo dejó en STAGED sin publicar runtime ni iniciar servicio. Los 14 archivos normativos comparados coinciden con la copia maestra; README.md es auxiliar no normativo. Sin commit/push/sync.
+Regresión completa 50/50 PASS; AST Python 18/18 PASS; bash -n en todos los archivos shell PASS; ShellCheck/shfmt focal PASS; git diff --check PASS. Xray-core 26.10.31 real validó candidato sintético temporal y lo dejó en STAGED sin publicar runtime ni iniciar servicio. Los 14 archivos normativos comparados coinciden con la copia maestra; README.md es auxiliar no normativo. Sin commit/push/sync.
 
 ## 2026-11-03 — Publicación autorizada de staging runtime y continuidad
 
@@ -1135,3 +1135,25 @@ Tras la revisión final y la regresión 58/58 PASS, U-01 se publicó en `design/
 - El propietario aceptó formalmente U-01 y su auditoría.
 - Se preparó `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md` como propuesta, con staging, validación final, snapshot/journal, publicación atómica, reinicio systemd, verificación y rollback.
 - No se implementó ni ejecutó aplicación runtime. R-06 live requiere autorización separada. Etapas 2, 3 y 5 permanecen abiertas.
+
+
+## 2026-11-04 — Diseño runtime corregido y R-01 implementada en entorno aislado
+
+El propietario aprobó el ajuste del diseño runtime para trabajar exclusivamente con profile_id + revision, conforme a Etapa 5 §3.1. Se contrastó la propuesta con la normativa: la activación se realiza mediante perfiles y no mediante configuraciones independientes. El propietario autorizó desarrollar y probar R-01–R-05 únicamente en entornos aislados; R-06/live sigue sin autorización.
+
+R-01 incorpora scripts/xray_profile_validation_store.py, un historial separado de informes de validación de perfiles con identidad exacta, SHA-256 del contenido descifrado, catálogo, permisos estrictos y journal recuperable. scripts/xray_runtime_preflight.py implementa el preflight read-only, comprueba integridad de perfil/revisión, informe PASS, hash del binario y un fixture de estado de servicio; no consulta systemd real ni ejecuta Xray. Se añadió XRAY_MANAGER_PROFILE_VALIDATIONS_DIR en config/paths.sh y la suite tests/test_xray_runtime_preflight.py.
+
+Resultados: R-01 focal 18/18 PASS; regresión Python 98/98 PASS; regresión shell 58/58 PASS; install.sh --check, py_compile, bash -n, ShellCheck focal y git diff --check PASS. Expedientes: docs/IMPLEMENTACION_R01_PREFLIGHT_PERFIL_2026-11-04.md, docs/AUDITORIA_R01_PREFLIGHT_PERFIL_2026-11-04.md y docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md.
+
+Limitación: la generación de informes aún no está integrada al menú/flujo normal de validación de perfiles; las pruebas crean informes sintéticos por API. R-01 está IMPLEMENTADA, VERIFICADA EN FIXTURES y AUDITADA LOCALMENTE, con aceptación formal pendiente. R-02–R-05 no iniciadas; R-06/live no autorizada. No se tocaron runtime, systemd real, /etc/xray/config.json, certificados reales, firewall, puertos, red, dependencias, main, Xray-Normativa/ ni VPS de pruebas. Etapas 2, 3 y 5 siguen abiertas.
+
+
+## 2026-11-04 — Integración del flujo de validación R-01 en perfiles
+
+Se completó el flujo que faltaba en R-01. Nuevo scripts/xray_profile_validation.py conecta el motor estático/nativo C-05A con el almacén independiente de informes de perfiles. Requiere profile_id y revision explícitos, valida los bytes descifrados exactos, persiste PASS/PASS_WITH_WARNINGS/FAIL/INCOMPLETE y actualiza manifiesto de revisión y metadata de current_revision mediante transacción recuperable. Se amplió el journal de ProfileStore para admitir el manifiesto como destino transaccional. update/restore limpian el puntero de validación del resumen actual, sin invalidar informes/manifiestos de revisiones históricas.
+
+Se integró la opción 8 “Validar revisión del perfil” en modules/profiles.sh. El menú obliga a elegir una revisión exacta y deja claro que validar no aplica runtime. El preflight distingue correctamente entre metadata de la revisión actual y el estado autónomo de una revisión histórica.
+
+Pruebas focales: preflight 18/18 PASS; integración validación de perfiles 10/10 PASS; total R-01 28/28 PASS. Regresión Python 108/108 PASS; regresión shell 58/58 PASS; py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS. Todos los perfiles, claves y binarios usados por las pruebas son sintéticos y temporales.
+
+R-01 está IMPLEMENTADA, INTEGRADA EN CLI/MENÚ, VERIFICADA EN FIXTURES y AUDITADA LOCALMENTE; aceptación formal pendiente. No se ejecutó contra el almacén/clave reales ni systemd real. La validación nativa todavía corre con la identidad del llamador; R-02 debe validar staging/leases bajo identidad de servicio simulada. R-02–R-05 no iniciadas; R-06/live no autorizada. Etapas 2, 3 y 5 siguen abiertas.

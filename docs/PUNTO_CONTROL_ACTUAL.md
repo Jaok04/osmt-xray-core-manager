@@ -1,10 +1,10 @@
 # Punto de control actual — Xray Core Manager
 
-> El punto de control operativo vigente es el último bloque U-01 al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
+> El punto de control operativo vigente es el último bloque R-01 al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
 
 **Fecha del corte:** 2026-11-04
-**Tarea activa:** U-01 — integración Usuarios V2→VLESS. Implementada, verificada, auditada, publicada y sincronizada; aceptación formal pendiente. Commit `1c2cd12f15be75d9f3a080ce028951724618c492`. La base Git de trabajo es `ca6d76895821310a3072d9de47268f925ecea7ba` en `design/user-identity-association-v1`.
-**Estado vigente:** U-01 integra el generador VLESS con Usuarios V2 como fuente única, exporta candidatos active/no vencidos sin depender del estado aplicado, mantiene separada la vista runtime y permite UUID automático/manual. Regresión shell 58/58 PASS; Xray 26.10.31 real aceptó un candidato VLESS-WS proyectado desde una asociación V2 active/draft/not_applied. C-05A–E permanecen aceptadas/publicadas según sus expedientes; C-05F aceptada y H-01 corregido/publicado según el estado vigente. Etapa 5 ABIERTA; Etapa 2 ABIERTA; Etapa 3 requiere auditoría propia. El trabajo de U-01 no activa runtime, no migra datos legacy y no implementa ACME/Cloudflare.
+**Tarea activa:** R-01 — preflight runtime por perfil/revisión. Implementada y verificada en fixtures; auditoría local realizada, aceptación formal pendiente. Integración con el menú de validación de perfiles aún pendiente.
+**Estado vigente:** diseño runtime corregido a profile_id + revision conforme a Etapa 5 §3.1. R-01 incluye CLI/menú de validación exacta, almacén independiente de informes y preflight read-only. Focal R-01 28/28 PASS; Python 108/108 PASS; shell 58/58 PASS. No ejecutado sobre almacén/clave reales ni systemd real. R-02–R-05 no iniciadas; R-06/live no autorizada. Etapas 2, 3 y 5 ABIERTAS.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -1130,3 +1130,17 @@ U-01 está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Co
 - Diseño actualizado: `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md`.
 - **No implica autorización de implementación** R-01–R-05 ni ensayo live R-06. Siguen pendientes primera aplicación sin config, señales locales de verificación y alcance de incrementos aislados/live.
 - Runtime, servicios, certificados desplegados, firewall, puertos, red y VPS de pruebas no fueron modificados.
+
+
+## Punto de control vigente — R-01 preflight runtime por perfil/revisión (2026-11-04)
+
+- Autorización: R-01–R-05 solo en entornos aislados; R-06/live requiere autorización nueva. El propietario aprobó además que el diseño use exclusivamente profile_id + revision.
+- Rama/base: design/user-identity-association-v1; base de trabajo verificada al inicio: 28235a1507914f34b20d3f3fcee29108ce696a9e.
+- Implementación R-01: scripts/xray_profile_validation_store.py, scripts/xray_profile_validation.py, scripts/xray_runtime_preflight.py, tests/test_xray_profile_validation.py, tests/test_xray_runtime_preflight.py y opción 8 en modules/profiles.sh; ruta de informes en config/paths.sh.
+- Diseño: docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md, corregido para vincular informe a perfil/revisión.
+- Evidencia: focal R-01 28/28 PASS (preflight 18/18, validación 10/10); Python 108/108 PASS; shell 58/58 PASS; install.sh --check, py_compile, bash -n, ShellCheck focal y git diff --check PASS.
+- Limitación crítica: CLI/menú integrados, pero aún no se han ejecutado sobre el almacén de perfiles ni la clave maestra reales. El estado de servicio usa fixture; validación final como usuario xray y leases TLS quedan para R-02.
+- Estado R-01: IMPLEMENTADA / VERIFICADA EN FIXTURES / AUDITADA LOCALMENTE / ACEPTACIÓN FORMAL PENDIENTE.
+- Siguiente paso técnico: iniciar R-02 — staging integrado de la revisión exacta del perfil y leases TLS en directorio temporal, con validación bajo identidad de servicio simulada. Mantener sin publicación runtime.
+- No autorizado: R-06/live; cambios en Xray real, /etc/xray/config.json, systemd real, certificados desplegados, firewall, puertos, red, dependencias, VPS de pruebas, main o Xray-Normativa/.
+- Etapas: Etapa 2, Etapa 3 y Etapa 5 siguen ABIERTAS.

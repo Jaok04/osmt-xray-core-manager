@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 # Gestión inicial de perfiles y revisiones; no activa ni publica configuraciones.
-profiles_cli() { python3 "$APP_ROOT/scripts/xray_profiles.py" "$@"; }
+profiles_cli() {
+    python3 "$APP_ROOT/scripts/xray_profiles.py" \
+        --store "$XRAY_MANAGER_PROFILES_DIR" \
+        --master-key "$XRAY_MANAGER_MASTER_KEY_FILE" "$@"
+}
+profiles_validation_cli() {
+    python3 "$APP_ROOT/scripts/xray_profile_validation.py" \
+        --profile-store "$XRAY_MANAGER_PROFILES_DIR" \
+        --master-key "$XRAY_MANAGER_MASTER_KEY_FILE" \
+        --validation-store "$XRAY_MANAGER_PROFILE_VALIDATIONS_DIR" \
+        --xray-binary "$XRAY_BIN_PATH" "$@"
+}
 profiles_list_json() { profiles_cli list; }
 profiles_select_id() {
     local answer json i
@@ -216,13 +227,69 @@ profiles_versions_menu() {
     profiles_cli restore --profile-id "$profile_id" --revision "$revision" | jq .
     ui_pause
 }
+profiles_validate_revision_menu() {
+    local profile_id versions answer revision result index
+    local -a revisions=() states=() current=()
+    ui_clear
+    ui_title "VALIDAR REVISIÓN DE PERFIL"
+    profile_id="$(profiles_select_id)" || {
+        ui_pause
+        return 1
+    }
+    versions="$(profiles_cli versions --profile-id "$profile_id")" || {
+        printf 'No se pudo consultar el historial de revisiones.\n'
+        ui_pause
+        return 1
+    }
+    mapfile -t revisions < <(jq -r '.[].revision' <<<"$versions")
+    mapfile -t states < <(jq -r '.[].validation' <<<"$versions")
+    mapfile -t current < <(jq -r '.[].current' <<<"$versions")
+    ((${#revisions[@]})) || {
+        printf '\nEl perfil no contiene revisiones para validar.\n'
+        ui_pause
+        return 0
+    }
+    printf '\nSelecciona la revisión exacta; no se sustituirá automáticamente por current_revision:\n'
+    for index in "${!revisions[@]}"; do
+        printf '  [%d] %s | validación: %s%s\n' \
+            "$((index + 1))" "${revisions[index]}" "${states[index]}" \
+            "$([[ ${current[index]} == true ]] && printf ' | actual' || true)"
+    done
+    ui_read_option "Revisión a validar (0 = cancelar): " answer || return 0
+    [[ "$answer" =~ ^[0-9]+$ ]] || {
+        printf 'Selección no válida.\n'
+        ui_pause
+        return 1
+    }
+    answer=$((10#$answer))
+    ((answer >= 1 && answer <= ${#revisions[@]})) || return 0
+    revision="${revisions[answer-1]}"
+    printf '\nPerfil: %s\nRevisión exacta: %s\n' "$profile_id" "$revision"
+    printf 'Se ejecutará validación estática y nativa y se guardará un informe ligado a esta revisión.\n'
+    printf 'No se publicará configuración ni se iniciará/reiniciará Xray.\n'
+    ui_confirm "¿Validar el perfil $profile_id, revisión $revision?" || {
+        printf 'Operación cancelada.\n'
+        ui_pause
+        return 0
+    }
+    result="$(profiles_validation_cli --profile-id "$profile_id" --revision "$revision")" || {
+        printf '\nLa validación no pudo completarse o no se pudo persistir de forma coherente.\n'
+        ui_pause
+        return 1
+    }
+    printf '\nResultado persistido:\n'
+    jq '{validation_id, profile_id, revision, result, validation_status, profile_validation_status, last_validated_revision, current_revision, selected_revision_is_current, report_persisted, configuration_applied, service_started}' <<<"$result"
+    ui_pause
+}
+
 menu_profiles() {
     local option
     while true; do
         ui_clear
         ui_title "GESTIONAR PERFILES"
         printf '\n  [1] Crear perfil\n  [2] Consultar perfiles\n  [3] Modificar perfil\n  [4] Duplicar perfil\n  [5] Renombrar perfil\n'
-        printf '  [6] Eliminar perfil (pendiente de protección de dependencias)\n  [7] Historial y restaurar versión\n  [0] Volver\n\n'
+        printf '  [6] Eliminar perfil (pendiente de protección de dependencias)\n  [7] Historial y restaurar versión\n'
+        printf '  [8] Validar revisión del perfil (estática + Xray; no aplica runtime)\n  [0] Volver\n\n'
         ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
             1) profiles_create_menu || true ;;
@@ -235,6 +302,7 @@ menu_profiles() {
                 ui_pause
                 ;;
             7) profiles_versions_menu || true ;;
+            8) profiles_validate_revision_menu || true ;;
             0) return 0 ;;
             *)
                 printf 'Opción no válida.\n'

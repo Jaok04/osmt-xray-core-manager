@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-04 — U-01 (integración Usuarios V2→VLESS) implementada, verificada y auditada localmente; pendiente de aceptación formal y publicación. Regresión shell 58/58 PASS; Xray 26.10.31 real aceptó un candidato VLESS con asociación V2 active/draft/not_applied. C-01/C-02/C-03 aceptadas como componentes limitados; C-04 cerrada integralmente; Etapa 5 y Etapa 2 ABIERTAS. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios documentados y probados. Los requisitos funcionales restantes de Etapa 5 siguen pendientes. Snapshot Writer v1 mantiene su aceptación limitada independiente; backup/restore integral pendiente. VLESS-WS live continúa draft, sin runtime apply ni conectividad externa.
+**Corte de estado:** 2026-11-04 — U-01 aceptada formalmente; diseño runtime corregido y R-01 implementada, integrada en CLI/menú y verificada en fixtures. El administrador puede validar una revisión exacta, persistir su informe con hash y ejecutar preflight read-only. R-01 focal 28/28 PASS; Python 108/108 PASS; shell 58/58 PASS. No se ejecutó contra almacén/clave reales. R-02–R-05 no iniciadas; R-06/live no autorizada. Etapas 2, 3 y 5 siguen ABIERTAS.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -681,7 +681,7 @@ Se corrigió el fixture de tests/users.sh para que las recargas de módulos siga
 ### Verificación final de la infraestructura de candidatos runtime
 
 - Pruebas automatizadas: 50/50 scripts PASS.
-- Python AST: 17/17 PASS.
+- Python AST: 18/18 PASS.
 - bash -n: todos los archivos shell del proyecto PASS.
 - ShellCheck y shfmt: prueba nueva focal PASS.
 - git diff --check PASS.
@@ -1122,3 +1122,17 @@ U-01 se publicó mediante commit `1c2cd12f15be75d9f3a080ce028951724618c492` (`fe
 ## Aceptación formal U-01 — 2026-11-04
 
 U-01 y su auditoría fueron aceptadas formalmente por el propietario. Se autoriza avanzar al diseño del mecanismo de aplicación runtime, no a implementarlo ni ejecutarlo. Diseño propuesto: `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md`. R-01–R-05 requieren aprobación de alcance/decisiones antes de implementación; R-06 requiere autorización live independiente. Etapas 2, 3 y 5 permanecen abiertas.
+
+
+## Estado vigente — diseño runtime corregido y R-01 aislada (2026-11-04)
+
+- El propietario aprobó que R-01–R-05 se desarrollen y prueben exclusivamente en entornos aislados.
+- El propietario aprobó corregir el diseño para usar profile_id + revision, conforme a Etapa 5 §3.1. Las configuraciones independientes no son una vía alternativa de activación.
+- Diseño actualizado: docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md.
+- R-01 añade scripts/xray_profile_validation_store.py, scripts/xray_profile_validation.py (motor estático/nativo y persistencia), scripts/xray_runtime_preflight.py y opción de menú 8 en modules/profiles.sh.
+- El preflight verifica perfil/revisión exactos, integridad AES-GCM, metadatos/manifiesto, informe PASS, hash de contenido y hash del binario Xray. No ejecuta systemd ni modifica runtime.
+- Prueba focal R-01: 28/28 PASS (preflight 18/18, integración de validación 10/10). Regresión Python completa: 108/108 PASS. Regresión shell: 58/58 PASS. install.sh --check, py_compile, bash -n, ShellCheck focal y git diff --check: PASS.
+- Limitación: CLI/menú ya integrados, pero no ejecutados contra el almacén/clave reales. El estado de servicio se representa con fixture; validación final como usuario xray y leases TLS quedan para R-02.
+- R-01: IMPLEMENTADA, VERIFICADA EN FIXTURES y AUDITADA LOCALMENTE; aceptación formal pendiente. R-02–R-05 no iniciadas. R-06/live no autorizada.
+- No se accedió a la clave maestra real ni a almacenes live; no se tocó /etc/xray/config.json, systemd real, runtime, certificados desplegados, firewall, puertos, red, dependencias, main, Xray-Normativa/ ni VPS de pruebas.
+- Etapa 5, Etapa 2 y Etapa 3 permanecen ABIERTAS.
