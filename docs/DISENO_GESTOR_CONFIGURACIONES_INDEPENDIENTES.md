@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-04
 **Rama:** design/user-identity-association-v1
 **Normativa:** Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md §§ 2–5 y 14; YAML aprobado correspondiente.
-**Estado:** C-01 y C-02 aceptados formalmente dentro de sus auditorías limitadas; C-03 aceptada formalmente como componente limitado conforme a su auditoría. C-04–C-06 no implementadas.
+**Estado actualizado 2026-11-04:** C-01/C-02/C-03 aceptadas formalmente como componentes limitados; C-04A aceptada/publicada; C-04B implementada, verificada y aceptada formalmente como componente limitado; C-04C no autorizada ni iniciada.
 
 ## 1. Objetivo y límites
 
@@ -233,9 +233,11 @@ Los comandos devuelven JSON estructurado para la interfaz Bash. No habrá comand
 - Auditoría: `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`.
 - Estado: implementado, verificado y aceptado formalmente como componente limitado (2026-11-04). No cierra la Etapa 5.
 
-**Fase C-04 — interfaz y eliminación**
-- Integrar submenú aprobado, navegación, errores recuperables, exportación múltiple y eliminación segura.
-- No habilitar eliminación hasta probar referencias y preservación de copias de perfil/informes.
+**Fase C-04 — interfaz y eliminación (desglosada por autorización)**
+- [x] C-04A: eliminación segura transaccional; auditoría `docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md`; aceptada y publicada.
+- [x] C-04B: exportación múltiple mediante manifiesto explícito, preview/hash de confirmación y resultados parciales; auditoría `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`; implementada, verificada y aceptada formalmente como componente limitado.
+- [ ] C-04C: integración del menú Bash; no autorizada ni iniciada.
+- C-04 no se considera completa hasta completar las fases autorizadas, su auditoría y aceptación.
 
 **Fase C-05 — integración con validador**
 - Contrato de informes y promoción a Validada. Esta fase depende del diseño/implementación del validador estático, que se auditará por separado.
@@ -296,3 +298,14 @@ Se incorporó WAL v2 exclusivo para delete: estado prepared revierte rename/cat�
 Auditoría: docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md. Prueba focal PASS; regresión completa 54/54 PASS; Python compile, Bash syntax, ShellCheck focal y git diff --check PASS.
 
 Estado: C-04A implementada y auditada localmente, pendiente de aceptación formal. C-04B (exportación múltiple) y C-04C (interfaz Bash) no iniciadas. Etapa 5 y Etapa 2 continúan ABIERTAS. Sin commit/push/sync.
+
+
+## 12. C-04B — contrato de exportación múltiple (2026-11-04)
+
+La exportación múltiple usa un manifiesto JSON estricto de hasta 100 entradas. Cada entrada identifica `config_id`, revisión concreta o `null` para resolver la actual durante preview, destino absoluto y booleano `overwrite` individual. El manifiesto debe ser regular, root:root 0600, sin symlink/hardlink y hasta 1 MiB.
+
+CLI: `preview-export-batch --manifest` y `export-batch --manifest --expected-manifest-sha256 --expected-preview-sha256 --confirm`. El primer hash liga el archivo de manifiesto; el segundo liga el resultado de preview, incluyendo la revisión resuelta y el estado de cada destino. La ejecución reconstruye el preview y aborta si cualquiera cambió; no vuelve a elegir una revisión actual diferente.
+
+Cada salida reutiliza la escritura individual atómica/0600 y verificación byte a byte. Los errores son por entrada y no cancelan las restantes; el resultado reporta éxitos/errores y advierte que los archivos están en claro. Destinos duplicados bloquean todas las entradas afectadas. No se añadió patrón de nombres ni generación automática de rutas: cada destino se declara explícitamente.
+
+Estado C-04B: implementada, verificada y aceptada formalmente como componente limitado. C-04C (menú Bash) no autorizada/iniciada. Sin commit/push/sync.

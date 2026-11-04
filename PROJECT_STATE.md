@@ -913,3 +913,21 @@ El propietario aceptó formalmente C-04A como componente limitado conforme a `do
 C-04A está IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Commit de implementación: `afb2f7bf8cc040ca2731787b9e113b5a4660a00f`.
 
 C-04B (exportación múltiple) y C-04C (integración del menú Bash) no están autorizadas ni iniciadas. La aceptación no autoriza runtime, servicios, dependencias, certificados, firewall, puertos, red, VPS de pruebas ni cambios en `main` o `Xray-Normativa/`.
+
+## Estado vigente — C-04B exportación múltiple (2026-11-04)
+
+- Autorización expresa recibida para implementar exclusivamente C-04B, después de la aceptación formal y publicación de C-04A.
+- `scripts/xray_configurations.py` incorpora `preview-export-batch` y `export-batch`. El contrato usa manifiesto JSON estricto (1–100 entradas), ruta por salida, revisión específica o revisión actual resuelta durante preview y política `overwrite` individual.
+- Preview valida configuración/revisión/destinos, rechaza rutas inseguras y destinos duplicados, y devuelve `manifest_sha256` y `preview_sha256`. La ejecución exige ambos hashes más `--confirm`, reconstruye el preview y rechaza cambios en manifiesto, revisión actual resuelta o estado revisado antes de exportar.
+- Cada archivo reutiliza la exportación individual atómica, root:root 0600 y verificación byte a byte. Un fallo individual se informa sin cancelar las demás salidas. Los archivos quedan en claro y la salida lo advierte.
+- Nueva prueba focal: `tests/xray_configurations_c04b.sh` PASS; incluye revisión obsoleta, manifiesto/destinos inseguros, duplicados, fallos parciales y confirmación/hash.
+- Regresión global final `tests/*.sh`: **55/55 PASS** después de incluir el caso de revisión obsoleta. `py_compile`, `bash -n` global, ShellCheck focal y `git diff --check` PASS.
+- Auditoría: `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`. Diseño actualizado en `docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md`.
+- Estado: C-04B IMPLEMENTADA y VERIFICADA localmente; pendiente de aceptación formal. C-04C (menú Bash) no autorizada ni iniciada. C-04, Etapa 5 y Etapa 2 siguen ABIERTAS.
+- Sólo almacenes temporales y claves sintéticas. No se leyó `master.key`, no se accedió al almacén real ni se tocó runtime, servicios, systemd, certificados, firewall, puertos, red, dependencias, VPS de pruebas, `main` o `Xray-Normativa/`. Sin commit/push/sync.
+
+## Aceptación formal C-04B — 2026-11-04
+
+El propietario aceptó formalmente C-04B como componente limitado conforme a `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`. La aceptación cubre exclusivamente la exportación múltiple, el contrato de manifiesto, las comprobaciones previas, la confirmación por hashes, la ejecución parcial y las pruebas documentadas. No cierra C-04 completa, Etapa 5 ni Etapa 2.
+
+C-04B permanece implementada, verificada y aceptada localmente. La publicación/sincronización no se entiende autorizada por esta aceptación. C-04C (integración del menú Bash) no se inicia sin autorización específica. `main`, `Xray-Normativa/`, runtime, servicios y VPS de pruebas permanecen fuera del alcance.

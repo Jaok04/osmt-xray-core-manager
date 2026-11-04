@@ -1052,3 +1052,17 @@ El propietario aceptó formalmente C-04A como componente limitado, conforme a `d
 La implementación, prueba focal y auditoría están publicadas en `design/user-identity-association-v1`. Commit: `afb2f7bf8cc040ca2731787b9e113b5a4660a00f`. La VPS `Implementación-Xray:/opt/xray-manager` y GitHub se verificaron en el mismo SHA, con árbol de trabajo limpio en el momento de la verificación.
 
 C-04B y C-04C no están autorizadas ni iniciadas. C-04 no está completa. Etapa 5 y Etapa 2 siguen ABIERTAS. No se tocó `main`, `Xray-Normativa/`, la VPS de pruebas ni runtime/servicios/red.
+
+## Continuidad vigente — C-04B exportación múltiple implementada (2026-11-04)
+
+C-01/C-02/C-03 permanecen aceptadas formalmente como componentes limitados. C-04A está aceptada, publicada y sincronizada. El propietario autorizó ahora exclusivamente C-04B; C-04C (integración del menú Bash) no está autorizada ni iniciada.
+
+C-04B añade `preview-export-batch` y `export-batch` a `scripts/xray_configurations.py`. La entrada es un manifiesto JSON cerrado de 1–100 exportaciones, con ID, revisión (o `null` para resolver la actual), destino absoluto y overwrite individual. Preview verifica cada elemento y devuelve hash del manifiesto y hash del preview. La ejecución exige ambos hashes y confirmación explícita, vuelve a calcular preview y utiliza la revisión exacta que se mostró. Los destinos duplicados bloquean todas las entradas afectadas. Las exportaciones reutilizan el writer individual, con escritura atómica, modo 0600, verificación byte a byte y advertencia de plaintext. Un fallo individual no cancela las demás.
+
+Auditoría: `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`. Prueba focal `tests/xray_configurations_c04b.sh` PASS. Regresión global final `tests/*.sh` **55/55 PASS**, incluida la revisión obsoleta. Python compile, Bash syntax, ShellCheck focal y `git diff --check` PASS.
+
+Estado: C-04B implementada/verificada localmente, pendiente de aceptación formal. No se ha hecho commit/push/sync. No iniciar C-04C sin autorización específica. C-04, Etapa 5 y Etapa 2 siguen ABIERTAS. Sólo almacenes temporales y claves sintéticas; no se leyó `master.key`, no se accedió al almacén real, no se tocaron runtime/servicios/dependencias/certificados/firewall/puertos/red/VPS de pruebas/`main`/`Xray-Normativa/`.
+
+## Aceptación C-04B — 2026-11-04
+
+El propietario aceptó formalmente C-04B como componente limitado conforme a `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`. La implementación y sus pruebas quedan aceptadas localmente. La aceptación no implica publicación, commit, push ni sincronización. C-04C (integración del menú Bash) requiere autorización específica antes de iniciar. C-04 no está completa; Etapa 5 y Etapa 2 siguen abiertas. No se modificaron `main`, `Xray-Normativa/`, runtime, servicios, dependencias ni VPS de pruebas.

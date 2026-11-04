@@ -934,6 +934,109 @@ class ConfigurationStore:
         finally:
             with contextlib.suppress(FileNotFoundError): temp.unlink()
 
+    def _read_export_batch_manifest(self, source):
+        if not isinstance(source, str) or not source:
+            fail("Ruta de manifiesto vacía.")
+        path = pathlib.Path(source)
+        if not path.is_absolute():
+            fail("El manifiesto debe tener ruta absoluta.")
+        safe_components(path)
+        raw = read_file(path, 1024 * 1024)
+        value = strict_json(raw, "Manifiesto de exportación múltiple")
+        if not isinstance(value, dict) or set(value) != {"schema_version", "exports"}:
+            fail("Contrato del manifiesto inválido: se esperan schema_version y exports.")
+        if type(value["schema_version"]) is not int or value["schema_version"] != 1:
+            fail("Versión de manifiesto no compatible.")
+        entries = value["exports"]
+        if not isinstance(entries, list) or not 1 <= len(entries) <= 100:
+            fail("El manifiesto debe contener entre 1 y 100 exportaciones.")
+        for index, item in enumerate(entries):
+            if not isinstance(item, dict) or set(item) != {"config_id", "revision", "destination", "overwrite"}:
+                fail(f"Entrada {index + 1}: contrato inválido.")
+            if not isinstance(item["config_id"], str) or not ID_RE.fullmatch(item["config_id"]):
+                fail(f"Entrada {index + 1}: config_id inválido.")
+            if item["revision"] is not None and (not isinstance(item["revision"], str) or not REV_RE.fullmatch(item["revision"])):
+                fail(f"Entrada {index + 1}: revisión inválida.")
+            if not isinstance(item["destination"], str) or not item["destination"]:
+                fail(f"Entrada {index + 1}: destino inválido.")
+            if type(item["overwrite"]) is not bool:
+                fail(f"Entrada {index + 1}: overwrite debe ser booleano.")
+        return raw, entries
+
+    def preview_export_batch(self, source):
+        raw, entries = self._read_export_batch_manifest(source)
+        digest = hashlib.sha256(raw).hexdigest()
+        destinations = {}
+        duplicate_indexes = set()
+        for index, item in enumerate(entries):
+            target = pathlib.Path(item["destination"])
+            if target.is_absolute() and ".." not in target.parts:
+                key = os.path.normpath(str(target))
+                if key in destinations:
+                    duplicate_indexes.add(index)
+                    duplicate_indexes.add(destinations[key] - 1)
+                else:
+                    destinations[key] = index + 1
+        for index, item in enumerate(entries):
+            try:
+                target = pathlib.Path(item["destination"])
+                if not target.is_absolute() or target.name in ("", ".", "..") or ".." in target.parts:
+                    fail("El destino debe ser una ruta absoluta normalizada a un archivo, sin '..'.")
+                if index in duplicate_indexes:
+                    fail("El destino está repetido en otra entrada del manifiesto.")
+                safe_components(target)
+                parent_stat = target.parent.lstat()
+                if not stat.S_ISDIR(parent_stat.st_mode):
+                    fail("El directorio de destino no es un directorio real.")
+                with self.locked():
+                    meta = self._registered_metadata(item["config_id"])
+                    selected = item["revision"] or meta["current_revision"]
+                    if selected is None:
+                        fail("La configuración no tiene contenido para exportar.")
+                    plain, _ = self.verify_revision(item["config_id"], selected)
+                try:
+                    existing = target.lstat()
+                except FileNotFoundError:
+                    existing = None
+                if existing is not None:
+                    if not stat.S_ISREG(existing.st_mode) or existing.st_nlink != 1:
+                        fail("El destino existente debe ser archivo regular sin hardlinks.")
+                    if not item["overwrite"]:
+                        fail("El destino ya existe y overwrite=false.")
+                result = {"index": index + 1, "status": "ready", "config_id": item["config_id"], "revision": selected, "destination": str(target), "size_bytes": len(plain), "sha256": hashlib.sha256(plain).hexdigest(), "overwrite": item["overwrite"]}
+            except (ConfigurationError, OSError, ValueError) as exc:
+                result = {"index": index + 1, "status": "error", "config_id": item["config_id"], "destination": item["destination"], "error": str(exc)}
+            entries[index] = result
+        ready = sum(1 for item in entries if item["status"] == "ready")
+        preview_sha256 = hashlib.sha256(json_bytes({"manifest_sha256": digest, "exports": entries})).hexdigest()
+        return {"manifest_sha256": digest, "preview_sha256": preview_sha256, "total": len(entries), "ready": ready, "errors": len(entries) - ready, "exports": entries, "plaintext_warning": "Los archivos exportados quedan en claro y pueden contener credenciales o claves.", "confirmation_required": True}
+
+    def export_batch(self, source, expected_manifest_sha256, expected_preview_sha256, confirm=False):
+        if not confirm:
+            fail("La exportación múltiple requiere --confirm después de revisar preview-export-batch.")
+        if not isinstance(expected_manifest_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_manifest_sha256):
+            fail("Se requiere --expected-manifest-sha256 válido.")
+        raw, _ = self._read_export_batch_manifest(source)
+        actual = hashlib.sha256(raw).hexdigest()
+        if actual != expected_manifest_sha256:
+            fail("El manifiesto cambió desde preview-export-batch; vuelve a previsualizar.")
+        preview = self.preview_export_batch(source)
+        if not isinstance(expected_preview_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_preview_sha256) or preview["preview_sha256"] != expected_preview_sha256:
+            fail("El resultado de preview cambió; vuelve a revisar preview-export-batch.")
+        results = []
+        for item in preview["exports"]:
+            index = item["index"]
+            if item["status"] != "ready":
+                results.append({"index": index, "status": "error", "config_id": item["config_id"], "destination": item["destination"], "error": item["error"]})
+                continue
+            try:
+                result = self.export_file(item["config_id"], item["destination"], item["revision"], item["overwrite"])
+                results.append({"index": index, "status": "exported", **result})
+            except (ConfigurationError, OSError, ValueError) as exc:
+                results.append({"index": index, "status": "error", "config_id": item["config_id"], "destination": item["destination"], "error": str(exc)})
+        exported = sum(1 for item in results if item["status"] == "exported")
+        return {"manifest_sha256": actual, "total": len(results), "exported": exported, "errors": len(results) - exported, "results": results, "plaintext_warning": "Los archivos exportados quedan en claro y pueden contener credenciales o claves."}
+
     def show_unlocked(self, cid):
         meta = self.load_metadata(cid); catalog = self.load_catalog()
         if not any(x["config_id"] == cid and x["name"] == meta["name"] for x in catalog["configurations"]): fail("Objeto no registrado en catálogo.")
@@ -971,6 +1074,8 @@ def build_parser():
     cp = sub.add_parser("compare"); cp.add_argument("--first", required=True); cp.add_argument("--second", required=True); cp.add_argument("--first-revision"); cp.add_argument("--second-revision")
     rv = sub.add_parser("revisions"); rv.add_argument("--config-id", required=True)
     ex = sub.add_parser("export"); ex.add_argument("--config-id", required=True); ex.add_argument("--revision"); ex.add_argument("--destination", required=True); ex.add_argument("--overwrite", action="store_true")
+    pb = sub.add_parser("preview-export-batch"); pb.add_argument("--manifest", required=True)
+    eb = sub.add_parser("export-batch"); eb.add_argument("--manifest", required=True); eb.add_argument("--expected-manifest-sha256", required=True); eb.add_argument("--expected-preview-sha256", required=True); eb.add_argument("--confirm", action="store_true")
     pd = sub.add_parser("preview-delete"); pd.add_argument("--config-id", required=True)
     de = sub.add_parser("delete"); de.add_argument("--config-id", required=True); de.add_argument("--expected-name", required=True); de.add_argument("--confirm", action="store_true"); de.add_argument("--assert-not-active", action="store_true")
     return p
@@ -993,6 +1098,8 @@ def main():
             result = store.edit(args.config_id, args.source, args.expected_sha256, expected_revision, args.accept_invalid)
         elif args.command == "compare": result = store.compare(args.first, args.second, args.first_revision, args.second_revision)
         elif args.command == "revisions": result = store.revisions(args.config_id)
+        elif args.command == "preview-export-batch": result = store.preview_export_batch(args.manifest)
+        elif args.command == "export-batch": result = store.export_batch(args.manifest, args.expected_manifest_sha256, args.expected_preview_sha256, args.confirm)
         elif args.command == "preview-delete": result = store.preview_delete(args.config_id)
         elif args.command == "delete":
             result = store.delete(args.config_id, args.expected_name, args.confirm, args.assert_not_active)

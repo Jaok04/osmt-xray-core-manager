@@ -888,3 +888,26 @@ La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una 
 - **Límite runtime:** el almacén independiente no verifica aplicaciones externas; `--assert-not-active` sigue siendo una afirmación explícita del operador, no una comprobación automática del runtime.
 - **Pendiente:** C-04B y C-04C no autorizadas ni iniciadas. C-04, Etapa 5 y Etapa 2 no están cerradas.
 - **Exclusiones:** no se tocó clave maestra real, almacén live, runtime, servicios, certificados, firewall, puertos, red, dependencias, VPS de pruebas, `main` ni `Xray-Normativa/`.
+
+## Punto de control vigente — C-04B implementada y verificada localmente (2026-11-04)
+
+- C-01/C-02/C-03: aceptadas formalmente como componentes limitados.
+- C-04A: aceptada formalmente, publicada y sincronizada en commit `afb2f7bf8cc040ca2731787b9e113b5a4660a00f`.
+- C-04B: autorización expresa recibida; `preview-export-batch` y `export-batch` implementados en `scripts/xray_configurations.py`.
+- El manifiesto es JSON estricto, 1–100 entradas, root:root 0600, sin symlink/hardlink. Cada salida define configuración, revisión o `null`, destino absoluto y overwrite booleano.
+- Preview devuelve hash del manifiesto y hash del preview. Ejecución requiere ambos hashes y `--confirm`; vuelve a construir el preview para impedir exportar una revisión distinta a la revisada. Destinos repetidos bloquean todas las entradas involucradas.
+- Exportación por elemento reutiliza el writer individual con permisos 0600, escritura atómica y verificación byte a byte. Los fallos individuales no cancelan las demás salidas; se devuelven contadores y resultados por elemento.
+- Prueba focal `tests/xray_configurations_c04b.sh`: PASS. Regresión integral final `tests/*.sh`: **55/55 PASS**. Python compile, Bash syntax global, ShellCheck focal y `git diff --check`: PASS.
+- Auditoría: `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`.
+- Estado C-04B: IMPLEMENTADA/VERIFICADA LOCALMENTE; pendiente de aceptación formal. C-04C (menú Bash) no autorizada ni iniciada. C-04 no está completa. Etapa 5 y Etapa 2 siguen ABIERTAS.
+- Sólo pruebas temporales y claves sintéticas. No se leyó clave maestra real ni se accedió al almacén real. Sin cambios en runtime/servicios/certificados/firewall/puertos/red/dependencias/VPS de pruebas/`main`/`Xray-Normativa/`. Sin commit/push/sync.
+
+## Punto de control vigente — C-04B aceptada formalmente (2026-11-04)
+
+- **Aceptación:** el propietario aceptó formalmente C-04B como componente limitado conforme a `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`.
+- **Estado:** IMPLEMENTADA, VERIFICADA y ACEPTADA LOCALMENTE.
+- **Evidencia:** `tests/xray_configurations_c04b.sh` PASS; regresión completa 55/55 PASS; Python compile, Bash syntax global, ShellCheck focal y `git diff --check` PASS.
+- **Pendiente:** C-04C (integración del menú Bash). Esta fase requiere autorización específica antes de iniciar implementación.
+- **Publicación:** no se hizo commit, push ni sincronización; la aceptación de C-04B no autoriza esas acciones.
+- **Exclusiones:** no se modificaron `main`, `Xray-Normativa/`, runtime, servicios, dependencias, certificados, firewall, puertos, red ni VPS de pruebas.
+- C-04, Etapa 5 y Etapa 2 permanecen ABIERTAS.
