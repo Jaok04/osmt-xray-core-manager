@@ -912,4 +912,114 @@ assert stat.S_IMODE((suspicious / "metadata.json").stat().st_mode) == 0o644, "PF
 print(f"PASS: PF-11 rejected {len(manifest_cases)} malformed manifests; PF-12 reconciled create/duplicate SIGKILL orphans and preserved unsafe candidates.")
 PFMANIFESTORPHANS
 
+# PF-06: modificar ciphertext y su SHA-256 para alcanzar y verificar el rechazo GCM.
+python3 - "$ROOT" "$TMP/pf06-gcm" <<'PFGCM'
+import base64, hashlib, json, pathlib, sys
+base = pathlib.Path(sys.argv[2]); base.mkdir(mode=0o700); base.chmod(0o700)
+key = base / "synthetic.key"; key.write_bytes(b"G" * 32); key.chmod(0o600)
+sys.path.insert(0, str(pathlib.Path(sys.argv[1]) / "scripts"))
+from xray_profiles import ProfileStore, ProfileError, json_bytes
+store = ProfileStore(str(base / "store"), str(key))
+created = store.create("GCM integrity", config_data=b'{"secret":"synthetic"}')
+pid = created["profile_id"]; revision = created["current_revision"]
+revdir = store.profiles / pid / "revisions" / revision
+blob_path = revdir / "config.enc.json"; manifest_path = revdir / "manifest.json"
+original_blob = blob_path.read_bytes(); original_manifest = manifest_path.read_bytes()
+envelope = json.loads(original_blob)
+ciphertext = bytearray(base64.b64decode(envelope["ciphertext"], validate=True))
+ciphertext[0] ^= 0x01
+envelope["ciphertext"] = base64.b64encode(ciphertext).decode("ascii")
+tampered_blob = json.dumps(envelope, sort_keys=True, separators=(",", ":")).encode()
+manifest = json.loads(original_manifest)
+manifest["config"]["stored_size_bytes"] = len(tampered_blob)
+manifest["config"]["ciphertext_sha256"] = hashlib.sha256(tampered_blob).hexdigest()
+blob_path.write_bytes(tampered_blob); blob_path.chmod(0o600)
+manifest_path.write_bytes(json_bytes(manifest)); manifest_path.chmod(0o600)
+try:
+    store.read_revision_config(pid, revision)
+except ProfileError as exc:
+    assert "autenticar o descifrar" in str(exc), f"expected AES-GCM authentication failure, got: {exc}"
+else:
+    raise AssertionError("PF-06: altered ciphertext with matching manifest hash passed AES-GCM")
+blob_path.write_bytes(original_blob); blob_path.chmod(0o600)
+manifest_path.write_bytes(original_manifest); manifest_path.chmod(0o600)
+assert store.read_revision_config(pid, revision)[0] == b'{"secret":"synthetic"}'
+print("PASS: PF-06 ciphertext altered with recomputed manifest SHA-256 is rejected by AES-256-GCM authentication.")
+PFGCM
+
+# PF-06: fallos de write/fsync/unlink dentro de atomic_write y transacción WAL.
+python3 - "$ROOT" "$TMP/pf06-filesystem" <<'PFFS'
+import os, pathlib, stat, sys
+base = pathlib.Path(sys.argv[2]); base.mkdir(mode=0o700); base.chmod(0o700)
+key = base / "synthetic.key"; key.write_bytes(b"F" * 32); key.chmod(0o600)
+sys.path.insert(0, str(pathlib.Path(sys.argv[1]) / "scripts"))
+import xray_profiles as xp
+store = xp.ProfileStore(str(base / "store"), str(key))
+created = store.create("Filesystem faults", config_data=b'{"version":1}')
+pid = created["profile_id"]
+destination = store.catalog_path
+
+# Short/partial write followed by EIO: old destination remains and our temp is removed.
+original = destination.read_bytes(); original_write = xp.os.write; calls = {"n": 0}
+def fail_after_partial_write(fd, data):
+    calls["n"] += 1
+    if calls["n"] == 1:
+        return original_write(fd, bytes(data[:max(1, len(data)//3)]))
+    raise OSError("injected partial write failure")
+xp.os.write = fail_after_partial_write
+try:
+    try:
+        xp.atomic_write(destination, b'{"partial":"must not publish"}')
+    except OSError as exc:
+        assert "partial write" in str(exc)
+    else:
+        raise AssertionError("PF-06: partial write failure was not propagated")
+finally:
+    xp.os.write = original_write
+assert destination.read_bytes() == original
+assert not list(store.root.glob(".catalog.json.*.tmp")), "PF-06: failed write left a private temp"
+
+# File-fsync failure before replace: preserve old destination and remove temp.
+original_fsync = xp.os.fsync
+def fail_file_fsync(fd):
+    if stat.S_ISREG(os.fstat(fd).st_mode):
+        raise OSError("injected file fsync failure")
+    return original_fsync(fd)
+xp.os.fsync = fail_file_fsync
+try:
+    try:
+        xp.atomic_write(destination, b'{"fsync":"must not publish"}')
+    except OSError as exc:
+        assert "file fsync" in str(exc)
+    else:
+        raise AssertionError("PF-06: file fsync failure was not propagated")
+finally:
+    xp.os.fsync = original_fsync
+assert destination.read_bytes() == original
+assert not list(store.root.glob(".catalog.json.*.tmp")), "PF-06: fsync failure left a private temp"
+
+# WAL unlink failure after destination replacements: recover and roll back atomically.
+original_unlink = pathlib.Path.unlink; failed = {"once": False}
+def fail_wal_unlink(path, *args, **kwargs):
+    if path == store.transaction_path and not failed["once"]:
+        failed["once"] = True
+        raise OSError("injected WAL unlink failure")
+    return original_unlink(path, *args, **kwargs)
+pathlib.Path.unlink = fail_wal_unlink
+try:
+    try:
+        store.rename(pid, "Nombre no confirmado por unlink")
+    except OSError as exc:
+        assert "WAL unlink" in str(exc)
+    else:
+        raise AssertionError("PF-06: WAL unlink failure was not propagated")
+finally:
+    pathlib.Path.unlink = original_unlink
+assert failed["once"], "PF-06: WAL unlink injection did not execute"
+assert not store.transaction_path.exists(), "PF-06: WAL remained after rollback recovery"
+assert store.list_profiles()[0]["name"] == "Filesystem faults"
+assert not list(store.root.glob(".catalog.json.*.tmp"))
+print("PASS: PF-06 partial write, file fsync, WAL unlink rollback; no partial catalog or private temp remains.")
+PFFS
+
 printf '%s\n' 'OK: almacén, menú, copias independientes, revisiones, restauración no destructiva, concurrencia, nombres únicos y controles de filesystem.'

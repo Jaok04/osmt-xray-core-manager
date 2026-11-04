@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-03 — contenedor cifrado compartido v1, API incremental, ZIP streaming y Snapshot Writer implementados/verificados y publicados; correcciones B-01/B-02/B-03 y A-16 publicadas; matriz A-01–A-19 trazable y Snapshot Writer v1 ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS. Backup/restore integral, backup real, restore y verify independiente siguen pendientes. VMess-48 pendiente de aceptación; certificados TLS centralizados parciales. Prueba live adicional en esta VPS: Xray-core 26.10.31 instalado mediante el administrador; VLESS-WS creado, persistido y validado con el binario instalado, pero sigue draft, sin runtime apply ni conectividad externa. Evidencia: docs/VALIDACION_LIVE_XRAY_VLESS_WS_2026-11-03.md. Etapa 2 ABIERTA.
+**Corte de estado:** 2026-11-04 — almacén de persistencia de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO; Etapa 5 y Etapa 2 ABIERTAS. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios documentados y probados. Los requisitos funcionales restantes de Etapa 5 siguen pendientes. Snapshot Writer v1 mantiene su aceptación limitada independiente; backup/restore integral pendiente. VLESS-WS live continúa draft, sin runtime apply ni conectividad externa.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -807,3 +807,32 @@ Sincronización GitHub/VPS de desarrollo completada el 2026-11-04: commit 46444b
 - Sin aceptación formal del almacén. PF-11/PF-12 no cierran Etapa 5; siguen pendientes las funciones normativas de validación Xray por revisión, preview/diff, comparación, historial/retención, composición integral, registro activo, activación/rollback y backup/restore. Etapa 5 y Etapa 2 permanecen ABIERTAS.
 - Restricciones: pruebas sólo con almacenes temporales y claves sintéticas. No se leyó `master.key`, no se creó/alteró perfil live, runtime, systemd, certificados, firewall, puertos o red. No se tocó `Vps de Pruebas`. `Xray-Normativa/` y `main` sin cambios.
 - Publicación GitHub: pendiente de revisión final del diff y confirmación del estado de regresión; no se ha creado commit/push.
+
+
+## PF-06 — cobertura criptográfica/filesystem ampliada (2026-11-04)
+
+- Se añadieron pruebas que alteran ciphertext y recalculan el SHA-256 del manifiesto para alcanzar el control de autenticidad AES-256-GCM; el blob adulterado es rechazado y los artefactos originales vuelven a leerse tras restaurarlos.
+- Fault injection añadido: escritura parcial (`os.write`), `fsync` de archivo antes de replace y `unlink` del WAL después de publicar destinos. Se comprueba destino intacto, limpieza de temporales o rollback/recuperación, según el caso.
+- Se mantienen casos de fallo de replace, fsync de directorio y SIGKILL/crash recovery.
+- `tests/xray_profiles.sh` PASS; regresión `tests/*.sh` **51/51 PASS**. Sólo se modificaron pruebas y documentación; código de producción intacto.
+- PF-06: CERRADO DENTRO DEL ALCANCE DE ESCENARIOS DOCUMENTADOS; no se afirma cobertura combinatoria exhaustiva ni fallos físicos del almacenamiento.
+- Informe: `docs/AUDITORIA_PF06_COBERTURA_CRIPTO_FILESYSTEM_2026-11-04.md`. Diseño §17.
+- Almacén v1.1 aún no aceptado formalmente; Etapa 5 y Etapa 2 ABIERTAS. Sin commit/push/sync. Sin secretos ni runtime live.
+
+## Decisión vigente — aceptación limitada del almacén de perfiles v1.1 (2026-11-04)
+
+El propietario aceptó formalmente el almacén de persistencia de perfiles v1.1 **como componente limitado**, circunscrito a los contratos, controles y escenarios implementados/auditados/probados. Se aceptan los controles de cifrado y autenticidad, contratos estrictos de catálogo/metadatos/manifiestos, revisiones inmutables, transacciones WAL y recuperación, limpieza/reconciliación conservadora de artefactos huérfanos, locking/permisos y pruebas documentadas PF-01/PF-02 y PF-06 a PF-12. La aceptación no amplía los límites de cobertura de cada informe.
+
+**No equivale a completar Etapa 5 ni Etapa 2. Ambas permanecen ABIERTAS.** Siguen pendientes, entre otros: preview/diff de importación y modificación, creación desde configuración independiente, validación estática Xray por revisión e informe, comparación de revisiones, historial separado y retención, registro/composición de perfil activo, eliminación segura integrada, activación/verificación/rollback y backup/restore integral.
+
+Los estados not_validated y not_integrated siguen vigentes; no se afirma validación Xray, activación ni conectividad extremo a extremo. Pruebas sintéticas no equivalen a cobertura combinatoria exhaustiva ni a pruebas de fallos físicos.
+
+No se leyó master.key, no se tocó almacén/perfil live, runtime, servicios, systemd, certificados, firewall, puertos o red. Vps de Pruebas, main y Xray-Normativa/ permanecen fuera del alcance. Documentación actualizada localmente, sin commit/push/sync.
+
+## Diseño siguiente — gestor de configuraciones independientes (2026-11-04)
+
+Se contrastó la normativa aprobada de Etapa 5 §§2–5 y 14 (Markdown/YAML) con el código actual. No existe un gestor de configuraciones JSON independientes: los almacenes VLESS/VMess existentes guardan configuraciones asociadas a conexiones, y el almacén v1.1 guarda copias pertenecientes a perfiles; no deben confundirse ni reutilizarse como catálogo independiente.
+
+Se preparó docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md. Propone un almacén separado, versionado, AES-256-GCM, WAL, importación/exportación segura, preview, diff y comparación, con estados Borrador/Validada/Anterior y sin operación de activación. La validación estática y los informes se mantienen como componente separado; la integración de creación de perfil desde configuración independiente copiará bytes y no sincronizará ambos objetos.
+
+Estado: diseño propuesto, no implementado. La implementación C-01/C-02 requiere autorización expresa. No se modificó código funcional, dependencias, normativa, almacén live, runtime, servicios, red, certificados, firewall o puertos. Sin commit/push/sync.

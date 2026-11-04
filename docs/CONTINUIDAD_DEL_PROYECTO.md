@@ -924,3 +924,40 @@ Diseño: `docs/DISENO_IMPLEMENTACION_PERFILES.md` §16. Informe: `docs/AUDITORIA
 Terminar la regresión, revisar el diff completo, ejecutar AST Python, Bash syntax, ShellCheck focal y `git diff --check`; actualizar el informe/continuidad con resultados; verificar `Xray-Normativa/` y `main` sin cambios. Publicar únicamente en la rama autorizada después de revisión final. No tocar `Vps de Pruebas`, runtime, servicios, secretos ni almacén live.
 
 PF-11/PF-12 no implican aceptación formal del almacén v1.1 ni cierre de Etapa 5/Etapa 2. Siguen pendientes las funcionalidades normativas de Etapa 5 documentadas en el informe de auditoría.
+
+
+## Continuidad — cierre acotado de PF-06 (2026-11-04)
+
+El propietario autorizó implementar las pruebas pendientes de PF-06 sin modificar el comportamiento del almacén ni tocar runtime. En `tests/xray_profiles.sh` se añadió: (1) alteración del ciphertext con SHA-256 recalculado en el manifiesto para verificar rechazo real de autenticidad AES-256-GCM; (2) escritura parcial seguida de error; (3) fallo de fsync del archivo antes de replace; y (4) fallo de unlink del WAL después de publicar destinos, verificando rollback y recuperación. Ya existían pruebas de replace, fsync de directorio y crash recovery.
+
+Prueba focal PASS; regresión completa 51/51 PASS. Sólo se modificaron pruebas y documentación; no código de producción. PF-06 queda cerrado dentro del alcance de escenarios enumerados, no como cobertura exhaustiva de todas las combinaciones ni de fallos físicos. Informe `docs/AUDITORIA_PF06_COBERTURA_CRIPTO_FILESYSTEM_2026-11-04.md`; diseño §17.
+
+Siguiente puerta: revisión final de diff/estáticos y decidir aceptación limitada del almacén v1.1. No publicar ni sincronizar sin autorización independiente. No tocar VPS de pruebas, master.key, almacén live, runtime, servicios, red, `main` o `Xray-Normativa/`. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Continuidad — aceptación limitada del almacén de perfiles v1.1 (2026-11-04)
+
+El propietario aceptó expresamente el almacén de persistencia de perfiles v1.1 **como componente limitado**. La decisión está desarrollada en docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md, sección 14.
+
+### Punto aceptado
+
+Se acepta el núcleo de persistencia en los contratos y escenarios probados: AES-256-GCM/autenticidad, validación estricta de catálogo/metadatos/manifiestos, revisiones inmutables, WAL/rollback/recuperación, limpieza y reconciliación conservadora de temporales/revisiones/perfiles huérfanos, controles de locking/filesystem y pruebas PF-01/PF-02 y PF-06 a PF-12 dentro de sus límites documentados.
+
+### Límites que no se deben sobrepasar
+
+La aceptación no convierte en disponibles ni terminadas las funciones aún pendientes de Etapa 5: preview/diff, creación desde configuración independiente, validación estática Xray por revisión e informe, comparación de revisiones, historial separado/retención, registro y composición de perfil activo, eliminación integrada segura, activación/verificación/rollback y backup/restore integral. not_validated y not_integrated siguen siendo estados conservadores.
+
+**Etapa 5 y Etapa 2 permanecen ABIERTAS.** La aceptación no certifica operación real, activación ni conectividad extremo a extremo; tampoco implica cobertura combinatoria exhaustiva o fallos físicos. La prueba integral VLESS WS TLS sigue condicionada a completar los requisitos y puntos de control que correspondan.
+
+### Próxima continuidad
+
+Conservar este punto de control como base aceptada del componente. El siguiente trabajo debe abordar los requisitos funcionales pendientes de Etapa 5, contrastando cada cambio con Xray-Normativa/ y solicitando autorización para la implementación correspondiente. No publicar ni sincronizar cambios sin autorización independiente.
+
+No se leyó master.key, no se tocó almacén live, runtime, servicios, certificados, firewall, puertos, red ni VPS de pruebas. main y Xray-Normativa/ intactas. Esta actualización documental permanece local, sin commit/push/sync.
+
+## Continuidad — diseño del gestor de configuraciones independientes (2026-11-04)
+
+Se completó el contraste de la normativa Etapa 5 §§2–5 y 14 con los módulos actuales. El repositorio no contiene un gestor de configuraciones independientes: VLESS/VMess tienen almacenamiento por conexión y el almacén de perfiles conserva copias propias. Esos modelos no sustituyen el catálogo independiente.
+
+Diseño: docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md. Arquitectura propuesta con catálogo y objetos propios, revisiones inmutables, AES-256-GCM con AAD por objeto/revisión, WAL, permisos root-only, importación/exportación segura, preview, diff/comparación y estados Borrador/Validada/Anterior. No hay comando apply/activate. El validador estático será separado; solo informe PASS ligado a hash/revisión puede promover una versión a Validada. La futura creación de perfil copiará bytes y quedará desacoplada.
+
+Siguiente paso: solicitar autorización para implementar C-01 (contrato/persistencia) y C-02 (importación/exportación). No iniciar C-03 a C-06 sin aceptación de fases y sus dependencias. No modificar el almacén de perfiles aceptado, VLESS/VMess por conexión, runtime, servicios, certificados, firewall, puertos o red. No usar secretos reales. No publicar ni sincronizar sin autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS.

@@ -98,7 +98,7 @@ Estos pendientes están descritos en el diseño v1.1; no deben presentarse como 
 
 La prueba de modificación de ciphertext en `tests/xray_profiles.sh` cambia el blob sin actualizar el hash del manifiesto; por tanto, el camino normal detecta primero el SHA-256 incorrecto y no alcanza el rechazo por `InvalidTag` de AES-GCM. Las pruebas de clave incorrecta y AAD modificada sí ejercitan fallo de autenticación. No se encontraron pruebas de inyección de fallos para las secuencias multiarchivo de `update()`/`restore()`/`rename()` ni de crash en las ventanas de publicación.
 
-**Corrección requerida:** añadir un caso que modifique ciphertext y actualice el hash del manifiesto para forzar la comprobación GCM; añadir fault injection de write/replace/fsync/unlink y crash recovery.
+**Corrección requerida (atendida parcialmente y verificada el 2026-11-04):** modificar ciphertext y actualizar el hash del manifiesto para forzar la comprobación GCM; añadir fault injection de write/replace/fsync/unlink y crash recovery. El alcance exacto y sus límites se documentan en `docs/AUDITORIA_PF06_COBERTURA_CRIPTO_FILESYSTEM_2026-11-04.md`.
 
 ### PF-07 — Validación de esquema del catálogo incompleta
 
@@ -206,10 +206,10 @@ Se separó la validación integral del journal de su aplicación:
 | PF-02 — transacciones multiarchivo | CORREGIDO en las operaciones enumeradas | WAL, recuperación idempotente y pruebas de interrupción |
 | Temporales huérfanos pre-WAL | CORREGIDO dentro de patrones/rutas documentados | limpieza limitada y pruebas SIGKILL |
 | Validación integral previa del WAL | CORREGIDO | preflight completo y pruebas de journal malformado |
-| PF-06 — cobertura criptográfica/fallos filesystem | PARCIALMENTE CUBIERTO | fault/crash recovery ampliado; no se afirma que toda combinación write/replace/fsync/unlink esté exhaustivamente probada |
-| PF-07 — esquema integral del catálogo | PENDIENTE DE REVISIÓN | fuera del alcance de este bloque |
+| PF-06 — cobertura criptográfica/fallos filesystem | CERRADO DENTRO DEL ALCANCE DE PRUEBAS | ciphertext alterado con SHA-256 recalculado alcanza y falla en AES-GCM; fallos inyectados de escritura parcial, fsync de archivo, replace, fsync de directorio y unlink WAL; crash recovery probado. No se afirma cobertura combinatoria exhaustiva ni fallos físicos del dispositivo |
+| PF-07 — esquema integral del catálogo | CORREGIDO DENTRO DEL ALCANCE PROBADO | validación estricta y 18 casos negativos con preservación del archivo |
 
-**Conclusión actual:** PF-01 y PF-02 dejan de ser bloqueos conocidos para la aceptación del núcleo de persistencia, dentro del alcance probado. No se declara el almacén formalmente aceptado. Persisten PF-06/PF-07 y los requisitos funcionales pendientes de Etapa 5. La aceptación del componente limitado requiere decisión expresa del propietario.
+**Conclusión actualizada al 2026-11-04:** PF-01/PF-02, PF-06 y PF-07 quedan corregidos dentro de los escenarios/contratos documentados y probados. No se declara el almacén formalmente aceptado. Persisten los requisitos funcionales pendientes de Etapa 5; la aceptación del componente limitado requiere decisión expresa del propietario.
 
 ### 12.4 Alcance y seguridad
 
@@ -222,3 +222,60 @@ Se endureció `ProfileStore.load_catalog()` para validar el documento completo a
 Se añadieron 18 casos de catálogo malformado (versión booleana/string, claves extra, estructura incorrecta, campos ausentes/adicionales, IDs/nombres/fechas con tipos o valores inválidos y duplicados). Cada caso debe producir `ProfileError`, nunca una excepción incidental, y conservar byte a byte el archivo. Un catálogo válido se vuelve a cargar al final de la prueba.
 
 Estado PF-07: **CORREGIDO dentro del contrato de esquema documentado y los casos probados**. No implica aceptación formal del almacén ni cierre de Etapa 5/Etapa 2. La prueba usa exclusivamente almacén temporal y clave sintética.
+
+
+### 13. Remediación PF-06 — cobertura criptográfica y fallos de filesystem (2026-11-04)
+
+Se amplió `tests/xray_profiles.sh` sin modificar el comportamiento de producción:
+
+- **Autenticidad GCM:** se altera un byte del ciphertext y se recalculan `stored_size_bytes` y `ciphertext_sha256` en el manifiesto. Así se supera deliberadamente la comprobación SHA-256 y se verifica que AES-256-GCM rechaza el blob por autenticación (`ProfileError` controlado). Después se restauran manifiesto y blob originales y se confirma lectura correcta.
+- **Escritura parcial:** `os.write` escribe una fracción y después lanza `OSError`; el destino anterior permanece byte a byte igual y el temporal privado se elimina.
+- **fsync del archivo:** se inyecta fallo antes de `os.replace`; no se publica contenido parcial, se conserva el destino y se elimina el temporal.
+- **replace:** ya existía una prueba de fallo de `os.replace`; el destino se conserva y sólo se retira el temporal no publicado.
+- **fsync del directorio:** ya existía una prueba que falla después de `replace`; el destino publicado permanece y no se intenta borrar. La transacción WAL exterior cubre la reversión cuando corresponde.
+- **unlink del WAL:** se hace fallar una vez la retirada del journal después de publicar los destinos; el camino de recuperación revierte la transacción, consume el journal y deja catálogo/metadatos coherentes.
+- **Crash recovery:** se mantienen las pruebas de terminación abrupta entre reemplazos, después de publicar ambos destinos y durante el rollback; la recuperación posterior es idempotente.
+
+**Resultado:** prueba focal `tests/xray_profiles.sh` PASS; regresión completa `tests/*.sh` **51/51 PASS**, exit code 0. No se modificó `scripts/xray_profiles.py` ni otro código de producción.
+
+**Límites:** las pruebas cubren los puntos de fallo indicados, no todas las permutaciones posibles ni errores del kernel, filesystem/dispositivo o pérdida física de datos que incumplan garantías de durabilidad. PF-06 queda cerrado sólo dentro del alcance de escenarios documentados. Almacén v1.1 aún requiere aceptación expresa; Etapa 5 y Etapa 2 siguen abiertas.
+
+## 14. Decisión del propietario — aceptación formal limitada (2026-11-04)
+
+El propietario emitió aceptación expresa de la versión 1.1 del almacén de persistencia de perfiles, limitada a los contratos, controles y escenarios efectivamente implementados, auditados y probados en este documento y en los informes complementarios PF-06 a PF-12.
+
+**Decisión:** almacén de persistencia de perfiles v1.1 = **ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO**, con las restricciones y exclusiones siguientes.
+
+### 14.1 Alcance aceptado
+
+La aceptación comprende el componente de persistencia y sus controles probados: cifrado AES-256-GCM y lectura autenticada; contratos estrictos de catálogo, metadatos y manifiestos; revisiones inmutables; validación previa de entradas; transacciones WAL y recuperación; limpieza/reconciliación conservadora de temporales, revisiones y perfiles huérfanos; locking, permisos y controles de filesystem; y los escenarios de fault injection/crash recovery documentados.
+
+PF-01/PF-02 se consideran corregidos en las operaciones y escenarios probados; PF-06 queda cerrado dentro de su cobertura expresamente enumerada; PF-07 queda corregido dentro del contrato probado; PF-08 a PF-12 quedan corregidos dentro de los alcances y pruebas de sus informes. Esta decisión no amplía la evidencia más allá de esos límites.
+
+### 14.2 Exclusiones y pendientes normativos
+
+Esta aceptación **no** declara completa la Etapa 5 ni habilita como disponibles las funciones aún pendientes. Entre ellas:
+
+- vista previa de importación y diff antes de guardar;
+- creación desde configuración independiente;
+- validación estática Xray por revisión e informe persistido;
+- comparación de revisiones/configuraciones;
+- historial separado de modificaciones y retención configurable;
+- registro de perfil activo y composición integral de conexiones, usuarios/asociaciones y certificados;
+- eliminación de perfiles integrada con dependencias y perfil activo;
+- activación transaccional, verificación del runtime y rollback;
+- backup/restore integral integrado y validado.
+
+Los estados not_validated y not_integrated continúan siendo conservadores y no deben interpretarse como validación o activación.
+
+### 14.3 Límites de la evidencia y seguridad
+
+Los resultados de pruebas acreditan exclusivamente los escenarios sintéticos documentados. No representan cobertura combinatoria exhaustiva, simulación de fallos físicos del almacenamiento ni una prueba integral de operación real. No se ha probado la activación de perfiles ni la conectividad extremo a extremo como consecuencia de esta aceptación.
+
+No se leyó ni utilizó la clave maestra real; no se creó ni modificó almacén/perfil live; no se tocó runtime, servicios, systemd, certificados reales, firewall, puertos o red; no se modificó Xray-Normativa/ ni main; y no se intervino la VPS de pruebas.
+
+### 14.4 Efecto sobre las etapas del proyecto
+
+La aceptación cierra únicamente el punto de control del **componente de persistencia de perfiles v1.1**. La **Etapa 5 permanece ABIERTA** hasta implementar, probar y auditar sus requisitos pendientes. La **Etapa 2 permanece ABIERTA** y no se autoriza su cierre por esta decisión. La prueba integral VLESS WS TLS sigue condicionada a los puntos de control y a la implementación funcional que aún falta.
+
+La decisión fue registrada en PROJECT_STATE.md, docs/PUNTO_CONTROL_ACTUAL.md, docs/CONTINUIDAD_DEL_PROYECTO.md y HISTORY.md. Esta actualización documental queda local; no implica commit, push ni sincronización con GitHub.

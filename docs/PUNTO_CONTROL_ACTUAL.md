@@ -1,10 +1,10 @@
 # Punto de control actual — Xray Core Manager
 
-> Los puntos anteriores son históricos. El punto operativo vigente es el último bloque «Almacén de perfiles v1.1 cifrado — 2026-11-03» al final de este documento.
+> El registro operativo vigente es el bloque «Decisión vigente — aceptación limitada del almacén de perfiles v1.1 (2026-11-04)» al final de este documento; los estados anteriores se conservan sólo como trazabilidad histórica.
 
-**Fecha del corte:** 2026-11-03
-**Tarea activa:** revisión del propietario del almacén de perfiles v1.1 cifrado. La implementación AES-256-GCM del JSON completo en `config.enc.json` está publicada y sincronizada byte a byte en `design/user-identity-association-v1`. Regresión: 51/51 scripts PASS; AST 18/18; bash -n global PASS; ShellCheck focal PASS; shfmt de los dos archivos nuevos PASS; diff-check PASS. Aceptación formal del subsistema pendiente.
-**Estado vigente:** almacén de perfiles v1.1 IMPLEMENTADO LOCALMENTE; aceptación formal pendiente. Regresión integral y publicación pendientes. Contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA; VM-38/39/40 focal PASS; suite 40/40 PASS; VM-46 live PASS; VM-47 VMess-TLS loopback PASS. Adicionalmente, Xray-core 26.10.31 está instalado en la VPS; VLESS-WS (conn-1793749234-670662) está creado/persistido/validado como draft, sin runtime apply ni listener. Etapa 2 ABIERTA.
+**Fecha del corte:** 2026-11-04
+**Tarea activa:** continuar Etapa 5 desde el punto de control del almacén de persistencia v1.1, formalmente aceptado sólo como componente limitado. Identificar el siguiente requisito normativo pendiente y preparar su diseño/plan antes de implementar, con autorización expresa.
+**Estado vigente:** almacén de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios probados. Etapa 5 ABIERTA; Etapa 2 ABIERTA. Preview/diff, creación desde configuración independiente, validación Xray por revisión, comparación, historial/retención, perfil activo, eliminación integrada, activación/rollback y backup/restore integral siguen pendientes. VLESS-WS live sigue draft y sin runtime apply.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -796,3 +796,30 @@ Host/ruta: `Implementación-Xray` / `/opt/xray-manager`
 - Árbol de trabajo aún local; sin commit/push. Antes de publicar: revisar diff completo, repetir estáticos, verificar `git status`, confirmar normativa protegida y comprobar que sólo se publica en esta rama.
 - No se leyó `master.key`, no se creó perfil/almacén live, no se tocó runtime/servicios/certificados/firewall/puertos/red ni `Vps de Pruebas`. `Xray-Normativa/` intacta.
 - Almacén v1.1 no aceptado formalmente. Etapa 5 y Etapa 2 ABIERTAS. La prueba integral VLESS WS TLS sigue condicionada a superar los puntos de control correspondientes.
+
+
+## Punto de control — PF-06 pruebas complementarias verificadas (2026-11-04)
+
+Se amplió `tests/xray_profiles.sh` sin modificar código de producción. La prueba GCM altera ciphertext y recalcula el hash del manifiesto, confirmando que AES-256-GCM rechaza el contenido adulterado. Se añadieron fallos inyectados de escritura parcial, fsync de archivo y unlink del WAL; se conservan pruebas de replace, fsync de directorio y crash recovery.
+
+Resultados: suite focal PASS; regresión completa 51/51 PASS. PF-06 queda cerrado sólo dentro de los escenarios probados y documentados; no cubre todas las permutaciones ni fallos físicos del almacenamiento. Informe: `docs/AUDITORIA_PF06_COBERTURA_CRIPTO_FILESYSTEM_2026-11-04.md`; diseño §17.
+
+Sólo pruebas/documentación; sin cambios de producción, dependencias, master.key, almacén live, runtime o VPS de pruebas. `main` y `Xray-Normativa/` intactas. Sin commit/push/sync. Aceptación del almacén v1.1 pendiente; Etapa 5 y Etapa 2 siguen ABIERTAS.
+
+## Punto de control vigente — almacén de perfiles v1.1 aceptado con alcance limitado (2026-11-04)
+
+**Decisión del propietario:** el almacén de persistencia de perfiles v1.1 queda **ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO**, conforme a la sección 14 de docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md.
+
+La aceptación comprende únicamente los contratos, controles y escenarios probados: cifrado/autenticidad AES-256-GCM; esquemas estrictos de catálogo, metadatos y manifiestos; revisiones; transacciones WAL y recuperación; reconciliación conservadora de artefactos huérfanos; controles de locking/filesystem; y las pruebas PF-01/PF-02 y PF-06 a PF-12 dentro de sus límites documentados.
+
+**Etapa 5: ABIERTA. Etapa 2: ABIERTA.** No se declaran implementadas las funciones pendientes: preview/diff, creación desde configuración independiente, validación estática Xray por revisión, comparación de revisiones, historial/retención, registro y composición de perfil activo, eliminación segura integrada, activación/verificación/rollback y backup/restore integral.
+
+No se afirma validación Xray, activación ni conectividad extremo a extremo. Las pruebas sintéticas no son cobertura combinatoria exhaustiva ni pruebas de fallos físicos. No se leyó master.key, no se tocó almacén live/runtime/servicios/red/certificados/firewall/puertos ni VPS de pruebas. main y Xray-Normativa/ intactas. Este registro es local: sin commit, push o sincronización.
+
+## Diseño siguiente — configuraciones independientes (2026-11-04)
+
+La normativa Etapa 5 §§2–5 y 14 fue contrastada con los módulos actuales. No hay gestor de configuraciones JSON independientes; VLESS/VMess persisten configuraciones por conexión y perfiles mantienen copias propias. No deben mezclarse.
+
+Diseño propuesto: docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md. Define catálogo/objetos/revisiones separados, cifrado AES-256-GCM, WAL, importación/exportación, preview, diff/comparación, estados Borrador/Validada/Anterior y prohibición de activar desde este módulo. El validador estático será separado y sus informes quedarán ligados a hash/revisión. La futura creación de perfil copiará bytes sin sincronización.
+
+**Estado: DISEÑO PROPUESTO; NO IMPLEMENTADO.** Siguiente autorización requerida: iniciar C-01 (contrato y persistencia) y C-02 (importación/exportación). No se modificó código funcional ni runtime; sin commit/push/sync. Etapa 5 y Etapa 2 ABIERTAS.

@@ -262,3 +262,12 @@ Si el catálogo está ausente, inseguro o inválido, no se infiere que todos los
 `tests/xray_profiles.sh` añade 13 casos de manifiestos malformados; `SIGKILL` real tras publicar directorio definitivo en `create()` (con y sin configuración) y `duplicate()`; conservación de un perfil tras caída en el primer alta cuando aún no existe catálogo; y preservación de candidatos inseguros sin reparar permisos. Las pruebas utilizan exclusivamente almacenes temporales y clave sintética.
 
 PF-11/PF-12 están implementados y verificados localmente: `tests/xray_profiles.sh` PASS, regresión completa `tests/*.sh` 51/51 PASS, Python AST, `bash -n`, ShellCheck focal y `git diff --check` PASS. El diff fue revisado; no se creó commit ni se publicó. No equivalen a aceptación formal del almacén ni a cierre de Etapa 5/Etapa 2.
+
+
+## 17. Cobertura PF-06 — autenticidad y fallos de filesystem (2026-11-04)
+
+La suite focal ahora verifica explícitamente el rechazo AES-256-GCM cuando se modifica el ciphertext y se recalcula su SHA-256 en el manifiesto, evitando que el test termine anticipadamente en la comprobación de hash. También inyecta escritura parcial seguida de error, `fsync` del archivo fallido antes de `replace`, fallo de `unlink` del WAL después de publicar destinos y recuperación/rollback. Se mantienen las pruebas ya existentes para fallo de `replace`, `fsync` del directorio después de publicar, y `SIGKILL` en ventanas de commit/rollback.
+
+En todos los casos se comprueba preservación del destino confirmado, limpieza del temporal propio o recuperación transaccional, según corresponda. La prueba de autenticidad restaura los artefactos originales y confirma que la revisión válida vuelve a leerse. Pruebas sólo con almacenes temporales y clave sintética.
+
+Verificación del 2026-11-04: `tests/xray_profiles.sh` PASS; `tests/*.sh` 51/51 PASS. No se cambió código de producción. La cobertura queda cerrada dentro de estos escenarios, sin afirmar todas las combinaciones de fallos posibles ni garantías frente a fallos físicos del almacenamiento.
