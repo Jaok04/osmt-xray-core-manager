@@ -1036,3 +1036,14 @@ El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar 
 - **Siguiente paso:** obtener decisión expresa sobre publicación de C-05E. C-05F requiere autorización independiente y no se ha iniciado.
 - **Protecciones:** `main`, `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime e infraestructura no se modifican.
 - **Etapas:** Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Punto de control vigente — C-05E publicada y sincronizada (2026-11-04)
+
+- **Estado C-05E:** ACEPTADA, AUDITADA, PUBLICADA y SINCRONIZADA.
+- **Rama:** `design/user-identity-association-v1`.
+- **Commit:** `8378ca47a751678f4eeeab20a5e2d06effd47fff` (`feat(validation): integrate C-05E validation menu`).
+- **Sincronización:** push fast-forward desde `ed700c1e770063f6e67c6ebaeae4652172bb2f02`; SHA remoto verificado con `git ls-remote`.
+- **main:** SHA remoto `656ecedc506a94a6461aee296b20871d51a38bf3`, sin cambios.
+- **Siguiente decisión:** C-05F no está autorizada ni iniciada; requiere autorización expresa independiente.
+- **Protecciones:** `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime e infraestructura no fueron modificados.
+- **Etapas:** Etapa 5 y Etapa 2 permanecen ABIERTAS.

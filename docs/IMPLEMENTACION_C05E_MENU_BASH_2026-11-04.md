@@ -99,3 +99,7 @@ C-05E está implementada, probada y auditada localmente. Este registro no consti
 ## Addendum de aceptación formal — 2026-11-04
 
 El propietario aceptó formalmente C-05E. La aceptación comprende la implementación y la evidencia de pruebas/auditoría aquí descritas, con las limitaciones y escenarios pendientes detallados en el expediente de auditoría. C-05E queda ACEPTADA. Esta decisión no autoriza commit, push ni sincronización; la publicación requiere autorización separada. C-05F no está autorizada ni iniciada.
+
+## Addendum de publicación — 2026-11-04
+
+C-05E fue publicada tras aceptación y autorización expresa del propietario. Commit `8378ca47a751678f4eeeab20a5e2d06effd47fff` en `design/user-identity-association-v1`; push fast-forward y SHA remoto verificado. `main` y `Xray-Normativa/` no fueron modificadas. C-05F permanece no autorizada ni iniciada.

@@ -1045,3 +1045,15 @@ El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar 
 - **C-05F:** no autorizada ni iniciada.
 - **Límites:** `main`, `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime e infraestructura permanecen fuera del alcance.
 - **Etapas:** Etapa 5 y Etapa 2 siguen ABIERTAS.
+
+## Publicación confirmada C-05E — 2026-11-04
+
+- **Estado:** C-05E ACEPTADA, AUDITADA, PUBLICADA y SINCRONIZADA.
+- **Rama:** `design/user-identity-association-v1`.
+- **Commit:** `8378ca47a751678f4eeeab20a5e2d06effd47fff` — `feat(validation): integrate C-05E validation menu`.
+- **Push:** fast-forward desde `ed700c1e770063f6e67c6ebaeae4652172bb2f02`; `git ls-remote` confirmó que GitHub publica el mismo SHA.
+- **main:** sin cambios; SHA remoto verificado `656ecedc506a94a6461aee296b20871d51a38bf3`.
+- **Árbol local:** limpio después del push y del registro de publicación (este addendum se versiona a continuación).
+- **Próxima decisión:** C-05F requiere autorización expresa independiente. No iniciar por inferencia.
+- **Protecciones:** `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime e infraestructura no fueron modificados.
+- **Etapas:** Etapa 5 y Etapa 2 permanecen ABIERTAS.

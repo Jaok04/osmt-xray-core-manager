@@ -117,3 +117,7 @@ La implementación satisface los criterios técnicos de C-05E dentro de los lím
 ## Addendum de decisión del propietario — 2026-11-04
 
 El propietario aceptó formalmente C-05E después de revisar este expediente, incluidos los estados individuales de la matriz E01–E38 y las limitaciones descritas. La auditoría queda aceptada como evidencia del alcance probado; los casos marcados PARCIAL o PENDIENTE no se reinterpretan como PASS. C-05E queda ACEPTADA. La aceptación no autoriza publicación: no se ha creado commit ni ejecutado push. C-05F permanece no autorizada y no iniciada.
+
+## Addendum de publicación — 2026-11-04
+
+La implementación auditada C-05E fue publicada después de su aceptación formal y autorización expresa. Commit `8378ca47a751678f4eeeab20a5e2d06effd47fff` en `design/user-identity-association-v1`; push fast-forward verificado mediante consulta del SHA remoto. Esta publicación no amplía el alcance auditado ni cambia los estados PARCIAL/PENDIENTE de la matriz E01–E38. `main`, `Xray-Normativa/` y VPS de pruebas permanecen intactas. C-05F no está autorizada ni iniciada.

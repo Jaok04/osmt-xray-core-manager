@@ -1094,3 +1094,7 @@ C-05E queda IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptac
 ## Aceptación formal de C-05E — 2026-11-04
 
 El propietario aceptó formalmente C-05E — Integración del menú Bash — tras revisar su implementación, resultados de pruebas, auditoría y limitaciones E01–E38. C-05E queda ACEPTADA. La aceptación no autoriza publicación: los cambios permanecen locales, sin commit ni push. C-05F no ha sido autorizada ni iniciada. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Publicación C-05E — 2026-11-04
+
+Tras la aceptación formal y autorización expresa del propietario, C-05E se publicó en `design/user-identity-association-v1`. Commit: `8378ca47a751678f4eeeab20a5e2d06effd47fff` (`feat(validation): integrate C-05E validation menu`). Push fast-forward desde `ed700c1e770063f6e67c6ebaeae4652172bb2f02`; `git ls-remote` confirmó el mismo SHA remoto. `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`. Árbol de trabajo limpio tras la publicación. No se modificaron `main`, `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime ni infraestructura. C-05F no autorizada ni iniciada; Etapa 5 y Etapa 2 siguen ABIERTAS.

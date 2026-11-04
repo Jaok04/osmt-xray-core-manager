@@ -178,3 +178,7 @@ Decisiones de UX aplicadas: historial global por defecto; página inicial de 20 
 ## 10. Autorización
 
 El usuario aprobó el diseño y autorizó expresamente la implementación completa de C-05E en `design/user-identity-association-v1`, sin commit ni push. La implementación y sus resultados se registran en `docs/IMPLEMENTACION_C05E_MENU_BASH_2026-11-04.md` y la auditoría en `docs/AUDITORIA_C05E_MENU_BASH_2026-11-04.md`.
+
+## Addendum de aceptación y publicación — 2026-11-04
+
+El diseño C-05E fue implementado, auditado, aceptado formalmente y publicado. Commit `8378ca47a751678f4eeeab20a5e2d06effd47fff` en `design/user-identity-association-v1`; push fast-forward y SHA remoto verificado. Las limitaciones de pruebas permanecen descritas en el informe de auditoría. C-05F requiere autorización independiente.
