@@ -182,6 +182,9 @@ class ConfigurationStore:
     def recover(self):
         if not self.wal_path.exists() and not self.wal_path.is_symlink(): return
         journal = strict_json(read_file(self.wal_path, 32*1024*1024), "Journal")
+        if isinstance(journal, dict) and journal.get("schema_version") == 2:
+            self._recover_delete(journal)
+            return
         if (not isinstance(journal, dict) or set(journal) != {"schema_version", "changes", "remove_dirs"}
                 or type(journal["schema_version"]) is not int or journal["schema_version"] != 1
                 or not isinstance(journal["changes"], list) or not 1 <= len(journal["changes"]) <= 2
@@ -225,6 +228,174 @@ class ConfigurationStore:
             if directory.exists():
                 check_dir(directory); shutil.rmtree(directory); fsync_dir(directory.parent)
         self.wal_path.unlink(); fsync_dir(self.root)
+
+    def _recover_delete(self, journal):
+        fields = {"schema_version", "operation", "config_id", "state", "original", "tombstone", "old_catalog"}
+        if (set(journal) != fields or type(journal["schema_version"]) is not int
+                or journal["schema_version"] != 2 or journal["operation"] != "delete"
+                or not isinstance(journal["config_id"], str) or not ID_RE.fullmatch(journal["config_id"])
+                or journal["state"] not in ("prepared", "committed")):
+            fail("Journal de eliminación inválido; se conserva para inspección.")
+        cid = journal["config_id"]
+        expected_original = f"items/{cid}"
+        tombstone_rel = journal["tombstone"]
+        if (journal["original"] != expected_original or not isinstance(tombstone_rel, str)
+                or not re.fullmatch(rf"items/[.]delete-{re.escape(cid)}-[0-9a-f]{{16}}", tombstone_rel)):
+            fail("Rutas del journal de eliminación fuera de contrato; se conserva.")
+        try:
+            old_catalog = base64.b64decode(journal["old_catalog"], validate=True)
+        except (TypeError, binascii.Error):
+            fail("Snapshot de catálogo del journal de eliminación inválido; se conserva.")
+        if len(old_catalog) > 4 * 1024 * 1024:
+            fail("Snapshot de catálogo del journal excede el límite; se conserva.")
+        snapshot = strict_json(old_catalog, "Snapshot de catálogo")
+        if (not isinstance(snapshot, dict) or set(snapshot) != {"schema_version", "configurations"}
+                or snapshot.get("schema_version") != 1 or not isinstance(snapshot.get("configurations"), list)
+                or not any(isinstance(item, dict) and item.get("config_id") == cid for item in snapshot["configurations"])):
+            fail("El snapshot no representa el catálogo anterior de la configuración; se conserva.")
+        original = self.resolve(expected_original)
+        tombstone = self.resolve(tombstone_rel)
+        if journal["state"] == "prepared":
+            if tombstone.exists() or tombstone.is_symlink():
+                check_dir(tombstone)
+                if original.exists() or original.is_symlink():
+                    fail("Existen simultáneamente origen y tombstone; se conserva el journal.")
+                os.rename(tombstone, original)
+                fsync_dir(self.items)
+            elif original.exists() or original.is_symlink():
+                check_dir(original)
+            else:
+                fail("Faltan origen y tombstone durante rollback; se conserva el journal.")
+            atomic_write(self.catalog_path, old_catalog)
+            if not any(item["config_id"] == cid for item in self.load_catalog()["configurations"]):
+                fail("El rollback no restauró el registro de catálogo; se conserva el journal.")
+        else:
+            if original.exists() or original.is_symlink():
+                fail("El origen reapareció tras confirmar eliminación; se conserva el journal.")
+            if any(item["config_id"] == cid for item in self.load_catalog()["configurations"]):
+                fail("El catálogo conserva la configuración después del commit; se conserva el journal.")
+            if tombstone.exists() or tombstone.is_symlink():
+                check_dir(tombstone)
+                shutil.rmtree(tombstone)
+                fsync_dir(self.items)
+        self.wal_path.unlink()
+        fsync_dir(self.root)
+
+    def _verify_deletion_tree(self, cid, meta):
+        directory = self.items / cid
+        check_dir(directory)
+        expected_top = {"metadata.json"} if meta["current_revision"] is None else {"metadata.json", "revisions"}
+        if {entry.name for entry in directory.iterdir()} != expected_top:
+            fail("La configuración contiene entradas inesperadas; no se elimina.")
+        check_file(directory / "metadata.json")
+        if meta["current_revision"] is None:
+            return
+        revisions_dir = directory / "revisions"
+        check_dir(revisions_dir)
+        entries = list(revisions_dir.iterdir())
+        if not entries:
+            fail("El catálogo indica contenido, pero no hay revisiones; no se elimina.")
+        for entry in entries:
+            if not REV_RE.fullmatch(entry.name):
+                fail("La carpeta de revisiones contiene entradas inesperadas; no se elimina.")
+            check_dir(entry)
+            if {child.name for child in entry.iterdir()} != {"config.enc.json", "manifest.json"}:
+                fail("Una revisión contiene archivos inesperados; no se elimina.")
+            check_file(entry / "config.enc.json", MAX_BLOB)
+            check_file(entry / "manifest.json")
+            self.verify_revision(cid, entry.name)
+        if meta["current_revision"] not in {entry.name for entry in entries}:
+            fail("La revisión actual no existe; no se elimina.")
+
+    def preview_delete(self, cid):
+        with self.locked():
+            meta = self._registered_metadata(cid)
+            catalog = self.load_catalog()
+            matches = [item for item in catalog["configurations"] if item["config_id"] == cid]
+            if len(matches) != 1 or matches[0]["name"] != meta["name"]:
+                fail("La configuración no existe de forma única o catálogo/metadatos no coinciden.")
+            self._verify_deletion_tree(cid, meta)
+            revision_count = 0 if meta["current_revision"] is None else len(list((self.items / cid / "revisions").iterdir()))
+            return {
+                "config_id": cid,
+                "name": meta["name"],
+                "path": str(self.items / cid),
+                "current_revision": meta["current_revision"],
+                "revisions_count": revision_count,
+                "activation_status": "not_managed_by_independent_configurations",
+                "runtime_activity_verified": False,
+                "operator_must_assert_not_active": True,
+                "profiles_and_profile_copies_will_be_untouched": True,
+                "backups_will_be_untouched": True,
+                "integrity_verified": True,
+                "deletion_permitted_by_store": True,
+            }
+
+    def delete(self, cid, expected_name, confirm=False, assert_not_active=False):
+        if not confirm:
+            fail("La eliminación requiere --confirm después de revisar preview-delete.")
+        if not assert_not_active:
+            fail("La eliminación requiere --assert-not-active: confirma que el elemento no está aplicado ni en uso.")
+        if not isinstance(cid, str) or not ID_RE.fullmatch(cid):
+            fail("ID de configuración inválido.")
+        expected_name = normalize_name(expected_name)
+        with self.locked():
+            catalog = self.load_catalog()
+            matches = [item for item in catalog["configurations"] if item["config_id"] == cid]
+            if len(matches) != 1:
+                fail("La configuración no existe de forma única en el catálogo.")
+            meta = self._registered_metadata(cid)
+            if matches[0]["name"] != meta["name"] or meta["name"] != expected_name:
+                fail("El nombre o el registro cambió desde preview-delete; vuelve a previsualizar.")
+            self._verify_deletion_tree(cid, meta)
+            original = self.items / cid
+            tombstone = self.items / f".delete-{cid}-{secrets.token_hex(8)}"
+            old_catalog = read_file(self.catalog_path, 4 * 1024 * 1024)
+            revision_count = 0 if meta["current_revision"] is None else len(list((original / "revisions").iterdir()))
+            updated = dict(catalog)
+            updated["configurations"] = [item for item in catalog["configurations"] if item["config_id"] != cid]
+            journal = {
+                "schema_version": 2,
+                "operation": "delete",
+                "config_id": cid,
+                "state": "prepared",
+                "original": self.rel(original),
+                "tombstone": self.rel(tombstone),
+                "old_catalog": base64.b64encode(old_catalog).decode(),
+            }
+            atomic_write(self.wal_path, json_bytes(journal))
+            try:
+                os.rename(original, tombstone)
+                fsync_dir(self.items)
+                atomic_write(self.catalog_path, json_bytes(updated))
+                journal["state"] = "committed"
+                atomic_write(self.wal_path, json_bytes(journal))
+            except Exception:
+                self.recover()
+                raise
+            try:
+                check_dir(tombstone)
+                shutil.rmtree(tombstone)
+                fsync_dir(self.items)
+                self.wal_path.unlink()
+                try:
+                    fsync_dir(self.root)
+                except Exception:
+                    if not self.wal_path.exists():
+                        atomic_write(self.wal_path, json_bytes(journal))
+                    raise
+            except Exception:
+                raise
+            return {
+                "config_id": cid,
+                "name": meta["name"],
+                "deleted": True,
+                "revisions_deleted": revision_count,
+                "operator_asserted_not_active": True,
+                "profiles_and_profile_copies_untouched": True,
+                "backups_untouched": True,
+                "transaction_state": "committed",
+            }
 
     def transact(self, changes, remove_dirs=(), publish_dirs=()):
         if self.wal_path.exists() or self.wal_path.is_symlink(): fail("Hay una transacción pendiente.")
@@ -800,6 +971,8 @@ def build_parser():
     cp = sub.add_parser("compare"); cp.add_argument("--first", required=True); cp.add_argument("--second", required=True); cp.add_argument("--first-revision"); cp.add_argument("--second-revision")
     rv = sub.add_parser("revisions"); rv.add_argument("--config-id", required=True)
     ex = sub.add_parser("export"); ex.add_argument("--config-id", required=True); ex.add_argument("--revision"); ex.add_argument("--destination", required=True); ex.add_argument("--overwrite", action="store_true")
+    pd = sub.add_parser("preview-delete"); pd.add_argument("--config-id", required=True)
+    de = sub.add_parser("delete"); de.add_argument("--config-id", required=True); de.add_argument("--expected-name", required=True); de.add_argument("--confirm", action="store_true"); de.add_argument("--assert-not-active", action="store_true")
     return p
 
 def main():
@@ -820,6 +993,9 @@ def main():
             result = store.edit(args.config_id, args.source, args.expected_sha256, expected_revision, args.accept_invalid)
         elif args.command == "compare": result = store.compare(args.first, args.second, args.first_revision, args.second_revision)
         elif args.command == "revisions": result = store.revisions(args.config_id)
+        elif args.command == "preview-delete": result = store.preview_delete(args.config_id)
+        elif args.command == "delete":
+            result = store.delete(args.config_id, args.expected_name, args.confirm, args.assert_not_active)
         else: result = store.export_file(args.config_id, args.destination, args.revision, args.overwrite)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True)); return 0
     except (ConfigurationError, OSError, ValueError, CertificateCryptoError) as exc:

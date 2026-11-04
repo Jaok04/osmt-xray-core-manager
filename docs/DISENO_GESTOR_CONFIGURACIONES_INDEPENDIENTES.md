@@ -282,3 +282,17 @@ Prueba focal PASS; regresión `tests/*.sh` 53/53 PASS; AST/compilación Python, 
 
 
 **Decisión vigente (2026-11-04):** C-03 queda aceptada formalmente como componente limitado conforme a `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`. C-04 sigue pendiente de diseño, aprobación y autorización independientes. Etapa 5 y Etapa 2 permanecen abiertas.
+
+## Addendum C-04A — eliminación segura implementada (2026-11-04)
+
+El propietario aprobó el diseño C-04 y autorizó iniciar exclusivamente C-04A. Se implementaron preview-delete y delete en scripts/xray_configurations.py.
+
+La vista previa verifica catálogo/metadatos, estructura del objeto, todas las revisiones, hash del ciphertext y autenticación AES-256-GCM; informa ID, nombre, ruta, revisión, cantidad de revisiones, estado del almacén e integridad. La eliminación exige --confirm, --expected-name coincidente con la vista previa y --assert-not-active.
+
+El almacén independiente no gestiona runtime ni puede detectar aplicaciones manuales externas. Por ello runtime_activity_verified=false y la eliminación requiere una afirmación explícita del operador de que el elemento no está aplicado ni en uso. No se interpreta not_managed_by_independent_configurations como prueba de inactividad runtime.
+
+Se incorporó WAL v2 exclusivo para delete: estado prepared revierte rename/catálogo; estado committed finaliza la limpieza del tombstone. El journal valida esquema, snapshot y patrones exactos de rutas. Se conserva el protocolo WAL v1 de C-01/C-02/C-03. La operación elimina sólo el objeto independiente y su registro; no modifica perfiles/copias, exportaciones ni respaldos.
+
+Auditoría: docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md. Prueba focal PASS; regresión completa 54/54 PASS; Python compile, Bash syntax, ShellCheck focal y git diff --check PASS.
+
+Estado: C-04A implementada y auditada localmente, pendiente de aceptación formal. C-04B (exportación múltiple) y C-04C (interfaz Bash) no iniciadas. Etapa 5 y Etapa 2 continúan ABIERTAS. Sin commit/push/sync.

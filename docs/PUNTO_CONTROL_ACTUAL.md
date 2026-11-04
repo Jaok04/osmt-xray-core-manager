@@ -865,3 +865,15 @@ La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una 
 - C-03 aceptada formalmente. La sincronización se registra en el bloque de publicación de este corte. C-04 requiere diseño, aprobación y autorización independientes.
 
 **Decisión vigente del propietario (2026-11-04):** C-03 aceptada formalmente como componente limitado según su auditoría. Próximo trabajo propuesto: diseño de C-04; no implementarla hasta obtener aprobación y autorización explícitas. Etapa 5 y Etapa 2 siguen abiertas.
+
+## Punto de control vigente — C-04A eliminación segura (2026-11-04)
+
+- Aprobación del diseño C-04 recibida; autorización de implementación limitada a C-04A.
+- scripts/xray_configurations.py: preview-delete y delete; verificación completa de objeto y revisiones, autenticidad AES-256-GCM, confirmación y nombre esperado.
+- El borrado requiere --assert-not-active. El almacén independiente no verifica aplicaciones runtime manuales externas; preview informa runtime_activity_verified=false. La afirmación explícita del operador es obligatoria.
+- WAL v2/tombstone: prepared revierte rename y catálogo; committed termina la limpieza. WAL v1 anterior sin cambios.
+- Sólo se elimina el objeto independiente seleccionado; perfiles/copias y respaldos no se modifican.
+- Prueba focal PASS; regresión 54/54 PASS; Python compile, Bash syntax, ShellCheck focal y git diff --check PASS.
+- Auditoría: docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md.
+- C-04A pendiente de aceptación formal. C-04B y C-04C no iniciadas. Etapa 5 y Etapa 2 ABIERTAS.
+- Sin commit/push/sync. Sin acceso al almacén real ni clave maestra; sin runtime, servicios, dependencias, certificados, firewall, puertos, red o VPS de pruebas. main y Xray-Normativa/ intactas.

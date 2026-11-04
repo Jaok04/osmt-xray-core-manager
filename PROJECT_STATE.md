@@ -890,3 +890,17 @@ No se leyó clave real, no se creó almacén live ni se tocó perfiles, VLESS/VM
 - El código y la auditoría C-03 se publican en la rama autorizada y se sincronizan con `Implementación-Xray:/opt/xray-manager` mediante el commit de sincronización documentado más abajo. No se inició C-04.
 
 **Aceptación y sincronización C-03 (2026-11-04):** el propietario aceptó C-03 como componente limitado conforme a su auditoría. Se publica el código, la prueba focal y la documentación en `design/user-identity-association-v1`; la VPS de desarrollo debe quedar en el mismo SHA. Sin force push. `main`, `Xray-Normativa/` y `Vps de Pruebas` permanecen fuera del alcance. Etapa 5 y Etapa 2 continúan ABIERTAS; C-04 no autorizada ni iniciada.
+
+## C-04A — eliminación segura de configuraciones independientes (2026-11-04)
+
+El propietario aprobó el diseño C-04 y autorizó sólo C-04A. En scripts/xray_configurations.py se añadieron preview-delete y delete. La vista previa valida catálogo/metadatos, estructura y todas las revisiones, hash y autenticación AES-256-GCM. La eliminación requiere confirmación, nombre esperado coincidente con la vista previa y --assert-not-active.
+
+El almacén independiente no administra ni puede verificar aplicaciones runtime manuales externas; por ello el preview informa runtime_activity_verified=false y exige afirmación explícita del operador de que el objeto no está aplicado ni en uso. No se presenta el estado interno not_managed_by_independent_configurations como verificación runtime.
+
+La transacción usa WAL v2 con tombstone y estados prepared/committed; rollback restaura objeto y snapshot exacto del catálogo; recuperación committed finaliza limpieza. Rutas WAL cerradas y protocolo WAL v1 existente preservado. Sólo se elimina el objeto independiente elegido; perfiles/copias y respaldos no se modifican.
+
+Prueba focal tests/xray_configurations_c04a.sh PASS. Regresión completa tests/*.sh 54/54 PASS. Python compile, bash -n global, ShellCheck focal y git diff --check PASS. Auditoría: docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md.
+
+Estado: C-04A implementada y auditada localmente, pendiente de aceptación formal. C-04B (exportación múltiple) y C-04C (integración menú Bash) no iniciadas. No se cerró C-04, Etapa 5 ni Etapa 2.
+
+Sólo almacenes temporales y claves sintéticas. No se leyó master.key, no se accedió al almacén real ni se tocó runtime/servicios/systemd/certificados/firewall/puertos/red/dependencias. VPS de pruebas, main y Xray-Normativa/ intactas. No commit/push/sync.

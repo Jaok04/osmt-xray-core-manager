@@ -1031,3 +1031,15 @@ C-03 pendiente de aceptación formal. C-04 no autorizada/iniciada. No publicar n
 ## Aceptación C-03 y sincronización autorizada — 2026-11-04
 
 El propietario aceptó formalmente C-03 como componente limitado dentro de `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`. Se autoriza publicar únicamente los cambios de C-03 y su documentación en `design/user-identity-association-v1` y sincronizar `/opt/xray-manager` con ese commit. C-04 no se inicia por esta aceptación. Etapa 5 y Etapa 2 permanecen ABIERTAS. `main`, `Xray-Normativa/`, runtime, servicios y VPS de pruebas quedan fuera del alcance.
+
+## Continuidad vigente — C-04A implementada y auditada (2026-11-04)
+
+C-01, C-02 y C-03 del gestor independiente están aceptadas formalmente como componentes limitados. El propietario aprobó el diseño C-04 y autorizó exclusivamente C-04A.
+
+C-04A implementa preview-delete y delete en scripts/xray_configurations.py: valida catálogo/metadatos y todas las revisiones; verifica hash y AES-256-GCM; requiere --confirm, --expected-name y --assert-not-active; usa WAL v2 y tombstone con rollback prepared y finalización committed. Sólo elimina el objeto independiente seleccionado. Perfiles/copias, exportaciones y respaldos quedan intactos.
+
+El almacén no integra el registro runtime y no puede detectar una aplicación manual externa. El preview lo declara (runtime_activity_verified=false) y exige la afirmación explícita del operador; no se confunde estado interno con estado real de Xray.
+
+Auditoría: docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md. Focal PASS; regresión completa 54/54 PASS; Python compile, Bash syntax, ShellCheck focal y git diff --check PASS.
+
+C-04A pendiente de aceptación formal. C-04B (exportación múltiple) y C-04C (menú Bash) no iniciadas. Etapa 5 y Etapa 2 ABIERTAS. No commit/push/sync sin autorización expresa. Sólo temporales y claves sintéticas; no almacén real, clave maestra, runtime, servicios, dependencias, certificados, firewall, puertos, red o VPS de pruebas. main y Xray-Normativa/ intactas.

@@ -948,3 +948,15 @@ C-02 queda aceptado formalmente como componente limitado. C-03 implementada y au
 ## 2026-11-04 — Aceptación formal C-03 y autorización de sincronización
 
 El propietario aceptó formalmente C-03 como componente limitado conforme a `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`. La aceptación cubre únicamente el alcance, pruebas, controles y exclusiones documentados; no cierra Etapa 5 ni Etapa 2 y no autoriza C-04. El propietario autorizó sincronizar los cambios de C-03 y su documentación desde la VPS de desarrollo hacia GitHub y dejar ambos en el mismo commit, exclusivamente en `design/user-identity-association-v1`. `main`, `Xray-Normativa/`, `Vps de Pruebas` y runtime permanecen fuera del alcance.
+
+## 2026-11-04 — C-04A eliminación segura
+
+- Aprobado el diseño C-04; autorización limitada a C-04A.
+- Añadidos preview-delete y delete al motor de configuraciones independientes.
+- Integridad previa completa de catálogo, metadatos y todas las revisiones; autenticación AES-256-GCM.
+- Confirmaciones obligatorias: nombre esperado, --confirm y --assert-not-active. El estado runtime no puede verificarse desde este almacén y se informa expresamente.
+- WAL v2 con tombstone, rollback en prepared y finalización en committed; WAL v1 previo preservado.
+- Pruebas temporales con claves sintéticas: fallo por corrupción/entradas inesperadas, nombre/confirmación, SIGKILL tras rename, tras catálogo y durante limpieza committed.
+- Regresión 54/54 PASS; Python compile, Bash syntax, ShellCheck focal y git diff --check PASS.
+- Auditoría: docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md.
+- C-04A pendiente de aceptación formal. C-04B/C-04C no iniciadas. Sin commit/push/sync.
