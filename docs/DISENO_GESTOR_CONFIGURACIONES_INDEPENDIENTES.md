@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-04
 **Rama:** design/user-identity-association-v1
 **Normativa:** Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md §§ 2–5 y 14; YAML aprobado correspondiente.
-**Estado actualizado 2026-11-04:** C-01/C-02/C-03 aceptadas formalmente como componentes limitados; C-04A/B/C implementadas, auditadas, aceptadas y publicadas; C-04 cerrada integralmente (56/56 PASS). El diseño técnico C-05 fue aprobado por el propietario y desglosado en C-05A–C-05F. C-05A (motor estático/nativo) y C-05B (almacén permanente de informes) están implementadas, auditadas, aceptadas y publicadas conjuntamente. C-05C (promoción controlada a Validada), C-05D (historial/comparación), C-05E (menú) y C-05F (auditoría integral) requieren autorizaciones independientes; ninguna está autorizada ni iniciada. Etapa 5 y Etapa 2 siguen ABIERTAS.
+**Estado actualizado 2026-11-04:** C-01/C-02/C-03 aceptadas formalmente como componentes limitados; C-04A/B/C implementadas, auditadas, aceptadas y publicadas; C-04 cerrada integralmente (56/56 PASS). El diseño técnico C-05 fue aprobado por el propietario y desglosado en C-05A–C-05F. C-05A (motor estático/nativo) y C-05B (almacén permanente de informes) están implementadas, auditadas, aceptadas y publicadas conjuntamente. C-05C (promoción controlada a Validada) está implementada, verificada y auditada localmente; pendiente de aceptación formal y publicación. C-05D (historial/comparación), C-05E (menú) y C-05F (auditoría integral) siguen sin autorización y requieren decisiones independientes. Etapa 5 y Etapa 2 siguen ABIERTAS.
 
 ## 1. Objetivo y límites
 
@@ -352,11 +352,33 @@ El diseño técnico C-05 fue aprobado por el propietario con estas decisiones: v
 |---|---|---|
 | C-05A | Motor de validación estática y nativa | Implementada, auditada, aceptada y publicada |
 | C-05B | Almacén permanente e inmutable de informes | Implementada, auditada, aceptada y publicada |
-| C-05C | Integración transaccional y promoción controlada a Validada | Pendiente de autorización |
+| C-05C | Integración transaccional y promoción controlada a Validada | Aceptada formalmente; publicada y sincronizada |
 | C-05D | Historial y comparación de informes | Pendiente de autorización |
 | C-05E | Integración del menú Bash | Pendiente de autorización |
 | C-05F | Auditoría integral | Pendiente de autorización |
 
 C-05A ejecuta `xray run -test -config` sobre bytes exactos en un directorio temporal privado y verifica previamente el binario Xray. No inicia servicios ni modifica runtime. C-05B persiste informes append-only con integridad SHA-256, controles de filesystem, bloqueo, escrituras atómicas y recuperación WAL. Ambos componentes permanecen desacoplados: la integración futura debe verificar la identidad de configuración, revisión y hash antes de persistir y promover.
 
-La aceptación de C-05A/B no implica promoción a Validada ni autoriza C-05C/D/E/F. El almacén live no fue creado; la validación no demuestra conectividad ni funcionamiento runtime. Evidencias: `docs/IMPLEMENTACION_C05A_MOTOR_VALIDACION_2026-11-04.md`, `docs/AUDITORIA_C05A_MOTOR_VALIDACION_2026-11-04.md`, `docs/IMPLEMENTACION_C05B_ALMACEN_INFORMES_2026-11-04.md` y `docs/AUDITORIA_C05B_ALMACEN_INFORMES_2026-11-04.md`.
+La aceptación de C-05A/B no autorizó por sí sola la promoción; C-05C fue autorizada posteriormente y su implementación/auditoría local se registra en el addendum siguiente. C-05D/E/F requieren autorizaciones independientes. El almacén live no fue creado; la validación no demuestra conectividad ni funcionamiento runtime. Evidencias: `docs/IMPLEMENTACION_C05A_MOTOR_VALIDACION_2026-11-04.md`, `docs/AUDITORIA_C05A_MOTOR_VALIDACION_2026-11-04.md`, `docs/IMPLEMENTACION_C05B_ALMACEN_INFORMES_2026-11-04.md` y `docs/AUDITORIA_C05B_ALMACEN_INFORMES_2026-11-04.md`.
+
+
+## Addendum C-05C — promoción controlada implementada y auditada localmente (2026-11-04)
+
+El propietario autorizó exclusivamente C-05C, incluyendo implementación, pruebas, auditoría técnica y documentación, con prohibición expresa de publicar o sincronizar en esta operación.
+
+Se añadió `scripts/xray_config_promotion.py` para orquestar la validación de una revisión exacta con C-05A y la persistencia permanente del informe con C-05B. La persistencia del informe, catálogo y metadatos de promoción utiliza `promotion.transaction.json`, con estados prepared/committed y recuperación probada ante SIGKILL. El proceso exige todas las comprobaciones estáticas obligatorias, validación nativa PASS, compatibilidad delegada al validador nativo y hash exacto de contenido. PASS_WITH_WARNINGS puede promocionar si las comprobaciones obligatorias pasan; FAIL e INCOMPLETE conservan informe sin promover.
+
+Se amplió el contrato de metadatos del gestor: valid solo si la revisión actual coincide exactamente con last_validated_revision; not_validated puede conservar un puntero a una revisión anterior. Editar crea una revisión nueva Borrador y preserva el puntero histórico. La validación de una revisión histórica no convierte la actual en Validada.
+
+Pruebas focales C-05C: 13/13 PASS. Regresión Python C-05A/B/C: 38/38 PASS, incluyendo prueba end-to-end con Xray 26.10.31. Regresión shell C-01/C-02, C-03, C-04A/B/C y almacén de perfiles: PASS. Python compile/AST, CLI help, bash -n focal y git diff --check: PASS. Expedientes: `docs/IMPLEMENTACION_C05C_PROMOCION_VALIDADA_2026-11-04.md` y `docs/AUDITORIA_C05C_PROMOCION_VALIDADA_2026-11-04.md`.
+
+C-05C queda IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE, pendiente de aceptación formal. No está publicada ni sincronizada. C-05D/E/F siguen sin autorización. No se creó almacén live ni se leyó la clave maestra real; no hubo cambios de runtime/servicios/infraestructura, dependencias, main, Xray-Normativa/ ni VPS de pruebas.
+
+
+## Addendum C-05C — aceptación formal, publicación y sincronización (2026-11-04)
+
+El propietario declaró: **«Acepto, publica cambios actualiza documentación»**. Se registra la aceptación formal de C-05C, con resultado técnico PASS, 13/13 pruebas focales y 38/38 pruebas Python combinadas C-05A/B/C. Las regresiones shell de C-01/C-02, C-03, C-04A/B/C y perfiles concluyeron PASS.
+
+La implementación y los documentos de auditoría/continuidad se publicaron en la rama autorizada `design/user-identity-association-v1` mediante commit normal y push fast-forward, sin force push. El HEAD de publicación y la verificación remota quedan registrados en el resumen final de esta sesión y en el commit de Git.
+
+C-05C queda ACEPTADA, PUBLICADA y SINCRONIZADA. C-05A/B/C completadas; C-05D (historial/comparación), C-05E (menú) y C-05F (auditoría integral) siguen pendientes de autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS.

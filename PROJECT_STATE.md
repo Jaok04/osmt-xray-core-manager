@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-04 — almacén de persistencia de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO; gestor de configuraciones independientes C-01/C-02/C-03 aceptados formalmente como componentes limitados; Etapa 5 y Etapa 2 ABIERTAS. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios documentados y probados. Los requisitos funcionales restantes de Etapa 5 siguen pendientes. Snapshot Writer v1 mantiene su aceptación limitada independiente; backup/restore integral pendiente. VLESS-WS live continúa draft, sin runtime apply ni conectividad externa.
+**Corte de estado:** 2026-11-04 — C-05A/B del gestor de configuraciones independientes aceptadas, publicadas y sincronizadas; C-05C aceptada formalmente, publicada y sincronizada. C-01/C-02/C-03 aceptadas como componentes limitados; C-04 cerrada integralmente; Etapa 5 y Etapa 2 ABIERTAS. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios documentados y probados. Los requisitos funcionales restantes de Etapa 5 siguen pendientes. Snapshot Writer v1 mantiene su aceptación limitada independiente; backup/restore integral pendiente. VLESS-WS live continúa draft, sin runtime apply ni conectividad externa.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -257,7 +257,7 @@ Consultar `docs/DISEÑO_TECNICO_VMESS.md` y `docs/PUNTO_CONTROL_ACTUAL.md` para 
 
 El propietario autorizó la protección de las entradas VMess actuales durante una restauración VLESS. `scripts/vless_backup.py` prepara el catálogo combinando las entradas VLESS del backup con las entradas VMess vigentes, bajo los bloqueos lifecycle/integrity. Valida catálogo, IDs, modalidad y referencias VMess; ante corrupción, referencias rotas, IDs duplicados o fallo de escritura staging, aborta antes de publicar. El almacén `/var/lib/xray-manager/vmess/` no se modifica y el backup VLESS no incorpora sus archivos.
 
-Pruebas: nuevo `tests/vless_restore_preserves_vmess.sh` cubre VMess anteriores/posteriores al backup, referencias de configuración/secreto, integridad byte a byte del almacén, colisiones, catálogo corrupto, refs rotas y fallo de escritura. `tests/vless_backup_journal_crash_matrix.sh` conserva cobertura de 32 interrupciones con catálogo VMess válido. Suite completa: 37/37 scripts PASS. `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de pruebas modificadas y `git diff --check`: PASS.
+Pruebas: nuevo `tests/vless_restore_preserves_vmess.sh` cubre VMess anteriores/posteriores al backup, referencias de configuración/secreto, integridad byte a byte del almacén, colisiones, catálogo corrupto, refs rotas y fallo de escritura. `tests/vless_backup_journal_crash_matrix.sh` conserva cobertura de 32 interrupciones con catálogo VMess válido. Suite completa: 38/38 scripts PASS. `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de pruebas modificadas y `git diff --check`: PASS.
 
 Estado del incremento: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; aceptación formal específica pendiente. Commit: `c890b5b5362e17e439f198b9b8bbbdbe0af0c653`. P4 conserva su aceptación histórica para el alcance original; esta corrección posterior se registra por separado. No se creó backup operativo ni se accedió a la clave maestra real. No se modificaron runtime, servicio, firewall, puertos, certificados desplegados ni documentación normativa preliminar.
 
@@ -975,3 +975,23 @@ La publicación de las correcciones documentales quedó verificada en el commit 
 ## Verificación de continuidad documental y sincronización — 2026-11-04
 
 Se revisaron los documentos de continuidad, diseño y expediente C-05A/C-05B. Se corrigieron los estados iniciales desactualizados mediante encabezados vigentes y addenda, preservando el contenido histórico y las evidencias originales. C-05A/B continúan aceptadas, publicadas y sincronizadas; C-05C sigue pendiente de autorización específica. El HEAD verificado antes de esta actualización documental fue 1815663438770a2271d769345adbc271714a6817; main y Xray-Normativa/ permanecieron intactas.
+
+
+## Estado vigente — C-05C implementada y auditada localmente (2026-11-04)
+
+C-05A (motor estático/nativo) y C-05B (almacén permanente de informes) permanecen aceptadas, publicadas y sincronizadas. El propietario autorizó exclusivamente C-05C para implementación, pruebas, auditoría técnica y documentación, limitando expresamente la publicación/sincronización.
+
+C-05C añade `scripts/xray_config_promotion.py`, amplía la validación de metadatos en `scripts/xray_configurations.py` y agrega `tests/test_xray_config_promotion.py`. Integra validación de bytes/revisión exactos, criterios estrictos PASS/PASS_WITH_WARNINGS, informe permanente y promoción transaccional recuperable. Las ediciones posteriores crean Borrador y conservan el puntero a la revisión validada anterior. La validación histórica no marca la revisión actual como Validada.
+
+Evidencia: auditoría `docs/AUDITORIA_C05C_PROMOCION_VALIDADA_2026-11-04.md`; implementación `docs/IMPLEMENTACION_C05C_PROMOCION_VALIDADA_2026-11-04.md`. C-05C focal 13/13 PASS; regresión Python C-05A/B/C 38/38 PASS; suites shell C-01/C-02, C-03, C-04A/B/C y perfiles PASS; Xray 26.10.31 real PASS en almacenes temporales.
+
+Estado administrativo C-05C: IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal; NO PUBLICADA ni SINCRONIZADA. C-05D, C-05E y C-05F no autorizadas. Etapa 5 y Etapa 2 siguen ABIERTAS.
+
+La base Git sigue siendo `6ab158f436d2d88755d70e954114efb4fa2f6129` en `design/user-identity-association-v1`; los cambios están locales y sin commit. No se creó almacén live, no se leyó la clave maestra real, no se instalaron/actualizaron dependencias ni se tocaron runtime, servicios, certificados, firewall, puertos, red, `main`, `Xray-Normativa/` o `Vps de Pruebas`.
+
+
+## Registro de aceptación/publicación C-05C — 2026-11-04
+
+El propietario aceptó formalmente C-05C y autorizó publicar cambios y actualizar documentación. C-05C queda ACEPTADA, PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Evidencias en los documentos de implementación y auditoría C-05C. Pruebas: 13/13 focal y 38/38 regresión Python C-05A/B/C; regresiones shell C-01/C-02, C-03, C-04A/B/C y perfiles PASS.
+
+C-05D/E/F siguen sin autorización. Etapa 5 y Etapa 2 permanecen ABIERTAS. La publicación no alteró `main`, `Xray-Normativa/`, runtime, almacenes live, dependencias, servicios, certificados, firewall, puertos, red ni VPS de pruebas; no se leyó la clave maestra real.

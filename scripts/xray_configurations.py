@@ -476,7 +476,22 @@ class ConfigurationStore:
         if rev is not None and (not isinstance(rev, str) or not REV_RE.fullmatch(rev)): fail("Puntero de revisión inválido.")
         last = meta["last_validated_revision"]
         if last is not None and (not isinstance(last, str) or not REV_RE.fullmatch(last)): fail("Puntero validado inválido.")
-        if type(meta["config_present"]) is not bool or meta["config_present"] != (rev is not None) or meta["validation_status"] != "not_validated" or last is not None: fail("Estado de metadatos incoherente para C-01.")
+        if type(meta["config_present"]) is not bool or meta["config_present"] != (rev is not None):
+            fail("El indicador config_present no coincide con la revisión actual.")
+        if last is not None and (rev is None or int(last[1:]) > int(rev[1:])):
+            fail("La última revisión validada no puede ser posterior a la revisión actual.")
+        if (not isinstance(meta["validation_status"], str)
+                or meta["validation_status"] not in {"not_validated", "valid"}):
+            fail("Estado de validación de metadatos no reconocido.")
+        if meta["validation_status"] == "valid" and (rev is None or last != rev):
+            fail("Una configuración Validada debe identificar exactamente la revisión actual.")
+        if meta["validation_status"] == "not_validated" and last == rev and last is not None:
+            fail("La revisión actual no puede estar marcada simultáneamente como validada y Borrador.")
+        for field, pointer in (("current_revision", rev), ("last_validated_revision", last)):
+            if pointer is None:
+                continue
+            revision_dir = directory / "revisions" / pointer
+            check_dir(revision_dir)
         return meta
 
     def verify_revision(self, cid, rev):
@@ -802,6 +817,7 @@ class ConfigurationStore:
                 updated = dict(meta)
                 updated["current_revision"] = revision
                 updated["config_present"] = True
+                updated["validation_status"] = "not_validated"
                 updated["modified_at"] = created
                 self.transact(
                     {self.items / cid / "metadata.json": json_bytes(updated)},

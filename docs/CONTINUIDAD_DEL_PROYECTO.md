@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-04:** C-01, C-02 y C-03 del gestor de configuraciones independientes están aceptados formalmente como componentes limitados; C-04A/B/C están aceptadas y C-04 quedó cerrada integralmente; C-05A (motor de validación estática/nativa) y C-05B (almacén permanente de informes) están implementadas, auditadas, aceptadas formalmente, publicadas y sincronizadas. Última regresión focal combinada C-05A/B: 25/25 PASS; regresiones shell de C-01/C-02, C-03, C-04A/B/C y smoke general PASS según sus auditorías. HEAD de implementación y aceptación verificado antes de esta actualización documental: `1815663438770a2271d769345adbc271714a6817` en `design/user-identity-association-v1`. Siguiente fase propuesta: C-05C (promoción transaccional y controlada a Validada), **NO autorizada ni iniciada**. C-05D/E/F también requieren autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS. No usar `master.key` real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o la VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
+> **Punto de reanudación vigente — 2026-11-04:** C-01/C-02/C-03 aceptadas como componentes limitados; C-04A/B/C aceptadas y C-04 cerrada integralmente; C-05A/B/C aceptadas, publicadas y sincronizadas. C-05C aprobada tras auditoría 13/13 focal y 38/38 regresión Python combinada; suites shell anteriores PASS. La siguiente fase posible es C-05D (historial/comparación), que requiere autorización independiente. C-05E (menú) y C-05F (auditoría integral) también requieren autorización propia. Etapa 5 y Etapa 2 permanecen ABIERTAS. No usar clave maestra real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -300,7 +300,7 @@ El propietario aprobó el plan completo de correcciones para el cierre de VMess 
 
 Se implementó en `scripts/vless_backup.py` una combinación en staging bajo `lifecycle.lock` e `integrity.lock`: las conexiones VLESS proceden del backup y las VMess proceden del catálogo vigente. Las VMess históricas del snapshot no prevalecen. Se validan catálogo actual, IDs únicos, modalidades VMess, referencias de configuración/secreto y archivos regulares con permisos seguros. Colisiones VLESS/VMess, catálogo corrupto, referencias rotas, protocolo desconocido o fallo de escritura staging detienen la operación antes de publicar. El almacén VMess separado no se modifica ni se incluye en el backup VLESS.
 
-Se creó `tests/vless_restore_preserves_vmess.sh` con casos de VMess anteriores y posteriores al backup, referencias `vmess_*`, comprobación byte a byte del almacén, colisión de IDs, catálogo corrupto, refs rotas y fallo de escritura. Se ajustó `tests/vless_backup_journal_crash_matrix.sh` para que su estado previo sea un catálogo VMess JSON válido y se conservaron las 32 pruebas de interrupción/rollback. Suite completa: 37/37 scripts PASS. `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de las pruebas modificadas y `git diff --check`: PASS.
+Se creó `tests/vless_restore_preserves_vmess.sh` con casos de VMess anteriores y posteriores al backup, referencias `vmess_*`, comprobación byte a byte del almacén, colisión de IDs, catálogo corrupto, refs rotas y fallo de escritura. Se ajustó `tests/vless_backup_journal_crash_matrix.sh` para que su estado previo sea un catálogo VMess JSON válido y se conservaron las 32 pruebas de interrupción/rollback. Suite completa: 38/38 scripts PASS. `python3 -m py_compile scripts/*.py`, `bash -n` de todos los scripts Bash, `install.sh --check`, ShellCheck warning de las pruebas modificadas y `git diff --check`: PASS.
 
 Estado del Bloque 1: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; commit `c890b5b5362e17e439f198b9b8bbbdbe0af0c653`. La aceptación formal específica permanece pendiente. P4 conserva su aceptación histórica para el alcance original; la corrección se registra como incremento posterior. No se creó backup operativo ni se accedió a la clave maestra real. No se tocó runtime, servicio, firewall, puertos ni certificados desplegados. La documentación normativa preliminar se mantuvo intacta.
 
@@ -1103,3 +1103,27 @@ El propietario aceptó formalmente el cierre integral de C-04. C-04A (eliminaci�
 - No se creó el almacén live `/var/lib/xray-manager/validation`; no se leyó `/etc/xray-manager/keys/master.key`; no se modificaron runtime, servicios, certificados, firewall, puertos, dependencias ni configuración activa.
 - `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`; `Xray-Normativa/` permanece intacta. Etapa 5 y Etapa 2 siguen ABIERTAS.
 - Para reanudar: leer primero `AGENTS.md`, `PROJECT_STATE.md`, este documento, `docs/PUNTO_CONTROL_ACTUAL.md` y `HISTORY.md`; después revisar el diseño C-05 aprobado, los informes C-05A/B y la normativa Etapa 5. Ejecutar auditoría de recuperación de solo lectura y esperar autorización expresa antes de implementar C-05C.
+
+
+## Punto de reanudación vigente — C-05C implementada y auditada localmente (2026-11-04)
+
+- Base Git de la sesión: `6ab158f436d2d88755d70e954114efb4fa2f6129`; rama `design/user-identity-association-v1`.
+- C-05A/B continúan aceptadas, publicadas y sincronizadas.
+- C-05C: implementación en `scripts/xray_config_promotion.py`; ampliación controlada de metadatos en `scripts/xray_configurations.py`; pruebas en `tests/test_xray_config_promotion.py`.
+- Expedientes: `docs/IMPLEMENTACION_C05C_PROMOCION_VALIDADA_2026-11-04.md` y `docs/AUDITORIA_C05C_PROMOCION_VALIDADA_2026-11-04.md`.
+- Pruebas focales C-05C: 13/13 PASS. Regresión Python C-05A/B/C: 38/38 PASS. Shell C-01/C-02, C-03, C-04A/B/C y perfiles: PASS. Xray 26.10.31 real integrado con almacenes temporales y clave sintética.
+- Estado: IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal. No publicada ni sincronizada.
+- Siguiente paso permitido: que el propietario revise la auditoría y decida si acepta C-05C. No iniciar C-05D/E/F ni publicar/sincronizar sin autorización independiente.
+- No se creó `/var/lib/xray-manager/configurations` ni `/var/lib/xray-manager/validation`; no se leyó clave maestra real ni se modificó runtime/infraestructura.
+
+
+## Registro de aceptación y publicación C-05C — 2026-11-04
+
+- Aceptación formal del propietario: «Acepto, publica cambios actualiza documentación».
+- C-05C: aceptada, publicada y sincronizada en `design/user-identity-association-v1`.
+- Implementación: `scripts/xray_config_promotion.py`; metadatos en `scripts/xray_configurations.py`; pruebas `tests/test_xray_config_promotion.py`.
+- Evidencias: `docs/IMPLEMENTACION_C05C_PROMOCION_VALIDADA_2026-11-04.md` y `docs/AUDITORIA_C05C_PROMOCION_VALIDADA_2026-11-04.md`.
+- Pruebas: 13/13 focal C-05C; 38/38 Python C-05A/B/C; suites shell C-01/C-02, C-03, C-04A/B/C y perfiles PASS.
+- La publicación fue fast-forward, sin force push. El commit y HEAD remoto se consultan en el registro Git de esta publicación.
+- C-05D/E/F no están autorizadas. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+- No se crearon almacenes live, no se leyó la clave maestra real, no se modificó runtime/infraestructura ni VPS de pruebas.

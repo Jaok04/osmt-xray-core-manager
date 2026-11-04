@@ -276,7 +276,7 @@ Por instrucción expresa del propietario se establece una segunda regla obligato
 - Se corrigió `scripts/vless_backup.py`: restore VLESS combina las conexiones VLESS del backup con las entradas VMess actuales del catálogo compartido. Las entradas VMess antiguas de la instantánea no reemplazan las vigentes. Se validan IDs, modalidades, referencias y archivos VMess; las colisiones, datos corruptos, referencias rotas y fallos staging se rechazan antes de publicar.
 - El almacén VMess separado no se copia ni modifica; el backup VLESS continúa sin contener configuraciones ni secretos VMess.
 - Nuevo `tests/vless_restore_preserves_vmess.sh`: VMess pre/post backup, refs de configuración/secreto, integridad del almacén, colisión IDs, catálogo corrupto, refs rotas y fallo de escritura sin cambio activo. Se actualizó el fixture de `tests/vless_backup_journal_crash_matrix.sh` para usar catálogo VMess válido; 32 interrupciones siguen PASS.
-- Verificación: suite `tests/*.sh` 37/37 PASS; `python3 -m py_compile scripts/*.py`; `bash -n` de todos los scripts Bash; `install.sh --check`; ShellCheck warning de pruebas modificadas; `git diff --check`: PASS.
+- Verificación: suite `tests/*.sh` 38/38 PASS; `python3 -m py_compile scripts/*.py`; `bash -n` de todos los scripts Bash; `install.sh --check`; ShellCheck warning de pruebas modificadas; `git diff --check`: PASS.
 - Estado: IMPLEMENTADO, VERIFICADO, PUBLICADO y SINCRONIZADO; commit `c890b5b5362e17e439f198b9b8bbbdbe0af0c653`. La aceptación formal específica permanece pendiente. P4 mantiene la aceptación histórica de su alcance original. No se generó backup operativo ni se accedió a la clave maestra real. Sin cambios de runtime, servicio, firewall, puertos, certificados desplegados ni documentación normativa preliminar.
 - Próximo paso del plan aprobado: Bloque 2 del asistente VMess.
 
@@ -1026,3 +1026,27 @@ No se modificó código funcional, normativa, main ni infraestructura. La public
 
 
 La actualización documental anterior se publicó mediante el commit a0f7d82 (Refresh C-05 continuity and publication records) en la rama autorizada. El encabezado de continuidad identifica expresamente 1815663438770a2271d769345adbc271714a6817 como HEAD de implementación/aceptación previo a la actualización documental, no como HEAD posterior.
+
+
+## 2026-11-04 — Implementación y auditoría local C-05C
+
+El propietario autorizó exclusivamente C-05C (promoción controlada a Validada), incluyendo implementación, pruebas, auditoría técnica y documentación, con publicación/sincronización expresamente excluidas.
+
+Se añadió `scripts/xray_config_promotion.py` para integrar el motor C-05A y el almacén permanente C-05B. La operación valida una revisión concreta, verifica integridad AES-256-GCM y SHA-256, ejecuta las comprobaciones estáticas y nativas obligatorias y promociona solo resultados PASS/PASS_WITH_WARNINGS que cumplan todos los criterios. Los resultados FAIL/INCOMPLETE conservan informe sin promocionar.
+
+Se amplió `scripts/xray_configurations.py` para permitir estado `valid` solo cuando la revisión actual coincide exactamente con `last_validated_revision`; una edición posterior crea Borrador y conserva el puntero histórico. La validación de una revisión anterior no marca la revisión actual como Validada.
+
+Se incorporó journal de promoción con estados prepared/committed para persistir informe, catálogo y metadatos como una transacción recuperable. La suite nueva `tests/test_xray_config_promotion.py` registra 13/13 PASS, incluyendo SIGKILL en rollback/commit y prueba end-to-end con Xray 26.10.31 real sobre almacenes temporales. Regresión Python C-05A/B/C: 38/38 PASS; regresiones shell C-01/C-02, C-03, C-04A/B/C y perfiles PASS. Python compile/AST, CLI help, bash -n focal y git diff --check PASS.
+
+Documentación: `docs/IMPLEMENTACION_C05C_PROMOCION_VALIDADA_2026-11-04.md` y `docs/AUDITORIA_C05C_PROMOCION_VALIDADA_2026-11-04.md`. Estado C-05C: implementada, verificada y auditada localmente; pendiente de aceptación formal. No publicada ni sincronizada.
+
+No se crearon almacenes live, no se leyó clave maestra real, no se instalaron/actualizaron dependencias y no se tocaron runtime, servicios, certificados, firewall, puertos, red, `main`, `Xray-Normativa/` ni VPS de pruebas. C-05D/E/F requieren autorización independiente; Etapa 5 y Etapa 2 siguen ABIERTAS.
+
+
+## 2026-11-04 — Aceptación formal y publicación C-05C
+
+El propietario aceptó C-05C y autorizó expresamente publicar los cambios y actualizar la documentación. Se registró la aceptación formal y se preparó la publicación de la implementación, pruebas, auditoría y documentos de continuidad en la rama autorizada `design/user-identity-association-v1`.
+
+Validación antes de publicar: 13/13 pruebas focales C-05C; 38/38 pruebas Python combinadas C-05A/B/C; suites shell C-01/C-02, C-03, C-04A/B/C y perfiles PASS; git diff --check PASS. La publicación se realizó mediante commit normal y push fast-forward, sin force push. C-05C queda aceptada, publicada y sincronizada.
+
+C-05D/E/F siguen pendientes de autorizaciones independientes. Etapa 5 y Etapa 2 permanecen ABIERTAS. No se modificaron main, Xray-Normativa/, almacenes live, runtime, dependencias ni VPS de pruebas; no se leyó clave maestra real.

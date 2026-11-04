@@ -1,10 +1,10 @@
 # Punto de control actual — Xray Core Manager
 
-> El registro operativo vigente es el bloque «Decisión vigente — aceptación limitada del almacén de perfiles v1.1 (2026-11-04)» al final de este documento; los estados anteriores se conservan sólo como trazabilidad histórica.
+> El punto de control operativo vigente es el último bloque C-05C al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
 
 **Fecha del corte:** 2026-11-04
-**Tarea activa:** definir y presentar el siguiente alcance de trabajo del gestor de configuraciones independientes, sin iniciar C-05 hasta recibir autorización específica. C-01, C-02 y C-03 están aceptadas formalmente como componentes limitados. C-04A, C-04B y C-04C están implementadas, auditadas, aceptadas y publicadas; el propietario aceptó formalmente el cierre integral de C-04 tras la auditoría 56/56 PASS.
-**Estado vigente:** almacén de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO. Gestor de configuraciones independientes: C-01/C-02/C-03 aceptadas formalmente como componentes limitados y C-04A/C-04B/C-04C aceptadas y publicadas; C-04 CERRADA FORMALMENTE. Etapa 5 ABIERTA; Etapa 2 ABIERTA. Pendientes: creación de perfil desde configuración independiente, validador estático Xray por revisión e informes, historial separado de modificaciones y retención, perfil activo/composición, activación/verificación/rollback y backup/restore integral. La integración del menú de configuraciones independientes está implementada; no incluye activación ni aplicación al runtime. VLESS-WS live sigue draft y sin runtime apply.
+**Tarea activa:** continuar la planificación de C-05D, previa autorización independiente; C-05C está aceptada formalmente, publicada y sincronizada. C-01/C-02/C-03 aceptadas como componentes limitados; C-04A/B/C aceptadas y C-04 cerrada integralmente; C-05A/B aceptadas, publicadas y sincronizadas.
+**Estado vigente:** almacén de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO. Gestor independiente: C-01/C-02/C-03 aceptadas; C-04 cerrada; C-05A/B aceptadas y publicadas; C-05C aceptada, publicada y sincronizada. C-05D/E/F no autorizadas. Etapa 5 ABIERTA; Etapa 2 ABIERTA. Pendientes: creación de perfil desde configuración independiente, validador estático Xray por revisión e informes, historial separado de modificaciones y retención, perfil activo/composición, activación/verificación/rollback y backup/restore integral. La integración del menú de configuraciones independientes está implementada; no incluye activación ni aplicación al runtime. VLESS-WS live sigue draft y sin runtime apply.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -47,7 +47,7 @@ Se conserva la distinción de la especificación normativa Etapa 2 revisión 1.3
 - Adaptador TLS reforzado: valida certificado PEM, clave privada PEM y correspondencia de claves públicas mediante `cryptography`; rechaza symlinks y archivos no regulares.
 - Casos negativos: TLS sin clave, symlink de clave, PEM inválido, certificado/clave no coincidentes, REALITY sin clave, short ID inválido, clave REALITY inválida, campos TLS en modalidad sin TLS, campos de transporte desconocidos y modelo/seguridad inconsistentes: PASS.
 - Navegación: 14/14 combinaciones VMess resueltas individualmente por el menú.
-- Suites históricas anteriores: 36/36, 37/37, 38/38 y 39/39 PASS. Revalidación actual: `tests/*.sh` 40/40 PASS, incluida `tests/vmess_navigation_edge_cases.sh`.
+- Suites históricas anteriores: 36/36, 38/38, 38/38 y 39/39 PASS. Revalidación actual: `tests/*.sh` 40/40 PASS, incluida `tests/vmess_navigation_edge_cases.sh`.
 - Controles estáticos históricos: `bash -n`, `python3 -m py_compile scripts/*.py`, `./install.sh --check`, ShellCheck y `git diff --check`: PASS. La revalidación actual también pasó ShellCheck y `shfmt -d -i 4 -ci` para la nueva prueba focal.
 
 ## 4. Límites que no bloquean el cierre de VMess
@@ -94,7 +94,7 @@ No modificar `main`. No ampliar la corrección P4 más allá de la preservación
 - Los almacenes VMess (`vmess/configurations` y `vmess/secrets`) no se modifican ni se incorporan al backup VLESS.
 - `tests/vless_restore_preserves_vmess.sh`: cubre VMess anteriores/posteriores al backup, referencias de configuración y secreto, integridad del almacén, colisión de IDs, catálogo corrupto, refs rotas y fallo de escritura sin modificación del catálogo activo.
 - `tests/vless_backup_journal_crash_matrix.sh`: fixtures actualizados para usar un catálogo VMess válido; 32 escenarios de interrupción/rollback PASS.
-- Suite completa: 37/37 scripts PASS. Sintaxis Bash/Python, `install.sh --check`, ShellCheck sobre pruebas modificadas y `git diff --check`: PASS.
+- Suite completa: 38/38 scripts PASS. Sintaxis Bash/Python, `install.sh --check`, ShellCheck sobre pruebas modificadas y `git diff --check`: PASS.
 - No se creó backup operativo ni se leyó/creó la clave maestra real.
 
 ## 9. Siguiente acción permitida
@@ -959,3 +959,27 @@ La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una 
 ## Verificación documental previa a reanudar — 2026-11-04
 
 Los documentos de continuidad y diseño se actualizaron para reflejar C-05A/C-05B aceptadas, publicadas y sincronizadas. Los expedientes de implementación/auditoría C-05A/B recibieron addenda que distinguen su estado histórico prepublicación de la publicación posterior. El HEAD verificado antes de esta actualización fue 1815663438770a2271d769345adbc271714a6817. La siguiente fase sigue siendo C-05C, no autorizada ni iniciada; no iniciar sin autorización expresa.
+
+
+## Punto de control vigente — C-05C implementada y auditada localmente (2026-11-04)
+
+- **Autorización recibida:** implementar exclusivamente C-05C, con pruebas, auditoría técnica y documentación. Publicación/sincronización expresamente excluidas.
+- **Base:** `6ab158f436d2d88755d70e954114efb4fa2f6129`, rama `design/user-identity-association-v1`.
+- **Implementación:** `scripts/xray_config_promotion.py`; cambios de estado/versionado en `scripts/xray_configurations.py`; suite `tests/test_xray_config_promotion.py`.
+- **Documentación:** `docs/IMPLEMENTACION_C05C_PROMOCION_VALIDADA_2026-11-04.md`; auditoría `docs/AUDITORIA_C05C_PROMOCION_VALIDADA_2026-11-04.md`.
+- **Resultado:** C-05C focal 13/13 PASS; regresión Python C-05A/B/C 38/38 PASS; shell C-01/C-02, C-03, C-04A/B/C y perfiles PASS; prueba real Xray 26.10.31 PASS con almacenes temporales.
+- **Estado:** IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal. Sin commit, push ni sincronización.
+- **Siguiente acción:** revisión del expediente y decisión expresa del propietario. No iniciar C-05D (historial), C-05E (menú) ni C-05F (auditoría integral) sin autorización independiente.
+- **Seguridad:** almacenes live ausentes; clave maestra real no leída; sin dependencias instaladas/actualizadas ni cambios runtime/servicios/infraestructura. `main`, `Xray-Normativa/` y VPS de pruebas intactas.
+- Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+
+## Punto de control vigente tras publicación C-05C — 2026-11-04
+
+- C-05C aceptada formalmente y publicada en `design/user-identity-association-v1`.
+- Implementación: `scripts/xray_config_promotion.py`; metadatos: `scripts/xray_configurations.py`; pruebas: `tests/test_xray_config_promotion.py`.
+- Auditoría focal: 13/13 PASS; regresión Python C-05A/B/C: 38/38 PASS; regresiones shell previas: PASS.
+- La publicación se realizó mediante commit normal y push fast-forward. No se hizo force push.
+- Siguiente fase posible: C-05D (historial/comparación), pendiente de autorización independiente. C-05E/F también requieren autorizaciones propias.
+- Etapa 5 y Etapa 2 permanecen ABIERTAS.
+- No se crearon almacenes live ni se leyó clave maestra real. No hubo cambios de runtime/infraestructura, `main`, `Xray-Normativa/` ni VPS de pruebas.
