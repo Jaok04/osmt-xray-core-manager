@@ -1124,3 +1124,8 @@ El propietario aprobó el diseño U-01 y autorizó su implementación con el alc
 Pruebas focales y regresión completa: 58/58 scripts shell PASS. Xray-core 26.10.31 real aceptó una configuración VLESS-WS que recibió una asociación sintética V2 `active/draft/not_applied`; se recorrieron además las nueve modalidades VLESS del test de integración. `bash -n`, `python3 -m py_compile scripts/*.py`, `./install.sh --check`, ShellCheck `-S error`, `shfmt` y `git diff --check`: PASS. Expedientes: `docs/IMPLEMENTACION_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md` y `docs/AUDITORIA_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`.
 
 U-01 queda IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; aceptación formal pendiente. No se ejecutó migración legacy, ACME/Cloudflare, publicación runtime, inicio Xray ni prueba externa NetMod. No se leyó la clave maestra real, no se modificaron almacenes live, runtime, servicios, certificados desplegados, firewall, puertos, red, dependencias, `main`, `Xray-Normativa/` ni VPS de pruebas. Etapa 2, Etapa 3 y Etapa 5 permanecen ABIERTAS.
+
+
+## 2026-11-04 — Publicación U-01 Usuarios V2 → VLESS
+
+Tras la revisión final y la regresión 58/58 PASS, U-01 se publicó en `design/user-identity-association-v1` mediante commit `1c2cd12f15be75d9f3a080ce028951724618c492` (`feat(vless): integrate V2 users into candidate generation`). Push fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`; GitHub confirmó el mismo SHA remoto. Se actualizaron los expedientes de implementación/auditoría y continuidad. U-01 queda IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA; aceptación formal pendiente. `main` y `Xray-Normativa/` permanecen intactas.

@@ -4,7 +4,8 @@
 **Base Git:** `ca6d76895821310a3072d9de47268f925ecea7ba`
 **Rama:** `design/user-identity-association-v1`
 **Entorno:** VPS de desarrollo `Implementación-Xray`, `/opt/xray-manager`; pruebas aisladas y datos sintéticos.
-**Dictamen:** PASS para el alcance U-01; no constituye aceptación formal del propietario ni cierre de una etapa.
+**Dictamen:** PASS para el alcance U-01; IMPLEMENTADA, VERIFICADA, PUBLICADA y SINCRONIZADA. Aceptación formal del propietario pendiente; no cierra una etapa.
+**Commit:** `1c2cd12f15be75d9f3a080ce028951724618c492` (`feat(vless): integrate V2 users into candidate generation`), push fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`.
 
 ## 1. Alcance auditado
 
@@ -86,3 +87,14 @@ La aceptación de U-01 no cierra Etapa 2, Etapa 3 ni Etapa 5. La prueba Xray `ru
 ## 6. Conclusión
 
 U-01 está IMPLEMENTADA, VERIFICADA y AUDITADA para el alcance aprobado. Se recomienda pasar a revisión/aceptación formal del propietario. Tras aceptación, la siguiente prioridad para la primera prueba real será diseñar y autorizar el flujo de aplicación runtime seguro; después se abordará ACME DNS-01/Cloudflare y la prueba externa NetMod. No se debe presentar la integración U-01 como una conexión ya operativa.
+
+
+## 7. Publicación y sincronización
+
+- Commit local: `1c2cd12f15be75d9f3a080ce028951724618c492`.
+- Rama GitHub: `design/user-identity-association-v1`.
+- Push: fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`, sin force push.
+- La verificación posterior confirmó la misma referencia remota.
+- La VPS `/opt/xray-manager` es el checkout que originó el commit; la sincronización final se vuelve a verificar después del registro documental.
+- `main` y `Xray-Normativa/` no se modificaron.
+- Aceptación formal de U-01: pendiente de decisión expresa del propietario.

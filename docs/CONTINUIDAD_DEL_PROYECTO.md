@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-04:** U-01 (integración Usuarios V2→VLESS) implementada, verificada y auditada localmente; pendiente de aceptación formal y publicación. Diseño aprobado y autorización de implementación recibida. Regresión shell 58/58 PASS; Xray-core 26.10.31 aceptó un candidato VLESS con asociación V2 active/draft/not_applied. Etapa 2 y Etapa 5 permanecen ABIERTAS. Ver `docs/IMPLEMENTACION_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md` y `docs/AUDITORIA_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`. No usar clave maestra real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
+> **Punto de reanudación vigente — 2026-11-04:** U-01 (integración Usuarios V2→VLESS) implementada, verificada, auditada, publicada y sincronizada; pendiente de aceptación formal. Commit `1c2cd12f15be75d9f3a080ce028951724618c492`. Diseño aprobado y autorización de implementación recibida. Regresión shell 58/58 PASS; Xray-core 26.10.31 aceptó un candidato VLESS con asociación V2 active/draft/not_applied. Etapa 2 y Etapa 5 permanecen ABIERTAS. Ver `docs/IMPLEMENTACION_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md` y `docs/AUDITORIA_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`. No usar clave maestra real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -1187,7 +1187,7 @@ H-01 de C-05F quedó CORREGIDO Y VERIFICADO bajo autorización expresa del propi
 
 ## Punto de reanudación vigente — U-01 Usuarios V2 → VLESS (2026-11-04)
 
-El propietario aprobó el diseño U-01 y autorizó su implementación con el alcance descrito. La implementación está terminada localmente en `/opt/xray-manager`, rama `design/user-identity-association-v1`, sobre la base `ca6d76895821310a3072d9de47268f925ecea7ba`.
+El propietario aprobó el diseño U-01 y autorizó su implementación con el alcance descrito. La implementación está terminada localmente en `/opt/xray-manager`, rama `design/user-identity-association-v1`, sobre la base `ca6d76895821310a3072d9de47268f925ecea7ba`; commit publicado `1c2cd12f15be75d9f3a080ce028951724618c492`.
 
 - Usuarios V2 es la fuente única del asistente VLESS; no existe fallback al gestor legacy.
 - Nuevo exportador candidato `users_v2_export_vless_candidate_clients`: active y no vencido, independiente de provisioning/runtime, lock compartido, sin inicialización accidental del almacén. La vista runtime previa conserva filtro applied/applied.
@@ -1195,7 +1195,12 @@ El propietario aprobó el diseño U-01 y autorizó su implementación con el alc
 - Creación y recuperación VLESS usan el constructor V2.
 - Pruebas shell: 58/58 PASS. Controles: bash -n, py_compile, install.sh --check, ShellCheck -S error, shfmt y git diff --check PASS. Xray 26.10.31 real aceptó un candidato VLESS-WS generado desde una asociación V2 active/draft/not_applied.
 - Expedientes: `docs/IMPLEMENTACION_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md` y `docs/AUDITORIA_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`.
-- Estado: IMPLEMENTADA, VERIFICADA y AUDITADA; aceptación formal pendiente. Publicación/sincronización pendiente de completar tras la revisión final.
-- Siguiente paso: revisión final del diff y publicación fast-forward en la rama autorizada; luego solicitar aceptación formal de U-01. Después, diseñar y solicitar autorización específica para el mecanismo seguro de publicación/aplicación runtime. ACME DNS-01/Cloudflare y prueba externa NetMod continúan fuera de U-01.
+- Estado: IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA; aceptación formal pendiente. Commit `1c2cd12f15be75d9f3a080ce028951724618c492`.
+- Siguiente paso: solicitar aceptación formal de U-01. Después, diseñar y solicitar autorización específica para el mecanismo seguro de publicación/aplicación runtime. ACME DNS-01/Cloudflare y prueba externa NetMod continúan fuera de U-01.
 - No se migraron registros legacy, no se usó la clave maestra real, no se modificaron almacenes live/runtime/servicios/certificados/firewall/puertos/red/dependencias, no se accedió a la VPS de pruebas y `main`/`Xray-Normativa/` permanecen intactas.
 - Etapa 2, Etapa 3 y Etapa 5 no quedan cerradas por U-01.
+
+
+## Registro de publicación U-01 — 2026-11-04
+
+U-01 se publicó en `design/user-identity-association-v1` mediante commit `1c2cd12f15be75d9f3a080ce028951724618c492` (`feat(vless): integrate V2 users into candidate generation`). Push fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`; no se utilizó force push. La consulta a GitHub confirmó el SHA remoto. La aceptación formal del propietario sigue pendiente. `main`, `Xray-Normativa/`, VPS de pruebas, almacenes live, runtime e infraestructura permanecen intactos.

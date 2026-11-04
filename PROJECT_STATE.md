@@ -1110,6 +1110,11 @@ El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar 
 - `tests/users_v2_vless_candidate.sh` cubre filtros, vencimientos, estados, aislamiento por conexión/protocolo, separación runtime, JSON inválido y almacén ausente. `tests/xray_vless_integration.sh` proyecta una asociación V2 sintética y la valida con Xray 26.10.31 real.
 - Regresión `tests/*.sh`: 58/58 PASS. `bash -n`, `py_compile`, `install.sh --check`, ShellCheck severidad error, shfmt y `git diff --check`: PASS.
 - Expedientes: `docs/IMPLEMENTACION_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`, `docs/AUDITORIA_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`; diseño actualizado en `docs/DISENO_IDENTIDADES_ASOCIACIONES_V1.md`.
-- Estado U-01: IMPLEMENTADA, VERIFICADA y AUDITADA; aceptación formal del propietario pendiente. Publicación/sincronización pendiente de cierre técnico.
+- Estado U-01: IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA; aceptación formal del propietario pendiente. Commit `1c2cd12f15be75d9f3a080ce028951724618c492`.
 - No se ejecutó migración legacy/cutover, ACME DNS-01/Cloudflare, publicación runtime, inicio de servicio ni prueba externa NetMod. No se modificaron almacenes live, clave maestra real, runtime, servicios, certificados desplegados, firewall, puertos, red, dependencias, `main`, `Xray-Normativa/` ni VPS de pruebas.
 - Etapa 2, Etapa 3 y Etapa 5 permanecen ABIERTAS.
+
+
+### Publicación U-01 — 2026-11-04
+
+U-01 se publicó mediante commit `1c2cd12f15be75d9f3a080ce028951724618c492` (`feat(vless): integrate V2 users into candidate generation`) en `design/user-identity-association-v1`. Push fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`; SHA remoto confirmado. Aceptación formal pendiente. `main`, `Xray-Normativa/`, VPS de pruebas, almacenes live, runtime e infraestructura permanecen intactos.

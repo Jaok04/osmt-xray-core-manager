@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-04
 **Autorización:** aprobación expresa del propietario del diseño U-01 y de su implementación con el alcance descrito.
 **Rama:** `design/user-identity-association-v1`
-**Estado de esta entrega:** IMPLEMENTADA y VERIFICADA; pendiente de aceptación formal del propietario.
+**Estado de esta entrega:** IMPLEMENTADA, VERIFICADA, PUBLICADA y SINCRONIZADA; aceptación formal del propietario pendiente. Commit: `1c2cd12f15be75d9f3a080ce028951724618c492`.
 
 ## 1. Objetivo
 
@@ -110,3 +110,8 @@ Una configuración candidata validada por `xray run -test` no es una conexión a
 - No se consultó ni modificó la VPS `Vps de Pruebas`.
 - `main` y `Xray-Normativa/` permanecen intactas.
 - Etapa 2 y Etapa 5 permanecen ABIERTAS. U-01 no cierra Etapa 2 ni Etapa 3.
+
+
+## 7. Publicación
+
+El cambio se publicó mediante commit `1c2cd12f15be75d9f3a080ce028951724618c492` (`feat(vless): integrate V2 users into candidate generation`) en `design/user-identity-association-v1`, con push fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`. La consulta posterior a GitHub confirmó el SHA remoto. `main` permaneció intacta. La aceptación formal de U-01 corresponde al propietario y sigue pendiente.

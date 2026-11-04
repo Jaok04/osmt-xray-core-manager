@@ -3,7 +3,7 @@
 > El punto de control operativo vigente es el último bloque U-01 al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
 
 **Fecha del corte:** 2026-11-04
-**Tarea activa:** U-01 — integración Usuarios V2→VLESS. Implementada, verificada y auditada localmente; pendiente de aceptación formal y publicación. La base Git de trabajo es `ca6d76895821310a3072d9de47268f925ecea7ba` en `design/user-identity-association-v1`.
+**Tarea activa:** U-01 — integración Usuarios V2→VLESS. Implementada, verificada, auditada, publicada y sincronizada; aceptación formal pendiente. Commit `1c2cd12f15be75d9f3a080ce028951724618c492`. La base Git de trabajo es `ca6d76895821310a3072d9de47268f925ecea7ba` en `design/user-identity-association-v1`.
 **Estado vigente:** U-01 integra el generador VLESS con Usuarios V2 como fuente única, exporta candidatos active/no vencidos sin depender del estado aplicado, mantiene separada la vista runtime y permite UUID automático/manual. Regresión shell 58/58 PASS; Xray 26.10.31 real aceptó un candidato VLESS-WS proyectado desde una asociación V2 active/draft/not_applied. C-05A–E permanecen aceptadas/publicadas según sus expedientes; C-05F aceptada y H-01 corregido/publicado según el estado vigente. Etapa 5 ABIERTA; Etapa 2 ABIERTA; Etapa 3 requiere auditoría propia. El trabajo de U-01 no activa runtime, no migra datos legacy y no implementa ACME/Cloudflare.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
@@ -1100,7 +1100,12 @@ El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar 
 - **Implementación:** `users_v2_export_vless_candidate_clients` separa candidato de runtime; el asistente VLESS usa exclusivamente Usuarios V2 para crear y reconstruir modelos; el menú V2 ofrece UUID automático predeterminado o manual oculto.
 - **Pruebas:** 58/58 scripts shell PASS. Xray-core 26.10.31 real acepta una configuración VLESS-WS con asociación V2 active/draft/not_applied. `bash -n`, `py_compile`, `install.sh --check`, ShellCheck -S error, shfmt y `git diff --check`: PASS.
 - **Documentación:** `docs/IMPLEMENTACION_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`; `docs/AUDITORIA_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`; `docs/DISENO_IDENTIDADES_ASOCIACIONES_V1.md` actualizado.
-- **Estado:** IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal. Publicación y sincronización pendientes de la revisión final.
-- **Siguiente paso:** revisión del diff, commit y push fast-forward únicamente a la rama autorizada; verificar GitHub/VPS; solicitar aceptación formal. Después diseñar el mecanismo de aplicación runtime segura y obtener autorización independiente.
+- **Estado:** IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA; aceptación formal pendiente. Commit `1c2cd12f15be75d9f3a080ce028951724618c492`.
+- **Siguiente paso:** solicitar aceptación formal de U-01. Después diseñar el mecanismo de aplicación runtime segura y obtener autorización independiente.
 - **Fuera de alcance:** migración/cutover legacy, ACME/Cloudflare DNS-01, publicación runtime, inicio de Xray, certificados desplegados, firewall, puertos, red, dependencias, VPS de pruebas.
 - `main`, `Xray-Normativa/` y la clave maestra real permanecen intactas. Etapa 2, Etapa 3 y Etapa 5 no quedan cerradas.
+
+
+## Addendum de publicación U-01 — 2026-11-04
+
+U-01 está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Commit: `1c2cd12f15be75d9f3a080ce028951724618c492` (`feat(vless): integrate V2 users into candidate generation`), push fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`. La consulta posterior confirmó el SHA remoto. Aceptación formal pendiente. `main` y `Xray-Normativa/` permanecen intactas.
