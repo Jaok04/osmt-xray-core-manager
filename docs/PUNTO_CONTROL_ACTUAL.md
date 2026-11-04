@@ -942,3 +942,15 @@ La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una 
 - **Publicación previa:** correcciones documentales publicadas en `7f215b1dbfaa0b2dc7a2a3726a76dfa25b1cbb10`. Este registro de aceptación es un cambio documental posterior, aún local y sin commit/push.
 - **Siguiente control:** definir el alcance de la siguiente fase y solicitar autorización específica antes de iniciar C-05.
 - **Límites:** C-05 no autorizada ni iniciada. Etapa 5 y Etapa 2 permanecen ABIERTAS. `main`, `Xray-Normativa/`, runtime, servicios e infraestructura no se modifican.
+
+
+## Punto de control vigente — C-05A/C-05B aceptadas y publicadas (2026-11-04)
+
+- **C-05A — motor de validación:** aceptada formalmente como componente limitado. Implementación `scripts/xray_config_validator.py`; auditoría `docs/AUDITORIA_C05A_MOTOR_VALIDACION_2026-11-04.md`.
+- **C-05B — almacén de informes:** aceptada formalmente. Implementación `scripts/xray_validation_store.py`; auditoría `docs/AUDITORIA_C05B_ALMACEN_INFORMES_2026-11-04.md`. Informes permanentes, inmutables, con catálogo SHA-256, controles filesystem, lock y WAL.
+- **Pruebas:** 25/25 pruebas Python C-05A/B PASS; regresión shell de C-01/C-02, C-03, C-04A/B/C y smoke general PASS; Python compile, `bash -n modules/*.sh` y `git diff --check` PASS.
+- **Publicación de código:** commit `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25`, ocho archivos nuevos C-05A/B.
+- **Sincronización inicial:** GitHub y `/opt/xray-manager` se verificaron en el mismo commit después del push; árbol limpio. La actualización de este punto de control se publica en un commit documental posterior.
+- **Siguiente fase:** C-05C promoción controlada al estado Validada. NO autorizada ni iniciada. C-05D historial/comparación, C-05E menú y C-05F auditoría integral también requieren autorizaciones independientes.
+- **Límites:** C-05B aún no se integra con el motor ni modifica estado Validada; no se creó `/var/lib/xray-manager/validation`. No se leyó la clave maestra real ni se tocaron runtime, servicios, certificados, firewall, puertos, dependencias o configuración activa.
+- `main` y `Xray-Normativa/` permanecen intactas. Etapa 5 y Etapa 2 siguen ABIERTAS.

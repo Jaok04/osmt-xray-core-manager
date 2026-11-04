@@ -1006,3 +1006,13 @@ El propietario aceptó formalmente C-04C conforme a `docs/AUDITORIA_C04C_INTEGRA
 El propietario acepta formalmente el cierre integral de C-04, sustentado en la auditoría integral de C-04A/C-04B/C-04C. Las tres fases quedan completadas dentro de sus alcances aprobados. La regresión integral registró **56/56 PASS** y las verificaciones estáticas documentadas PASS; no se identificaron defectos funcionales bloqueantes.
 
 Las correcciones documentales previas se publicaron en `7f215b1dbfaa0b2dc7a2a3726a76dfa25b1cbb10`. Este registro de aceptación es un cambio documental nuevo, aún local y sin commit/push. No autoriza C-05. Etapa 5 y Etapa 2 permanecen abiertas; `main`, `Xray-Normativa/`, runtime e infraestructura permanecen protegidas.
+
+## 2026-11-04 — Aceptación, publicación y sincronización C-05A/C-05B
+
+El propietario aceptó formalmente C-05B y autorizó publicar/sincronizar los cambios. C-05A ya contaba con aceptación formal previa. Se publicaron conjuntamente los dos componentes aceptados: motor estático/nativo `scripts/xray_config_validator.py`, almacén append-only de informes `scripts/xray_validation_store.py`, sus pruebas y las auditorías/documentos técnicos correspondientes (ocho archivos; 1.416 líneas añadidas). Commit de implementación: `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25` (`Implement persistent Xray validation reports (C-05A/B)`).
+
+Verificación previa a publicar: 25/25 pruebas Python PASS (17 C-05A + 8 C-05B); regresión shell C-01/C-02, C-03, C-04A, C-04B, C-04C y smoke general PASS; compilación Python, `bash -n modules/*.sh` y `git diff --check` PASS. Se corrigieron espacios finales de los documentos antes del commit.
+
+El push fue fast-forward a `origin/design/user-identity-association-v1`, sin force push. El HEAD local de `/opt/xray-manager` y el HEAD remoto coincidieron en `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25` tras el push; el árbol quedó limpio. La rama `main` permaneció en `656ecedc506a94a6461aee296b20871d51a38bf3` y `Xray-Normativa/` no tuvo cambios.
+
+C-05A y C-05B quedan IMPLEMENTADAS, VERIFICADAS, AUDITADAS, ACEPTADAS, PUBLICADAS y SINCRONIZADAS. C-05C, C-05D, C-05E y C-05F no quedan autorizadas. No se creó el almacén live, no se leyó la clave maestra real, no se modificaron runtime, servicios, certificados, firewall, puertos, dependencias ni configuración activa.

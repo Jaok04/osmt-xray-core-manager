@@ -958,3 +958,15 @@ Se autoriza expresamente publicar los cambios C-04C aceptados. La implementació
 El propietario acepta formalmente el cierre integral de C-04, con base en la auditoría integral documentada y sus resultados. C-04A (eliminación segura), C-04B (exportación múltiple) y C-04C (integración del menú Bash) quedan reconocidas como fases completadas dentro del alcance aprobado. La auditoría integral ejecutó la regresión completa con **56/56 PASS**, además de las verificaciones estáticas documentadas, y no identificó defectos funcionales bloqueantes.
 
 La publicación de las correcciones documentales quedó verificada en el commit `7f215b1dbfaa0b2dc7a2a3726a76dfa25b1cbb10`, rama `design/user-identity-association-v1`. Este registro de aceptación integral es un cambio documental posterior y queda local, sin commit ni push. C-05 no está autorizada ni iniciada. Etapa 5 y Etapa 2 permanecen ABIERTAS. `main`, `Xray-Normativa/`, runtime, servicios e infraestructura siguen fuera del alcance.
+
+## Estado vigente — C-05A y C-05B aceptadas, publicadas y sincronizadas (2026-11-04)
+
+- C-05A — motor de validación estática y nativa: IMPLEMENTADA, AUDITADA y ACEPTADA FORMALMENTE como componente limitado. Evidencia: `docs/AUDITORIA_C05A_MOTOR_VALIDACION_2026-11-04.md`.
+- C-05B — almacén permanente e inmutable de informes: IMPLEMENTADA, AUDITADA y ACEPTADA FORMALMENTE. Evidencia: `docs/AUDITORIA_C05B_ALMACEN_INFORMES_2026-11-04.md`.
+- Motor: `scripts/xray_config_validator.py`; almacén desacoplado: `scripts/xray_validation_store.py`. Pruebas focales combinadas: 25/25 PASS (17 C-05A + 8 C-05B).
+- Regresión shell C-01/C-02, C-03, C-04A, C-04B, C-04C y smoke general: PASS. Python compile, `bash -n modules/*.sh` y `git diff --check`: PASS.
+- Publicación: commit inicial `0b0e36e53dbc58c2102805834c2ffc1a5edd6b25` contiene los ocho archivos C-05A/C-05B. Rama autorizada `design/user-identity-association-v1`.
+- Sincronización GitHub/VPS: verificada posteriormente en el commit de continuidad que acompaña este estado; comprobar siempre `git rev-parse HEAD`, `git ls-remote` y árbol limpio.
+- C-05C (promoción al estado Validada), C-05D (historial/comparación), C-05E (menú) y C-05F (auditoría integral) requieren autorizaciones independientes. Ninguna queda autorizada por la aceptación/publicación de C-05A/B.
+- El almacén de informes no se ha creado en `/var/lib/xray-manager/validation`; no hay integración funcional con el motor ni promoción de estados. No se modificaron runtime, servicios, certificados, firewall, puertos, dependencias ni configuración activa. No se leyó la clave maestra real.
+- `main` y `Xray-Normativa/` permanecen intactas. Etapa 5 y Etapa 2 siguen ABIERTAS.
