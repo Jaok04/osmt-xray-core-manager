@@ -1185,7 +1185,7 @@ El propietario aceptó formalmente C-05F, considerando el dictamen PASS, H-01 y 
 H-01 de C-05F quedó CORREGIDO Y VERIFICADO bajo autorización expresa del propietario. La CLI inspecciona con lstat() cada componente de la ruta absoluta del almacén y rechaza symlinks rotos o válidos. Pruebas H39–H42; historial 42/42, Python 80/80 y shell 57/57 PASS. Consultar docs/CORRECCION_H01_RUTAS_SYMLINK_C05F_2026-11-04.md. D-01–D-05 continúan pendientes/documentados; no se implementó validación externa/activa ni prueba runtime, y backup/restore sigue pendiente de auditoría. Etapa 5 y Etapa 2 siguen abiertas.
 
 
-## Punto de reanudación vigente — U-01 Usuarios V2 → VLESS (2026-11-04)
+## Punto de reanudación histórico — U-01 Usuarios V2 → VLESS (2026-11-04)
 
 El propietario aprobó el diseño U-01 y autorizó su implementación con el alcance descrito. La implementación está terminada localmente en `/opt/xray-manager`, rama `design/user-identity-association-v1`, sobre la base `ca6d76895821310a3072d9de47268f925ecea7ba`; commit publicado `1c2cd12f15be75d9f3a080ce028951724618c492`.
 
@@ -1220,20 +1220,24 @@ El propietario aprobó el **reinicio controlado** mediante `systemctl restart xr
 La aprobación no autoriza todavía implementación R-01–R-05 ni ensayo live R-06. Siguen pendientes las decisiones sobre primera aplicación sin configuración anterior, señales locales de verificación y alcance aislado/live. No se modificó runtime ni infraestructura.
 
 
-## Continuidad vigente — R-01 runtime por perfil/revisión (2026-11-04)
-- Publicación: commit c605b3efc904d75a142e9e8c539210eb65070acd (c605b3e) en design/user-identity-association-v1; GitHub confirmó el SHA; checkout /opt/xray-manager limpio y sincronizado. main y Xray-Normativa/ intactas.
+## Continuidad vigente — R-01 publicada; siguiente R-02 (2026-11-04)
 
-El propietario aprobó desarrollar R-01–R-05 exclusivamente en entornos aislados y aprobó corregir el diseño runtime para que toda identidad sea profile_id + revision, conforme a Etapa 5 §3.1. No usar informes C-05B/C-05C de configuraciones independientes como prueba de validación de perfiles.
+El estado vigente del proyecto está consolidado en PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md. Este bloque es el punto de reanudación; los apartados anteriores conservan trazabilidad histórica y no deben usarse como estado actual si difieren de este bloque.
 
-R-01 está implementada y verificada en fixtures:
-- scripts/xray_profile_validation_store.py: almacén independiente de informes de perfil, catálogo/hash y journal con recuperación.
-- scripts/xray_profile_validation.py: conecta el motor estático/nativo con el informe persistente; actualiza manifiesto de revisión y resumen de current_revision de forma transaccional.
-- modules/profiles.sh: opción 8 para elegir y validar una revisión exacta; no activa runtime.
-- scripts/xray_runtime_preflight.py: preflight read-only; verifica árbol del perfil, manifiesto, blob AES-GCM, hash de bytes descifrados, estado validado, informe PASS y hash del binario; recibe el estado de servicio mediante fixture root-owned, no consulta systemd.
-- tests/test_xray_runtime_preflight.py: 18/18 PASS; tests/test_xray_profile_validation.py: 10/10 PASS; total focal R-01: 28/28 PASS.
-- Regresión Python: 108/108 PASS; shell: 58/58 PASS. install.sh --check, py_compile, bash -n, ShellCheck focal y git diff --check PASS.
-- Documentos: docs/IMPLEMENTACION_R01_PREFLIGHT_PERFIL_2026-11-04.md y docs/AUDITORIA_R01_PREFLIGHT_PERFIL_2026-11-04.md.
+- **Repositorio:** Jaok04/xray-core-manager.
+- **Rama autorizada:** design/user-identity-association-v1. No modificar main.
+- **VPS desarrollo:** /opt/xray-manager. No tocar la VPS de pruebas.
+- **Identidad de trabajo verificada al inicio de esta actualización:** VPS y GitHub coincidían en 856662b0981ad4457f4e4bba72c41735e998f958, con árbol limpio. La actualización documental se publicará en la misma rama; volver a verificar SHA remoto y checkout después del push.
+- **Normativa:** Xray-Normativa/ es inmutable sin consentimiento explícito. Los 14 archivos Markdown/YAML coinciden byte a byte con /root/Xray_Manager_Documentacion_Final_2026-10-31. No editar ni regenerar.
+- **U-01:** aceptada formalmente.
+- **Diseño runtime:** aprobado para R-01–R-05 exclusivamente aisladas; la identidad debe ser profile_id + revision conforme a Etapa 5 §3.1. R-06/live no autorizada.
+- **R-01:** implementada, integrada en CLI/menú, verificada en fixtures, auditada localmente, publicada y sincronizada; aceptación formal específica pendiente.
+- **Componentes:** scripts/xray_profile_validation_store.py (almacén independiente de informes); scripts/xray_profile_validation.py (motor estático/nativo y persistencia transaccional); scripts/xray_runtime_preflight.py (preflight read-only); modules/profiles.sh opción 8; scripts/xray_profiles.py (transacciones manifiesto/metadata); config/paths.sh (ruta del almacén).
+- **Expedientes:** docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md; docs/IMPLEMENTACION_R01_PREFLIGHT_PERFIL_2026-11-04.md; docs/AUDITORIA_R01_PREFLIGHT_PERFIL_2026-11-04.md.
+- **Pruebas:** focal R-01 28/28 PASS (preflight 18/18 + integración 10/10); regresión Python 108/108 PASS; shell 58/58 PASS; py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS.
+- **Limitaciones:** no se usó el almacén de perfiles ni la clave maestra reales; el estado systemd es fixture; no se probó la identidad efectiva xray ni lectura de leases TLS. Eso corresponde a R-02.
+- **Siguiente paso autorizado:** R-02 — staging de la revisión exacta del perfil y leases TLS en directorio temporal, validación bajo identidad de servicio simulada. No publicar runtime.
+- **Fuera de alcance:** R-06/live, /etc/xray/config.json, systemd real, runtime, certificados desplegados, firewall, puertos, red, dependencias, VPS de pruebas, main y Xray-Normativa/.
+- **Etapas:** Etapas 2, 3 y 5 permanecen ABIERTAS.
 
-CLI y menú ya integrados. La validación estática/nativa genera informes persistentes ligados a profile_id + revision y actualiza manifiesto/metadata mediante transacción. No se han ejecutado sobre el almacén/clave reales; estado systemd mediante fixture. Siguiente paso: R-02, staging integrado con leases TLS y validación bajo identidad simulada. R-03–R-05 no iniciadas; R-06/live no autorizada.
-
-No leer la clave maestra real ni modificar almacenes live, runtime, /etc/xray/config.json, systemd real, certificados desplegados, firewall, puertos, red, dependencias, main, Xray-Normativa/ o VPS de pruebas. Etapas 2, 3 y 5 permanecen ABIERTAS.
+Para comenzar en otra conversación, leer AGENTS.md, PROJECT_STATE.md, docs/PUNTO_CONTROL_ACTUAL.md, este documento y HISTORY.md; verificar HEAD remoto, rama, árbol y SHA-256 normativos antes de continuar. No repetir R-01 ni inferir que R-02 ya comenzó.

@@ -1162,3 +1162,12 @@ R-01 está IMPLEMENTADA, INTEGRADA EN CLI/MENÚ, VERIFICADA EN FIXTURES y AUDITA
 ## Publicación R-01 — 2026-11-04
 
 El incremento R-01 se confirmó y publicó en la rama autorizada design/user-identity-association-v1 mediante el commit c605b3efc904d75a142e9e8c539210eb65070acd (feat(runtime): validate exact profile revisions). Push fast-forward desde 28235a1507914f34b20d3f3fcee29108ce696a9e; GitHub confirmó el mismo SHA remoto. El checkout /opt/xray-manager quedó limpio y alineado con origin/design/user-identity-association-v1. main permanece en 656ecedc506a94a6461aee296b20871d51a38bf3. No se modificó Xray-Normativa/ ni la VPS de pruebas.
+
+
+## 2026-11-04 — Reconciliación documental y sincronización GitHub/VPS
+
+A petición expresa del propietario se verificó primero la rama autorizada y el contenido real de /opt/xray-manager frente a GitHub. Antes de editar, ambos coincidían en 856662b0981ad4457f4e4bba72c41735e998f958 y el árbol de trabajo estaba limpio. Se confirmó también que los 14 archivos normativos Markdown/YAML de Xray-Normativa/ coinciden byte a byte con /root/Xray_Manager_Documentacion_Final_2026-10-31.
+
+Se detectaron resúmenes de continuidad desactualizados que todavía afirmaban que faltaba integrar la validación de perfiles en el menú. Se consolidó el estado actual en PROJECT_STATE.md, docs/PUNTO_CONTROL_ACTUAL.md y docs/CONTINUIDAD_DEL_PROYECTO.md: R-01 está implementada, integrada en CLI/menú, verificada en fixtures, auditada localmente, publicada y sincronizada; aceptación formal específica pendiente. Se aclaró que R-02 es el siguiente trabajo autorizado, limitado a staging temporal y validación bajo identidad simulada. R-06/live sigue no autorizada; Etapas 2, 3 y 5 permanecen abiertas.
+
+No se modificó código de producto, Xray-Normativa/, main, almacenes live, clave maestra real, runtime, systemd real, certificados desplegados, firewall, puertos, red, dependencias ni VPS de pruebas. Esta entrada registra la reconciliación documental; el SHA definitivo de publicación se verifica en el propio Git y se comunica al propietario.
