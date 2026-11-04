@@ -1023,3 +1023,6 @@ C-05A y C-05B quedan IMPLEMENTADAS, VERIFICADAS, AUDITADAS, ACEPTADAS, PUBLICADA
 Tras la auditoría de sincronización, se corrigió el encabezado de docs/CONTINUIDAD_DEL_PROYECTO.md, que aún mostraba C-01/C-02/C-03 como último punto de reanudación. Se actualizó el estado del diseño docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md para reflejar la aprobación de C-05 y el cierre aceptado/publicado de C-05A/B. Se añadieron addenda a los documentos de implementación y auditoría C-05A/B para conservar sus registros históricos de prepublicación y documentar los commits posteriores. PROJECT_STATE.md y docs/PUNTO_CONTROL_ACTUAL.md registran esta revisión documental.
 
 No se modificó código funcional, normativa, main ni infraestructura. La publicación se limita a la rama design/user-identity-association-v1. C-05C/D/E/F siguen sin autorización. La sincronización previa comprobada estaba en 1815663438770a2271d769345adbc271714a6817.
+
+
+La actualización documental anterior se publicó mediante el commit a0f7d82 (Refresh C-05 continuity and publication records) en la rama autorizada. El encabezado de continuidad identifica expresamente 1815663438770a2271d769345adbc271714a6817 como HEAD de implementación/aceptación previo a la actualización documental, no como HEAD posterior.
