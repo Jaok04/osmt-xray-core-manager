@@ -52,4 +52,4 @@ shfmt -d -i 4 tests/xray_profiles.sh detecta diferencias de indentación preexis
 
 PF-08, PF-09 y PF-10 quedan IMPLEMENTADOS Y VERIFICADOS EN PRUEBAS AISLADAS. Esto no equivale a aceptación formal del almacén v1.1 ni al cierre de Etapa 5 o Etapa 2. No se ejecutó validación live de perfiles, activación, backup/restore integral ni prueba externa.
 
-GitHub: publicación autorizada el 2026-11-04 en design/user-identity-association-v1. El commit y la sincronización remota se registrarán al completar el push. main y Xray-Normativa/ permanecen intactas.
+GitHub: publicación autorizada el 2026-11-04 en design/user-identity-association-v1. Commit publicado: 46444bcf11b41750d45f2187d77eeb5f7fce654c. origin/design/user-identity-association-v1 y /opt/xray-manager en Implementación-Xray coinciden; árbol local limpio. main y Xray-Normativa/ permanecen intactas.
