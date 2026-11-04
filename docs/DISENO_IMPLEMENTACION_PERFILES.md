@@ -63,7 +63,7 @@ El ID interno no depende del nombre. Renombrar no mueve ni reescribe los blobs. 
 - Nonce: 96 bits (12 bytes) aleatorios por cifrado, generado con `secrets.token_bytes`.
 - AAD: `xray-manager:profile-config:v1:<profile_id>:<revision>`. Vincula el ciphertext a su perfil y revisión; copiar un blob a otra identidad/revisión no permite descifrarlo.
 - El envelope incluye `format_version`, `algorithm`, `profile_id`, `revision`, `nonce` y `ciphertext`. Se rechazan campos ausentes/extra, JSON duplicado, codificación Base64 inválida, versión/algoritmo no admitidos y longitudes incorrectas.
-- El manifiesto conserva SHA-256 y tamaño del JSON descifrado; después de autenticar GCM, se verifican ambos y se vuelve a validar el JSON estricto.
+- El manifiesto conserva el tamaño del JSON en claro y el tamaño/SHA-256 del blob cifrado. Al leer, primero se comprueban tamaño y SHA-256 del blob; después se autentica AES-GCM y se verifica el tamaño del plaintext y el JSON estricto. No se almacena un hash del plaintext en el manifiesto.
 - Sólo el blob cifrado se escribe a disco, con `root:root 0600`, dentro de directorios `root:root 0700`; la escritura es atómica y sincronizada. El plaintext existe transitoriamente en memoria para validar/cifrar y para operaciones que requieren recuperarlo.
 - El cargador no crea automáticamente la clave maestra. La pérdida de la clave impide recuperar las revisiones; no existe todavía rotación ni recuperación de clave en este subsistema.
 
@@ -150,3 +150,10 @@ Verificación ejecutada en esta iteración: `tests/*.sh` 51/51 PASS; Python AST 
 - La publicación conserva exactamente los blobs Git del índice local; el árbol remoto se comparó con `git write-tree` de la VPS y ambos dieron el mismo SHA de árbol.
 - Rama `design/user-identity-association-v1`; `main` no se modificó. `Xray-Normativa/` no se modificó. `scripts/__pycache__/` se preservó y excluyó.
 - Estado de aceptación: pendiente de decisión formal del propietario. La publicación no declara completada Etapa 5 ni habilita runtime.
+
+
+## 11. Auditoría formal v1.1 — 2026-11-03
+
+La revisión formal de solo lectura contra Etapa 5 está registrada en `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`. Se confirma el alcance de almacenamiento cifrado y versionado implementado, pero se identificó un bloqueo de consistencia transaccional en `update()` ante fallo de escritura del catálogo, reproducido mediante inyección de fallo en un almacén temporal. También permanecen pendientes los requisitos de validación Xray, vista previa/diff, comparación/retención/historial, composición y activación.
+
+**Estado de aceptación:** no se recomienda aceptar todavía el subsistema v1.1 como componente terminado hasta resolver y probar la consistencia entre catálogo y metadatos en los caminos de actualización/restauración/renombrado y la recuperación ante fallos/crash. No se modificó código durante la auditoría. La decisión final corresponde al propietario.

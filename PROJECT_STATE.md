@@ -727,3 +727,18 @@ Se excluye deliberadamente `scripts/__pycache__/` por ser un artefacto local de 
 - Siguiente actividad autorizada por el propietario: revisión documental y técnica de solo lectura contra `Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md` y su YAML, inspeccionando implementación, pruebas, límites y trazabilidad. No modificar código durante la revisión.
 - No usar `master.key` real, no crear perfiles live, no activar runtime, no habilitar eliminación ni modificar servicios, firewall, puertos, certificados o red.
 - Tras presentar hallazgos, solicitar decisión formal del propietario: aceptar el subsistema con límites o autorizar correcciones concretas. Etapa 2 permanece ABIERTA.
+
+
+## Estado vigente — auditoría formal de perfiles v1.1 (2026-11-03)
+
+- Revisión de solo lectura contra Etapa 5 Markdown/YAML completada. Se inspeccionaron `scripts/xray_profiles.py`, `modules/profiles.sh`, integración de menú, `tests/xray_profiles.sh` y diseño.
+- Verificaciones actuales: `tests/xray_profiles.sh`, `tests/stage1_menu.sh`, `tests/smoke.sh`, AST Python, Bash syntax, ShellCheck focal y `git diff --check`: PASS. La regresión histórica 51/51 no se repitió completa en esta auditoría.
+- **PF-01 BLOQUEANTE:** fallo reproducido con fault injection: si `update()` guarda metadatos y falla al guardar catálogo, queda discrepancia y `list_profiles()` falla.
+- **PF-02 ALTO:** operaciones multiarchivo (`create`, `duplicate`, `rename`, `update`, `restore`) carecen de transacción recuperable completa; hay ventanas de rename/replace/fsync y rollback que requieren diseño y pruebas de crash/fallo.
+- Pendientes funcionales frente a Etapa 5: vista previa/diff, validación Xray por revisión e informes, creación desde configuración independiente, comparación de revisiones, historial de modificaciones, retención, registro activo, composición integral, activación/verificación/rollback y backup/restore. La eliminación permanece deshabilitada deliberadamente.
+- Se corrigió la documentación del manifiesto: el código guarda `ciphertext_sha256` y `plaintext_size_bytes`, no SHA-256 del plaintext.
+- Informe: `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`.
+
+**Estado:** IMPLEMENTADO y PUBLICADO/SINCRONIZADO; pruebas focales PASS; **NO ACEPTADO FORMALMENTE** por PF-01/PF-02. No se modificó código ni normativa; no se leyó la clave maestra real ni se creó almacén/perfil live.
+
+**Siguiente paso:** esperar autorización expresa para corregir PF-01/PF-02 y añadir fault injection/crash recovery en almacén temporal. No ejecutar cambios sobre runtime ni secretos reales. Etapa 2 permanece ABIERTA.

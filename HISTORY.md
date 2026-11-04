@@ -814,3 +814,12 @@ Limitaciones: validación Xray nativa aún `not_run`; perfiles `not_validated`; 
 Se incorporó el informe `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md` a partir de capturas compartidas por el propietario. La segunda ejecución de Xray-core 26.10.31 bajo UID 999/GID 988 leyó el certificado y la clave sintéticos del lease y completó un handshake TLS 1.3 verificado. La primera ejecución no se contabiliza como exitosa. No se inventaron comandos, rutas, puertos, SNI, cipher suite ni causa del primer intento, porque no se dispone de la transcripción íntegra.
 
 Se actualizaron `docs/CONTINUIDAD_DEL_PROYECTO.md`, `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`, `PROJECT_STATE.md` y `docs/PUNTO_CONTROL_ACTUAL.md` para reflejar la evidencia acotada, corregir el encabezado de perfiles v1.1 (ya publicado/sincronizado) y fijar la siguiente actividad: revisión formal de solo lectura del almacén de perfiles contra Etapa 5. No se modificó código ni documentación normativa. No se usó `master.key` real ni se creó perfil live; no runtime apply, servicio, firewall, puertos, certificados reales o WAN. VMess y Etapa 2 siguen sin aceptación integral.
+
+
+## 2026-11-03 — Auditoría formal de perfiles v1.1; aceptación pendiente
+
+Se completó la revisión de solo lectura del almacén de perfiles contra Etapa 5 Markdown/YAML. Pasaron `tests/xray_profiles.sh`, `tests/stage1_menu.sh`, `tests/smoke.sh`, AST Python, `bash -n`, ShellCheck focal y `git diff --check`; no se repitió la regresión completa histórica 51/51.
+
+PF-01 BLOQUEANTE reproducido mediante fault injection en un almacén temporal: `update()` puede guardar metadatos y fallar al guardar catálogo, dejando discrepancia que hace fallar `list_profiles()`. PF-02 ALTO: las operaciones multiarchivo requieren transacción recuperable y pruebas de write/replace/fsync/crash. Se documentaron además pendientes funcionales de Etapa 5. No se modificó código ni normativa. No se leyó `master.key`, no se creó almacén/perfil live ni se tocó runtime.
+
+Se corrigió `docs/DISENO_IMPLEMENTACION_PERFILES.md` para describir el hash real del manifiesto (SHA-256 del ciphertext y tamaño del plaintext). Informe: `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`. Recomendación: no aceptar aún v1.1 hasta resolver PF-01/PF-02. Siguiente paso sujeto a autorización expresa del propietario.

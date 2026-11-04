@@ -708,3 +708,20 @@ La evidencia no acredita `xray.service` administrado, runtime apply, activación
 5. Presentar informe y solicitar decisión expresa del propietario sobre aceptación o correcciones.
 
 `Xray-Normativa/` y `main` permanecen inmutables. No usar `master.key` real, no crear perfiles live, no activar runtime ni tocar servicios, firewall, puertos, certificados o red. Etapa 2 sigue ABIERTA.
+
+
+## Punto de control vigente — perfiles v1.1 auditado; aceptación bloqueada (2026-11-03)
+
+**Auditoría:** `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`.
+
+**Verificaciones ejecutadas en esta revisión:** `tests/xray_profiles.sh`, `tests/stage1_menu.sh`, `tests/smoke.sh`, Python AST, `bash -n`, ShellCheck focal y `git diff --check`: PASS. La suite histórica 51/51 no se volvió a ejecutar completa. La normativa 14/14 coincide por SHA-256 con la copia maestra.
+
+**Bloqueos:**
+- PF-01 BLOQUEANTE: `update()` puede persistir `metadata.json` y fallar al guardar `catalog.json`; fault injection temporal reprodujo una discrepancia que hace fallar `list_profiles()`.
+- PF-02 ALTO: `create`, `duplicate`, `rename`, `update` y `restore` necesitan un contrato transaccional/durabilidad/recuperación multiarchivo probado ante write/replace/fsync/crash.
+
+**Otros pendientes de Etapa 5:** preview/diff, validación Xray e informes, creación desde configuración independiente, comparación/retención/historial, registro activo, composición integral, activación/verificación/rollback y backup/restore. La eliminación sigue deshabilitada.
+
+**Estado:** código sin cambios; implementación publicada/sincronizada; NO ACEPTADA formalmente. No se leyó `master.key`, no se creó almacén/perfil live, no se tocó runtime, servicios, firewall, puertos, certificados reales o red.
+
+**Siguiente acción permitida:** solicitar decisión del propietario para autorizar una corrección acotada PF-01/PF-02, con diseño previo, pruebas de fault injection/crash recovery en almacén temporal y nueva auditoría. No implementar hasta recibir autorización expresa. Etapa 2 continúa ABIERTA.

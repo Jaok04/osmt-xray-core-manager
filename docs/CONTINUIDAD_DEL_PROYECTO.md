@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — regularización documental 2026-11-03:** el almacén de perfiles v1.1 con AES-256-GCM está IMPLEMENTADO, VERIFICADO EN PRUEBAS SINTÉTICAS, PUBLICADO y SINCRONIZADO byte a byte en `design/user-identity-association-v1`; su aceptación formal como subsistema sigue PENDIENTE. La primera versión plaintext no se publicó. La siguiente actividad es la revisión formal de solo lectura del código/diseño contra Etapa 5; no modificar código, no usar `master.key` real, no crear perfiles live ni activar runtime durante esa revisión. Ver `docs/DISENO_IMPLEMENTACION_PERFILES.md`, `PROJECT_STATE.md` y el último punto de `docs/PUNTO_CONTROL_ACTUAL.md`.
+> **Punto de reanudación vigente — auditoría formal de perfiles v1.1 (2026-11-03):** el almacén AES-256-GCM está IMPLEMENTADO, VERIFICADO EN PRUEBAS SINTÉTICAS, PUBLICADO y SINCRONIZADO. La revisión formal contra Etapa 5 ya se ejecutó sin modificar código. Se detectó PF-01: un fallo de escritura del catálogo durante `update()` deja catálogo y metadatos inconsistentes, reproducido en almacén temporal; PF-02 identifica ventanas adicionales de commit/durabilidad. No se recomienda aceptación hasta resolverlos y añadir pruebas de recuperación. El siguiente paso requiere decisión expresa del propietario sobre autorizar correcciones acotadas. No usar `master.key` real, no crear perfiles live ni activar runtime. Informe: `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -875,3 +875,14 @@ Se incorporó el informe `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md` a 
 La prueba no acredita despliegue de `xray.service`, activación runtime del administrador, persistencia de certificados reales, conectividad cliente externa/WAN ni aceptación integral de VMess TLS. VMess y Etapa 2 conservan sus estados formales pendientes.
 
 Se corrigió el encabezado de este documento para reflejar que perfiles v1.1 ya fue publicado y sincronizado; su aceptación formal permanece pendiente. La siguiente actividad permitida es una revisión formal de solo lectura del subsistema de perfiles contra Etapa 5, sin modificar código ni utilizar secretos reales.
+
+
+## Auditoría formal de perfiles v1.1 — 2026-11-03
+
+Se completó la revisión de solo lectura de `scripts/xray_profiles.py`, `modules/profiles.sh`, integración del menú, pruebas y diseño contra la especificación Etapa 5 (Markdown/YAML). La prueba focal de perfiles, `tests/stage1_menu.sh`, `tests/smoke.sh`, AST Python, sintaxis Bash, ShellCheck focal y `git diff --check` pasaron en esta sesión. La regresión histórica 51/51 no se volvió a ejecutar completa.
+
+Hallazgo bloqueante PF-01: fault injection en almacén temporal confirmó que si `update()` guarda `metadata.json` y falla al guardar `catalog.json`, la siguiente consulta falla por discrepancia de nombre. PF-02 documenta ventanas de consistencia/durabilidad en operaciones multiarchivo. Se encontraron además requisitos pendientes de preview/diff, validación Xray, comparación/retención/historial, composición, registro activo, activación/rollback y backup/restore.
+
+Se corrigió en `docs/DISENO_IMPLEMENTACION_PERFILES.md` una descripción inexacta del hash del manifiesto: el código guarda SHA-256 del ciphertext y tamaño del plaintext, no SHA-256 del plaintext. Informe completo: `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`.
+
+**Estado:** código sin cambios; perfiles v1.1 permanece publicado/sincronizado, pero NO aceptado formalmente. Siguiente acción: decisión expresa del propietario sobre autorizar la corrección PF-01/PF-02 y las pruebas de fallo/recuperación. No leer clave maestra real, no crear perfiles live ni activar runtime. Etapa 2 permanece ABIERTA.
