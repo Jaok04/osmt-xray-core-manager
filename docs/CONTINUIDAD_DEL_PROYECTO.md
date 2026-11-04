@@ -1212,3 +1212,9 @@ El propietario respondió afirmativamente a la solicitud de aceptación formal d
 U-01 permanece IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Referencias de publicación: `1c2cd12f15be75d9f3a080ce028951724618c492` y `bcb3338a527e3f4021489815d92797b9a59fdd62`. La documentación normativa y `main` no se modificaron.
 
 Se preparó `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md`. Es una propuesta técnica, no una autorización de implementación ni de aplicación live. Separa validación, staging, publicación atómica, reinicio systemd, verificación y rollback; define R-01–R-06 y una matriz inicial de 15 criterios. Las decisiones de §9 deben ser revisadas por el propietario antes de implementar. R-06 exige autorización independiente y específica.
+
+## Decisiones runtime aprobadas — 2026-11-04
+
+El propietario aprobó el **reinicio controlado** mediante `systemctl restart xray.service` (sin asumir hot reload) y la estrategia de **rollback**: restaurar la configuración anterior de forma atómica y recuperar el estado previo del servicio; si estaba inactivo, no arrancarlo. Si no existe configuración previa, detenerse y requerir intervención controlada. Estas decisiones se incorporan a `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md`.
+
+La aprobación no autoriza todavía implementación R-01–R-05 ni ensayo live R-06. Siguen pendientes las decisiones sobre primera aplicación sin configuración anterior, señales locales de verificación y alcance aislado/live. No se modificó runtime ni infraestructura.

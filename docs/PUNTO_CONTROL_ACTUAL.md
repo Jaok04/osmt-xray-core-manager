@@ -1120,3 +1120,13 @@ U-01 está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Co
 - **Decisiones pendientes:** estrategia restart vs hot reload; primera aplicación sin config previa; restauración del estado previo del servicio; señales locales de verificación; alcance R-01–R-05 aislado y R-06 live.
 - **No autorizado/ejecutado:** implementación runtime, escritura de `/etc/xray/config.json`, restart/start Xray, ACME/Cloudflare, instalación de dependencias, firewall/puertos/red, VPS de pruebas o prueba NetMod.
 - **Etapas:** U-01 aceptada; Etapas 2, 3 y 5 siguen ABIERTAS. La prueba real VLESS-WS-TLS aún no está hecha.
+
+
+## Decisiones aprobadas — aplicación runtime (2026-11-04)
+
+- El propietario aprobó `systemctl restart xray.service` como mecanismo inicial de aplicación controlada; no se presupone hot reload.
+- El propietario aprobó rollback de configuración y recuperación del estado previo del servicio: activo permanece activo; inactivo permanece inactivo.
+- Si no existe configuración anterior, la operación se detiene en estado de recuperación explícito; no crea placeholder ni arranca Xray.
+- Diseño actualizado: `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md`.
+- **No implica autorización de implementación** R-01–R-05 ni ensayo live R-06. Siguen pendientes primera aplicación sin config, señales locales de verificación y alcance de incrementos aislados/live.
+- Runtime, servicios, certificados desplegados, firewall, puertos, red y VPS de pruebas no fueron modificados.

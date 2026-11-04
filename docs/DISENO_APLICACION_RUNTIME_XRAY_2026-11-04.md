@@ -100,3 +100,12 @@ El journal debe ser root-owned, modo `0600`, JSON estricto, versionado, limitado
 ## 10. No autorizado por este diseño
 
 No se ha implementado ni ejecutado aplicación runtime. No se ha escrito `/etc/xray/config.json`, instalado Xray, creado unidad/usuario de servicio, iniciado/reiniciado Xray, abierto puertos, tocado firewall/red, importado certificado real, ejecutado ACME/Cloudflare ni probado NetMod. La aceptación del diseño no equivaldrá a autorización de R-06 ni al cierre de ninguna etapa.
+
+## 11. Decisiones aprobadas por el propietario — 2026-11-04
+
+El propietario aprobó expresamente las siguientes decisiones de diseño:
+
+- **Reinicio controlado:** usar `systemctl restart xray.service` como estrategia inicial de aplicación; no asumir hot reload. El reinicio sólo se solicitará después de staging, validación final, snapshot durable y publicación atómica, bajo el lock de ciclo de vida compartido.
+- **Rollback:** si la aplicación falla después de publicar, restaurar atómicamente la configuración anterior y recuperar el estado previo del servicio. Si estaba activo, exigir que vuelva a quedar activo; si estaba inactivo, no arrancarlo. Si no había configuración previa, detenerse en estado de recuperación explícito y no inventar una configuración anterior.
+
+Estas aprobaciones son decisiones de diseño; no autorizan aún la implementación R-01–R-05 ni el ensayo live R-06. Las decisiones 2, 4 y 5 de §9 siguen pendientes de confirmación expresa.
