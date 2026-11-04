@@ -216,6 +216,7 @@ users_association_create() {
 			users_v2_unlock "$fd"
 			return 2
 		}
+		cvalue="${cvalue,,}"
 		if jq -e --arg value "$cvalue" 'any(.associations[]; .protocol == "vless" and (.credential.value | ascii_downcase) == ($value | ascii_downcase))' "$USERS_V2_DATA_FILE" >/dev/null; then
 			users_v2_unlock "$fd"
 			return 1
@@ -560,7 +561,55 @@ users_identity_delete() {
 	users_v2_unlock "$fd"
 }
 
-# Adaptador neutral de salida VLESS: solo asociaciones activas y aplicadas.
+# Exportación para construir candidatos: estado deseado, independiente de provisioning/runtime.
+# No inicializa el almacén si falta; toma una instantánea consistente bajo lock compartido.
+users_v2_export_vless_candidate_clients() {
+	[[ "$#" -eq 1 && -n "$1" ]] || return 2
+	local connection_id="$1" fd now_epoch output rc=0
+	[[ -f "$USERS_V2_DATA_FILE" && -r "$USERS_V2_DATA_FILE" && ! -L "$USERS_V2_DATA_FILE" ]] || {
+		printf 'El almacén Usuarios V2 no existe, no es regular o no se puede leer; no se inicializó.\n' >&2
+		return 1
+	}
+	[[ -f "$USERS_V2_CONNECTIONS_FILE" && -r "$USERS_V2_CONNECTIONS_FILE" ]] || {
+		printf 'El catálogo de conexiones no está disponible.\n' >&2
+		return 1
+	}
+	mkdir -p "$(dirname "$USERS_V2_LOCK")" || return 1
+	exec {fd}>"$USERS_V2_LOCK" || return 1
+	flock -s "$fd" || {
+		exec {fd}>&-
+		return 1
+	}
+	if ! users_v2_validate_file "$USERS_V2_DATA_FILE"; then
+		printf 'El registro Usuarios V2 no supera la validación; se abortó la exportación.\n' >&2
+		rc=1
+	else
+		now_epoch="$(date -u +%s)" || rc=1
+		if ((rc == 0)); then
+			if ! jq -e --arg cid "$connection_id" 'any(.[]; .id == $cid and (.protocol_id | startswith("vless_")))' "$USERS_V2_CONNECTIONS_FILE" >/dev/null 2>&1; then
+				printf 'La conexión indicada no existe o no es VLESS.\n' >&2
+				rc=1
+			else
+				output="$(jq -ce --arg cid "$connection_id" --argjson now "$now_epoch" '
+					def valid_expiry: .expires_at == null or (try (.expires_at | fromdateiso8601) catch false);
+					. as $doc |
+					if all($doc.associations[] | select(.connection_id == $cid and .protocol == "vless" and .state == "active"); valid_expiry) then
+						[$doc.associations[] | select(
+							.connection_id == $cid and .protocol == "vless" and .state == "active" and
+							(.expires_at == null or (.expires_at | fromdateiso8601) > $now)
+						) | {id:.credential.value,email:("assoc:" + .id)}]
+					else error("invalid expiration") end
+				' "$USERS_V2_DATA_FILE" 2>/dev/null)" || rc=1
+			fi
+		fi
+	fi
+	flock -u "$fd"
+	exec {fd}>&-
+	((rc == 0)) || return "$rc"
+	printf '%s\n' "$output"
+}
+
+# Vista de runtime: conserva la semántica estricta de asociaciones ya aplicadas.
 users_v2_export_vless_clients() {
 	[[ "$#" -eq 1 ]] || return 2
 	local fd

@@ -10,6 +10,25 @@ source "$ROOT/modules/vless_model.sh"
 source "$ROOT/modules/vless_xray_26_10_31.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
+
+# U-01: proyectar una asociación V2 active/draft al modelo y validar el cliente real con Xray.
+export APP_ROOT="$ROOT"
+export XRAY_MANAGER_USERS_DIR="$TMP/users"
+export XRAY_MANAGER_USERS_FILE="$TMP/users/users.json"
+export XRAY_MANAGER_CONNECTIONS_FILE="$TMP/users-connections.json"
+export XRAY_MANAGER_INTEGRITY_LOCK="$TMP/u01-integrity.lock"
+printf '[{"id":"u01-vless","protocol_id":"vless_ws","max_users":3}]\n' >"$XRAY_MANAGER_CONNECTIONS_FILE"
+source "$ROOT/modules/users_v2.sh"
+source "$ROOT/modules/vless_assistant.sh"
+U01_ID="$(users_identity_create)"
+U01_ASSOC="$(users_association_create "$U01_ID" u01-vless 'Cliente U-01' uuid aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa active unlimited 0 none 0 0 auto)"
+connections_vless_assistant_build_model u01-vless vless_ws 127.0.0.1 62010 >"$TMP/u01-model.json"
+jq -e --arg assoc "$U01_ASSOC" '.users == [{id:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",email:("assoc:"+$assoc)}]' "$TMP/u01-model.json" >/dev/null
+printf '{"path":"/u01-test"}\n' >"$TMP/u01-options.json"
+vless_xray_26_10_31_build "$TMP/u01-model.json" "$TMP/u01-options.json" - >"$TMP/u01-xray.json"
+"$XRAY" run -test -config "$TMP/u01-xray.json"
+printf 'PASS: U-01 Usuarios V2 -> modelo VLESS -> Xray 26.10.31 con asociación active/draft.\n'
+
 openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/tls.key" -out "$TMP/tls.crt" -days 1 -subj '/CN=localhost' -addext 'subjectAltName=DNS:localhost' >/dev/null 2>&1
 KEY_OUTPUT="$("$XRAY" x25519)"
 REALITY_KEY="$(sed -n 's/^PrivateKey: //p' <<<"$KEY_OUTPUT")"

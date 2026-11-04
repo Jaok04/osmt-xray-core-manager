@@ -1115,3 +1115,12 @@ El propietario aceptó formalmente C-05F, incluyendo el dictamen técnico PASS, 
 ## 2026-11-04 — Corrección H-01 C-05F
 
 Tras la aceptación formal C-05F, el propietario autorizó corregir H-01, añadir pruebas y ejecutar la regresión correspondiente. Se sustituyó la detección basada en exists()/is_symlink() por inspección lstat() de cada componente de la ruta en scripts/xray_validation_history.py. Se añadieron H39–H42: symlink directo, ancestro symlink válido, ancestro roto y ruta ordinaria inexistente. Resultados: historial 42/42 PASS; Python 80/80 PASS; shell 57/57 PASS; py_compile, bash -n, ShellCheck severidad error, warning focal, install.sh --check y git diff --check PASS. Expediente: docs/CORRECCION_H01_RUTAS_SYMLINK_C05F_2026-11-04.md. H-01 queda CORREGIDO Y VERIFICADO. D-01–D-05 siguen pendientes/documentados; Etapa 5 y Etapa 2 abiertas.
+
+
+## 2026-11-04 — Implementación y auditoría local U-01 (Usuarios V2 → VLESS)
+
+El propietario aprobó el diseño U-01 y autorizó su implementación con el alcance descrito. Se añadió una exportación candidata desde Usuarios V2 independiente de `provisioning_status` y `runtime.status`, manteniendo separada la vista runtime aplicada. El asistente VLESS consume exclusivamente el modelo V2 en creación y recuperación; no usa fallback legacy. El menú de asociaciones VLESS permite generar UUID automáticamente (predeterminado) o introducirlo manualmente con entrada oculta. Se normalizan UUID a minúsculas y se conserva la unicidad global.
+
+Pruebas focales y regresión completa: 58/58 scripts shell PASS. Xray-core 26.10.31 real aceptó una configuración VLESS-WS que recibió una asociación sintética V2 `active/draft/not_applied`; se recorrieron además las nueve modalidades VLESS del test de integración. `bash -n`, `python3 -m py_compile scripts/*.py`, `./install.sh --check`, ShellCheck `-S error`, `shfmt` y `git diff --check`: PASS. Expedientes: `docs/IMPLEMENTACION_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md` y `docs/AUDITORIA_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`.
+
+U-01 queda IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; aceptación formal pendiente. No se ejecutó migración legacy, ACME/Cloudflare, publicación runtime, inicio Xray ni prueba externa NetMod. No se leyó la clave maestra real, no se modificaron almacenes live, runtime, servicios, certificados desplegados, firewall, puertos, red, dependencias, `main`, `Xray-Normativa/` ni VPS de pruebas. Etapa 2, Etapa 3 y Etapa 5 permanecen ABIERTAS.

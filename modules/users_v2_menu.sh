@@ -179,7 +179,7 @@ users_v2_menu_create_identity() {
 # Las credenciales se leen sin eco y nunca se imprimen en pantalla.
 users_v2_menu_create_association() {
 	local fd identity_id connection_id protocol_id protocol name capacity
-	local alias credential_type credential_value state duration_kind duration_value duration_unit
+	local alias credential_type credential_value credential_choice= state duration_kind duration_value duration_unit
 	local traffic simultaneous association_id
 	ui_clear
 	ui_title "ASOCIAR IDENTIDAD A CONEXIÓN"
@@ -248,15 +248,55 @@ users_v2_menu_create_association() {
 	printf '\nConexión: %s (%s)\nProtocolo: %s\nCapacidad configurada: %s\n' "$name" "$connection_id" "$protocol" "$capacity"
 	printf '\nAlias de esta asociación (máximo 64 caracteres): '
 	IFS= read -r alias || return 0
-	printf 'Credencial (%s): ' "$credential_type"
-	IFS= read -r -s credential_value || {
+	if [[ "$credential_type" == uuid ]]; then
+		printf '\nCredencial UUID VLESS:\n  [1] Generar UUID automáticamente (recomendado)\n  [2] Introducir UUID manualmente\n'
+		printf 'Selecciona [1]: '
+		IFS= read -r credential_choice || return 0
+		case "$credential_choice" in
+		'' | 1)
+			local attempt=0
+			while ((attempt < 5)); do
+				credential_value="$(users_v2_uuid)" || return 1
+				if [[ "$credential_value" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]] &&
+					! jq -e --arg value "$credential_value" 'any(.associations[]; .protocol == "vless" and (.credential.value | ascii_downcase) == ($value | ascii_downcase))' "$USERS_V2_DATA_FILE" >/dev/null 2>&1; then
+					break
+				fi
+				credential_value=''
+				attempt=$((attempt + 1))
+			done
+			[[ -n "$credential_value" ]] || {
+				printf '\nNo se pudo generar un UUID VLESS único.\n'
+				return 1
+			}
+			;;
+		2)
+			printf 'UUID manual (entrada oculta): '
+			IFS= read -r -s credential_value || {
+				printf '\n'
+				return 0
+			}
+			printf '\n'
+			[[ "$credential_value" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$ ]] || {
+				printf '\nEl UUID manual no tiene un formato válido.\n'
+				return 1
+			}
+			;;
+		*)
+			printf '\nOpción de credencial no válida.\n'
+			return 1
+			;;
+		esac
+	else
+		printf 'Credencial (%s): ' "$credential_type"
+		IFS= read -r -s credential_value || {
+			printf '\n'
+			return 0
+		}
 		printf '\n'
-		return 0
-	}
-	printf '\n'
-	if [[ -z "$credential_value" ]]; then
-		printf '\nLa credencial no puede estar vacía.\n'
-		return 1
+		[[ -n "$credential_value" ]] || {
+			printf '\nLa credencial no puede estar vacía.\n'
+			return 1
+		}
 	fi
 
 	printf '\nEstado inicial [active/suspended]: '
@@ -293,8 +333,8 @@ users_v2_menu_create_association() {
 	fi
 
 	printf '\nRESUMEN (la credencial se mantiene oculta)\n'
-	printf 'Identidad: %s\nConexión: %s\nModalidad: %s\nAlias: %s\nCredencial: %s\nEstado: %s\nDuración: %s %s\nLímite de tráfico: %s bytes\nConexiones simultáneas: %s\n' \
-		"$identity_id" "$connection_id" "$protocol_id" "$alias" "$credential_type" "$state" "$duration_value" "$duration_unit" "$traffic" "$simultaneous"
+	printf 'Identidad: %s\nConexión: %s\nModalidad: %s\nAlias: %s\nCredencial: %s (%s)\nEstado: %s\nDuración: %s %s\nLímite de tráfico: %s bytes\nConexiones simultáneas: %s\n' \
+		"$identity_id" "$connection_id" "$protocol_id" "$alias" "$credential_type" "$(if [[ "$credential_type" == uuid && "$credential_choice" != 2 ]]; then printf 'generada automáticamente'; elif [[ "$credential_type" == uuid ]]; then printf 'manual'; else printf 'manual'; fi)" "$state" "$duration_value" "$duration_unit" "$traffic" "$simultaneous"
 	if ! ui_confirm "¿Confirmas la creación de esta asociación?"; then
 		printf '\nOperación cancelada; no se guardaron cambios.\n'
 		return 0

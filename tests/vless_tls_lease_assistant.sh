@@ -4,17 +4,23 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d)"
 chmod 711 "$TMP"
 trap 'rm -rf "$TMP"' EXIT
-BASE="$TMP/connections"; CERTS="$TMP/certificates"; SECRETS="$TMP/secrets"; KEYS="$TMP/keys"; RUN="$TMP/run"; RUNTIME="$TMP/cert-runtime"
+BASE="$TMP/connections"
+CERTS="$TMP/certificates"
+SECRETS="$TMP/secrets"
+KEYS="$TMP/keys"
+RUN="$TMP/run"
+RUNTIME="$TMP/cert-runtime"
 mkdir -m 700 "$BASE" "$BASE/configurations" "$SECRETS" "$CERTS" "$CERTS/managed" "$CERTS/secrets" "$KEYS" "$RUN" "$TMP/mockbin"
-openssl rand -out "$KEYS/master.key" 32; chmod 600 "$KEYS/master.key"
+openssl rand -out "$KEYS/master.key" 32
+chmod 600 "$KEYS/master.key"
 openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/tls.key" -out "$TMP/tls.pem" -days 2 -subj '/CN=localhost' >/dev/null 2>&1
 chmod 600 "$TMP/tls.key" "$TMP/tls.pem"
-cat > "$TMP/mockbin/systemctl" <<'SYSTEMCTL'
+cat >"$TMP/mockbin/systemctl" <<'SYSTEMCTL'
 #!/usr/bin/env bash
 printf 'User=www-data\nGroup=www-data\nSupplementaryGroups=\n'
 SYSTEMCTL
 chmod 700 "$TMP/mockbin/systemctl"
-cat > "$TMP/xray" <<'XRAY'
+cat >"$TMP/xray" <<'XRAY'
 #!/usr/bin/env bash
 set -Eeuo pipefail
 [[ "$1" == run && "$2" == -test && "$3" == -config && -s "$4" ]]
@@ -30,7 +36,7 @@ printf '%s\n' "$cert|$key" >>"$XRAY_TEST_CALLS"
 printf 'Configuration OK.\n'
 XRAY
 chmod 700 "$TMP/xray"
-cat > "$BASE/connections.json" <<'JSON'
+cat >"$BASE/connections.json" <<'JSON'
 [{"id":"vless-tls-ok","name":"VLESS TLS OK","protocol_id":"vless_tcp_tls","port":62301,"max_users":1,"state":"draft","runtime_applied":false},{"id":"vless-tls-fail","name":"VLESS TLS fail","protocol_id":"vless_tcp_tls","port":62302,"max_users":1,"state":"draft","runtime_applied":false}]
 JSON
 chmod 600 "$BASE/connections.json"
@@ -49,13 +55,22 @@ export XRAY_MANAGER_CERTIFICATES_SECRETS_DIR="$CERTS/secrets"
 export XRAY_MANAGER_CERTIFICATES_LOCK="$CERTS/catalog.lock"
 export XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR="$RUNTIME"
 export XRAY_MANAGER_INTEGRITY_LOCK="$RUN/integrity.lock"
+export XRAY_MANAGER_CONNECTIONS_FILE="$BASE/connections.json"
+export XRAY_MANAGER_USERS_DIR="$TMP/users"
+export XRAY_MANAGER_USERS_FILE="$TMP/users/users.json"
 export CONNECTION_LOCK="$XRAY_MANAGER_INTEGRITY_LOCK"
 export XRAY_VALIDATION_BINARY="$TMP/xray"
 export XRAY_TEST_CALLS="$TMP/xray.calls"
+source "$ROOT/modules/users_v2.sh"
 source "$ROOT/modules/vless_model.sh"
 source "$ROOT/modules/vless_xray_26_10_31.sh"
 source "$ROOT/modules/vless_assistant.sh"
 ui_pause() { :; }
+mkdir -m 700 -p "$XRAY_MANAGER_USERS_DIR"
+for id in vless-tls-ok vless-tls-fail; do
+	identity="$(users_identity_create)"
+	users_association_create "$identity" "$id" "Cliente $id" uuid "$([[ "$id" == vless-tls-ok ]] && printf '11111111-1111-4111-8111-111111111111' || printf '22222222-2222-4222-8222-222222222222')" active unlimited 0 none 0 0 auto >/dev/null
+done
 printf '127.0.0.1\ncert-assistant\ns\n' | connections_vless_assistant vless-tls-ok vless_tcp_tls
 jq -e 'any(.[]; .id == "vless-tls-ok" and .configuration_revision == 1 and .secret_ref == null)' "$CONNECTION_DATA_FILE" >/dev/null
 jq -e '.security_options == {certificate_id:"cert-assistant"}' "$BASE/configurations/vless-tls-ok.r000001.json" >/dev/null
@@ -63,7 +78,8 @@ jq -e '.security_options == {certificate_id:"cert-assistant"}' "$BASE/configurat
 [[ -d "$RUNTIME" && -z "$(find "$RUNTIME" -mindepth 1 -maxdepth 1 -print -quit)" ]]
 [[ "$(wc -l <"$XRAY_TEST_CALLS")" -eq 1 ]]
 if printf '127.0.0.1\ncert-assistant\ns\n' | XRAY_FAIL=1 connections_vless_assistant vless-tls-fail vless_tcp_tls; then
-	echo 'ERROR: se esperaba el rechazo del Xray simulado.' >&2; exit 1
+	echo 'ERROR: se esperaba el rechazo del Xray simulado.' >&2
+	exit 1
 fi
 jq -e 'any(.[]; .id == "vless-tls-fail" and .configuration_revision == 1 and .secret_ref == null)' "$CONNECTION_DATA_FILE" >/dev/null
 [[ ! -e "$SECRETS/vless-tls-fail.r000001.bin" ]]
@@ -78,19 +94,29 @@ for i,mode in enumerate(('vless_ws_tls','vless_grpc_tls','vless_xhttp_tls'),star
     rows.append({'id':f'restore-{mode}','name':mode,'protocol_id':mode,'port':62300+i,'max_users':1,'state':'draft','runtime_applied':False})
 p.write_text(json.dumps(rows,indent=2)+'\n'); p.chmod(0o600)
 PYROWS
+for id in restore-vless_ws_tls restore-vless_grpc_tls restore-vless_xhttp_tls; do
+	identity="$(users_identity_create)"
+	case "$id" in
+	restore-vless_ws_tls) credential=33333333-3333-4333-8333-333333333333 ;;
+	restore-vless_grpc_tls) credential=44444444-4444-4444-8444-444444444444 ;;
+	*) credential=55555555-5555-4555-8555-555555555555 ;;
+	esac
+	users_association_create "$identity" "$id" "Cliente $id" uuid "$credential" active unlimited 0 none 0 0 auto >/dev/null
+done
 store_tls_mode() {
- local id="$1" mode="$2" transport="$3" options="$4" port="$5"
- jq -n --arg id "$id" --arg mode "$mode" --arg transport "$transport" --argjson port "$port" --argjson options "$options" '{schema_version:1,connection_id:$id,protocol:"vless",mode_id:$mode,transport:$transport,security:"tls",listen_address:"127.0.0.1",listen_port:$port,transport_options:$options,security_options:{certificate_id:"cert-assistant"}}' >"$TMP/$id.json"
- chmod 600 "$TMP/$id.json"
- python3 "$ROOT/scripts/vless_config_store.py" store --connection-id "$id" --input "$TMP/$id.json" --base "$BASE" --catalog "$CONNECTION_DATA_FILE" --lock "$CONNECTION_LOCK" --secrets-dir "$SECRETS" --master-key "$KEYS/master.key" --certificate-catalog "$CERTS/catalog.json" >/dev/null
+	local id="$1" mode="$2" transport="$3" options="$4" port="$5"
+	jq -n --arg id "$id" --arg mode "$mode" --arg transport "$transport" --argjson port "$port" --argjson options "$options" '{schema_version:1,connection_id:$id,protocol:"vless",mode_id:$mode,transport:$transport,security:"tls",listen_address:"127.0.0.1",listen_port:$port,transport_options:$options,security_options:{certificate_id:"cert-assistant"}}' >"$TMP/$id.json"
+	chmod 600 "$TMP/$id.json"
+	python3 "$ROOT/scripts/vless_config_store.py" store --connection-id "$id" --input "$TMP/$id.json" --base "$BASE" --catalog "$CONNECTION_DATA_FILE" --lock "$CONNECTION_LOCK" --secrets-dir "$SECRETS" --master-key "$KEYS/master.key" --certificate-catalog "$CERTS/catalog.json" >/dev/null
 }
 store_tls_mode restore-vless_ws_tls vless_ws_tls websocket '{"path":"/ws-restore"}' 62304
 store_tls_mode restore-vless_grpc_tls vless_grpc_tls grpc '{"service_name":"grpc-restore"}' 62305
 store_tls_mode restore-vless_xhttp_tls vless_xhttp_tls xhttp '{"path":"/xhttp-restore","mode":"auto"}' 62306
 for mode in vless_tcp_tls vless_ws_tls vless_grpc_tls vless_xhttp_tls; do
- id="restore-$mode"; [[ "$mode" == vless_tcp_tls ]] && id=vless-tls-ok
- connections_vless_assistant_restore "$id" "$mode"
- [[ -z "$(find "$RUNTIME" -mindepth 1 -maxdepth 1 -print -quit)" ]]
+	id="restore-$mode"
+	[[ "$mode" == vless_tcp_tls ]] && id=vless-tls-ok
+	connections_vless_assistant_restore "$id" "$mode"
+	[[ -z "$(find "$RUNTIME" -mindepth 1 -maxdepth 1 -print -quit)" ]]
 done
 [[ "$(wc -l <"$XRAY_TEST_CALLS")" -eq 6 ]]
 echo 'PASS: VLESS TLS central prepara y limpia leases en creación y recuperación de RAW/TCP, WS, gRPC y XHTTP; permisos simulados www-data.'

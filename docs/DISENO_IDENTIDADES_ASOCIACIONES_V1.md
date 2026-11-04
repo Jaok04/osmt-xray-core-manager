@@ -1,6 +1,6 @@
 # Diseño técnico — Identidades globales y asociaciones (Etapas 2 y 3)
 
-**Estado:** decisiones técnicas aprobadas el 01/11/2026; implementación v2 inicial aislada en pruebas. No modifica la especificación funcional aprobada.  
+**Estado:** decisiones técnicas aprobadas el 01/11/2026; implementación v2 inicial y U-01 (integración con VLESS) implementadas/verificadas. No modifica la especificación funcional aprobada.
 **Versión:** 1.2  
 **Fecha:** 2026-11-01  
 **Base funcional:** Etapa 2 v1.2 y Etapa 3 v1.2, aprobadas el 31/10/2026.  
@@ -213,7 +213,8 @@ Implementado en `modules/users_v2.sh`:
 - `users_v2_expire_due`
 - `users_association_delete`
 - `users_identity_delete`
-- `users_v2_export_vless_clients <connection_id>`
+- `users_v2_export_vless_clients <connection_id>` (vista runtime: activas y aplicadas).
+- `users_v2_export_vless_candidate_clients <connection_id>` (proyección candidata desde estado funcional deseado).
 - `users_v2_migrate_legacy <legacy_json> <connections_json> <output_json> <confirmed_state>`
 
 Reglas del módulo:
@@ -237,9 +238,9 @@ Pendiente:
 - programar el hook periódico y llamarlo desde los flujos reales de inicio;
 - búsqueda/consulta pública de entidades, edición de credenciales y límites;
 - modelo completo de datos WireGuard;
-- integración con menú, generador y flujo de activación runtime.
+- flujo transaccional de aplicación/publicación y verificación runtime; la integración del generador VLESS con Usuarios V2 queda implementada por U-01.
 
-El módulo v2 todavía no está conectado al menú ni al adaptador de runtime. No reemplaza `modules/users.sh` ni convierte automáticamente el almacenamiento existente.
+En el incremento inicial, el módulo v2 aún no estaba conectado al menú ni al adaptador de runtime; esa limitación de integración VLESS quedó resuelta por U-01 (sección 11). El módulo no reemplaza `modules/users.sh` ni convierte automáticamente el almacenamiento existente.
 
 ## 10. Matriz de pruebas mínima para este incremento
 
@@ -288,5 +289,19 @@ El módulo v2 todavía no está conectado al menú ni al adaptador de runtime. N
 
 El código inicial está en `modules/users_v2.sh` y `tests/users_v2.sh`. La suite v2 valida identidad global, asociaciones múltiples, alias duplicados, unicidad global de UUID VLESS, peers WireGuard, CRUD básico, pausa y reactivación de duración (días, horas y minutos), modificación, renovación, vencimiento idempotente, corrupción y migración aislada. La suite completa existente (concurrency, cross-race, fallos de JSON, colisiones de puertos, smoke, uninstall, users, users_v2, xray_admin y Xray VLESS integration) ha pasado en la VPS con Xray 26.10.31.
 
-**Límites de esta entrega:** el módulo no está integrado al menú ni a la activación de runtime; no se ha migrado el archivo real, no se ha reemplazado `modules/users.sh`, y no se ha tocado el servicio Xray, firewall o SSH. La Etapa 3 no se declara terminada. Antes de producción faltan la revocación real en runtime y la programación de los barridos al iniciar y periódicamente, los campos específicos de WireGuard, la protección de secretos y la importación/exportación con resolución manual de identidades.
+**Límites registrados para la entrega inicial v2 (histórico, previo a U-01): no se había integrado el generador VLESS; tampoco se había migrado el archivo real ni reemplazado `modules/users.sh`. U-01 resuelve la integración del generador VLESS, pero no la activación de runtime. Antes de producción siguen pendientes la revocación real en runtime, la programación de los barridos al iniciar y periódicamente, los campos específicos de WireGuard, la protección de secretos y la importación/exportación con resolución manual de identidades. La Etapa 3 no se declara terminada.
 
+
+
+## 11. Addendum U-01 — integración Usuarios V2 con generador VLESS (2026-11-04)
+
+**Estado:** IMPLEMENTADA, VERIFICADA y AUDITADA para el alcance U-01; aceptación formal del propietario pendiente. Expedientes: `docs/IMPLEMENTACION_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md` y `docs/AUDITORIA_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`.
+
+- Usuarios V2 es la fuente única de identidades, asociaciones y credenciales del asistente VLESS. No se usa fallback legacy.
+- `users_v2_export_vless_candidate_clients` exporta asociaciones de la conexión solicitada con estado funcional active y vencimiento nulo/futuro, independientemente de provisioning/runtime. Excluye suspendidas, vencidas, otras conexiones y protocolos. Valida snapshot bajo lock compartido y no inicializa un almacén ausente.
+- `users_v2_export_vless_clients` mantiene su semántica runtime estricta: active + provisioning applied + runtime applied.
+- La proyección nativa conserva `clients[].id` como UUID de credencial y `clients[].email` como `assoc:<association.id>`. Alias e identidad global no se usan como identificadores técnicos.
+- El menú V2 ofrece UUID automático predeterminado o entrada manual oculta; se valida unicidad global y se normaliza a minúsculas.
+- Creación y recuperación del asistente usan el constructor V2. La asociación active/draft/not_applied puede formar un candidato, pero no se considera acceso efectivo.
+- Xray-core 26.10.31 aceptó una configuración WS con cliente sintético proyectado desde Usuarios V2 mediante `xray run -test`.
+- U-01 no aplica runtime, no migra datos legacy y no implementa ACME ni pruebas externas.

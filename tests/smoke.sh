@@ -5,7 +5,7 @@ ENTRY="$ROOT/bin/xray-manager"
 OUT="$(mktemp)"
 TMPDIR_TEST="$(mktemp -d)"
 trap 'rm -f "$OUT"; rm -rf "$TMPDIR_TEST"' EXIT
-bash -n "$ENTRY" "$ROOT/lib/ui.sh" "$ROOT/lib/system.sh" "$ROOT/modules/connections.sh" "$ROOT/modules/vless_model.sh" "$ROOT/modules/vless_xray_26_10_31.sh" "$ROOT/modules/vmess_model.sh" "$ROOT/modules/vmess_xray_26_10_31.sh" "$ROOT/modules/vmess_assistant.sh" "$ROOT/modules/users.sh" "$ROOT/modules/users_v2.sh" "$ROOT/modules/users_v2_menu.sh" "$ROOT/modules/profiles.sh" "$ROOT/modules/xray_configurations_menu.sh" "$ROOT/modules/xray_validation_menu.sh" "$ROOT/modules/main_menu.sh" "$ROOT/tests/users.sh" "$ROOT/tests/users_v2.sh" "$ROOT/tests/users_v2_menu.sh" "$ROOT/tests/xray_validation_menu.sh"
+bash -n "$ENTRY" "$ROOT/lib/ui.sh" "$ROOT/lib/system.sh" "$ROOT/modules/connections.sh" "$ROOT/modules/vless_model.sh" "$ROOT/modules/vless_xray_26_10_31.sh" "$ROOT/modules/vmess_model.sh" "$ROOT/modules/vmess_xray_26_10_31.sh" "$ROOT/modules/vmess_assistant.sh" "$ROOT/modules/users.sh" "$ROOT/modules/users_v2.sh" "$ROOT/modules/users_v2_menu.sh" "$ROOT/modules/profiles.sh" "$ROOT/modules/xray_configurations_menu.sh" "$ROOT/modules/xray_validation_menu.sh" "$ROOT/modules/main_menu.sh" "$ROOT/tests/users.sh" "$ROOT/tests/users_v2.sh" "$ROOT/tests/users_v2_menu.sh" "$ROOT/tests/users_v2_vless_candidate.sh" "$ROOT/tests/vless_assistant.sh" "$ROOT/tests/xray_validation_menu.sh"
 printf '0\ns\n' | "$ENTRY" >"$OUT"
 grep -q 'MENÚ PRINCIPAL' "$OUT"
 grep -q 'Cerrando Xray Core Manager' "$OUT"

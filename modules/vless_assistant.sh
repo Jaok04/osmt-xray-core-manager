@@ -9,6 +9,19 @@ connections_vless_assistant_read() {
 	printf -v "$var_name" '%s' "$value"
 }
 
+# Construye siempre desde Usuarios V2. No existe fallback silencioso al modelo legacy.
+connections_vless_assistant_build_model() {
+	[[ "$#" -eq 4 ]] || return 2
+	local connection_id="$1" mode_id="$2" listen_address="$3" listen_port="$4" clients model
+	declare -F users_v2_export_vless_candidate_clients >/dev/null 2>&1 || {
+		printf 'El adaptador Usuarios V2 no está cargado; se abortó la generación.\n' >&2
+		return 1
+	}
+	clients="$(users_v2_export_vless_candidate_clients "$connection_id")" || return 1
+	model="$(vless_model_build "$connection_id" "$mode_id" "$listen_address" "$listen_port")" || return 1
+	jq --argjson users "$clients" '.users = $users' <<<"$model"
+}
+
 connections_vless_assistant_read_secret() {
 	local prompt="$1" var_name="$2" value
 	printf '%s' "$prompt"
@@ -25,7 +38,7 @@ connections_vless_assistant() (
 	local save_choice='' prepared_file='' secret_file='' secret_meta='' secret_type=''
 	local runtime_root="${XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR:-/run/xray-manager-certificates}"
 	local -a store_args=()
-	local users_json='[]' xray_bin="${XRAY_VALIDATION_BINARY:-/var/cache/xray-manager/validation/v26.10.31/xray}"
+	local xray_bin="${XRAY_VALIDATION_BINARY:-/var/cache/xray-manager/validation/v26.10.31/xray}"
 	command -v jq >/dev/null 2>&1 || {
 		printf '\nSe requiere jq; no se generó configuración.\n'
 		return 1
@@ -51,11 +64,9 @@ connections_vless_assistant() (
 	model_file="$tmp/model.json"
 	options_file="$tmp/options.json"
 	config_file="$tmp/xray.json"
-	if declare -F users_build_vless_model >/dev/null 2>&1; then
-		users_json="$(users_build_vless_model "$connection_id" "$listen_address")" || return 1
-		printf '%s\n' "$users_json" >"$model_file"
-	else
-		vless_model_build "$connection_id" "$mode_id" "$listen_address" "$listen_port" >"$model_file" || return 1
+	if ! connections_vless_assistant_build_model "$connection_id" "$mode_id" "$listen_address" "$listen_port" >"$model_file"; then
+		printf '\nNo se pudo obtener una instantánea válida de Usuarios V2. No se utilizará el registro legacy.\n'
+		return 1
 	fi
 	case "$mode_id" in
 	vless_ws)
@@ -112,7 +123,12 @@ connections_vless_assistant() (
 		printf '\nTLS utiliza el catálogo central. Para validar Xray se guardará primero el borrador y se preparará un lease temporal autorizado.\n'
 		printf '¿Deseas guardar este borrador y continuar con la validación TLS? [s/N]: '
 		IFS= read -r save_choice || save_choice=''
-		case "$save_choice" in [sS]|[sS][iI]) ;; *) printf '\nNo se guardó la configuración.\n'; ui_pause; return 0 ;; esac
+		case "$save_choice" in [sS] | [sS][iI]) ;; *)
+			printf '\nNo se guardó la configuración.\n'
+			ui_pause
+			return 0
+			;;
+		esac
 		prepared_file="$tmp/persistent-config.json"
 		secret_file="$tmp/private-secret.bin"
 		secret_meta="$tmp/secret-meta.json"
@@ -224,11 +240,10 @@ connections_vless_assistant_restore() (
 		printf '\nLa modalidad guardada no coincide con la seleccionada.\n'
 		return 1
 	}
-	if declare -F users_build_vless_model >/dev/null 2>&1; then
-		users_build_vless_model "$connection_id" "$address" >"$model" || return 1
-	else
-		vless_model_build "$connection_id" "$mode_id" "$address" "$port" >"$model" || return 1
-	fi
+	connections_vless_assistant_build_model "$connection_id" "$mode_id" "$address" "$port" >"$model" || {
+		printf '\nNo se pudo reconstruir el modelo desde Usuarios V2.\n'
+		return 1
+	}
 	local security
 	security="$(jq -r '.configuration.security' "$persisted")"
 	case "$security" in

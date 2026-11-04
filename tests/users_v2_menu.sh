@@ -118,7 +118,7 @@ IDENTITY_ID="$(sed -n 's/^ID: //p' "$OUT" | tail -n1)"
 jq -e --arg id "$IDENTITY_ID" 'any(.identities[]; .id==$id) and (.associations|length)==0' "$XRAY_MANAGER_USERS_FILE" >/dev/null
 
 VLESS_SECRET='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-printf '4\n%s\nconn-vless\nCliente desde menú\n%s\nactive\nunlimited\n0\n0\ns\n\n0\n' \
+printf '4\n%s\nconn-vless\nCliente desde menú\n2\n%s\nactive\nunlimited\n0\n0\ns\n\n0\n' \
 	"$IDENTITY_ID" "$VLESS_SECRET" | users_v2_menu >"$OUT"
 VLESS_ASSOC_ID="$(sed -n 's/^ID de asociación: //p' "$OUT" | tail -n1)"
 [[ "$VLESS_ASSOC_ID" =~ ^[0-9a-f-]{36}$ ]]
@@ -173,7 +173,7 @@ cmp -s "$TMP/before-invalid-connection" "$XRAY_MANAGER_USERS_FILE"
 grep -q 'conexión indicada no existe' "$OUT"
 
 # La validación del dominio sigue rechazando UUID VLESS duplicados.
-if printf '%s\nconn-vless\nUUID duplicado\n%s\nactive\nunlimited\n0\n0\ns\n' \
+if printf '%s\nconn-vless\nUUID duplicado\n2\n%s\nactive\nunlimited\n0\n0\ns\n' \
 	"$IDENTITY_ID" "$VLESS_SECRET" | users_v2_menu_create_association >"$OUT"; then
 	echo 'ERROR: el menú aceptó un UUID VLESS duplicado.' >&2
 	exit 1
@@ -182,14 +182,25 @@ fi
 
 # La capacidad de la conexión se respeta en el alta desde el menú.
 CAP_ID="$(users_identity_create)"
-printf '%s\nconn-cap\nPrimer slot\ncccccccc-cccc-4ccc-8ccc-cccccccccccc\nactive\nunlimited\n0\n0\ns\n' \
+printf '%s\nconn-cap\nPrimer slot\n2\ncccccccc-cccc-4ccc-8ccc-cccccccccccc\nactive\nunlimited\n0\n0\ns\n' \
 	"$CAP_ID" | users_v2_menu_create_association >"$OUT"
-if printf '%s\nconn-cap\nSlot excedido\ndddddddd-dddd-4ddd-8ddd-dddddddddddd\nactive\nunlimited\n0\n0\ns\n' \
+if printf '%s\nconn-cap\nSlot excedido\n2\ndddddddd-dddd-4ddd-8ddd-dddddddddddd\nactive\nunlimited\n0\n0\ns\n' \
 	"$CAP_ID" | users_v2_menu_create_association >"$OUT"; then
 	echo 'ERROR: el menú permitió superar max_users.' >&2
 	exit 1
 fi
 [[ "$(jq '[.associations[]|select(.connection_id=="conn-cap")]|length' "$XRAY_MANAGER_USERS_FILE")" -eq 1 ]]
+
+# Generación automática de UUID VLESS: no requiere que el administrador copie una credencial.
+AUTO_ID="$(users_identity_create)"
+printf '%s\nconn-vless\nCliente UUID automático\n1\nactive\nunlimited\n0\n0\ns\n' "$AUTO_ID" | users_v2_menu_create_association >"$OUT"
+AUTO_UUID="$(jq -r --arg iid "$AUTO_ID" '.associations[] | select(.identity_id==$iid) | .credential.value' "$XRAY_MANAGER_USERS_FILE")"
+[[ "$AUTO_UUID" =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$ ]]
+grep -q 'generada automáticamente' "$OUT"
+if grep -Fq "$AUTO_UUID" "$OUT"; then
+	echo 'ERROR: el menú imprimió el UUID generado.' >&2
+	exit 1
+fi
 
 # El flujo de opciones [3] y [4] está conectado al menú principal v2.
 printf '0\n' | users_v2_menu >"$OUT"

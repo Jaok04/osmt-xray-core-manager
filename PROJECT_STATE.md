@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-04 — C-05A/B/C/D aceptadas, publicadas y sincronizadas; C-05E (integración del menú Bash) implementada, verificada y auditada localmente, pendiente de aceptación formal y sin commit/push. C-01/C-02/C-03 aceptadas como componentes limitados; C-04 cerrada integralmente; Etapa 5 y Etapa 2 ABIERTAS. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios documentados y probados. Los requisitos funcionales restantes de Etapa 5 siguen pendientes. Snapshot Writer v1 mantiene su aceptación limitada independiente; backup/restore integral pendiente. VLESS-WS live continúa draft, sin runtime apply ni conectividad externa.
+**Corte de estado:** 2026-11-04 — U-01 (integración Usuarios V2→VLESS) implementada, verificada y auditada localmente; pendiente de aceptación formal y publicación. Regresión shell 58/58 PASS; Xray 26.10.31 real aceptó un candidato VLESS con asociación V2 active/draft/not_applied. C-01/C-02/C-03 aceptadas como componentes limitados; C-04 cerrada integralmente; Etapa 5 y Etapa 2 ABIERTAS. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios documentados y probados. Los requisitos funcionales restantes de Etapa 5 siguen pendientes. Snapshot Writer v1 mantiene su aceptación limitada independiente; backup/restore integral pendiente. VLESS-WS live continúa draft, sin runtime apply ni conectividad externa.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -1098,3 +1098,18 @@ El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar 
 - py_compile, bash -n, ShellCheck -S error, warning focal, install.sh --check y git diff --check: PASS.
 - Evidencia: docs/CORRECCION_H01_RUTAS_SYMLINK_C05F_2026-11-04.md.
 - D-01–D-05 no se modificaron ni resolvieron. Etapa 5 y Etapa 2 siguen ABIERTAS.
+
+
+## U-01 — integración Usuarios V2 con VLESS (2026-11-04)
+
+- El propietario aprobó el diseño U-01 y autorizó su implementación con el alcance descrito.
+- Usuarios V2 es ahora la única fuente del asistente VLESS; se eliminó el fallback legacy en creación y recuperación.
+- `users_v2_export_vless_candidate_clients` proyecta asociaciones VLESS de la conexión solicitada con estado funcional active y vencimiento futuro/nulo, sin exigir provisioning/runtime applied. Excluye suspended/expired/vencidas y valida snapshot bajo lock compartido. Si el almacén no existe, falla sin inicializarlo.
+- `users_v2_export_vless_clients` mantiene su contrato runtime de asociaciones activas y aplicadas.
+- UUID VLESS: menú con generación automática predeterminada o entrada manual oculta; unicidad global y normalización a minúsculas.
+- `tests/users_v2_vless_candidate.sh` cubre filtros, vencimientos, estados, aislamiento por conexión/protocolo, separación runtime, JSON inválido y almacén ausente. `tests/xray_vless_integration.sh` proyecta una asociación V2 sintética y la valida con Xray 26.10.31 real.
+- Regresión `tests/*.sh`: 58/58 PASS. `bash -n`, `py_compile`, `install.sh --check`, ShellCheck severidad error, shfmt y `git diff --check`: PASS.
+- Expedientes: `docs/IMPLEMENTACION_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`, `docs/AUDITORIA_U01_INTEGRACION_USUARIOS_V2_VLESS_2026-11-04.md`; diseño actualizado en `docs/DISENO_IDENTIDADES_ASOCIACIONES_V1.md`.
+- Estado U-01: IMPLEMENTADA, VERIFICADA y AUDITADA; aceptación formal del propietario pendiente. Publicación/sincronización pendiente de cierre técnico.
+- No se ejecutó migración legacy/cutover, ACME DNS-01/Cloudflare, publicación runtime, inicio de servicio ni prueba externa NetMod. No se modificaron almacenes live, clave maestra real, runtime, servicios, certificados desplegados, firewall, puertos, red, dependencias, `main`, `Xray-Normativa/` ni VPS de pruebas.
+- Etapa 2, Etapa 3 y Etapa 5 permanecen ABIERTAS.
