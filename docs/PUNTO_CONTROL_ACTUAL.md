@@ -3,8 +3,8 @@
 > El registro operativo vigente es el bloque «Decisión vigente — aceptación limitada del almacén de perfiles v1.1 (2026-11-04)» al final de este documento; los estados anteriores se conservan sólo como trazabilidad histórica.
 
 **Fecha del corte:** 2026-11-04
-**Tarea activa:** preparar el expediente definitivo para la decisión de cierre integral de C-04. C-01, C-02 y C-03 están aceptadas formalmente como componentes limitados. C-04A, C-04B y C-04C están implementadas, auditadas, aceptadas y publicadas; la auditoría integral no identificó defectos funcionales bloqueantes. El cierre integral de C-04 queda pendiente de aceptación formal del propietario.
-**Estado vigente:** almacén de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO. Gestor de configuraciones independientes: C-01/C-02/C-03 aceptadas formalmente como componentes limitados y C-04A/C-04B/C-04C aceptadas y publicadas. Etapa 5 ABIERTA; Etapa 2 ABIERTA. Pendientes: creación de perfil desde configuración independiente, validador estático Xray por revisión e informes, historial separado de modificaciones y retención, perfil activo/composición, activación/verificación/rollback y backup/restore integral. La integración del menú de configuraciones independientes está implementada; no incluye activación ni aplicación al runtime. VLESS-WS live sigue draft y sin runtime apply.
+**Tarea activa:** definir y presentar el siguiente alcance de trabajo del gestor de configuraciones independientes, sin iniciar C-05 hasta recibir autorización específica. C-01, C-02 y C-03 están aceptadas formalmente como componentes limitados. C-04A, C-04B y C-04C están implementadas, auditadas, aceptadas y publicadas; el propietario aceptó formalmente el cierre integral de C-04 tras la auditoría 56/56 PASS.
+**Estado vigente:** almacén de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO. Gestor de configuraciones independientes: C-01/C-02/C-03 aceptadas formalmente como componentes limitados y C-04A/C-04B/C-04C aceptadas y publicadas; C-04 CERRADA FORMALMENTE. Etapa 5 ABIERTA; Etapa 2 ABIERTA. Pendientes: creación de perfil desde configuración independiente, validador estático Xray por revisión e informes, historial separado de modificaciones y retención, perfil activo/composición, activación/verificación/rollback y backup/restore integral. La integración del menú de configuraciones independientes está implementada; no incluye activación ni aplicación al runtime. VLESS-WS live sigue draft y sin runtime apply.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -932,3 +932,13 @@ La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una 
 - Publicación autorizada expresamente: implementación, prueba, auditoría y registro de aceptación, sólo en `design/user-identity-association-v1`.
 - No se autoriza C-05 ni se cierra C-04 completa, Etapa 5 o Etapa 2.
 - `main`, `Xray-Normativa/`, runtime, servicios e infraestructura permanecen fuera del alcance.
+
+
+## Decisión vigente — cierre integral C-04 aceptado (2026-11-04)
+
+- **Aceptación:** el propietario acepta formalmente el cierre integral de C-04.
+- **Alcance completado:** C-04A eliminación segura, C-04B exportación múltiple y C-04C integración del menú Bash.
+- **Evidencia:** auditorías individuales y auditoría integral; regresión completa **56/56 PASS**; verificaciones estáticas documentadas PASS; ningún defecto funcional bloqueante identificado.
+- **Publicación previa:** correcciones documentales publicadas en `7f215b1dbfaa0b2dc7a2a3726a76dfa25b1cbb10`. Este registro de aceptación es un cambio documental posterior, aún local y sin commit/push.
+- **Siguiente control:** definir el alcance de la siguiente fase y solicitar autorización específica antes de iniciar C-05.
+- **Límites:** C-05 no autorizada ni iniciada. Etapa 5 y Etapa 2 permanecen ABIERTAS. `main`, `Xray-Normativa/`, runtime, servicios e infraestructura no se modifican.

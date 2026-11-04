@@ -999,3 +999,10 @@ C-04C queda implementada/verificada/auditada localmente, pendiente de aceptació
 ## 2026-11-04 — Aceptación formal y autorización de publicación C-04C
 
 El propietario aceptó formalmente C-04C conforme a `docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md` y autorizó publicar los cambios aceptados. La publicación comprende exclusivamente la integración del menú Bash, pruebas, auditoría y registro de aceptación en `design/user-identity-association-v1`. No se autoriza C-05 ni cambios en `main`, `Xray-Normativa/`, runtime o infraestructura.
+
+
+## 2026-11-04 — Aceptación formal del cierre integral C-04
+
+El propietario acepta formalmente el cierre integral de C-04, sustentado en la auditoría integral de C-04A/C-04B/C-04C. Las tres fases quedan completadas dentro de sus alcances aprobados. La regresión integral registró **56/56 PASS** y las verificaciones estáticas documentadas PASS; no se identificaron defectos funcionales bloqueantes.
+
+Las correcciones documentales previas se publicaron en `7f215b1dbfaa0b2dc7a2a3726a76dfa25b1cbb10`. Este registro de aceptación es un cambio documental nuevo, aún local y sin commit/push. No autoriza C-05. Etapa 5 y Etapa 2 permanecen abiertas; `main`, `Xray-Normativa/`, runtime e infraestructura permanecen protegidas.

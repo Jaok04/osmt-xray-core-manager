@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-04
 **Rama:** design/user-identity-association-v1
 **Normativa:** Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md §§ 2–5 y 14; YAML aprobado correspondiente.
-**Estado actualizado 2026-11-04:** C-01/C-02/C-03 aceptadas formalmente como componentes limitados; C-04A, C-04B y C-04C implementadas, auditadas, aceptadas formalmente y publicadas. La auditoría integral de C-04 no identificó defectos funcionales bloqueantes; el cierre integral permanece pendiente de aceptación formal del propietario. C-05 no está autorizada ni iniciada.
+**Estado actualizado 2026-11-04:** C-01/C-02/C-03 aceptadas formalmente como componentes limitados; C-04A, C-04B y C-04C implementadas, auditadas, aceptadas formalmente y publicadas. La auditoría integral de C-04 no identificó defectos funcionales bloqueantes (regresión 56/56 PASS); el propietario aceptó formalmente su cierre integral el 2026-11-04. C-05 no está autorizada ni iniciada.
 
 ## 1. Objetivo y límites
 
@@ -236,8 +236,8 @@ Los comandos devuelven JSON estructurado para la interfaz Bash. No habrá comand
 **Fase C-04 — interfaz y eliminación (desglosada por autorización)**
 - [x] C-04A: eliminación segura transaccional; auditoría `docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md`; aceptada y publicada.
 - [x] C-04B: exportación múltiple mediante manifiesto explícito, preview/hash de confirmación y resultados parciales; auditoría `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`; implementada, verificada y aceptada formalmente como componente limitado.
-- [x] C-04C: integración del menú Bash; implementada, verificada y auditada localmente, pendiente de aceptación formal. Auditoría docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md.
-- C-04 no se considera completa hasta completar las fases autorizadas, su auditoría y aceptación.
+- [x] C-04C: integración del menú Bash; implementada, verificada, auditada, aceptada y publicada. Auditoría `docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md`.
+- C-04: **CERRADA FORMALMENTE** tras completar C-04A/B/C, auditorías individuales, auditoría integral y aceptación expresa del propietario (2026-11-04).
 
 **Fase C-05 — integración con validador**
 - Contrato de informes y promoción a Validada. Esta fase depende del diseño/implementación del validador estático, que se auditará por separado.
@@ -335,3 +335,10 @@ Estado: C-04C implementada, verificada y auditada localmente; pendiente de acept
 ## 14. Aceptación formal C-04C — 2026-11-04
 
 El propietario acepta formalmente C-04C conforme a la auditoría `docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md`. La integración del menú Bash queda aceptada como componente limitado. Se autoriza publicar los cambios de C-04C, sus pruebas, auditoría y registro de aceptación en `design/user-identity-association-v1`. Esta aceptación no cierra C-04 completa, Etapa 5 ni Etapa 2 y no autoriza C-05. `main` y `Xray-Normativa/` permanecen protegidas.
+
+
+## 15. Cierre integral C-04 — aceptación formal (2026-11-04)
+
+El propietario acepta formalmente el cierre integral de C-04 tras revisar el expediente de auditoría integral. C-04A (eliminación segura), C-04B (exportación múltiple) y C-04C (integración del menú Bash) quedan completadas dentro de sus alcances autorizados. La regresión integral fue **56/56 PASS** y las verificaciones estáticas documentadas fueron satisfactorias; no se identificaron defectos funcionales bloqueantes.
+
+La aceptación cierra únicamente C-04. No cierra Etapa 5 ni Etapa 2 y no autoriza C-05, activación/runtime, cambios de infraestructura, dependencias ni modificaciones de `main` o `Xray-Normativa/`. El registro de aceptación se encuentra pendiente de publicación independiente.
