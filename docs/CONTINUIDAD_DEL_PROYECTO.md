@@ -1,8 +1,10 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-03:** almacén de perfiles v1.1 implementado localmente con AES-256-GCM para cifrar el JSON completo de cada revisión. La decisión de texto plano de la primera iteración fue sustituida por elección expresa del propietario (opción 1); la versión plaintext no se publicó. Consultar `docs/DISENO_IMPLEMENTACION_PERFILES.md`, `PROJECT_STATE.md` y el último bloque de este documento. No leer ni modificar `master.key` real, no crear perfiles live, no activar runtime. La regresión integral y la publicación siguen pendientes.
+> **Punto de reanudación vigente — regularización documental 2026-11-03:** el almacén de perfiles v1.1 con AES-256-GCM está IMPLEMENTADO, VERIFICADO EN PRUEBAS SINTÉTICAS, PUBLICADO y SINCRONIZADO byte a byte en `design/user-identity-association-v1`; su aceptación formal como subsistema sigue PENDIENTE. La primera versión plaintext no se publicó. La siguiente actividad es la revisión formal de solo lectura del código/diseño contra Etapa 5; no modificar código, no usar `master.key` real, no crear perfiles live ni activar runtime durante esa revisión. Ver `docs/DISENO_IMPLEMENTACION_PERFILES.md`, `PROJECT_STATE.md` y el último punto de `docs/PUNTO_CONTROL_ACTUAL.md`.
 
-> Los apartados cronológicos antiguos se conservan como historial. Para el estado actual y el punto de reanudación prevalece el bloque «Punto de reanudación posterior a la aceptación del Snapshot Writer v1» al final del documento.
+> **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
+
+> Los apartados cronológicos antiguos se conservan como historial. Para el estado actual prevalecen los bloques vigentes añadidos al final de `PROJECT_STATE.md`, `docs/PUNTO_CONTROL_ACTUAL.md` y este documento; las decisiones históricas superadas no autorizan nuevas implementaciones.
 
 > Frente activo 2026-11-03: aceptación formal del Snapshot Writer v1 con limitaciones documentadas. La corrección A-16 y B-01/B-02/B-03 están publicadas; se añadieron diez negativos A-16 y una matriz de trazabilidad A-01–A-19 en §10.20. Última regresión: 49/49 scripts PASS; AST 16/16; bash -n 74 archivos; ShellCheck, shfmt y diff-check PASS. Writer ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS el 2026-11-03. No crear backups reales ni leer secretos/master.key; no restore/verify independiente ni runtime apply. Xray-Normativa inmutable; no tocar VPS de pruebas.
 > La aceptación formal y su actualización documental están registradas en la parte final de este archivo. La rama autorizada sigue siendo design/user-identity-association-v1; main y Xray-Normativa permanecen protegidas.
@@ -11,7 +13,7 @@
 > Registro histórico: la auditoría inicial de almacenes/certificados y el cierre del contrato se documentaron antes del primer bloque. Consultar los dos informes de implementación para el estado vigente.
 
 
-> **Estado vigente 2026-11-03:** VMess técnicamente preparado para aceptación formal. F-01–F-05 resueltos/verificados; VM-28 verificado; VM-32 verificado con límite transaccional documentado; VM-33 no aplica al alcance aprobado; VM-38/39/40 verificados; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 cliente-servidor VMess-TLS loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño. VM-48 requiere decisión expresa del propietario; VMess NO está aún aceptado y Etapa 2 permanece ABIERTA. Leer primero docs/PUNTO_CONTROL_ACTUAL.md, docs/AUDITORIA_INTEGRAL_VMESS_2026-11-02.md, docs/MATRIZ_TRAZABILIDAD_VMESS_2026-11-02.md y docs/VALIDACION_CLIENTE_SERVIDOR_VMESS_VM47_2026-11-02.md. No iniciar Trojan.
+> **Línea base VMess — 2026-11-03 (actualizada por evidencia posterior):** F-01–F-05 resueltos/verificados; VM-28 verificado; VM-32 verificado con límite transaccional documentado; VM-33 no aplica al alcance aprobado; VM-38/39/40 verificados; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 cliente-servidor VMess-TLS loopback PASS. Posteriormente se verificó lectura del lease por proceso Xray real y handshake TLS 1.3; véase el informe live específico. Cliente externo/WAN no probado y no requerido por el diseño. VM-48/aceptación formal de VMess siguen pendientes; Etapa 2 permanece ABIERTA. Leer los informes de auditoría y validación referenciados en los apartados históricos y el informe live nuevo. No iniciar Trojan.
 
 
 ## 1. Objetivo
@@ -864,3 +866,12 @@ La inspección confirmó que `/var/lib/xray-manager/profiles` no existe; no hay 
 **Estado:** IMPLEMENTADO, VERIFICADO EN PRUEBAS SINTÉTICAS, PUBLICADO y SINCRONIZADO byte a byte en `design/user-identity-association-v1`. Commit funcional inicial `03b63ca109a2fabb262924daf5d2fe4a683b23d8`; commit de reconciliación byte a byte `4cec7496585390adbe72d8887cb6dacd94743c32`. El árbol Git local y remoto coincide. `scripts/__pycache__/` es un artefacto local preexistente y se preserva/excluye. `main` permanece protegida.
 
 **Próxima acción:** revisión del propietario y aceptación formal del subsistema o solicitud de ajustes. No usar la clave maestra real en pruebas ni ejecutar activación runtime.
+
+
+## Regularización documental — evidencia live VMess TLS y reanudación de perfiles (2026-11-03)
+
+Se incorporó el informe `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md` a partir de la evidencia compartida por el propietario en las capturas de la prueba. El resultado válido es la segunda ejecución: Xray-core 26.10.31, proceso con UID 999/GID 988, lectura de certificado y clave sintéticos desde el lease y handshake TLS 1.3 verificado. La primera ejecución no se cuenta como PASS. No se dispone en este registro de la transcripción completa de comandos/stdout/stderr; el informe distingue esa limitación y no inventa detalles ausentes.
+
+La prueba no acredita despliegue de `xray.service`, activación runtime del administrador, persistencia de certificados reales, conectividad cliente externa/WAN ni aceptación integral de VMess TLS. VMess y Etapa 2 conservan sus estados formales pendientes.
+
+Se corrigió el encabezado de este documento para reflejar que perfiles v1.1 ya fue publicado y sincronizado; su aceptación formal permanece pendiente. La siguiente actividad permitida es una revisión formal de solo lectura del subsistema de perfiles contra Etapa 5, sin modificar código ni utilizar secretos reales.

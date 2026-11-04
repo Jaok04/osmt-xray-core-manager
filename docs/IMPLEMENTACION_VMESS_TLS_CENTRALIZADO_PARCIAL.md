@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-03  
 **Bloque:** Etapa 2 — Bloque 3, integración VMess  
-**Estado:** IMPLEMENTADO PARCIALMENTE; pruebas PASS; no publicado en esta actualización, no desplegado y no aceptado.
+**Estado:** IMPLEMENTADO PARCIALMENTE; pruebas automatizadas y validación live acotada PASS; publicado en la rama autorizada; no desplegado como servicio administrado ni aceptado formalmente.
 
 ## Alcance implementado
 
@@ -28,8 +28,8 @@
 
 ## Límites pendientes
 
-- La VPS de desarrollo no tiene `xray.service` ni usuario/grupo Xray. El CLI real del resolutor consulta la identidad systemd y falla cerrado. No se ha probado que el proceso Xray real lea los archivos del lease.
-- La prueba del ciclo del asistente usa un resolutor simulado y Xray simulado; la prueba de las 14 modalidades usa el Xray real de validación, pero con fixtures de lease.
+- La VPS de desarrollo no dispone de un `xray.service` administrado por el proyecto. El CLI del resolutor consulta la identidad systemd y falla cerrado si ésta no está configurada. La prueba live posterior ejecutó el binario Xray real directamente bajo UID 999/GID 988 y verificó lectura del lease; no equivale a desplegar ni validar una unidad systemd del administrador.
+- La prueba del ciclo del asistente usa un resolutor simulado y Xray simulado; la prueba de las 14 modalidades usa el Xray real de validación, pero con fixtures de lease. La prueba live posterior de lectura del lease y handshake TLS 1.3 está descrita por separado en `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 - El asistente de creación persiste el borrador antes de preparar el lease; si la identidad Xray no puede verificarse, el borrador permanece guardado y el runtime no se modifica.
 - No existe todavía una operación de migración de revisiones TLS históricas. La lectura histórica se conserva; la recuperación/validación de una revisión TLS antigua falla cerrada hasta migración controlada.
 - El backup VLESS sigue siendo VLESS: no incorpora el almacén VMess ni el catálogo central. El backup/restore independiente VMess y el backup compartido del recurso central corresponden al bloque de backup/restore de Etapa 2 y siguen pendientes.
@@ -37,23 +37,32 @@
 
 ## Límites operativos y de gobernanza
 
-- No se aplicaron borradores al runtime ni se modificaron servicios, firewall o puertos.
+- No se aplicaron borradores al runtime administrado ni se modificaron servicios, firewall o puertos. La prueba live posterior fue una ejecución de validación acotada del proceso Xray bajo UID/GID no privilegiados con materiales sintéticos.
 - No se modificó la VPS `Vps de Pruebas`, no se importaron certificados reales persistentes y no se migraron secretos históricos.
 - REALITY permanece separado.
 - `Xray-Normativa/` y `main` no se modificaron.
-- Esta actualización permanece en el árbol de trabajo local de `design/user-identity-association-v1`; no se creó commit ni se hizo push en esta continuación.
+- La implementación y su documentación forman parte de la rama autorizada `design/user-identity-association-v1`. La evidencia live adicional se registra en un informe separado; su incorporación documental no cambia la clasificación de aceptación.
 
 ## Clasificación
 
 | Estado | Resultado |
 |---|---|
 | IMPLEMENTADO | Adaptador TLS por lease, recuperación/limpieza del asistente y validación de referencias centrales en restore VLESS |
-| VERIFICADO | Suite 43/43; Xray 14/14 con fixture de lease; ciclo asistente simulado; controles estáticos PASS |
-| PUBLICADO | No en esta actualización |
-| SINCRONIZADO | No; cambios locales pendientes de publicación |
-| ACEPTADO | No; Bloque 3 y Etapa 2 continúan abiertos |
+| VERIFICADO | Suite 43/43 y validaciones automatizadas históricas; además, lectura live del lease por Xray-core 26.10.31 bajo UID 999/GID 988 y handshake TLS 1.3 en la segunda ejecución; evidencia acotada en informe separado |
+| PUBLICADO | Implementación y documentación en `design/user-identity-association-v1` |
+| SINCRONIZADO | El checkout de VPS y GitHub coincidían en el HEAD auditado antes de esta regularización documental |
+| ACEPTADO | No; Bloque 3/VMess y Etapa 2 continúan abiertos |
 
 
 ## Actualización cruzada — integración VLESS (2026-11-03)
 
 La integración VLESS TLS centralizada ya comenzó en un bloque separado. Su estado, pruebas y límites se documentan en `docs/IMPLEMENTACION_VLESS_TLS_CENTRALIZADO_PARCIAL.md`. Esto no modifica la clasificación de VMess de este informe ni convierte la integración conjunta en completa. El backup compartido del catálogo central, la migración histórica y la lectura de leases por un servicio Xray real siguen pendientes.
+
+
+## Actualización — validación live de lectura del lease por Xray real (2026-11-03)
+
+La evidencia compartida por el propietario confirma una prueba live acotada posterior a las pruebas con fixtures: Xray-core 26.10.31 se ejecutó como UID 999/GID 988, accedió al certificado y a la clave sintéticos del lease y completó un handshake TLS 1.3 verificado en la segunda ejecución. La primera ejecución no se contabiliza como exitosa.
+
+El resultado demuestra que un proceso Xray real pudo leer los materiales sintéticos del lease bajo esa identidad. No demuestra que `xray.service` del administrador esté instalado/configurado, que el flujo completo del asistente haya aplicado una conexión al runtime, que se hayan usado certificados reales, que exista conectividad WAN ni que VMess haya recibido aceptación formal. No se atribuyen suite, comandos, cipher suite, endpoint o logs no incluidos en la evidencia disponible.
+
+Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.

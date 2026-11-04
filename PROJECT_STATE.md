@@ -712,3 +712,18 @@ Se excluye deliberadamente `scripts/__pycache__/` por ser un artefacto local de 
 - Verificación de publicación: árbol Git de la VPS y árbol remoto idénticos; `main` sin cambios; `Xray-Normativa/` sin cambios (el README auxiliar sigue siendo el único archivo extra frente al respaldo). `scripts/__pycache__/` permanece local y excluido.
 
 **Siguiente paso:** revisión del propietario y aceptación formal del subsistema o indicación de ajustes. No activar perfiles ni ejecutar pruebas con secretos reales. Etapa 2 continúa ABIERTA.
+
+
+## Estado vigente — validación live de lectura del lease VMess TLS por Xray real (2026-11-03)
+
+- Evidencia compartida por el propietario: Xray-core 26.10.31 se ejecutó realmente bajo UID 999/GID 988 y accedió al certificado y a la clave sintéticos del lease.
+- La segunda ejecución completó un handshake TLS 1.3 verificado. La primera ejecución no se contabiliza como exitosa; la causa no se infiere porque no se dispone de la salida íntegra.
+- Esta prueba demuestra lectura de los materiales sintéticos por un proceso Xray real bajo la identidad indicada. No demuestra despliegue de `xray.service`, aplicación del runtime desde el administrador, activación por perfil, conectividad externa/WAN ni uso de certificados reales.
+- Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`. La implementación VMess TLS sigue parcial y su aceptación formal permanece pendiente; Etapa 2 continúa ABIERTA.
+
+## Punto de reanudación vigente — revisión formal de perfiles v1.1 (2026-11-03)
+
+- El almacén de perfiles v1.1 con AES-256-GCM está IMPLEMENTADO, VERIFICADO EN PRUEBAS SINTÉTICAS, PUBLICADO y SINCRONIZADO byte a byte en `design/user-identity-association-v1`. La aceptación formal del subsistema sigue pendiente.
+- Siguiente actividad autorizada por el propietario: revisión documental y técnica de solo lectura contra `Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md` y su YAML, inspeccionando implementación, pruebas, límites y trazabilidad. No modificar código durante la revisión.
+- No usar `master.key` real, no crear perfiles live, no activar runtime, no habilitar eliminación ni modificar servicios, firewall, puertos, certificados o red.
+- Tras presentar hallazgos, solicitar decisión formal del propietario: aceptar el subsistema con límites o autorizar correcciones concretas. Etapa 2 permanece ABIERTA.

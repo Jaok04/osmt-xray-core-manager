@@ -663,7 +663,7 @@ La publicación es exclusivamente de código y documentación. No implica que ex
 
 **Límites:** pruebas en almacenes temporales; no se creó `/var/lib/xray-manager/profiles` ni perfil real. No se tocó `Prueba-VLESS-WS-Real`, `/etc/xray/config.json`, servicio Xray, systemd, firewall, puertos, certificados o red. No `master.key`. `Xray-Normativa/` y `main` intactas. Etapa 2 sigue ABIERTA.
 
-**Siguiente acción:** auditar diff/diseño y construir la validación estática Xray por revisión, con informe y pruebas de fallo/rollback. Mantener eliminación y activación deshabilitadas. No ampliar a composición/activación hasta terminar la auditoría del almacén y aprobar el siguiente bloque.
+**Siguiente acción histórica SUPERADA:** auditar diff/diseño y construir la validación estática Xray por revisión. Antes de iniciar esa implementación, el propietario debe revisar y aceptar formalmente (o devolver para ajustes) el subsistema v1.1. La siguiente acción vigente está registrada en el último punto de control de este documento.
 
 
 ## Almacén de perfiles v1.1 cifrado — 2026-11-03
@@ -681,3 +681,30 @@ La publicación es exclusivamente de código y documentación. No implica que ex
 **Verificación:** `tests/*.sh` 51/51 PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck focal PASS; shfmt de los archivos nuevos PASS; `git diff --check` PASS.
 
 **Siguiente paso:** el propietario revisa el diseño/implementación y decide si acepta el subsistema o solicita ajustes. No implementar validación Xray, composición integral, eliminación, registro activo ni activación hasta autorización/contraste específicos. No usar la clave maestra real en pruebas. No modificar `main` ni `Xray-Normativa/`. No tocar runtime, servicios, firewall, puertos, certificados o red. Etapa 2 continúa ABIERTA.
+
+
+## Punto de control vigente — regularización documental y revisión formal de perfiles v1.1 (2026-11-03)
+
+**Regularización de evidencia VMess TLS**
+
+Se incorporó `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md` a partir de las capturas compartidas por el propietario. Resultado confirmado: Xray-core 26.10.31, proceso real bajo UID 999/GID 988, lectura del certificado y clave sintéticos del lease y handshake TLS 1.3 verificado en la segunda ejecución. La primera ejecución no se contabiliza como PASS. No se dispone de la transcripción íntegra de comandos/logs, por lo que no se inventan ruta, puerto, SNI, cipher suite ni causa del primer fallo.
+
+La evidencia no acredita `xray.service` administrado, runtime apply, activación de perfil, conectividad WAN ni aceptación formal de VMess. Etapa 2 permanece ABIERTA.
+
+**Estado del almacén de perfiles v1.1**
+
+- IMPLEMENTADO: `scripts/xray_profiles.py` y `modules/profiles.sh`, integrados en el menú.
+- VERIFICADO: pruebas sintéticas registradas, 51/51 scripts PASS; AST 18/18; Bash syntax global; ShellCheck/shfmt focal; `git diff --check`.
+- PUBLICADO/SINCRONIZADO: rama `design/user-identity-association-v1`, commits funcional y de reconciliación registrados en `PROJECT_STATE.md`; HEAD de partida previo a esta regularización: `b72d926dbfb7a57954d2c325405bf9e79e2fccee`.
+- ACEPTADO: pendiente de decisión formal del propietario.
+- Límites vigentes: no existe almacén live ni perfil real; no validación Xray por revisión; no composición integral; no registro activo; no activación/rollback; eliminación deshabilitada; sin rotación/recuperación de clave maestra.
+
+**Siguiente acción vigente — revisión formal de solo lectura**
+
+1. Contrastar el diseño y el código con Etapa 5 normativa y YAML.
+2. Auditar `scripts/xray_profiles.py`, `modules/profiles.sh`, integración del menú y `tests/xray_profiles.sh`; revisar controles criptográficos, filesystem, atomicidad, concurrencia, errores, estados y operaciones.
+3. Verificar qué requisitos están implementados, verificados, parciales, ausentes o divergentes; no confundir PASS sintéticos con validación live.
+4. No modificar código ni ejecutar operaciones sobre almacenes/secretos reales durante esta revisión.
+5. Presentar informe y solicitar decisión expresa del propietario sobre aceptación o correcciones.
+
+`Xray-Normativa/` y `main` permanecen inmutables. No usar `master.key` real, no crear perfiles live, no activar runtime ni tocar servicios, firewall, puertos, certificados o red. Etapa 2 sigue ABIERTA.

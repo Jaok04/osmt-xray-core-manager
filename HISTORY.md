@@ -807,3 +807,10 @@ El almacén soporta creación desde cero o JSON, consulta, modificación de meta
 Verificación ejecutada: 51/51 scripts PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck y shfmt focal PASS; `git diff --check` PASS. Pruebas de perfiles aisladas en almacenes temporales.
 
 Limitaciones: validación Xray nativa aún `not_run`; perfiles `not_validated`; estado activo `not_integrated`; no composición integral ni activación/rollback. No se creó `/var/lib/xray-manager/profiles` ni perfil real. No se modificó la conexión live, runtime, servicio, systemd, firewall, puertos, certificados o red. No se leyó/uso `master.key`. `Xray-Normativa/` y `main` intactas. Etapa 2 permanece ABIERTA.
+
+
+## 2026-11-03 — Regularización de continuidad y evidencia live VMess TLS
+
+Se incorporó el informe `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md` a partir de capturas compartidas por el propietario. La segunda ejecución de Xray-core 26.10.31 bajo UID 999/GID 988 leyó el certificado y la clave sintéticos del lease y completó un handshake TLS 1.3 verificado. La primera ejecución no se contabiliza como exitosa. No se inventaron comandos, rutas, puertos, SNI, cipher suite ni causa del primer intento, porque no se dispone de la transcripción íntegra.
+
+Se actualizaron `docs/CONTINUIDAD_DEL_PROYECTO.md`, `docs/IMPLEMENTACION_VMESS_TLS_CENTRALIZADO_PARCIAL.md`, `PROJECT_STATE.md` y `docs/PUNTO_CONTROL_ACTUAL.md` para reflejar la evidencia acotada, corregir el encabezado de perfiles v1.1 (ya publicado/sincronizado) y fijar la siguiente actividad: revisión formal de solo lectura del almacén de perfiles contra Etapa 5. No se modificó código ni documentación normativa. No se usó `master.key` real ni se creó perfil live; no runtime apply, servicio, firewall, puertos, certificados reales o WAN. VMess y Etapa 2 siguen sin aceptación integral.
