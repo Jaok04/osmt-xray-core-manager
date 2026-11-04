@@ -736,3 +736,49 @@ El propietario aceptó formalmente el **Snapshot Writer v1**, con las limitacion
 
 
 La decisión se registró en los documentos de estado, continuidad, punto de control y plan técnico. La publicación se registra en el commit de esta entrada una vez sincronizado con GitHub.
+
+
+## 2026-11-03 — Primera prueba live del administrador: Xray-core y VLESS-WS
+
+Se ejecutó el administrador en la VPS de desarrollo. Xray-core 26.10.31 (a4a3dff) quedó instalado desde el menú de administración, con verificación del release oficial, SHA-256, versión y geodata.
+
+El preflight del almacén VLESS detectó que /var/lib/xray-manager/connections estaba en modo 750, mientras install.sh y el almacén requieren 700. Tras verificar directorio real y propietario root:root, se ajustó únicamente a modo 700; el audit posterior pasó. No se modificó código.
+
+Desde el menú real se creó Prueba-VLESS-WS-Real (conn-1793749234-670662), modalidad vless_ws, escucha prevista 0.0.0.0:10001, path /ws, seguridad sin TLS y un slot. Se creó un usuario de prueba en el registro legacy de usuarios, que sigue siendo un arreglo JSON. La revisión neutral 1 quedó persistida; el UUID se omite del historial.
+
+La previsualización, recuperación del borrador y validación con /usr/local/bin/xray devolvieron Configuration OK. El audit del almacén reportó cero referencias rotas y cero huérfanos.
+
+No hubo runtime apply: Xray sigue inactivo, no existe /etc/xray/config.json ni xray.service, el puerto 10001 no escucha y no se tocó firewall. No se probó cliente externo/WAN. Xray advirtió que WebSocket está obsoleto/no recomendado y recomienda XHTTP H2/H3.
+
+Informe: docs/VALIDACION_LIVE_XRAY_VLESS_WS_2026-11-03.md. Código sin cambios; documentos actualizados localmente, sin commit/push/sync. Xray-Normativa/ y main intactas.
+
+## 2026-11-03 — Infraestructura inicial de candidatos runtime mediante perfiles
+
+El propietario aprobó la opción A para respetar la normativa de Etapa 5: la activación se realizará únicamente mediante el flujo de cambio de perfil activo. No se habilitará una ruta de activación de conexiones independientes.
+
+La inspección del repositorio confirmó que no existe todavía un gestor funcional de perfiles. Los adaptadores VLESS/VMess construyen configuraciones por conexión, no una configuración integral versionada de perfil. Por eso se implementó una primitiva aislada de staging y se dejó pendiente la integración con perfiles.
+
+Archivos nuevos:
+- scripts/xray_runtime_candidates.py
+- tests/xray_runtime_candidates.sh
+- docs/DISENO_IMPLEMENTACION_RUNTIME_PERFILES.md
+
+La primitiva lee un candidato regular sin symlink/hardlink, limita el tamaño a 16 MiB, comprueba JSON, valida con el binario Xray sobre los mismos bytes almacenados, aplica timeout, almacena config y manifiesto privados (0600) bajo directorios 0700, registra SHA-256 y procedencia profile_id/profile_revision, bloquea concurrencia y no sobrescribe revisiones existentes. El resultado es STAGED, con runtime_published=false y service_started=false.
+
+Prueba focal sintética PASS. Esta prueba no es validación de perfil real ni prueba de conectividad. La publicación runtime, el servicio y el arranque permanecen fuera del componente. No se escribió /etc/xray/config.json, no se ejecutó xray_service_prepare, no se creó unidad ni cuenta/grupo, no se inició Xray, no se habilitó autostart, no se abrió puerto ni se modificó firewall/certificados.
+
+La conexión Prueba-VLESS-WS-Real permanece draft y runtime_applied=false. No se modificó Xray-Normativa/ ni main. No commit/push/sync.
+
+### Corrección del aislamiento de tests/users.sh
+
+La regresión inicial detectó que tests/users.sh recargaba modules/users.sh con rutas por defecto y podía consultar el registro live de la VPS. La prueba se detuvo por límite de capacidad sin modificar el archivo real. Se fijaron las variables de rutas/lock temporales antes de cargar los módulos; las ejecuciones posteriores de tests/users.sh y tests/smoke.sh pasan. También se reforzaron los requisitos root-owned del almacén, bloqueo y binario del staging runtime.
+
+### Verificación final del staging runtime
+
+Regresión completa 50/50 PASS; AST Python 17/17 PASS; bash -n en todos los archivos shell PASS; ShellCheck/shfmt focal PASS; git diff --check PASS. Xray-core 26.10.31 real validó candidato sintético temporal y lo dejó en STAGED sin publicar runtime ni iniciar servicio. Los 14 archivos normativos comparados coinciden con la copia maestra; README.md es auxiliar no normativo. Sin commit/push/sync.
+
+## 2026-11-03 — Publicación autorizada de staging runtime y continuidad
+
+Por autorización expresa del propietario se publica en `design/user-identity-association-v1` el componente de staging de candidatos runtime por perfil, su prueba focal, la corrección de aislamiento de `tests/users.sh`, y los documentos de diseño, validación live, estado, continuidad y punto de control. Se excluye `scripts/__pycache__/` por ser un artefacto local.
+
+La publicación no crea ni activa el subsistema de perfiles, no publica configuración runtime, no prepara/inicia Xray, no abre puertos ni modifica firewall/certificados. `Xray-Normativa/` y `main` permanecen intactas. Etapa 2 continúa ABIERTA.

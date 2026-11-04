@@ -1,10 +1,10 @@
 # Punto de control actual — Xray Core Manager
 
-> Los puntos anteriores son registros históricos. El punto operativo vigente es el último bloque «Estado vigente — después de aceptar Snapshot Writer v1».
+> Los puntos anteriores son históricos. El punto operativo vigente es el último bloque «Validación live inicial de Xray-core y VLESS-WS — 2026-11-03».
 
 **Fecha del corte:** 2026-11-03
-**Tarea activa:** continuación del plan de backup/restore integral; Snapshot Writer v1 ya fue aceptado formalmente con limitaciones. Base, B-01/B-02/B-03 y A-16 publicadas; matriz de trazabilidad §10.20 añadida y diez negativos nuevos de marcador A-16 verificados localmente. La matriz y los diez negativos A-16 están publicados en `7f03efcf080465d8bced447549e29f8abb95248b`; VPS y GitHub sincronizados. Writer ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS (2026-11-03). No crear backups reales ni tocar runtime/secretos. Límites del paquete: 10.000 entradas ZIP y 512 MiB. VMess continúa técnicamente preparado para aceptación formal; VM-48 sigue pendiente.
-**Estado vigente:** contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA AL ALCANCE APROBADO; VM-38/39/40 focal PASS; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 VMess-TLS cliente-servidor loopback PASS. Cliente externo/WAN no probado y no requerido por el diseño aprobado. VMess está técnicamente preparado, pero VM-48 requiere aceptación expresa; Etapa 2 ABIERTA.
+**Tarea activa:** continuar la validación live de Xray Manager. Xray-core 26.10.31 instalado y VLESS-WS creado, persistido y validado; el borrador sigue sin aplicar a runtime. Próximo frente: revisar/diseñar el flujo de aplicación segura de configuración, sin iniciar servicio ni abrir red hasta autorización expresa. Backup/restore integral sigue pendiente; Snapshot Writer v1 aceptado con limitaciones; VM-48 pendiente.
+**Estado vigente:** contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA; VM-38/39/40 focal PASS; suite 40/40 PASS; VM-46 live PASS; VM-47 VMess-TLS loopback PASS. Adicionalmente, Xray-core 26.10.31 está instalado en la VPS; VLESS-WS (conn-1793749234-670662) está creado/persistido/validado como draft, sin runtime apply ni listener. Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -580,3 +580,54 @@ Estado: writer y correcciones locales, no publicados ni aceptados formalmente. H
 **Estado del componente:** Snapshot Writer v1 **ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS** por decisión expresa del propietario del 2026-11-03. La evidencia técnica A-01–A-19 permanece en §10.20 del plan; la aceptación y sus límites están en §10.22.
 
 **Siguiente punto de trabajo:** backup/restore integral, incluyendo diseño y validación del flujo de restauración y verify independiente, previa autorización y contraste normativo. No ejecutar backup real, restore, verify independiente, leer secretos/master.key ni aplicar cambios al runtime hasta que exista autorización específica. **Etapa 2 permanece ABIERTA**; esta aceptación es sólo del componente Snapshot Writer v1.
+
+
+## Validación live inicial de Xray-core y VLESS-WS — 2026-11-03
+
+**Estado:** instalación real de Xray-core PASS; creación/persistencia/recuperación/validación VLESS-WS PASS; runtime apply y conectividad cliente externa PENDIENTES.
+
+- Xray-core 26.10.31 (a4a3dff) instalado mediante el menú de administración. Release/ZIP SHA-256, versión del binario y geodata verificados.
+- Se ajustó /var/lib/xray-manager/connections de root:root 750 a root:root 700, alineándolo con la política de install.sh y el contrato del almacén VLESS. No se modificó código.
+- Conexión Prueba-VLESS-WS-Real, ID conn-1793749234-670662, vless_ws, 0.0.0.0:10001, WebSocket /ws, seguridad none, un slot. Estado draft, runtime_applied=false, revisión 1.
+- Usuario de prueba Cliente-Prueba-VLESS-WS creado con el gestor legacy porque el archivo live de usuarios sigue siendo un arreglo JSON. UUID omitido de la documentación.
+- Asistente y recuperación del Manager validaron la configuración; segunda recuperación con XRAY_VALIDATION_BINARY=/usr/local/bin/xray confirmó Configuration OK usando el binario instalado.
+- Auditoría del almacén: cero referencias rotas, cero archivos huérfanos y cero secretos huérfanos.
+- Xray permanece inactivo; /etc/xray/config.json y xray.service no existen; puerto 10001 no escucha. Sin firewall, runtime apply, certificados ni WAN.
+- Xray advierte que WebSocket está obsoleto/no recomendado y recomienda XHTTP H2/H3.
+- Informe: docs/VALIDACION_LIVE_XRAY_VLESS_WS_2026-11-03.md.
+
+**Siguiente punto:** revisar y autorizar por separado el diseño/implementación del flujo de aplicación runtime. La inspección del menú actual no encontró una acción que publique esta configuración en /etc/xray/config.json; no preparar/iniciar servicio ni abrir red hasta autorización expresa. Etapa 2 permanece ABIERTA.
+
+## Punto de control — candidatos runtime vinculados a perfiles (2026-11-03)
+
+**Decisión:** opción A aprobada; activación exclusivamente mediante el flujo de perfil activo de Etapa 5.
+
+**Hallazgo:** no existe todavía un gestor funcional de perfiles. El directorio de datos preparado por install.sh no equivale a implementación. Los adaptadores VLESS/VMess generan configuración por conexión y no una composición integral de perfil.
+
+**Implementación local:**
+- Nuevo `scripts/xray_runtime_candidates.py`.
+- Nueva prueba `tests/xray_runtime_candidates.sh`.
+- Diseño: `docs/DISENO_IMPLEMENTACION_RUNTIME_PERFILES.md`.
+- La prueba focal sintética PASS: staging, hash/manifiesto, permisos, no sobrescritura, JSON inválido, rechazo Xray simulado, symlink, hardlink y traversal.
+- La validación Xray se ejecuta sobre la copia privada exacta que se almacena, mitigando TOCTOU.
+- Almacén de candidatos privado: directorios 0700; config/manifiesto 0600; revisión inmutable y bloqueo.
+
+**No es activación:** no se escribe /etc/xray/config.json; no se prepara systemd ni cuenta/grupo; no se inicia/habilita Xray; no se modifica firewall, puerto 10001, certificados ni reglas de red. No se usa conexión independiente como origen.
+
+La conexión Prueba-VLESS-WS-Real sigue draft y runtime_applied=false. Etapa 2 sigue ABIERTA. La integración de publicación queda bloqueada hasta implementar perfiles y el flujo de activación de Etapa 5.
+
+**Estado Git:** rama design/user-identity-association-v1, HEAD de base d632908300441341d84db8573c417f14002c3f70; cambios locales previos de documentación se preservan. Sin commit/push/sync. Xray-Normativa/ sin modificar y main intacta.
+
+### Corrección de aislamiento de prueba
+
+Se corrigió tests/users.sh para fijar las rutas de datos y lock temporales antes de cargar y volver a cargar módulos. La ejecución inicial había detectado el usuario de prueba live en el archivo real y se detuvo por capacidad; no escribió ni alteró el registro live. Tras la corrección, tests/users.sh y tests/smoke.sh pasan.
+
+### Verificación final
+
+50/50 scripts PASS; Python AST 17/17; bash -n en todos los archivos shell PASS; ShellCheck y shfmt focal PASS; git diff --check PASS. Xray-core 26.10.31 real validó un candidato sintético temporal: STAGED, runtime_published=false, service_started=false. Comparación de normativa: 14/14 MATCH; README.md es auxiliar no normativo. Sin commit/push/sync.
+
+## Publicación GitHub — staging de candidatos runtime por perfil (2026-11-03)
+
+Por autorización expresa, los cambios pendientes fueron preparados para publicación en la rama autorizada `design/user-identity-association-v1`: primitiva de staging, prueba focal, aislamiento de `tests/users.sh`, documentación de diseño, validación live y registros de estado/continuidad/historial. El artefacto local `scripts/__pycache__/` se excluye.
+
+La publicación es exclusivamente de código y documentación. No implica que exista ya un gestor de perfiles ni que el runtime esté implementado/activado. La conexión de prueba continúa draft, sin runtime apply y sin listener. `Xray-Normativa/` y `main` no se modifican. Etapa 2 sigue ABIERTA.

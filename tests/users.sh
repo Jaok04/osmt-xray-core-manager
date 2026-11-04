@@ -4,6 +4,12 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_ROOT="$ROOT"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
+# Mantener los módulos aislados de los registros reales incluso al volver a cargarlos.
+export XRAY_MANAGER_CONNECTIONS_DIR="$TMP/data"
+export XRAY_MANAGER_CONNECTIONS_FILE="$TMP/data/connections.json"
+export XRAY_MANAGER_USERS_DIR="$TMP/data"
+export XRAY_MANAGER_USERS_FILE="$TMP/data/users.json"
+export XRAY_MANAGER_INTEGRITY_LOCK="$TMP/run/connections.lock"
 source "$ROOT/modules/connections.sh"
 source "$ROOT/modules/users.sh"
 source "$ROOT/modules/vless_model.sh"
