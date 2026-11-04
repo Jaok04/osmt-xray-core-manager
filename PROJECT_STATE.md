@@ -778,3 +778,17 @@ Se excluye deliberadamente `scripts/__pycache__/` por ser un artefacto local de 
 - Se eliminaron coerciones de tipo que podían ocultar datos malformados y producir excepciones incidentales. Los errores de esquema se reportan como `ProfileError`; la lectura inválida no modifica el archivo.
 - Prueba focal ampliada con 18 casos malformados y control de preservación byte a byte.
 - PF-07: CORREGIDO dentro del contrato y pruebas documentados. Verificación: 51/51 scripts, AST 18/18, bash -n, ShellCheck focal, shfmt y git diff --check PASS. Publicado y sincronizado en `85c637c93778780c98589dc2f791b190daeedfd6` sobre `design/user-identity-association-v1`; árbol limpio. No se declara aceptación formal ni cierre de Etapa 5/Etapa 2.
+
+## Correcciones PF-08/PF-09/PF-10 del almacén de perfiles — 2026-11-04
+
+Autorización del propietario aplicada en la rama design/user-identity-association-v1, host Implementación-Xray, ruta /opt/xray-manager.
+
+- PF-08: validación previa de tipos, límites y texto imprimible de descripción/notas; configuración validada antes de publicar una nueva revisión. Cuatro casos negativos verifican que no se crea revisión huérfana.
+- PF-09: reconciliación bajo lock de revisiones definitivas posteriores al current_revision confirmado. Sólo se elimina una revisión con directorio/archivos seguros, contenido exacto y manifiesto coherente; artefactos no verificables se preservan y reportan.
+- PF-10: contrato estricto de metadatos: conjunto exacto de campos, tipos no coercitivos, fechas UTC reales, límites y caracteres de texto, IDs de revisión y coherencia de estado/punteros.
+
+Pruebas focales: tests/xray_profiles.sh PASS; PF-08 cuatro casos, PF-09 SIGKILL después del rename y recuperación en la siguiente operación, PF-10 dieciocho metadatos malformados rechazados. Python AST 18/18, py_compile del módulo modificado, bash -n global, ShellCheck focal y git diff --check PASS. shfmt -d -i 4 tests/xray_profiles.sh muestra diferencias de estilo preexistentes (indentación de bloques if en el archivo); no se reformateó el archivo completo para evitar cambios ajenos al alcance.
+
+Informe: docs/AUDITORIA_CORRECCIONES_PF08_PF09_PF10_2026-11-04.md. Regresión general tests/*.sh finalizada: 51/51 scripts PASS (exit code 0).
+
+Límites: sólo almacenes temporales y claves sintéticas. No se leyó master.key, no se crearon perfiles live, no se tocó runtime/servicios/certificados/firewall/puertos/red. Xray-Normativa/ y main intactas. No publicado en GitHub; publicación requiere autorización expresa posterior. Almacén v1.1 no aceptado formalmente; Etapa 5 y Etapa 2 siguen ABIERTAS.

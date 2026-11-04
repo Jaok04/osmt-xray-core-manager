@@ -330,6 +330,7 @@ class ProfileStore:
             fcntl.flock(fd, fcntl.LOCK_EX)
             self.recover_transaction()
             self._cleanup_report = self.cleanup_orphan_temps()
+            self._cleanup_report["orphan_revisions_removed"] = self.cleanup_orphan_revisions()
             yield
         finally:
             with contextlib.suppress(OSError):
@@ -471,6 +472,51 @@ class ProfileStore:
         for anomaly in report["anomalies"]:
             print(f"ADVERTENCIA: temporal huérfano conservado: {anomaly}", file=sys.stderr)
         return report
+
+    def cleanup_orphan_revisions(self) -> int:
+        """Remove only well-formed revisions newer than each profile's committed pointer."""
+        removed = 0
+        for profile in list(self.profiles.iterdir()):
+            if not re.fullmatch(r"profile-[0-9a-f]{32}", profile.name):
+                continue
+            if self._cleanup_lstat(profile, "dir") is None:
+                continue
+            try:
+                metadata = self.load_metadata(profile.name)
+            except ProfileError as exc:
+                self._cleanup_anomaly(self._cleanup_report, profile, f"metadatos no verificables; no se concilian revisiones: {exc}")
+                continue
+            current = metadata["current_revision"]
+            current_number = int(current[1:]) if current is not None else 0
+            revisions = profile / "revisions"
+            if self._cleanup_lstat(revisions, "dir") is None:
+                continue
+            for revision_dir in list(revisions.iterdir()):
+                match = re.fullmatch(r"r([0-9]{6})", revision_dir.name)
+                if not match or int(match.group(1)) <= current_number:
+                    continue
+                if self._cleanup_lstat(revision_dir, "dir") is None:
+                    self._cleanup_anomaly(self._cleanup_report, revision_dir, "revisión posterior al puntero actual insegura; se conserva")
+                    continue
+                try:
+                    children = {child.name for child in revision_dir.iterdir()}
+                    if children != {"config.enc.json", "manifest.json"}:
+                        raise ProfileError("contenido de revisión inesperado")
+                    for child in revision_dir.iterdir():
+                        if self._cleanup_lstat(child, "file") is None:
+                            raise ProfileError("archivo de revisión inseguro")
+                    manifest = strict_json(read_regular(revision_dir / "manifest.json"), "Manifiesto huérfano")
+                    if (not isinstance(manifest, dict) or manifest.get("profile_id") != profile.name or
+                            manifest.get("revision") != revision_dir.name):
+                        raise ProfileError("identidad del manifiesto no coincide")
+                except (OSError, ProfileError) as exc:
+                    self._cleanup_anomaly(self._cleanup_report, revision_dir, f"revisión no verificable; se conserva: {exc}")
+                    continue
+                import shutil
+                shutil.rmtree(revision_dir)
+                self._fsync_dir(revisions)
+                removed += 1
+        return removed
 
     def _fsync_dir(self, directory: pathlib.Path) -> None:
         fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
@@ -734,15 +780,59 @@ class ProfileStore:
     def load_metadata(self, profile_id: str) -> dict:
         path = self.profile_dir(profile_id) / "metadata.json"
         value = strict_json(read_regular(path), "Metadatos")
-        if (not isinstance(value, dict) or value.get("schema_version") != 1 or
-                value.get("profile_id") != profile_id or not isinstance(value.get("name"), str) or
-                not isinstance(value.get("config_present"), bool)):
-            fail("Metadatos de perfil inconsistentes o con esquema no reconocido.")
-        current = value.get("current_revision")
-        if current is not None and not re.fullmatch(r"r[0-9]{6}", str(current)):
-            fail("La revisión actual del perfil no tiene un identificador válido.")
-        if bool(current) != value["config_present"]:
+        fields = {
+            "schema_version", "profile_id", "name", "description", "notes",
+            "created_at", "modified_at", "current_revision",
+            "last_validated_revision", "validation_status", "config_present",
+        }
+        if not isinstance(value, dict) or set(value) != fields:
+            fail("Los metadatos contienen campos ausentes, adicionales o una estructura inválida.")
+        if type(value["schema_version"]) is not int or value["schema_version"] != 1:
+            fail("Versión de esquema de metadatos no válida.")
+        if value["profile_id"] != profile_id:
+            fail("La identidad de los metadatos no coincide con el perfil.")
+        name = value["name"]
+        if (not isinstance(name, str) or not name or len(name) > 80 or
+                name != " ".join(name.strip().split()) or
+                any(not char.isprintable() for char in name)):
+            fail("Nombre de perfil inválido en los metadatos.")
+        for field in ("description", "notes"):
+            item = value[field]
+            if (not isinstance(item, str) or len(item) > 4096 or "\x00" in item or
+                    any(not char.isprintable() and char not in "\n\t" for char in item)):
+                fail(f"El campo {field} de los metadatos no es válido.")
+        created = self._validate_catalog_timestamp(value["created_at"], "created_at de metadatos")
+        modified = self._validate_catalog_timestamp(value["modified_at"], "modified_at de metadatos")
+        if modified < created:
+            fail("modified_at es anterior a created_at en los metadatos.")
+        current = value["current_revision"]
+        last_validated = value["last_validated_revision"]
+        for field, revision in (("current_revision", current), ("last_validated_revision", last_validated)):
+            if revision is not None and (not isinstance(revision, str) or not re.fullmatch(r"r[0-9]{6}", revision)):
+                fail(f"El campo {field} no contiene un identificador de revisión válido.")
+        if type(value["config_present"]) is not bool or bool(current) != value["config_present"]:
             fail("El indicador de configuración no coincide con la revisión actual.")
+        if last_validated is not None and (current is None or int(last_validated[1:]) > int(current[1:])):
+            fail("La última revisión validada no puede ser posterior a la revisión actual.")
+        if (not isinstance(value["validation_status"], str) or
+                value["validation_status"] not in {"not_validated", "pending", "valid", "invalid"}):
+            fail("Estado de validación de metadatos no reconocido.")
+        if value["validation_status"] == "not_validated" and last_validated is not None:
+            fail("Un perfil no validado no puede declarar una revisión validada.")
+        if value["validation_status"] in {"valid", "invalid"} and last_validated is None:
+            fail("Un estado de validación final requiere identificar la revisión validada.")
+        revisions_dir = self.profile_dir(profile_id) / "revisions"
+        for field, revision in (("current_revision", current), ("last_validated_revision", last_validated)):
+            if revision is None:
+                continue
+            revision_path = revisions_dir / revision
+            try:
+                info = revision_path.lstat()
+            except FileNotFoundError:
+                fail(f"El campo {field} referencia una revisión inexistente.")
+            if (not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_gid != 0 or
+                    stat.S_IMODE(info.st_mode) != 0o700):
+                fail(f"El campo {field} referencia un directorio de revisión inseguro.")
         return value
 
     def save_metadata(self, profile_id: str, metadata: dict) -> None:
@@ -842,6 +932,12 @@ class ProfileStore:
         return revision
 
     def create(self, name: str, description: str = "", notes: str = "", config_data: bytes | None = None, source: str = "zero") -> dict:
+        for field, value in (("description", description), ("notes", notes)):
+            if (not isinstance(value, str) or len(value) > 4096 or "\x00" in value or
+                    any(not char.isprintable() and char not in "\n\t" for char in value)):
+                fail(f"El campo {field} debe ser texto imprimible de hasta 4096 caracteres.")
+        if config_data is not None and (not isinstance(config_data, bytes) or not 1 <= len(config_data) <= MAX_CONFIG):
+            fail("Configuración vacía o fuera del límite permitido.")
         with self.locked():
             catalog = self.load_catalog()
             clean_name = self.unique_name(catalog, name)
@@ -1015,6 +1111,12 @@ class ProfileStore:
         with self.locked():
             catalog = self.load_catalog()
             meta = self.load_metadata(profile_id)
+            for field, value in (("description", description), ("notes", notes)):
+                if value is not None and (not isinstance(value, str) or len(value) > 4096 or "\x00" in value or
+                        any(not char.isprintable() and char not in "\n\t" for char in value)):
+                    fail(f"El campo {field} debe ser texto imprimible de hasta 4096 caracteres.")
+            if config_data is not None and (not isinstance(config_data, bytes) or not 1 <= len(config_data) <= MAX_CONFIG):
+                fail("Configuración vacía o fuera del límite permitido.")
             if name is not None:
                 meta["name"] = self.unique_name(catalog, name, exclude=profile_id)
             if description is not None:

@@ -765,3 +765,17 @@ No se usó `master.key`, no se creó ni modificó almacén live, y no se tocó r
 Se endureció `ProfileStore.load_catalog()` con esquema estricto, tipos exactos, límite de registros, campos obligatorios/exclusivos, ID `profile-` + 32 hex, nombre normalizado sin controles, timestamps UTC válidos y orden cronológico; se rechazan duplicados. Los errores se convierten en `ProfileError` y el archivo inválido se conserva sin mutación.
 
 La prueba focal `tests/xray_profiles.sh` pasó, incluidos 18 casos malformados con almacén temporal y clave sintética. Verificación final: 51/51 scripts, AST 18/18, bash -n, ShellCheck focal, shfmt y `git diff --check` PASS. Revisión final completada y cambios publicados/sincronizados en `design/user-identity-association-v1`, commit `85c637c93778780c98589dc2f791b190daeedfd6`; árbol Git limpio. No se usaron secretos ni almacén live; no se tocó runtime ni normativa.
+
+## Correcciones PF-08/PF-09/PF-10 del almacén de perfiles — 2026-11-04
+
+Autorización del propietario aplicada en la rama design/user-identity-association-v1, host Implementación-Xray, ruta /opt/xray-manager.
+
+- PF-08: validación previa de tipos, límites y texto imprimible de descripción/notas; configuración validada antes de publicar una nueva revisión. Cuatro casos negativos verifican que no se crea revisión huérfana.
+- PF-09: reconciliación bajo lock de revisiones definitivas posteriores al current_revision confirmado. Sólo se elimina una revisión con directorio/archivos seguros, contenido exacto y manifiesto coherente; artefactos no verificables se preservan y reportan.
+- PF-10: contrato estricto de metadatos: conjunto exacto de campos, tipos no coercitivos, fechas UTC reales, límites y caracteres de texto, IDs de revisión y coherencia de estado/punteros.
+
+Pruebas focales: tests/xray_profiles.sh PASS; PF-08 cuatro casos, PF-09 SIGKILL después del rename y recuperación en la siguiente operación, PF-10 dieciocho metadatos malformados rechazados. Python AST 18/18, py_compile del módulo modificado, bash -n global, ShellCheck focal y git diff --check PASS. shfmt -d -i 4 tests/xray_profiles.sh muestra diferencias de estilo preexistentes (indentación de bloques if en el archivo); no se reformateó el archivo completo para evitar cambios ajenos al alcance.
+
+Informe: docs/AUDITORIA_CORRECCIONES_PF08_PF09_PF10_2026-11-04.md. Regresión general tests/*.sh finalizada: 51/51 scripts PASS (exit code 0).
+
+Límites: sólo almacenes temporales y claves sintéticas. No se leyó master.key, no se crearon perfiles live, no se tocó runtime/servicios/certificados/firewall/puertos/red. Xray-Normativa/ y main intactas. No publicado en GitHub; publicación requiere autorización expresa posterior. Almacén v1.1 no aceptado formalmente; Etapa 5 y Etapa 2 siguen ABIERTAS.

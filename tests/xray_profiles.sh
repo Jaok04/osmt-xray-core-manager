@@ -688,4 +688,97 @@ assert store.load_catalog() == good
 print(f"PASS: PF-07 rejected {len(cases)} malformed catalog cases with controlled errors; valid catalog preserved.")
 PFCATALOG
 
+
+# PF-08/PF-09/PF-10: límites previos, reconciliación post-crash y contrato estricto de metadatos.
+python3 - "$ROOT" "$TMP/pf08-pf10" <<'PFPERSISTENCE'
+import copy, json, os, pathlib, signal, stat, sys
+base = pathlib.Path(sys.argv[2]); base.mkdir(mode=0o700)
+key = base / "synthetic.key"; key.write_bytes(b"S" * 32); key.chmod(0o600)
+sys.path.insert(0, str(pathlib.Path(sys.argv[1]) / "scripts"))
+import xray_profiles as xp
+store = xp.ProfileStore(str(base / "store"), str(key))
+created = store.create("Perfil de auditoría", config_data=b'{"v":1}')
+pid = created["profile_id"]
+profile = store.profiles / pid
+metadata_path = profile / "metadata.json"
+
+# PF-08: límites rechazados antes de publicar una revisión.
+before = sorted(p.name for p in (profile / "revisions").iterdir())
+for kwargs in (
+    {"description": "D" * 4097, "config_data": b'{"v":2}'},
+    {"notes": "N" * 4097, "config_data": b'{"v":2}'},
+    {"config_data": b""},
+    {"config_data": b"x" * (xp.MAX_CONFIG + 1)},
+):
+    try:
+        store.update(pid, **kwargs)
+    except xp.ProfileError:
+        pass
+    else:
+        raise AssertionError(f"PF-08: accepted invalid update {list(kwargs)}")
+    assert sorted(p.name for p in (profile / "revisions").iterdir()) == before
+assert store.show(pid)["metadata"]["current_revision"] == "r000001"
+
+# PF-09: kill exactly after final revision rename + directory fsync entry.
+original_fsync = xp.os.fsync
+revisions_dir = profile / "revisions"
+rev_stat = revisions_dir.stat()
+child = os.fork()
+if child == 0:
+    def kill_after_revision_publish(fd):
+        info = os.fstat(fd)
+        if stat.S_ISDIR(info.st_mode) and (info.st_dev, info.st_ino) == (rev_stat.st_dev, rev_stat.st_ino):
+            os.kill(os.getpid(), signal.SIGKILL)
+        return original_fsync(fd)
+    xp.os.fsync = kill_after_revision_publish
+    store.update(pid, config_data=b'{"v":2}')
+    os._exit(99)
+_, status = os.waitpid(child, 0)
+assert os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGKILL
+assert (revisions_dir / "r000002").is_dir(), "fault injection must leave published orphan"
+# The next exclusive store operation must remove the uncommitted revision.
+assert store.show(pid)["metadata"]["current_revision"] == "r000001"
+assert not (revisions_dir / "r000002").exists(), "PF-09: orphan revision survived recovery"
+assert (revisions_dir / "r000001").is_dir(), "PF-09: committed revision was removed"
+
+# PF-10: exact schema, exact types, real UTC timestamps and cross-field consistency.
+good = json.loads(metadata_path.read_text())
+cases = []
+def add(label, mutate):
+    value = copy.deepcopy(good); mutate(value); cases.append((label, value))
+add("boolean schema", lambda v: v.update(schema_version=True))
+add("string schema", lambda v: v.update(schema_version="1"))
+add("extra key", lambda v: v.update(extra="x"))
+add("missing key", lambda v: v.pop("notes"))
+add("boolean current revision", lambda v: v.update(current_revision=True))
+add("numeric current revision", lambda v: v.update(current_revision=1))
+add("boolean config flag", lambda v: v.update(config_present=1))
+add("invalid date", lambda v: v.update(created_at="2026-02-30T00:00:00Z"))
+add("modified before created", lambda v: v.update(modified_at="2000-01-01T00:00:00Z"))
+add("description type", lambda v: v.update(description=[]))
+add("description too long", lambda v: v.update(description="D"*4097))
+add("notes NUL", lambda v: v.update(notes="a\x00b"))
+add("invalid status type", lambda v: v.update(validation_status=[]))
+add("unknown status", lambda v: v.update(validation_status="unknown"))
+add("last validated after current", lambda v: v.update(last_validated_revision="r999999"))
+add("not validated with revision", lambda v: v.update(last_validated_revision="r000001"))
+add("current revision missing on disk", lambda v: v.update(current_revision="r000002"))
+add("final status without validated revision", lambda v: v.update(validation_status="valid"))
+for label, malformed in cases:
+    metadata_path.write_text(json.dumps(malformed))
+    metadata_path.chmod(0o600)
+    try:
+        store.load_metadata(pid)
+    except xp.ProfileError:
+        pass
+    except Exception as exc:
+        raise AssertionError(f"PF-10 {label}: uncontrolled {type(exc).__name__}: {exc}") from exc
+    else:
+        raise AssertionError(f"PF-10 {label}: malformed metadata accepted")
+metadata_path.write_text(json.dumps(good))
+metadata_path.chmod(0o600)
+assert store.load_metadata(pid) == good
+print(f"PASS: PF-08 prevalidation ({4} cases), PF-09 SIGKILL after revision publication/reconciliation, PF-10 rejected {len(cases)} malformed metadata cases.")
+PFPERSISTENCE
+
 printf '%s\n' 'OK: almacén, menú, copias independientes, revisiones, restauración no destructiva, concurrencia, nombres únicos y controles de filesystem.'

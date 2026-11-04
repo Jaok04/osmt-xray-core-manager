@@ -886,3 +886,17 @@ Hallazgo bloqueante PF-01: fault injection en almacén temporal confirmó que si
 Se corrigió en `docs/DISENO_IMPLEMENTACION_PERFILES.md` una descripción inexacta del hash del manifiesto: el código guarda SHA-256 del ciphertext y tamaño del plaintext, no SHA-256 del plaintext. Informe completo: `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`.
 
 **Estado:** código sin cambios; perfiles v1.1 permanece publicado/sincronizado, pero NO aceptado formalmente. Siguiente acción: decisión expresa del propietario sobre autorizar la corrección PF-01/PF-02 y las pruebas de fallo/recuperación. No leer clave maestra real, no crear perfiles live ni activar runtime. Etapa 2 permanece ABIERTA.
+
+## Correcciones PF-08/PF-09/PF-10 del almacén de perfiles — 2026-11-04
+
+Autorización del propietario aplicada en la rama design/user-identity-association-v1, host Implementación-Xray, ruta /opt/xray-manager.
+
+- PF-08: validación previa de tipos, límites y texto imprimible de descripción/notas; configuración validada antes de publicar una nueva revisión. Cuatro casos negativos verifican que no se crea revisión huérfana.
+- PF-09: reconciliación bajo lock de revisiones definitivas posteriores al current_revision confirmado. Sólo se elimina una revisión con directorio/archivos seguros, contenido exacto y manifiesto coherente; artefactos no verificables se preservan y reportan.
+- PF-10: contrato estricto de metadatos: conjunto exacto de campos, tipos no coercitivos, fechas UTC reales, límites y caracteres de texto, IDs de revisión y coherencia de estado/punteros.
+
+Pruebas focales: tests/xray_profiles.sh PASS; PF-08 cuatro casos, PF-09 SIGKILL después del rename y recuperación en la siguiente operación, PF-10 dieciocho metadatos malformados rechazados. Python AST 18/18, py_compile del módulo modificado, bash -n global, ShellCheck focal y git diff --check PASS. shfmt -d -i 4 tests/xray_profiles.sh muestra diferencias de estilo preexistentes (indentación de bloques if en el archivo); no se reformateó el archivo completo para evitar cambios ajenos al alcance.
+
+Informe: docs/AUDITORIA_CORRECCIONES_PF08_PF09_PF10_2026-11-04.md. Regresión general tests/*.sh finalizada: 51/51 scripts PASS (exit code 0).
+
+Límites: sólo almacenes temporales y claves sintéticas. No se leyó master.key, no se crearon perfiles live, no se tocó runtime/servicios/certificados/firewall/puertos/red. Xray-Normativa/ y main intactas. No publicado en GitHub; publicación requiere autorización expresa posterior. Almacén v1.1 no aceptado formalmente; Etapa 5 y Etapa 2 siguen ABIERTAS.
