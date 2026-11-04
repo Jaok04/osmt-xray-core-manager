@@ -1227,7 +1227,7 @@ El estado vigente del proyecto está consolidado en PROJECT_STATE.md y docs/PUNT
 - **Repositorio:** Jaok04/xray-core-manager.
 - **Rama autorizada:** design/user-identity-association-v1. No modificar main.
 - **VPS desarrollo:** /opt/xray-manager. No tocar la VPS de pruebas.
-- **Identidad de trabajo verificada al inicio de esta actualización:** VPS y GitHub coincidían en 856662b0981ad4457f4e4bba72c41735e998f958, con árbol limpio. La actualización documental se publicará en la misma rama; volver a verificar SHA remoto y checkout después del push.
+- **Sincronización documental:** la reconciliación se publicó en 94556849316852625fbcf98d8ea0796600097088 en design/user-identity-association-v1. GitHub confirmó el mismo SHA y /opt/xray-manager quedó limpio y alineado. Volver a verificar el HEAD real al iniciar cada sesión.
 - **Normativa:** Xray-Normativa/ es inmutable sin consentimiento explícito. Los 14 archivos Markdown/YAML coinciden byte a byte con /root/Xray_Manager_Documentacion_Final_2026-10-31. No editar ni regenerar.
 - **U-01:** aceptada formalmente.
 - **Diseño runtime:** aprobado para R-01–R-05 exclusivamente aisladas; la identidad debe ser profile_id + revision conforme a Etapa 5 §3.1. R-06/live no autorizada.
