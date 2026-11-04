@@ -101,3 +101,7 @@ No se detectaron defectos bloqueantes dentro del alcance probado.
 **C-05C: PASS técnico — implementada, verificada y auditada localmente.**
 
 El propietario aceptó formalmente C-05C el 2026-11-04 y autorizó publicar sus cambios y actualizar la documentación. La publicación y sincronización quedan registradas en el addendum final. Esta aceptación no cierra la totalidad de C-05 ni autoriza C-05D/E/F. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Registro de aceptación y publicación
+
+El propietario aceptó formalmente C-05C el 2026-11-04. Publicación: commit `58c273a18ea32c1feddc02012d0318952c7a0689` (`58c273a`) en `design/user-identity-association-v1`, push fast-forward.

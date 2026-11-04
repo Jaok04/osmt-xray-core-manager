@@ -983,3 +983,5 @@ Los documentos de continuidad y diseño se actualizaron para reflejar C-05A/C-05
 - Siguiente fase posible: C-05D (historial/comparación), pendiente de autorización independiente. C-05E/F también requieren autorizaciones propias.
 - Etapa 5 y Etapa 2 permanecen ABIERTAS.
 - No se crearon almacenes live ni se leyó clave maestra real. No hubo cambios de runtime/infraestructura, `main`, `Xray-Normativa/` ni VPS de pruebas.
+
+**SHA publicado C-05C:** `58c273a18ea32c1feddc02012d0318952c7a0689` (`58c273a`), rama `design/user-identity-association-v1`; push fast-forward y sincronización del checkout de desarrollo verificados.

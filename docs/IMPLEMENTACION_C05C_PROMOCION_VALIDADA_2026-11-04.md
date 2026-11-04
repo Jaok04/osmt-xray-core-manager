@@ -116,3 +116,7 @@ Xray real: `Xray 26.10.31`, SHA-256 `cc4b84d3069569f297a61f04b914f2bb37e9d202fd7
 - No se creó commit, no se hizo push ni se sincronizó GitHub.
 
 C-05C queda implementada, verificada y auditada localmente, pendiente de aceptación formal. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Registro de publicación
+
+Aceptación formal y publicación registradas el 2026-11-04. Commit: `58c273a18ea32c1feddc02012d0318952c7a0689` (`58c273a`), rama `design/user-identity-association-v1`; push fast-forward.

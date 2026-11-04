@@ -1127,3 +1127,5 @@ El propietario aceptó formalmente el cierre integral de C-04. C-04A (eliminaci�
 - La publicación fue fast-forward, sin force push. El commit y HEAD remoto se consultan en el registro Git de esta publicación.
 - C-05D/E/F no están autorizadas. Etapa 5 y Etapa 2 permanecen ABIERTAS.
 - No se crearon almacenes live, no se leyó la clave maestra real, no se modificó runtime/infraestructura ni VPS de pruebas.
+
+**Referencia Git de publicación C-05C:** commit `58c273a18ea32c1feddc02012d0318952c7a0689` (`58c273a`) en `design/user-identity-association-v1`; push fast-forward verificado desde el HEAD base `6ab158f436d2d88755d70e954114efb4fa2f6129`.

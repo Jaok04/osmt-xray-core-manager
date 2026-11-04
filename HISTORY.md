@@ -1050,3 +1050,5 @@ El propietario aceptó C-05C y autorizó expresamente publicar los cambios y act
 Validación antes de publicar: 13/13 pruebas focales C-05C; 38/38 pruebas Python combinadas C-05A/B/C; suites shell C-01/C-02, C-03, C-04A/B/C y perfiles PASS; git diff --check PASS. La publicación se realizó mediante commit normal y push fast-forward, sin force push. C-05C queda aceptada, publicada y sincronizada.
 
 C-05D/E/F siguen pendientes de autorizaciones independientes. Etapa 5 y Etapa 2 permanecen ABIERTAS. No se modificaron main, Xray-Normativa/, almacenes live, runtime, dependencias ni VPS de pruebas; no se leyó clave maestra real.
+
+Publicación GitHub C-05C verificada: commit `58c273a18ea32c1feddc02012d0318952c7a0689` (`58c273a`), push fast-forward desde `6ab158f436d2d88755d70e954114efb4fa2f6129` a `design/user-identity-association-v1`. La rama remota quedó en ese SHA tras el push.

@@ -995,3 +995,5 @@ La base Git sigue siendo `6ab158f436d2d88755d70e954114efb4fa2f6129` en `design/u
 El propietario aceptó formalmente C-05C y autorizó publicar cambios y actualizar documentación. C-05C queda ACEPTADA, PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Evidencias en los documentos de implementación y auditoría C-05C. Pruebas: 13/13 focal y 38/38 regresión Python C-05A/B/C; regresiones shell C-01/C-02, C-03, C-04A/B/C y perfiles PASS.
 
 C-05D/E/F siguen sin autorización. Etapa 5 y Etapa 2 permanecen ABIERTAS. La publicación no alteró `main`, `Xray-Normativa/`, runtime, almacenes live, dependencias, servicios, certificados, firewall, puertos, red ni VPS de pruebas; no se leyó la clave maestra real.
+
+**Publicación C-05C:** commit `58c273a18ea32c1feddc02012d0318952c7a0689` (`58c273a`) en `design/user-identity-association-v1`; push fast-forward verificado. La sincronización del checkout de desarrollo en `/opt/xray-manager` corresponde al mismo commit.

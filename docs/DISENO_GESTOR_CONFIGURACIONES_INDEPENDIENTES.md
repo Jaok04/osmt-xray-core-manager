@@ -382,3 +382,5 @@ El propietario declaró: **«Acepto, publica cambios actualiza documentación»*
 La implementación y los documentos de auditoría/continuidad se publicaron en la rama autorizada `design/user-identity-association-v1` mediante commit normal y push fast-forward, sin force push. El HEAD de publicación y la verificación remota quedan registrados en el resumen final de esta sesión y en el commit de Git.
 
 C-05C queda ACEPTADA, PUBLICADA y SINCRONIZADA. C-05A/B/C completadas; C-05D (historial/comparación), C-05E (menú) y C-05F (auditoría integral) siguen pendientes de autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+**Commit de publicación C-05C:** `58c273a18ea32c1feddc02012d0318952c7a0689` (`58c273a`) en `design/user-identity-association-v1`; push fast-forward verificado.
