@@ -781,3 +781,18 @@ Informe: docs/AUDITORIA_CORRECCIONES_PF08_PF09_PF10_2026-11-04.md. Regresión ge
 Límites: sólo almacenes temporales y claves sintéticas. No se leyó master.key, no se crearon perfiles live, no se tocó runtime/servicios/certificados/firewall/puertos/red. Xray-Normativa/ y main intactas. No publicado en GitHub; publicación requiere autorización expresa posterior. Almacén v1.1 no aceptado formalmente; Etapa 5 y Etapa 2 siguen ABIERTAS.
 
 Sincronización GitHub/VPS de desarrollo completada el 2026-11-04: commit 46444bcf11b41750d45f2187d77eeb5f7fce654c publicado en origin/design/user-identity-association-v1. El checkout /opt/xray-manager del host Implementación-Xray quedó en ese mismo commit, con árbol limpio. main y Xray-Normativa/ sin cambios.
+
+## Punto de control vigente — PF-11/PF-12 implementados localmente (2026-11-04)
+
+Rama: `design/user-identity-association-v1`
+Base: `41309a45caa3c19cb86a697c41ec505c9e25678d`
+Host/ruta: `Implementación-Xray` / `/opt/xray-manager`
+
+- PF-11: validación estricta del manifiesto de cada revisión; campos exactos, tipos no coercitivos, fecha UTC, metadatos cifrados, tamaños, hash, procedencia y coherencia de estados.
+- PF-12: recuperación segura de perfiles definitivos fuera del catálogo tras SIGKILL en create/duplicate. Sólo elimina candidato íntegro y verificable. Catálogo ausente/inseguro o perfil candidato ambiguo implica preservación, no borrado. `lstat` previo evita reparar permisos inseguros antes de preservarlos.
+- Prueba focal `tests/xray_profiles.sh` PASS; 13 manifiestos malformados y escenarios crash/preservación PF-12 PASS.
+- Regresión global `tests/*.sh`: **51/51 PASS**, exit code 0. Python AST, `bash -n`, ShellCheck focal y `git diff --check` PASS.
+- Documentos: `docs/DISENO_IMPLEMENTACION_PERFILES.md` §16; `docs/AUDITORIA_CORRECCIONES_PF11_PF12_2026-11-04.md`.
+- Árbol de trabajo aún local; sin commit/push. Antes de publicar: revisar diff completo, repetir estáticos, verificar `git status`, confirmar normativa protegida y comprobar que sólo se publica en esta rama.
+- No se leyó `master.key`, no se creó perfil/almacén live, no se tocó runtime/servicios/certificados/firewall/puertos/red ni `Vps de Pruebas`. `Xray-Normativa/` intacta.
+- Almacén v1.1 no aceptado formalmente. Etapa 5 y Etapa 2 ABIERTAS. La prueba integral VLESS WS TLS sigue condicionada a superar los puntos de control correspondientes.

@@ -330,7 +330,11 @@ class ProfileStore:
             fcntl.flock(fd, fcntl.LOCK_EX)
             self.recover_transaction()
             self._cleanup_report = self.cleanup_orphan_temps()
+            reported_anomalies = len(self._cleanup_report["anomalies"])
             self._cleanup_report["orphan_revisions_removed"] = self.cleanup_orphan_revisions()
+            self._cleanup_report["orphan_profiles_removed"] = self.cleanup_orphan_profiles()
+            for anomaly in self._cleanup_report["anomalies"][reported_anomalies:]:
+                print(f"ADVERTENCIA: artefacto huérfano conservado: {anomaly}", file=sys.stderr)
             yield
         finally:
             with contextlib.suppress(OSError):
@@ -474,12 +478,19 @@ class ProfileStore:
         return report
 
     def cleanup_orphan_revisions(self) -> int:
-        """Remove only well-formed revisions newer than each profile's committed pointer."""
+        """Remove only verified uncommitted revisions belonging to catalogued profiles."""
+        if self._cleanup_lstat(self.catalog_path, "file") is None:
+            return 0
+        registered = {item["profile_id"] for item in self.load_catalog()["profiles"]}
         removed = 0
         for profile in list(self.profiles.iterdir()):
-            if not re.fullmatch(r"profile-[0-9a-f]{32}", profile.name):
+            if not re.fullmatch(r"profile-[0-9a-f]{32}", profile.name) or profile.name not in registered:
                 continue
             if self._cleanup_lstat(profile, "dir") is None:
+                continue
+            if (self._cleanup_lstat(profile / "metadata.json", "file") is None or
+                    self._cleanup_lstat(profile / "revisions", "dir") is None):
+                self._cleanup_anomaly(self._cleanup_report, profile, "metadatos/revisions inseguros; se conservan sin reparación")
                 continue
             try:
                 metadata = self.load_metadata(profile.name)
@@ -505,10 +516,7 @@ class ProfileStore:
                     for child in revision_dir.iterdir():
                         if self._cleanup_lstat(child, "file") is None:
                             raise ProfileError("archivo de revisión inseguro")
-                    manifest = strict_json(read_regular(revision_dir / "manifest.json"), "Manifiesto huérfano")
-                    if (not isinstance(manifest, dict) or manifest.get("profile_id") != profile.name or
-                            manifest.get("revision") != revision_dir.name):
-                        raise ProfileError("identidad del manifiesto no coincide")
+                    self.read_revision_config(profile.name, revision_dir.name)
                 except (OSError, ProfileError) as exc:
                     self._cleanup_anomaly(self._cleanup_report, revision_dir, f"revisión no verificable; se conserva: {exc}")
                     continue
@@ -516,6 +524,61 @@ class ProfileStore:
                 shutil.rmtree(revision_dir)
                 self._fsync_dir(revisions)
                 removed += 1
+        return removed
+
+    def cleanup_orphan_profiles(self) -> int:
+        """Remove only fully verified, unpublished profile directories absent from a valid catalog."""
+        if self._cleanup_lstat(self.catalog_path, "file") is None:
+            if self.catalog_path.exists() or self.catalog_path.is_symlink():
+                self._cleanup_anomaly(self._cleanup_report, self.catalog_path, "catálogo ausente/inseguro; no se concilian perfiles huérfanos")
+            elif any(re.fullmatch(r"profile-[0-9a-f]{32}", entry.name) for entry in self.profiles.iterdir()):
+                self._cleanup_anomaly(self._cleanup_report, self.profiles, "catálogo ausente; perfiles no referenciados se preservan por ambigüedad")
+            return 0
+        catalog = self.load_catalog()
+        registered = {item["profile_id"] for item in catalog["profiles"]}
+        removed = 0
+        for profile in list(self.profiles.iterdir()):
+            if not re.fullmatch(r"profile-[0-9a-f]{32}", profile.name) or profile.name in registered:
+                continue
+            if self._cleanup_lstat(profile, "dir") is None:
+                self._cleanup_anomaly(self._cleanup_report, profile, "perfil huérfano inseguro; se conserva")
+                continue
+            try:
+                if {entry.name for entry in profile.iterdir()} != {"metadata.json", "revisions"}:
+                    raise ProfileError("estructura del perfil huérfano inesperada")
+                if self._cleanup_lstat(profile / "metadata.json", "file") is None:
+                    raise ProfileError("metadatos del perfil huérfano inseguros")
+                revisions_dir = profile / "revisions"
+                if self._cleanup_lstat(revisions_dir, "dir") is None:
+                    raise ProfileError("directorio de revisiones del perfil huérfano inseguro")
+                revision_entries = list(revisions_dir.iterdir())
+                for revision_entry in revision_entries:
+                    if not re.fullmatch(r"r[0-9]{6}", revision_entry.name) or self._cleanup_lstat(revision_entry, "dir") is None:
+                        raise ProfileError("directorio de revisión huérfana inesperado/inseguro")
+                    if {child.name for child in revision_entry.iterdir()} != {"config.enc.json", "manifest.json"}:
+                        raise ProfileError("contenido de revisión huérfana inesperado")
+                    for child in revision_entry.iterdir():
+                        if self._cleanup_lstat(child, "file") is None:
+                            raise ProfileError("archivo de revisión huérfana inseguro")
+                metadata = self.load_metadata(profile.name)
+                if metadata["profile_id"] != profile.name or metadata["last_validated_revision"] is not None:
+                    raise ProfileError("identidad/estado del perfil huérfano no verificable")
+                revisions = self.revision_ids(profile.name)
+                current = metadata["current_revision"]
+                expected = [] if current is None else [current]
+                if revisions != expected:
+                    raise ProfileError("revisiones del perfil huérfano no corresponden a su única publicación")
+                if current is not None:
+                    self.read_revision_config(profile.name, current)
+                if metadata["validation_status"] != "not_validated":
+                    raise ProfileError("estado de validación inesperado en perfil huérfano")
+            except (OSError, ProfileError) as exc:
+                self._cleanup_anomaly(self._cleanup_report, profile, f"perfil huérfano no verificable; se conserva: {exc}")
+                continue
+            import shutil
+            shutil.rmtree(profile)
+            self._fsync_dir(self.profiles)
+            removed += 1
         return removed
 
     def _fsync_dir(self, directory: pathlib.Path) -> None:
@@ -861,28 +924,81 @@ class ProfileStore:
             ids.append(entry.name)
         return sorted(ids, key=lambda x: int(x[1:]))
 
+    def validate_revision_manifest(self, manifest: object, profile_id: str, revision: str) -> dict:
+        fields = {"schema_version", "profile_id", "revision", "created_at", "config", "source", "validation"}
+        if not isinstance(manifest, dict) or set(manifest) != fields:
+            fail(f"Manifiesto inconsistente en {revision}: campos ausentes/adicionales o estructura inválida.")
+        if type(manifest["schema_version"]) is not int or manifest["schema_version"] != 1:
+            fail(f"Versión de esquema de manifiesto no válida en {revision}.")
+        if manifest["profile_id"] != profile_id or manifest["revision"] != revision:
+            fail(f"Identidad del manifiesto inconsistente en {revision}.")
+        self._validate_catalog_timestamp(manifest["created_at"], f"created_at del manifiesto {revision}")
+        config = manifest["config"]
+        config_fields = {"file", "plaintext_size_bytes", "stored_size_bytes", "ciphertext_sha256", "storage", "crypto_format_version"}
+        if not isinstance(config, dict) or set(config) != config_fields:
+            fail(f"Metadatos de configuración incompletos o adicionales en {revision}.")
+        if config["file"] != "config.enc.json" or config["storage"] != "aes-256-gcm":
+            fail(f"Formato de almacenamiento no reconocido en {revision}.")
+        if (type(config["crypto_format_version"]) is not int or
+                config["crypto_format_version"] != CRYPTO_FORMAT_VERSION):
+            fail(f"Versión criptográfica no compatible en {revision}.")
+        if (type(config["plaintext_size_bytes"]) is not int or
+                not 1 <= config["plaintext_size_bytes"] <= MAX_CONFIG or
+                type(config["stored_size_bytes"]) is not int or
+                not 1 <= config["stored_size_bytes"] <= MAX_ENCRYPTED_CONFIG or
+                not isinstance(config["ciphertext_sha256"], str) or
+                not re.fullmatch(r"[0-9a-f]{64}", config["ciphertext_sha256"])):
+            fail(f"Tamaños o huella del blob inválidos en {revision}.")
+        source = manifest["source"]
+        if isinstance(source, str):
+            if not source or len(source) > 64 or any(not char.isprintable() for char in source):
+                fail(f"Origen del manifiesto inválido en {revision}.")
+        elif isinstance(source, dict):
+            source_type = source.get("type")
+            if not isinstance(source_type, str):
+                fail(f"Origen compuesto del manifiesto inválido en {revision}.")
+            if source_type == "restore":
+                if set(source) != {"type", "revision"} or not isinstance(source["revision"], str) or not re.fullmatch(r"r[0-9]{6}", source["revision"]):
+                    fail(f"Referencia de restauración inválida en {revision}.")
+            elif source_type == "profile_copy":
+                if (set(source) != {"type", "profile_id", "revision"} or
+                        not isinstance(source.get("profile_id"), str) or
+                        not re.fullmatch(r"profile-[0-9a-f]{32}", source["profile_id"]) or
+                        not isinstance(source.get("revision"), str) or
+                        not re.fullmatch(r"r[0-9]{6}", source["revision"])):
+                    fail(f"Referencia de copia inválida en {revision}.")
+            else:
+                fail(f"Tipo de origen compuesto no reconocido en {revision}.")
+        else:
+            fail(f"Origen del manifiesto inválido en {revision}.")
+        validation = manifest["validation"]
+        if (not isinstance(validation, dict) or
+                set(validation) != {"json_syntax", "xray_static", "status"} or
+                not isinstance(validation["json_syntax"], str) or validation["json_syntax"] != "pass" or
+                not isinstance(validation["xray_static"], str) or
+                validation["xray_static"] not in {"not_run", "pass", "fail"} or
+                not isinstance(validation["status"], str) or
+                validation["status"] not in {"pending", "valid", "invalid"}):
+            fail(f"Estado de validación del manifiesto inválido en {revision}.")
+        expected_status = {"not_run": "pending", "pass": "valid", "fail": "invalid"}[validation["xray_static"]]
+        if validation["status"] != expected_status:
+            fail(f"Estado de validación incoherente en {revision}.")
+        return manifest
+
     def read_revision_config(self, profile_id: str, revision: str) -> tuple[bytes, dict]:
         if not re.fullmatch(r"r[0-9]{6}", revision):
             fail("Identificador de revisión no válido.")
         directory = self.profile_dir(profile_id) / "revisions" / revision
         check_dir(directory)
-        manifest = strict_json(read_regular(directory / "manifest.json"), "Manifiesto")
-        if (not isinstance(manifest, dict) or manifest.get("schema_version") != 1 or
-                manifest.get("profile_id") != profile_id or manifest.get("revision") != revision or
-                not isinstance(manifest.get("config"), dict)):
-            fail(f"Manifiesto inconsistente en {revision}.")
-        if manifest["config"].get("file") != "config.enc.json":
-            fail(f"Ruta de configuración cifrada no reconocida en {revision}.")
-        if manifest["config"].get("storage") != "aes-256-gcm":
-            fail(f"Formato de almacenamiento no cifrado/no compatible en {revision}; se rechaza fail-closed.")
-        if manifest["config"].get("crypto_format_version") != CRYPTO_FORMAT_VERSION:
-            fail(f"Versión criptográfica no compatible en {revision}.")
+        manifest = self.validate_revision_manifest(
+            strict_json(read_regular(directory / "manifest.json"), "Manifiesto"), profile_id, revision
+        )
         blob = read_regular(directory / "config.enc.json", MAX_ENCRYPTED_CONFIG)
-        if (manifest["config"].get("stored_size_bytes") != len(blob) or
-                manifest["config"].get("ciphertext_sha256") != hashlib.sha256(blob).hexdigest()):
+        if (manifest["config"]["stored_size_bytes"] != len(blob) or
+                manifest["config"]["ciphertext_sha256"] != hashlib.sha256(blob).hexdigest()):
             fail(f"Integridad del blob cifrado incorrecta en {revision}.")
         config = self.decrypt_config(blob, profile_id, revision)
-        if manifest["config"].get("plaintext_size_bytes") != len(config):
+        if manifest["config"]["plaintext_size_bytes"] != len(config):
             fail(f"Tamaño de configuración descifrada incorrecto en {revision}.")
         parsed = strict_json(config, f"Configuración {revision}")
         if not isinstance(parsed, dict):

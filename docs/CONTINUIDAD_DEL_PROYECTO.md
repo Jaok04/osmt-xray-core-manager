@@ -902,3 +902,25 @@ Informe: docs/AUDITORIA_CORRECCIONES_PF08_PF09_PF10_2026-11-04.md. Regresión ge
 Límites: sólo almacenes temporales y claves sintéticas. No se leyó master.key, no se crearon perfiles live, no se tocó runtime/servicios/certificados/firewall/puertos/red. Xray-Normativa/ y main intactas. No publicado en GitHub; publicación requiere autorización expresa posterior. Almacén v1.1 no aceptado formalmente; Etapa 5 y Etapa 2 siguen ABIERTAS.
 
 Sincronización GitHub/VPS de desarrollo completada el 2026-11-04: commit 46444bcf11b41750d45f2187d77eeb5f7fce654c publicado en origin/design/user-identity-association-v1. El checkout /opt/xray-manager del host Implementación-Xray quedó en ese mismo commit, con árbol limpio. main y Xray-Normativa/ sin cambios.
+
+## Continuidad — remediación PF-11/PF-12 de perfiles (2026-11-04)
+
+El propietario autorizó corregir PF-11/PF-12 exclusivamente en la rama `design/user-identity-association-v1`, con pruebas aisladas y actualización documental.
+
+### Estado de implementación local
+
+- `scripts/xray_profiles.py`: `validate_revision_manifest()` exige contrato exacto de manifiesto y valida tipos estrictos, timestamp UTC, identidad, tamaños, SHA-256, formato cifrado, source y estados de validación coherentes.
+- La lectura de revisión valida manifiesto antes de hash del ciphertext y autenticación/descifrado AES-256-GCM.
+- `cleanup_orphan_profiles()` se ejecuta bajo lock después de WAL, temporales y revisiones. Retira sólo directorios definitivos no registrados cuyo catálogo exista y sea seguro, estructura/metadata/permisos sean exactos y única revisión cifrada pase lectura integral.
+- Catálogo ausente o inseguro: preservar candidatos, no inferir pérdida/ausencia de catálogo como autorización para borrar. Candidatos ambiguos o inseguros se conservan y notifican. La inspección `lstat` precede a lectores que pueden normalizar permisos.
+- `tests/xray_profiles.sh`: 13 manifiestos malformados rechazados; SIGKILL en create sin/con configuración y duplicate; primera alta sin catálogo preservada; candidato con metadata 0644 preservado sin corregir modo. Prueba focal PASS.
+
+### Documentación y validación
+
+Diseño: `docs/DISENO_IMPLEMENTACION_PERFILES.md` §16. Informe: `docs/AUDITORIA_CORRECCIONES_PF11_PF12_2026-11-04.md`. Regresión global posterior a la última modificación: **51/51 scripts PASS**, exit code 0. Python AST, `bash -n`, ShellCheck focal y `git diff --check` PASS.
+
+### Próximo paso
+
+Terminar la regresión, revisar el diff completo, ejecutar AST Python, Bash syntax, ShellCheck focal y `git diff --check`; actualizar el informe/continuidad con resultados; verificar `Xray-Normativa/` y `main` sin cambios. Publicar únicamente en la rama autorizada después de revisión final. No tocar `Vps de Pruebas`, runtime, servicios, secretos ni almacén live.
+
+PF-11/PF-12 no implican aceptación formal del almacén v1.1 ni cierre de Etapa 5/Etapa 2. Siguen pendientes las funcionalidades normativas de Etapa 5 documentadas en el informe de auditoría.

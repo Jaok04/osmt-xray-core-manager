@@ -238,3 +238,27 @@ Un journal inválido se conserva y provoca fallo cerrado. Las pruebas comprueban
 `catalog.json` acepta únicamente el objeto raíz `{schema_version, profiles}` con `schema_version` de tipo entero exacto (no booleano) y valor 1. `profiles` es una lista de hasta 10000 elementos. Cada elemento contiene exactamente `profile_id`, `name`, `created_at` y `modified_at`. El ID usa `profile-` seguido de 32 dígitos hexadecimales minúsculos; el nombre es una cadena normalizada de 1 a 80 caracteres sin caracteres no imprimibles; ambas fechas son timestamps UTC reales con formato `YYYY-MM-DDTHH:MM:SSZ`, y `modified_at` es igual o posterior a `created_at`. IDs y nombres no se pueden repetir (nombres comparados con `casefold()`). Cualquier desviación falla con `ProfileError`; no se convierten valores arbitrarios a texto ni se corrige silenciosamente el catálogo.
 
 La validación es de solo lectura: ante datos inválidos, `catalog.json` se conserva intacto para diagnóstico.
+
+## 16. Remediación PF-11/PF-12 — manifiestos estrictos y perfiles huérfanos (2026-11-04)
+
+### 16.1 Contrato del manifiesto (PF-11)
+
+`ProfileStore.validate_revision_manifest()` valida el manifiesto antes de leer/descifrar la revisión. El documento raíz debe contener exactamente `schema_version`, `profile_id`, `revision`, `created_at`, `config`, `source` y `validation`. La versión es entero exacto 1 (no booleano); la identidad debe coincidir con el directorio/revisión; la fecha es UTC real `YYYY-MM-DDTHH:MM:SSZ`.
+
+`config` contiene exactamente `file`, `plaintext_size_bytes`, `stored_size_bytes`, `ciphertext_sha256`, `storage` y `crypto_format_version`. Se validan nombre fijo, algoritmo, versión criptográfica entera exacta, tamaños dentro de límites y SHA-256 hexadecimal minúsculo de 64 caracteres. `source` acepta cadenas imprimibles acotadas o los contratos exactos `restore` y `profile_copy`. `validation` contiene exactamente `json_syntax`, `xray_static` y `status`, con tipos y estados permitidos/coherentes. Cualquier desviación produce `ProfileError` y falla cerrado.
+
+La misma validación estricta se utiliza al verificar una revisión huérfana antes de retirarla. La integridad SHA-256 del ciphertext y la autenticación AES-256-GCM siguen verificándose antes de entregar plaintext.
+
+### 16.2 Reconciliación de perfiles definitivos sin catálogo (PF-12)
+
+`ProfileStore.locked()` conserva el orden: recuperar WAL, limpiar temporales, reconciliar revisiones huérfanas y, por último, reconciliar perfiles definitivos no registrados, todo bajo el lock exclusivo.
+
+La limpieza sólo considera IDs canónicos `profile-` + 32 hex ausentes de un catálogo existente, regular, root-owned y con modo 0600. Para retirar el directorio exige estructura exacta (`metadata.json`, `revisions`), propietario/modos seguros, metadatos estrictos con identidad coincidente, estado no validado, una sola revisión que coincida con `current_revision` (o ninguna si no hay configuración) y lectura/validación criptográfica completa de esa revisión. Después elimina el directorio y sincroniza `profiles/`.
+
+Si el catálogo está ausente, inseguro o inválido, no se infiere que todos los perfiles son huérfanos: se preservan por ambigüedad. Candidatos con permisos, identidad, estructura, manifiesto o contenido no verificables se conservan y notifican. La prevalidación con `lstat` evita que `read_regular()`/`check_dir()` reparen automáticamente permisos sospechosos antes de decidir la preservación.
+
+### 16.3 Pruebas
+
+`tests/xray_profiles.sh` añade 13 casos de manifiestos malformados; `SIGKILL` real tras publicar directorio definitivo en `create()` (con y sin configuración) y `duplicate()`; conservación de un perfil tras caída en el primer alta cuando aún no existe catálogo; y preservación de candidatos inseguros sin reparar permisos. Las pruebas utilizan exclusivamente almacenes temporales y clave sintética.
+
+PF-11/PF-12 están implementados y verificados localmente: `tests/xray_profiles.sh` PASS, regresión completa `tests/*.sh` 51/51 PASS, Python AST, `bash -n`, ShellCheck focal y `git diff --check` PASS. El diff fue revisado; no se creó commit ni se publicó. No equivalen a aceptación formal del almacén ni a cierre de Etapa 5/Etapa 2.

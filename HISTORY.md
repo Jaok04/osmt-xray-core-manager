@@ -870,3 +870,15 @@ Informe: docs/AUDITORIA_CORRECCIONES_PF08_PF09_PF10_2026-11-04.md. Regresión ge
 Límites: sólo almacenes temporales y claves sintéticas. No se leyó master.key, no se crearon perfiles live, no se tocó runtime/servicios/certificados/firewall/puertos/red. Xray-Normativa/ y main intactas. No publicado en GitHub; publicación requiere autorización expresa posterior. Almacén v1.1 no aceptado formalmente; Etapa 5 y Etapa 2 siguen ABIERTAS.
 
 Sincronización GitHub/VPS de desarrollo completada el 2026-11-04: commit 46444bcf11b41750d45f2187d77eeb5f7fce654c publicado en origin/design/user-identity-association-v1. El checkout /opt/xray-manager del host Implementación-Xray quedó en ese mismo commit, con árbol limpio. main y Xray-Normativa/ sin cambios.
+
+## 2026-11-04 — Remediación PF-11/PF-12 de perfiles autorizada
+
+El propietario autorizó corregir PF-11/PF-12 en la rama `design/user-identity-association-v1` y actualizar documentación.
+
+- PF-11: se implementó contrato estricto de manifiesto; campos exactos, tipos estrictos, fecha UTC, configuración cifrada, tamaños, hash, procedencia y estados de validación coherentes. Lectura falla cerrado antes de descifrar si el manifiesto no cumple.
+- PF-12: se añadió reconciliación bajo lock de directorios de perfil definitivos no registrados. Se exige catálogo presente/seguro, estructura exacta, permisos root-only, metadatos coincidentes y revisión cifrada íntegra. Catálogo ausente/inseguro y candidatos ambiguos se preservan; no se borran por inferencia. `lstat` previo evita reparar permisos sospechosos.
+- Prueba focal `tests/xray_profiles.sh` PASS: 13 manifiestos malformados, SIGKILL en create/duplicate, primera alta interrumpida sin catálogo preservada y candidato inseguro preservado sin reparación.
+- Diseño §16 y auditoría `docs/AUDITORIA_CORRECCIONES_PF11_PF12_2026-11-04.md` añadidos; PROJECT_STATE, punto de control y continuidad actualizados.
+- Regresión integral posterior a la última modificación: **51/51 scripts PASS**, exit code 0; AST Python, `bash -n`, ShellCheck focal y `git diff --check` PASS.
+
+Sin clave maestra real, perfiles live, runtime, systemd, certificados, firewall, puertos o red. VPS de pruebas no tocada. `Xray-Normativa/` y `main` intactas. Cambios locales; sin commit/push/sync. Almacén v1.1 no aceptado formalmente; Etapa 5 y Etapa 2 ABIERTAS.

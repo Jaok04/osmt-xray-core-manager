@@ -794,3 +794,16 @@ Informe: docs/AUDITORIA_CORRECCIONES_PF08_PF09_PF10_2026-11-04.md. Regresión ge
 Límites: sólo almacenes temporales y claves sintéticas. No se leyó master.key, no se crearon perfiles live, no se tocó runtime/servicios/certificados/firewall/puertos/red. Xray-Normativa/ y main intactas. No publicado en GitHub; publicación requiere autorización expresa posterior. Almacén v1.1 no aceptado formalmente; Etapa 5 y Etapa 2 siguen ABIERTAS.
 
 Sincronización GitHub/VPS de desarrollo completada el 2026-11-04: commit 46444bcf11b41750d45f2187d77eeb5f7fce654c publicado en origin/design/user-identity-association-v1. El checkout /opt/xray-manager del host Implementación-Xray quedó en ese mismo commit, con árbol limpio. main y Xray-Normativa/ sin cambios.
+
+## Estado vigente — remediación PF-11/PF-12 del almacén de perfiles (2026-11-04)
+
+- Autorización expresa del propietario recibida para corregir PF-11/PF-12 en `design/user-identity-association-v1`, con pruebas aisladas y actualización documental. No incluye VPS de pruebas ni runtime.
+- PF-11 implementado: contrato estricto del manifiesto (campos exactos, versión entera exacta, identidad, fecha UTC, config/crypto metadata, tamaños, SHA-256, origen y estados de validación coherentes). La lectura de revisión valida el manifiesto antes de comprobar ciphertext y descifrar.
+- PF-12 implementado: después de WAL, temporales y revisiones huérfanas, el lock exclusivo reconcilia directorios de perfil definitivos no presentes en un catálogo existente/seguro. Sólo retira candidatos cuya estructura, permisos, identidad, metadatos y revisión cifrada se verifican íntegramente.
+- Regla conservadora: si el catálogo falta (p. ej. caída en el primer alta), está inseguro o no se puede verificar, no se eliminan perfiles por inferencia. Candidatos ambiguos/inseguros se preservan y notifican; la inspección previa `lstat` evita reparación automática de sus permisos.
+- `tests/xray_profiles.sh`: PASS; 13 casos de manifiesto malformado, SIGKILL real en create/duplicate, alta inicial sin catálogo preservada y candidato inseguro preservado sin reparación de permisos.
+- Diseño y auditoría: `docs/DISENO_IMPLEMENTACION_PERFILES.md` §16 y `docs/AUDITORIA_CORRECCIONES_PF11_PF12_2026-11-04.md`.
+- Regresión integral posterior a la última modificación: `tests/*.sh` **51/51 PASS**, exit code 0. AST Python, Bash syntax, ShellCheck focal y `git diff --check` PASS.
+- Sin aceptación formal del almacén. PF-11/PF-12 no cierran Etapa 5; siguen pendientes las funciones normativas de validación Xray por revisión, preview/diff, comparación, historial/retención, composición integral, registro activo, activación/rollback y backup/restore. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+- Restricciones: pruebas sólo con almacenes temporales y claves sintéticas. No se leyó `master.key`, no se creó/alteró perfil live, runtime, systemd, certificados, firewall, puertos o red. No se tocó `Vps de Pruebas`. `Xray-Normativa/` y `main` sin cambios.
+- Publicación GitHub: pendiente de revisión final del diff y confirmación del estado de regresión; no se ha creado commit/push.

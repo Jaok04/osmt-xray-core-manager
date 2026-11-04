@@ -781,4 +781,135 @@ assert store.load_metadata(pid) == good
 print(f"PASS: PF-08 prevalidation ({4} cases), PF-09 SIGKILL after revision publication/reconciliation, PF-10 rejected {len(cases)} malformed metadata cases.")
 PFPERSISTENCE
 
+# PF-11/PF-12: strict manifest contract and safe reconciliation of published-but-unregistered profiles.
+python3 - "$ROOT" "$TMP/pf11-pf12" <<'PFMANIFESTORPHANS'
+import copy, json, os, pathlib, signal, stat, sys, uuid
+base = pathlib.Path(sys.argv[2]); base.mkdir(mode=0o700)
+key = base / "synthetic.key"; key.write_bytes(b"T" * 32); key.chmod(0o600)
+sys.path.insert(0, str(pathlib.Path(sys.argv[1]) / "scripts"))
+import xray_profiles as xp
+store = xp.ProfileStore(str(base / "store"), str(key))
+created = store.create("Perfil manifiesto", config_data=b'{"v":1}')
+pid = created["profile_id"]
+manifest_path = store.profile_dir(pid) / "revisions" / "r000001" / "manifest.json"
+good_manifest = json.loads(manifest_path.read_text())
+manifest_cases = []
+def bad_manifest(label, mutate):
+    value = copy.deepcopy(good_manifest); mutate(value); manifest_cases.append((label, value))
+bad_manifest("boolean schema", lambda v: v.update(schema_version=True))
+bad_manifest("extra top-level key", lambda v: v.update(extra="x"))
+bad_manifest("missing source", lambda v: v.pop("source"))
+bad_manifest("invalid timestamp", lambda v: v.update(created_at="2026-02-30T00:00:00Z"))
+bad_manifest("extra config key", lambda v: v["config"].update(extra="x"))
+bad_manifest("boolean plaintext size", lambda v: v["config"].update(plaintext_size_bytes=True))
+bad_manifest("negative stored size", lambda v: v["config"].update(stored_size_bytes=-1))
+bad_manifest("invalid hash", lambda v: v["config"].update(ciphertext_sha256="g"*64))
+bad_manifest("list source type", lambda v: v.update(source=[]))
+bad_manifest("list nested source type", lambda v: v.update(source={"type": [], "profile_id": pid, "revision": "r000001"}))
+bad_manifest("list validation state", lambda v: v["validation"].update(xray_static=[]))
+bad_manifest("boolean validation status", lambda v: v["validation"].update(status=True))
+bad_manifest("inconsistent validation", lambda v: v["validation"].update(xray_static="pass", status="pending"))
+for label, malformed in manifest_cases:
+    raw = json.dumps(malformed).encode(); manifest_path.write_bytes(raw); manifest_path.chmod(0o600)
+    try:
+        store.versions(pid)
+    except xp.ProfileError:
+        pass
+    except Exception as exc:
+        raise AssertionError(f"PF-11 {label}: uncontrolled {type(exc).__name__}: {exc}") from exc
+    else:
+        raise AssertionError(f"PF-11 {label}: malformed manifest accepted")
+manifest_path.write_text(json.dumps(good_manifest)); manifest_path.chmod(0o600)
+assert store.versions(pid)[0]["revision"] == "r000001"
+
+# Crash after final profile rename/fsync but before journal creation: next lock removes exact valid orphan.
+def crash_create(identity, name, config):
+    final_id = "profile-" + identity
+    child = os.fork()
+    if child == 0:
+        xp.uuid.uuid4 = lambda: uuid.UUID(hex=identity)
+        original = store._fsync_dir
+        def kill_after_profile_publish(directory):
+            if pathlib.Path(directory) == store.profiles:
+                os.kill(os.getpid(), signal.SIGKILL)
+            return original(directory)
+        store._fsync_dir = kill_after_profile_publish
+        store.create(name, config_data=config)
+        os._exit(99)
+    _, status = os.waitpid(child, 0)
+    assert os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGKILL
+    assert (store.profiles / final_id).is_dir(), "fault injection did not leave final orphan profile"
+    listed = store.list_profiles()
+    assert all(item["profile_id"] != final_id for item in listed)
+    assert not (store.profiles / final_id).exists(), "PF-12: verified orphan profile survived reconciliation"
+
+crash_create("a"*32, "Alta huérfana sin config", None)
+crash_create("b"*32, "Alta huérfana cifrada", b'{"orphan":true}')
+
+# If the catalog itself is absent (first-ever create crash), preserve rather than guess.
+empty_store = xp.ProfileStore(str(base / "first-create-store"), str(key))
+child = os.fork()
+if child == 0:
+    identity = "e"*32
+    xp.uuid.uuid4 = lambda: uuid.UUID(hex=identity)
+    original = empty_store._fsync_dir
+    def kill_first_create(directory):
+        if pathlib.Path(directory) == empty_store.profiles:
+            os.kill(os.getpid(), signal.SIGKILL)
+        return original(directory)
+    empty_store._fsync_dir = kill_first_create
+    empty_store.create("Primera alta interrumpida")
+    os._exit(99)
+_, status = os.waitpid(child, 0)
+assert os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGKILL
+first_orphan = empty_store.profiles / ("profile-" + "e"*32)
+assert first_orphan.is_dir() and not empty_store.catalog_path.exists()
+assert empty_store.list_profiles() == []
+assert first_orphan.is_dir(), "PF-12: without a catalog, ambiguous profiles must be preserved"
+
+# Duplicate has the same publication window and must be reconciled too.
+child = os.fork()
+if child == 0:
+    identity = "c"*32
+    xp.uuid.uuid4 = lambda: uuid.UUID(hex=identity)
+    original = store._fsync_dir
+    def kill_after_duplicate_publish(directory):
+        if pathlib.Path(directory) == store.profiles:
+            os.kill(os.getpid(), signal.SIGKILL)
+        return original(directory)
+    store._fsync_dir = kill_after_duplicate_publish
+    store.duplicate(pid, "Duplicado huérfano")
+    os._exit(99)
+_, status = os.waitpid(child, 0)
+assert os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGKILL
+duplicate_orphan = store.profiles / ("profile-" + "c"*32)
+assert duplicate_orphan.is_dir()
+assert all(item["profile_id"] != duplicate_orphan.name for item in store.list_profiles())
+assert not duplicate_orphan.exists(), "PF-12: duplicate orphan survived reconciliation"
+
+# Unverifiable candidates must be preserved, not recursively deleted.
+child = os.fork()
+if child == 0:
+    identity = "d"*32
+    xp.uuid.uuid4 = lambda: uuid.UUID(hex=identity)
+    original = store._fsync_dir
+    def kill_after_unverifiable_publish(directory):
+        if pathlib.Path(directory) == store.profiles:
+            os.kill(os.getpid(), signal.SIGKILL)
+        return original(directory)
+    store._fsync_dir = kill_after_unverifiable_publish
+    store.create("Orphan sospechoso")
+    os._exit(99)
+_, status = os.waitpid(child, 0)
+assert os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGKILL
+suspicious = store.profiles / ("profile-" + "d"*32)
+assert suspicious.is_dir(), "fault injection did not leave suspicious candidate"
+(suspicious / "metadata.json").chmod(0o644)
+store.list_profiles()
+assert suspicious.is_dir(), "PF-12: unsafe orphan should be preserved for diagnosis"
+assert any("perfil huérfano no verificable" in item for item in store._cleanup_report["anomalies"]), "PF-12: preserved orphan anomaly was not reported"
+assert stat.S_IMODE((suspicious / "metadata.json").stat().st_mode) == 0o644, "PF-12: cleanup must not repair unsafe metadata before preserving it"
+print(f"PASS: PF-11 rejected {len(manifest_cases)} malformed manifests; PF-12 reconciled create/duplicate SIGKILL orphans and preserved unsafe candidates.")
+PFMANIFESTORPHANS
+
 printf '%s\n' 'OK: almacén, menú, copias independientes, revisiones, restauración no destructiva, concurrencia, nombres únicos y controles de filesystem.'
