@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-04
 **Rama:** design/user-identity-association-v1
 **Normativa:** Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md §§ 2–5 y 14; YAML aprobado correspondiente.
-**Estado:** diseño propuesto; no implementado; pendiente de autorización específica para codificar.
+**Estado:** C-01 aceptado formalmente como componente limitado; C-02 implementado localmente y pendiente de aceptación. C-03–C-06 no implementadas.
 
 ## 1. Objetivo y límites
 
@@ -212,13 +212,17 @@ Los comandos devuelven JSON estructurado para la interfaz Bash. No habrá comand
 ## 10. Secuencia de implementación propuesta
 
 **Fase C-01 — contrato y persistencia**
-- CLI de catálogo, identidad, metadatos, cifrado, manifiesto, revisiones y WAL.
-- create vacío/plantilla, list/show y pruebas de corrupción/fallos.
-- Sin integración del menú aún hasta superar pruebas de almacenamiento.
+- [x] CLI de catálogo, identidad, metadatos, cifrado, manifiesto, revisiones y WAL.
+- [x] create vacío/plantilla, list/show y pruebas de corrupción/fallos.
+- [x] Sin integración del menú; persistencia aislada.
+- Auditoría: `docs/AUDITORIA_C01_GESTOR_CONFIGURACIONES_2026-11-04.md`.
+- Estado: implementado y probado localmente; pendiente de aceptación expresa.
 
 **Fase C-02 — importación y exportación**
-- importación de archivo sin modificar fuente, preview, borrador inválido y exportación verificada.
-- Pruebas de symlink/hardlink, UTF-8, tamaño, sobrescritura y fallos de escritura.
+- [x] Importación de archivo sin modificar fuente, preview, borrador inválido y exportación verificada.
+- [x] Pruebas de symlink/hardlink, UTF-8/BOM, tamaño, sobrescritura y fallos de escritura.
+- Auditoría: `docs/AUDITORIA_C02_IMPORTACION_EXPORTACION_2026-11-04.md`.
+- Estado: implementado y probado localmente; pendiente de aceptación expresa.
 
 **Fase C-03 — edición, diff y comparación**
 - edición sobre copia temporal, confirmación, nueva revisión y diff por secciones.
@@ -261,4 +265,4 @@ Todas las pruebas utilizarán directorios temporales y claves sintéticas. No se
 4. Plantilla inicial: se recomienda plantilla mínima marcada Borrador; no prometer que es válida para cualquier versión de Xray.
 5. Alcance inicial: implementar primero C-01 y C-02; mantener C-03 a C-06 como fases separadas y sujetas a aceptación.
 
-**Estado final:** diseño técnico propuesto y contrastado con la normativa aprobada. No se implementó código ni se modificó el runtime. Se requiere autorización expresa para iniciar C-01.
+**Estado actualizado (2026-11-04):** C-01 aceptado como componente limitado. C-02 implementado localmente y auditado; pendiente de aceptación. C-03–C-06 siguen sin implementar. No se modificó runtime ni se usó clave real.

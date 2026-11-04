@@ -907,3 +907,24 @@ Se contrastó Etapa 5 §§2–5 y 14 (Markdown/YAML normativos) con el repositor
 Se añadió docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md, con modelo de datos, rutas, cifrado, revisiones, WAL, operaciones CRUD/import/export/compare, estados, separación del validador, integración futura con perfiles, fases C-01–C-06 y matriz de pruebas. El diseño prohíbe activar desde configuraciones independientes y conserva la independencia de copias de perfil.
 
 Diseño únicamente: no se modificó código funcional, dependencias, runtime, servicios, certificados, firewall, puertos o red. No se leyó clave maestra real. Implementación C-01/C-02 pendiente de autorización; sin commit/push/sync.
+
+## 2026-11-04 — Implementación local C-01 del gestor de configuraciones independientes
+
+Se implementó `scripts/xray_configurations.py` con almacenamiento separado, catálogo/metadatos/manifiesto estrictos, `create` vacío/plantilla mínima, `list`, `show`, revisiones inmutables y AES-256-GCM con AAD por identidad/revisión. Se añadió lock y WAL propio; el journal se persiste antes de publicar el directorio definitivo y permite rollback tras SIGKILL.
+
+Se añadió `tests/xray_configurations.sh` con pruebas de permisos, plantillas, corrupción, clave sintética incorrecta/ausente, ciphertext adulterado y recuperación SIGKILL en tres puntos de la transacción. Prueba focal PASS; regresión `tests/*.sh` 52/52 PASS; AST Python, `bash -n`, ShellCheck focal y `git diff --check` PASS. Auditoría: `docs/AUDITORIA_C01_GESTOR_CONFIGURACIONES_2026-11-04.md`.
+
+C-01 implementado y auditado localmente, pendiente de aceptación. C-02–C-06 no iniciadas; Etapa 5 y Etapa 2 siguen ABIERTAS. No se usó clave real, almacén live, runtime, dependencias ni VPS de pruebas. `main` y `Xray-Normativa/` intactas. Sin commit/push/sync.
+
+## 2026-11-04 — Aceptación C-01 e implementación local C-02
+
+El propietario aceptó C-01 como componente limitado y autorizó C-02. Se añadieron `preview-import`, `import` y `export` al gestor independiente. Preview informa UTF-8/BOM, validez JSON, secciones, tamaño y SHA-256. Import exige confirmación y hash previsualizado, conserva exactamente los bytes, no modifica el origen y guarda JSON inválido/vacío como Borrador sólo con aceptación expresa. Export escribe temporalmente, usa modo 0600, exige autorización para overwrite y verifica byte a byte.
+
+Pruebas añadidas: BOM, JSON válido/inválido, vacío, UTF-8 inválido, symlink/hardlink, límite 16 MiB, origen modificado, export exacto, permisos, overwrite y fallo parcial de escritura. Auditoría C-02: `docs/AUDITORIA_C02_IMPORTACION_EXPORTACION_2026-11-04.md`. C-02 pendiente de aceptación; C-03–C-06 no iniciadas. Etapa 5/Etapa 2 abiertas. Sin secretos reales, runtime, dependencias, VPS de pruebas, commit/push/sync.
+
+
+## 2026-11-04 — Sincronización solicitada C-01/C-02 (gestor de configuraciones independientes)
+
+Se prepara la publicación en `design/user-identity-association-v1` del motor independiente, pruebas y documentación C-01/C-02. C-01 permanece aceptado formalmente como componente limitado; C-02 continúa pendiente de aceptación expresa. Regresión completa `tests/*.sh`: 52/52 PASS; `bash -n`, AST Python y `git diff --check` PASS. ShellCheck no estaba disponible y no se instaló.
+
+La sincronización no cierra Etapa 5 ni Etapa 2 ni autoriza C-03. No se tocó runtime, servicios, certificados, firewall, puertos, red, almacenes live, clave maestra real ni VPS de pruebas. `main` y `Xray-Normativa/` permanecen fuera del alcance. El SHA definitivo se anotará tras verificar GitHub y `/opt/xray-manager`.

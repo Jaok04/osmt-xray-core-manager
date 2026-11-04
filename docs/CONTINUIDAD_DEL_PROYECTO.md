@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — auditoría formal de perfiles v1.1 (2026-11-03):** el almacén AES-256-GCM está IMPLEMENTADO, VERIFICADO EN PRUEBAS SINTÉTICAS, PUBLICADO y SINCRONIZADO. La revisión formal contra Etapa 5 ya se ejecutó sin modificar código. Se detectó PF-01: un fallo de escritura del catálogo durante `update()` deja catálogo y metadatos inconsistentes, reproducido en almacén temporal; PF-02 identifica ventanas adicionales de commit/durabilidad. No se recomienda aceptación hasta resolverlos y añadir pruebas de recuperación. El siguiente paso requiere decisión expresa del propietario sobre autorizar correcciones acotadas. No usar `master.key` real, no crear perfiles live ni activar runtime. Informe: `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`.
+> **Punto de reanudación vigente — 2026-11-04:** C-01 del gestor de configuraciones independientes está aceptado formalmente como componente limitado; C-02 (importación/exportación) está implementado, auditado y probado, pero pendiente de aceptación expresa. Última regresión completa: 52/52 PASS. La sincronización GitHub/VPS se registra en el bloque final vigente de este documento. Etapa 5 y Etapa 2 permanecen ABIERTAS. No usar `master.key` real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o la VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -961,3 +961,55 @@ Se completó el contraste de la normativa Etapa 5 §§2–5 y 14 con los módulo
 Diseño: docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md. Arquitectura propuesta con catálogo y objetos propios, revisiones inmutables, AES-256-GCM con AAD por objeto/revisión, WAL, permisos root-only, importación/exportación segura, preview, diff/comparación y estados Borrador/Validada/Anterior. No hay comando apply/activate. El validador estático será separado; solo informe PASS ligado a hash/revisión puede promover una versión a Validada. La futura creación de perfil copiará bytes y quedará desacoplada.
 
 Siguiente paso: solicitar autorización para implementar C-01 (contrato/persistencia) y C-02 (importación/exportación). No iniciar C-03 a C-06 sin aceptación de fases y sus dependencias. No modificar el almacén de perfiles aceptado, VLESS/VMess por conexión, runtime, servicios, certificados, firewall, puertos o red. No usar secretos reales. No publicar ni sincronizar sin autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Continuidad — implementación C-01 de configuraciones independientes (2026-11-04)
+
+El usuario indicó continuar con el siguiente paso tras la sincronización del diseño. Se inició C-01 exclusivamente en `Implementación-Xray`, `/opt/xray-manager`, rama `design/user-identity-association-v1`.
+
+- Nuevo motor: `scripts/xray_configurations.py`.
+- Nuevo test: `tests/xray_configurations.sh`.
+- Operaciones: `create --name ... [--template empty|minimal]`, `list`, `show --config-id ...`.
+- Persistencia independiente bajo `/var/lib/xray-manager/configurations`; pruebas redirigen a temporales.
+- Catálogo/metadatos/manifiesto cerrados; IDs `config-` + 32 hex; revisiones `rNNNNNN`; límite 16 MiB y catálogo de 10.000.
+- AES-256-GCM con nonce de 12 bytes y AAD por ID/revisión; usa helper existente para cargar clave maestra, nunca crea/regenera una. No se leyó la clave real.
+- Directorios root:root 0700, archivos 0600, lock exclusivo, escrituras atómicas y WAL. El journal se publica antes del rename definitivo; recuperación revierte el catálogo y retira directorio/staging tras interrupciones.
+- Pruebas: plantillas, permisos, catálogo malformado, clave incorrecta/ausente, ciphertext alterado con hash recalculado y SIGKILL en tres ventanas de commit. Focal PASS; regresión completa 52/52 PASS; AST, `bash -n`, ShellCheck focal y `git diff --check` PASS.
+- Auditoría: `docs/AUDITORIA_C01_GESTOR_CONFIGURACIONES_2026-11-04.md`; diseño actualizado en `docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md`.
+
+**Estado:** C-01 implementado y auditado localmente, pendiente de aceptación expresa. C-02 importación/exportación no iniciada. No se integró menú, validador, edición/diff, eliminación ni perfil desde configuración independiente. No hay `apply`/`activate`. Etapa 5 y Etapa 2 siguen ABIERTAS.
+
+Límites: no se leyó `master.key`, no se creó almacén live, no se tocó `xray_profiles.py`, VLESS/VMess, runtime, servicios, systemd, certificados, firewall, puertos o red. No se instalaron/actualizaron dependencias. VPS de pruebas, `main` y `Xray-Normativa/` intactas. Cambios locales; no commit/push/sync.
+
+Siguiente puerta: revisión/aceptación formal de C-01. C-02 requiere autorización independiente; no continuar fases posteriores por inferencia.
+
+## Continuidad — aceptación C-01 e implementación C-02 (2026-11-04)
+
+El propietario respondió afirmativamente a la aceptación de C-01 como componente limitado y autorizó C-02.
+
+### C-01
+
+Aceptado formalmente dentro del alcance de `docs/AUDITORIA_C01_GESTOR_CONFIGURACIONES_2026-11-04.md`. No implica completar Etapa 5 ni Etapa 2.
+
+### C-02 implementado localmente
+
+- `preview-import --source`: vista previa sin escribir; ruta absoluta, archivo regular, rechaza symlink/hardlink y exceso 16 MiB; detecta UTF-8/BOM, JSON estricto y secciones; informa SHA-256.
+- `import`: requiere `--confirm` y `--expected-sha256` de la vista previa; vuelve a leer el origen una vez y cifra exactamente esos bytes. Origen inalterado. JSON inválido o vacío requiere `--accept-invalid` y se conserva como Borrador. UTF-8 inválido se rechaza.
+- `export`: una configuración/revisión por invocación; destino absoluto, symlink/hardlink rechazados, overwrite sólo con `--overwrite`; temporal privado, modo 0600, fsync y verificación byte a byte. Advierte que el resultado está en claro.
+- Se amplió el contrato de manifiesto para admitir `source=import` y contenido importado de cero bytes, manteniendo revisión autenticada y estado pendiente/no validado.
+- Tests incluyen BOM, JSON válido/inválido, vacío, UTF-8 inválido, origen cambiado tras preview, límites, symlink/hardlink, export exacto, overwrite y fallo parcial de escritura.
+
+Auditoría: `docs/AUDITORIA_C02_IMPORTACION_EXPORTACION_2026-11-04.md`. C-02 implementado localmente; pendiente de aceptación expresa. C-03–C-06 no iniciadas. La preview no sustituye al validador estático Xray; no se implementó menú, exportación por lotes, reemplazo de nombre duplicado ni activación.
+
+Límites: sólo temporales y claves sintéticas. No se leyó `master.key`, no se creó almacén live, no se modificaron perfiles/VLESS/VMess/runtime/servicios/certificados/firewall/puertos/red, ni VPS de pruebas. No se instalaron/actualizaron dependencias. `main` y `Xray-Normativa/` intactas. Sin commit/push/sync.
+
+
+## Punto de continuidad vigente — C-01/C-02 sincronizados (2026-11-04)
+
+- Rama autorizada: `design/user-identity-association-v1`; host: `Implementación-Xray`; ruta: `/opt/xray-manager`.
+- C-01 del gestor de configuraciones independientes: **ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO**.
+- C-02: importación/exportación implementadas, auditadas y verificadas; **pendiente de aceptación expresa**. La vista previa no equivale a validación estática Xray.
+- Regresión completa: `tests/*.sh` **52/52 PASS**. `bash -n`, Python AST y `git diff --check`: PASS. ShellCheck no estaba disponible en el host y no se instaló ninguna dependencia.
+- Archivos sincronizados: `scripts/xray_configurations.py`, `tests/xray_configurations.sh`, auditorías C-01/C-02 y actualizaciones de `PROJECT_STATE.md`, `HISTORY.md`, `docs/CONTINUIDAD_DEL_PROYECTO.md`, `docs/PUNTO_CONTROL_ACTUAL.md` y `docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md`.
+- C-03–C-06 no iniciadas. Sin menú, validador estático, diff/comparación, activación ni integración de perfil desde configuración independiente. Etapa 5 y Etapa 2 siguen ABIERTAS.
+- Sólo pruebas temporales y claves sintéticas. No se leyó `master.key`; no se creó almacén live; no se modificó runtime, servicios, systemd, certificados reales, firewall, puertos o red. No se tocó `Vps de Pruebas`, `main` ni `Xray-Normativa/`. No se instalaron/actualizaron dependencias.
+- Sincronización GitHub/VPS solicitada expresamente por el propietario. El identificador final del commit y la verificación de árbol limpio se añadirán al cierre de esta operación.

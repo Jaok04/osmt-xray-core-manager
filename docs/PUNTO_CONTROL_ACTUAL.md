@@ -823,3 +823,30 @@ La normativa Etapa 5 §§2–5 y 14 fue contrastada con los módulos actuales. N
 Diseño propuesto: docs/DISENO_GESTOR_CONFIGURACIONES_INDEPENDIENTES.md. Define catálogo/objetos/revisiones separados, cifrado AES-256-GCM, WAL, importación/exportación, preview, diff/comparación, estados Borrador/Validada/Anterior y prohibición de activar desde este módulo. El validador estático será separado y sus informes quedarán ligados a hash/revisión. La futura creación de perfil copiará bytes sin sincronización.
 
 **Estado: DISEÑO PROPUESTO; NO IMPLEMENTADO.** Siguiente autorización requerida: iniciar C-01 (contrato y persistencia) y C-02 (importación/exportación). No se modificó código funcional ni runtime; sin commit/push/sync. Etapa 5 y Etapa 2 ABIERTAS.
+
+## Punto de control — C-01 del gestor de configuraciones independientes (2026-11-04)
+
+`C-01` se implementó localmente en `scripts/xray_configurations.py`: almacén separado, `create` vacío/plantilla mínima, `list`, `show`, catálogo/metadatos/manifiesto estrictos, AES-256-GCM, AAD por ID/revisión, revisiones inmutables, lock y WAL recuperable. No se integró menú ni se modificaron los almacenes de perfiles o conexiones.
+
+Pruebas focales PASS y regresión global `tests/*.sh` **52/52 PASS**. Se probaron claves sintéticas, ciphertext adulterado con hash recalculado y SIGKILL antes/durante/después de la publicación. Auditoría: `docs/AUDITORIA_C01_GESTOR_CONFIGURACIONES_2026-11-04.md`.
+
+Estado: implementado y auditado localmente; **pendiente de aceptación**. C-02 (importación/exportación) no iniciada. Etapa 5 y Etapa 2 ABIERTAS. Sin clave real, almacén live, runtime, servicios, red, certificados, firewall o puertos; sin dependencias; `main`, `Xray-Normativa/` y VPS de pruebas intactas. Sin commit/push/sync.
+
+## Punto de control — C-01 aceptado y C-02 implementado (2026-11-04)
+
+C-01 del gestor independiente fue aceptado formalmente como componente limitado. C-02 se implementó localmente: `preview-import`, `import` y `export` en `scripts/xray_configurations.py`.
+
+Importación: UTF-8 estricto, BOM detectado, origen regular sin symlink/hardlink, límite 16 MiB, lectura estable, SHA-256 de preview confirmado en import, conservación exacta de bytes, Borrador para JSON inválido/vacío sólo con aceptación explícita. Exportación: destino absoluto sin symlink/hardlink, confirmación de overwrite, temporal privado, modo 0600, fsync y verificación byte a byte. No se activa ni se escribe runtime.
+
+Auditoría C-02: `docs/AUDITORIA_C02_IMPORTACION_EXPORTACION_2026-11-04.md`. C-02 implementado y pendiente de aceptación. La vista previa no equivale a validación estática Xray. C-03–C-06 pendientes; Etapa 5 y Etapa 2 ABIERTAS. Sólo claves sintéticas y almacenes temporales; no runtime, secretos, dependencias, VPS de pruebas, `main` o normativa. Sin commit/push/sync.
+
+
+## Punto de control vigente — sincronización C-01/C-02 (2026-11-04)
+
+C-01 del gestor independiente está aceptado formalmente como componente limitado. C-02 está implementado y auditado, pero sigue **pendiente de aceptación expresa**. Se sincronizan el motor `scripts/xray_configurations.py`, su suite `tests/xray_configurations.sh`, las auditorías C-01/C-02 y los documentos de estado/diseño/continuidad.
+
+Verificación previa: regresión `tests/*.sh` **52/52 PASS**; `bash -n`, Python AST y `git diff --check` PASS. ShellCheck no está instalado y no se instalaron dependencias.
+
+No iniciar C-03 sin aceptación y autorización específicas. No declarar completada Etapa 5 ni Etapa 2. No se modificaron runtime, servicios, certificados, firewall, puertos, red ni almacenes live; no se leyó `master.key`. La VPS de pruebas, `main` y `Xray-Normativa/` permanecen intactas.
+
+La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una vez confirmado el commit de GitHub y el HEAD de `/opt/xray-manager`.
