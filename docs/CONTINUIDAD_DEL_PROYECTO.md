@@ -1043,3 +1043,12 @@ El almacén no integra el registro runtime y no puede detectar una aplicación m
 Auditoría: docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md. Focal PASS; regresión completa 54/54 PASS; Python compile, Bash syntax, ShellCheck focal y git diff --check PASS.
 
 C-04A pendiente de aceptación formal. C-04B (exportación múltiple) y C-04C (menú Bash) no iniciadas. Etapa 5 y Etapa 2 ABIERTAS. No commit/push/sync sin autorización expresa. Sólo temporales y claves sintéticas; no almacén real, clave maestra, runtime, servicios, dependencias, certificados, firewall, puertos, red o VPS de pruebas. main y Xray-Normativa/ intactas.
+
+
+## Continuidad vigente — C-04A aceptada y publicada (2026-11-04)
+
+El propietario aceptó formalmente C-04A como componente limitado, conforme a `docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md`. La aceptación comprende sólo el alcance técnico, controles, pruebas y exclusiones del informe.
+
+La implementación, prueba focal y auditoría están publicadas en `design/user-identity-association-v1`. Commit: `afb2f7bf8cc040ca2731787b9e113b5a4660a00f`. La VPS `Implementación-Xray:/opt/xray-manager` y GitHub se verificaron en el mismo SHA, con árbol de trabajo limpio en el momento de la verificación.
+
+C-04B y C-04C no están autorizadas ni iniciadas. C-04 no está completa. Etapa 5 y Etapa 2 siguen ABIERTAS. No se tocó `main`, `Xray-Normativa/`, la VPS de pruebas ni runtime/servicios/red.

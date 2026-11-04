@@ -877,3 +877,14 @@ La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una 
 - Auditoría: docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md.
 - C-04A pendiente de aceptación formal. C-04B y C-04C no iniciadas. Etapa 5 y Etapa 2 ABIERTAS.
 - Sin commit/push/sync. Sin acceso al almacén real ni clave maestra; sin runtime, servicios, dependencias, certificados, firewall, puertos, red o VPS de pruebas. main y Xray-Normativa/ intactas.
+
+
+## Punto de control vigente — C-04A aceptada formalmente (2026-11-04)
+
+- **Aceptación:** el propietario aceptó C-04A como componente limitado conforme a `docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md`.
+- **Estado:** IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA.
+- **Commit de implementación:** `afb2f7bf8cc040ca2731787b9e113b5a4660a00f` en `design/user-identity-association-v1`.
+- **Evidencia:** `tests/xray_configurations_c04a.sh`; regresión completa 54/54 PASS; Python compile, Bash syntax, ShellCheck focal y `git diff --check` PASS, según auditoría.
+- **Límite runtime:** el almacén independiente no verifica aplicaciones externas; `--assert-not-active` sigue siendo una afirmación explícita del operador, no una comprobación automática del runtime.
+- **Pendiente:** C-04B y C-04C no autorizadas ni iniciadas. C-04, Etapa 5 y Etapa 2 no están cerradas.
+- **Exclusiones:** no se tocó clave maestra real, almacén live, runtime, servicios, certificados, firewall, puertos, red, dependencias, VPS de pruebas, `main` ni `Xray-Normativa/`.

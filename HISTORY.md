@@ -960,3 +960,12 @@ El propietario aceptó formalmente C-03 como componente limitado conforme a `doc
 - Regresión 54/54 PASS; Python compile, Bash syntax, ShellCheck focal y git diff --check PASS.
 - Auditoría: docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md.
 - C-04A pendiente de aceptación formal. C-04B/C-04C no iniciadas. Sin commit/push/sync.
+
+
+## 2026-11-04 — Aceptación formal y sincronización de C-04A
+
+El propietario aceptó formalmente C-04A como componente limitado conforme a `docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md`. La aceptación no cierra C-04, Etapa 5 ni Etapa 2.
+
+La implementación, la prueba focal y la auditoría se publicaron en `design/user-identity-association-v1` mediante el commit `afb2f7bf8cc040ca2731787b9e113b5a4660a00f`. La verificación posterior confirmó que la VPS `Implementación-Xray:/opt/xray-manager` y la referencia remota de GitHub coinciden en ese SHA, y que el árbol de trabajo está limpio.
+
+C-04B y C-04C no están autorizadas ni iniciadas. `main`, `Xray-Normativa/`, la VPS de pruebas y runtime permanecen fuera del alcance.

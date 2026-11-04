@@ -904,3 +904,12 @@ Prueba focal tests/xray_configurations_c04a.sh PASS. Regresión completa tests/*
 Estado: C-04A implementada y auditada localmente, pendiente de aceptación formal. C-04B (exportación múltiple) y C-04C (integración menú Bash) no iniciadas. No se cerró C-04, Etapa 5 ni Etapa 2.
 
 Sólo almacenes temporales y claves sintéticas. No se leyó master.key, no se accedió al almacén real ni se tocó runtime/servicios/systemd/certificados/firewall/puertos/red/dependencias. VPS de pruebas, main y Xray-Normativa/ intactas. No commit/push/sync.
+
+
+## Aceptación formal y publicación de C-04A — 2026-11-04
+
+El propietario aceptó formalmente C-04A como componente limitado conforme a `docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md`. La aceptación cubre exclusivamente la eliminación segura de configuraciones independientes, los controles, las pruebas y las limitaciones documentadas. No cierra C-04 completa, Etapa 5 ni Etapa 2.
+
+C-04A está IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Commit de implementación: `afb2f7bf8cc040ca2731787b9e113b5a4660a00f`.
+
+C-04B (exportación múltiple) y C-04C (integración del menú Bash) no están autorizadas ni iniciadas. La aceptación no autoriza runtime, servicios, dependencias, certificados, firewall, puertos, red, VPS de pruebas ni cambios en `main` o `Xray-Normativa/`.
