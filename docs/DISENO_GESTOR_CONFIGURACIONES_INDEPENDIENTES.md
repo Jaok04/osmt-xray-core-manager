@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-04
 **Rama:** design/user-identity-association-v1
 **Normativa:** Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md §§ 2–5 y 14; YAML aprobado correspondiente.
-**Estado actualizado 2026-11-04:** C-01/C-02/C-03 aceptadas formalmente como componentes limitados; C-04A aceptada/publicada; C-04B implementada, verificada y aceptada formalmente como componente limitado; C-04C no autorizada ni iniciada.
+**Estado actualizado 2026-11-04:** C-01/C-02/C-03 aceptadas formalmente como componentes limitados; C-04A, C-04B y C-04C implementadas, auditadas, aceptadas formalmente y publicadas. La auditoría integral de C-04 no identificó defectos funcionales bloqueantes; el cierre integral permanece pendiente de aceptación formal del propietario. C-05 no está autorizada ni iniciada.
 
 ## 1. Objetivo y límites
 
