@@ -759,3 +759,9 @@ La recuperación WAL ahora valida íntegramente el journal antes de aplicar cual
 Pruebas nuevas demuestran que una entrada inválida tardía y una ruta de eliminación inválida no causan rollback parcial; el catálogo permanece byte a byte igual. La prueba focal `tests/xray_profiles.sh` PASS. PF-01/PF-02 se consideran corregidos dentro del alcance probado; PF-06 queda parcialmente cubierto y PF-07 sigue pendiente de revisión. Aceptación formal de perfiles pendiente; Etapa 5 y Etapa 2 abiertas.
 
 No se usó `master.key`, no se creó ni modificó almacén live, y no se tocó runtime/servicios/firewall/puertos/certificados/red. `main` y `Xray-Normativa/` permanecen protegidas.
+
+## Punto de control — PF-07 en implementación (2026-11-04)
+
+Se endureció `ProfileStore.load_catalog()` con esquema estricto, tipos exactos, límite de registros, campos obligatorios/exclusivos, ID `profile-` + 32 hex, nombre normalizado sin controles, timestamps UTC válidos y orden cronológico; se rechazan duplicados. Los errores se convierten en `ProfileError` y el archivo inválido se conserva sin mutación.
+
+La prueba focal `tests/xray_profiles.sh` pasó, incluidos 18 casos malformados con almacén temporal y clave sintética. Pendiente: suite completa, estáticos, revisión final del diff y publicación en `design/user-identity-association-v1`. No usar secretos ni almacén live; no tocar runtime ni normativa.

@@ -563,7 +563,7 @@ assert set(store.root.glob(".catalog.json.*.tmp")) == {bad_mode_tmp, symlink_tmp
 # Directory-fsync failure happens after replace: published destination must survive.
 original_fsync = xp.os.fsync
 catalog_after_fsync_failure = __import__("json").loads(before)
-catalog_after_fsync_failure["test_marker"] = "published"
+catalog_after_fsync_failure["profiles"][0]["modified_at"] = "9999-12-31T23:59:59Z"
 published_data = xp.json_bytes(catalog_after_fsync_failure)
 def fail_directory_fsync(fd):
     if stat.S_ISDIR(os.fstat(fd).st_mode):
@@ -637,5 +637,55 @@ assert [x["revision"] for x in store.versions(pid)] == ["r000001"]
 assert suspicious_dir.exists() and bad_mode_tmp.exists() and symlink_tmp.is_symlink()
 print("PASS: temporales exactos, WAL-before-cleanup, SIGKILL, idempotencia, anomalías preservadas y revisiones válidas.")
 PYORPHAN
+
+# PF-07: el catálogo debe rechazar esquema/tipos/fechas/identidades malformadas
+# sin filtrar AttributeError/TypeError y sin mutar el archivo de origen.
+python3 - "$ROOT" "$TMP/catalog-validation" <<'PFCATALOG'
+import copy, json, pathlib, sys
+root = pathlib.Path(sys.argv[1]); base = pathlib.Path(sys.argv[2])
+base.mkdir(mode=0o700); base.chmod(0o700)
+key = base / "synthetic.key"; key.write_bytes(b"K" * 32); key.chmod(0o600)
+sys.path.insert(0, str(root / "scripts"))
+from xray_profiles import ProfileStore, ProfileError, json_bytes
+store = ProfileStore(str(base / "store"), str(key))
+store.create("Perfil válido")
+good = json.loads(store.catalog_path.read_text())
+assert store.load_catalog() == good
+cases = []
+def add(label, mutate):
+    value = copy.deepcopy(good); mutate(value); cases.append((label, value))
+add("schema bool", lambda v: v.update(schema_version=True))
+add("schema string", lambda v: v.update(schema_version="1"))
+add("extra top-level", lambda v: v.update(unexpected=True))
+add("profiles not list", lambda v: v.update(profiles={}))
+add("profile not object", lambda v: v["profiles"].__setitem__(0, "bad"))
+add("missing field", lambda v: v["profiles"][0].pop("name"))
+add("extra field", lambda v: v["profiles"][0].update(extra="x"))
+add("id integer", lambda v: v["profiles"][0].update(profile_id=123))
+add("id malformed", lambda v: v["profiles"][0].update(profile_id="../bad"))
+add("name null", lambda v: v["profiles"][0].update(name=None))
+add("name integer", lambda v: v["profiles"][0].update(name=42))
+add("name control", lambda v: v["profiles"][0].update(name="bad\nname"))
+add("name DEL", lambda v: v["profiles"][0].update(name="bad\x7fname"))
+add("created invalid type", lambda v: v["profiles"][0].update(created_at=123))
+add("created invalid date", lambda v: v["profiles"][0].update(created_at="2026-02-30T00:00:00Z"))
+add("modified before created", lambda v: v["profiles"][0].update(modified_at="2000-01-01T00:00:00Z"))
+add("duplicate id", lambda v: v["profiles"].append(copy.deepcopy(v["profiles"][0])))
+add("duplicate name", lambda v: (v["profiles"].append(copy.deepcopy(v["profiles"][0])), v["profiles"][1].update(profile_id="profile-" + "a" * 32)))
+for label, malformed in cases:
+    raw = json_bytes(malformed); store.catalog_path.write_bytes(raw); store.catalog_path.chmod(0o600)
+    try:
+        store.load_catalog()
+    except ProfileError:
+        pass
+    except Exception as exc:
+        raise AssertionError(f"{label}: uncontrolled {type(exc).__name__}: {exc}") from exc
+    else:
+        raise AssertionError(f"{label}: malformed catalog accepted")
+    assert store.catalog_path.read_bytes() == raw, f"{label}: validation mutated catalog"
+store.catalog_path.write_bytes(json_bytes(good)); store.catalog_path.chmod(0o600)
+assert store.load_catalog() == good
+print(f"PASS: PF-07 rejected {len(cases)} malformed catalog cases with controlled errors; valid catalog preserved.")
+PFCATALOG
 
 printf '%s\n' 'OK: almacén, menú, copias independientes, revisiones, restauración no destructiva, concurrencia, nombres únicos y controles de filesystem.'

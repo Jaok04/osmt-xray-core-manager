@@ -676,20 +676,47 @@ class ProfileStore:
             self.recover_transaction()
             raise
 
+    @staticmethod
+    def _validate_catalog_timestamp(value: object, field: str) -> dt.datetime:
+        if not isinstance(value, str) or not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z", value):
+            fail(f"El campo {field} del catálogo no tiene formato UTC válido.")
+        try:
+            parsed = dt.datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=dt.timezone.utc)
+        except ValueError:
+            fail(f"El campo {field} del catálogo contiene una fecha inexistente.")
+        return parsed
+
     def load_catalog(self) -> dict:
         if not self.catalog_path.exists():
             return {"schema_version": 1, "profiles": []}
         value = strict_json(read_regular(self.catalog_path), "Catálogo")
-        if not isinstance(value, dict) or value.get("schema_version") != 1 or not isinstance(value.get("profiles"), list):
+        if (not isinstance(value, dict) or set(value) != {"schema_version", "profiles"} or
+                type(value.get("schema_version")) is not int or value["schema_version"] != 1 or
+                not isinstance(value.get("profiles"), list)):
             fail("El catálogo de perfiles tiene un esquema no reconocido.")
+        if len(value["profiles"]) > 10000:
+            fail("El catálogo excede el máximo permitido de 10000 perfiles.")
         seen_ids, seen_names = set(), set()
-        for item in value["profiles"]:
-            if not isinstance(item, dict) or not TOKEN_RE.fullmatch(str(item.get("profile_id", ""))):
-                fail("El catálogo contiene una identidad de perfil inválida.")
-            key = str(item.get("name", "")).casefold()
-            if not key or item["profile_id"] in seen_ids or key in seen_names:
+        for index, item in enumerate(value["profiles"]):
+            label = f"entrada {index + 1}"
+            if not isinstance(item, dict) or set(item) != {"profile_id", "name", "created_at", "modified_at"}:
+                fail(f"El catálogo contiene campos ausentes, adicionales o un registro inválido ({label}).")
+            profile_id = item["profile_id"]
+            if not isinstance(profile_id, str) or not re.fullmatch(r"profile-[0-9a-f]{32}", profile_id):
+                fail(f"Identidad de perfil inválida en el catálogo ({label}).")
+            name = item["name"]
+            if (not isinstance(name, str) or not name or len(name) > 80 or
+                    name != " ".join(name.strip().split()) or
+                    any(not char.isprintable() for char in name)):
+                fail(f"Nombre de perfil inválido en el catálogo ({label}).")
+            created = self._validate_catalog_timestamp(item["created_at"], f"created_at ({label})")
+            modified = self._validate_catalog_timestamp(item["modified_at"], f"modified_at ({label})")
+            if modified < created:
+                fail(f"modified_at es anterior a created_at ({label}).")
+            key = name.casefold()
+            if profile_id in seen_ids or key in seen_names:
                 fail("El catálogo contiene IDs o nombres duplicados.")
-            seen_ids.add(item["profile_id"])
+            seen_ids.add(profile_id)
             seen_names.add(key)
         return value
 
@@ -724,7 +751,7 @@ class ProfileStore:
     @staticmethod
     def unique_name(catalog: dict, name: str, exclude: str | None = None) -> str:
         cleaned = " ".join(name.strip().split())
-        if not cleaned or len(cleaned) > 80 or any(ord(c) < 32 for c in cleaned):
+        if not cleaned or len(cleaned) > 80 or any(not c.isprintable() for c in cleaned):
             fail("El nombre debe contener entre 1 y 80 caracteres imprimibles.")
         for item in catalog["profiles"]:
             if item["profile_id"] != exclude and item["name"].casefold() == cleaned.casefold():

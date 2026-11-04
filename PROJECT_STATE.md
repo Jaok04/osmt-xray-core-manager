@@ -771,3 +771,10 @@ Se excluye deliberadamente `scripts/__pycache__/` por ser un artefacto local de 
 - La auditoría formal se actualizó en `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`; el diseño en `docs/DISENO_IMPLEMENTACION_PERFILES.md`.
 - La aceptación formal del almacén de perfiles sigue pendiente de decisión expresa. No se cierra Etapa 5 ni Etapa 2.
 - Restricciones: no usar `master.key` real; no crear/alterar perfiles live; no tocar runtime, servicios, firewall, puertos, certificados, red, `main` o `Xray-Normativa/`.
+
+## PF-07 — validación estricta de catálogo (2026-11-04)
+
+- `load_catalog()` valida esquema raíz, versión entera estricta (rechaza `bool`), lista acotada a 10000, campos exactos por registro, ID, nombre normalizado, timestamps UTC reales, orden temporal y unicidad de ID/nombre.
+- Se eliminaron coerciones de tipo que podían ocultar datos malformados y producir excepciones incidentales. Los errores de esquema se reportan como `ProfileError`; la lectura inválida no modifica el archivo.
+- Prueba focal ampliada con 18 casos malformados y control de preservación byte a byte.
+- PF-07: CORREGIDO dentro del contrato y pruebas documentados; regresión integral y publicación pendientes de verificación. No se declara aceptación formal ni cierre de Etapa 5/Etapa 2.

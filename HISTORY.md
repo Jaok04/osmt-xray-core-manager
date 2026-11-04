@@ -848,3 +848,9 @@ Estado: cambios locales en VPS; revisión final y sincronización GitHub pendien
 - Rechazo de solapamientos entre destinos y directorios de rollback; journal inválido se conserva y falla cerrado sin rollback parcial.
 - Añadidas pruebas de entrada inválida tardía y lista de eliminación inválida, verificando catálogo byte a byte intacto.
 - PF-01/PF-02 corregidos dentro del alcance probado; PF-06 parcialmente cubierto; PF-07 pendiente. Sin aceptación formal ni cierre de Etapa 5/Etapa 2.
+
+## 2026-11-04 — Remediación PF-07: esquema estricto del catálogo
+
+Se endureció `ProfileStore.load_catalog()` para validar íntegramente el catálogo antes de usarlo: versión entera exacta (sin aceptar booleanos), raíz y campos exactos, máximo 10000 perfiles, IDs con formato fijo, nombres normalizados sin controles, timestamps UTC reales y orden temporal, además de unicidad de IDs/nombres. Los datos inválidos generan `ProfileError` sin modificar el archivo.
+
+Se añadieron 18 pruebas negativas y una comprobación de preservación byte a byte. La prueba focal `tests/xray_profiles.sh` pasó con almacén temporal y clave sintética. La regresión integral, revisión del diff y publicación quedan pendientes. PF-07 se considera corregido dentro del alcance probado; no hay aceptación formal ni cierre de Etapa 5/Etapa 2.

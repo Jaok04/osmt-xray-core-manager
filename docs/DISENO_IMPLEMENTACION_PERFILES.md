@@ -232,3 +232,9 @@ La regresión completa del repositorio ejecutó 51/51 scripts PASS. AST Python 1
 La recuperación transaccional se divide ahora en dos fases. `_validate_transaction_journal()` valida el documento completo, todos los snapshots, destinos, directorios padre y rutas de eliminación antes de permitir mutaciones. Comprueba rutas permitidas y no duplicadas, Base64 estricto, límites de tamaño, ausencia de symlinks, tipo/propietario/modo esperado y ausencia de solapamientos entre destinos y directorios de rollback. Sólo después `recover_transaction()` aplica los snapshots y retira directorios.
 
 Un journal inválido se conserva y provoca fallo cerrado. Las pruebas comprueban que una entrada inválida tardía o una ruta de eliminación inválida no permite aplicar parcialmente una entrada válida anterior. Esta defensa evita que la validación incremental produzca un rollback parcial ante un journal corrupto o manipulado.
+
+## 15. Contrato estricto del catálogo — PF-07
+
+`catalog.json` acepta únicamente el objeto raíz `{schema_version, profiles}` con `schema_version` de tipo entero exacto (no booleano) y valor 1. `profiles` es una lista de hasta 10000 elementos. Cada elemento contiene exactamente `profile_id`, `name`, `created_at` y `modified_at`. El ID usa `profile-` seguido de 32 dígitos hexadecimales minúsculos; el nombre es una cadena normalizada de 1 a 80 caracteres sin caracteres no imprimibles; ambas fechas son timestamps UTC reales con formato `YYYY-MM-DDTHH:MM:SSZ`, y `modified_at` es igual o posterior a `created_at`. IDs y nombres no se pueden repetir (nombres comparados con `casefold()`). Cualquier desviación falla con `ProfileError`; no se convierten valores arbitrarios a texto ni se corrige silenciosamente el catálogo.
+
+La validación es de solo lectura: ante datos inválidos, `catalog.json` se conserva intacto para diagnóstico.

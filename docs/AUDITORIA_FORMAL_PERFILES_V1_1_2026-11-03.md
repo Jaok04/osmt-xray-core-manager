@@ -214,3 +214,11 @@ Se separó la validación integral del journal de su aplicación:
 ### 12.4 Alcance y seguridad
 
 Pruebas con almacenes temporales y clave sintética. No se leyó `master.key`, no se creó ni modificó almacén/perfil live, no se modificó `Xray-Normativa/`, `main`, runtime, systemd, firewall, puertos, certificados o red. La Etapa 5 y la Etapa 2 permanecen ABIERTAS.
+
+## 13. Remediación PF-07 — validación integral del catálogo (2026-11-04)
+
+Se endureció `ProfileStore.load_catalog()` para validar el documento completo antes de devolverlo. El contrato aceptado es `schema_version` entero estricto (no `bool`) igual a 1 y `profiles` como lista con máximo 10000 registros. Cada registro debe contener exactamente `profile_id`, `name`, `created_at` y `modified_at`; los IDs siguen `profile-` más 32 caracteres hexadecimales minúsculos; los nombres deben ser cadenas normalizadas de 1–80 caracteres sin controles; las fechas deben ser timestamps UTC reales `YYYY-MM-DDTHH:MM:SSZ`, y `modified_at` no puede preceder a `created_at`. Se rechazan IDs y nombres duplicados sin coerciones de tipos.
+
+Se añadieron 18 casos de catálogo malformado (versión booleana/string, claves extra, estructura incorrecta, campos ausentes/adicionales, IDs/nombres/fechas con tipos o valores inválidos y duplicados). Cada caso debe producir `ProfileError`, nunca una excepción incidental, y conservar byte a byte el archivo. Un catálogo válido se vuelve a cargar al final de la prueba.
+
+Estado PF-07: **CORREGIDO dentro del contrato de esquema documentado y los casos probados**. No implica aceptación formal del almacén ni cierre de Etapa 5/Etapa 2. La prueba usa exclusivamente almacén temporal y clave sintética.
