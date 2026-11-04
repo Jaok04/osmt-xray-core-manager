@@ -1013,3 +1013,6 @@ Límites: sólo temporales y claves sintéticas. No se leyó `master.key`, no se
 - C-03–C-06 no iniciadas. Sin menú, validador estático, diff/comparación, activación ni integración de perfil desde configuración independiente. Etapa 5 y Etapa 2 siguen ABIERTAS.
 - Sólo pruebas temporales y claves sintéticas. No se leyó `master.key`; no se creó almacén live; no se modificó runtime, servicios, systemd, certificados reales, firewall, puertos o red. No se tocó `Vps de Pruebas`, `main` ni `Xray-Normativa/`. No se instalaron/actualizaron dependencias.
 - Sincronización GitHub/VPS solicitada expresamente por el propietario. El identificador final del commit y la verificación de árbol limpio se añadirán al cierre de esta operación.
+
+
+**Resultado de sincronización:** commit `3523368729a4e872d65dc7a37c8a2276a04f640e` publicado en `origin/design/user-identity-association-v1`; checkout `Implementación-Xray:/opt/xray-manager` verificado en el mismo SHA. Push fast-forward y árbol limpio. C-02 continúa pendiente de aceptación formal; Etapa 5/Etapa 2 abiertas.

@@ -928,3 +928,6 @@ Pruebas añadidas: BOM, JSON válido/inválido, vacío, UTF-8 inválido, symlink
 Se prepara la publicación en `design/user-identity-association-v1` del motor independiente, pruebas y documentación C-01/C-02. C-01 permanece aceptado formalmente como componente limitado; C-02 continúa pendiente de aceptación expresa. Regresión completa `tests/*.sh`: 52/52 PASS; `bash -n`, AST Python y `git diff --check` PASS. ShellCheck no estaba disponible y no se instaló.
 
 La sincronización no cierra Etapa 5 ni Etapa 2 ni autoriza C-03. No se tocó runtime, servicios, certificados, firewall, puertos, red, almacenes live, clave maestra real ni VPS de pruebas. `main` y `Xray-Normativa/` permanecen fuera del alcance. El SHA definitivo se anotará tras verificar GitHub y `/opt/xray-manager`.
+
+
+Sincronización completada: commit de implementación/documentación `3523368729a4e872d65dc7a37c8a2276a04f640e` publicado en `origin/design/user-identity-association-v1`; `/opt/xray-manager` quedó en ese mismo commit. Publicación fast-forward, sin force push. Árbol de trabajo limpio tras la verificación. C-02 permanece pendiente de aceptación expresa.

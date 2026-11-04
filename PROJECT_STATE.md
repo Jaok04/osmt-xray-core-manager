@@ -874,3 +874,6 @@ No se leyó clave real, no se creó almacén live ni se tocó perfiles, VLESS/VM
 - Etapa 5 y Etapa 2 permanecen ABIERTAS. La prueba integral VLESS WS TLS sigue condicionada a superar los puntos de control funcionales pendientes.
 - Sólo almacenes temporales y claves sintéticas. No se leyó `master.key`, no se creó almacén live, no se modificó runtime/servicios/systemd/certificados/firewall/puertos/red, no se tocaron dependencias ni VPS de pruebas. `main` y `Xray-Normativa/` sin cambios.
 - La sincronización GitHub/VPS se solicitó expresamente y su commit/HEAD se registrará aquí y en `HISTORY.md` al verificarse.
+
+
+**Sincronización verificada (2026-11-04):** commit `3523368729a4e872d65dc7a37c8a2276a04f640e` publicado en `origin/design/user-identity-association-v1`; checkout `Implementación-Xray:/opt/xray-manager` en el mismo SHA. Publicación fast-forward. `git status --short` vacío. `main`, `Xray-Normativa/` y `Vps de Pruebas` fuera del alcance.

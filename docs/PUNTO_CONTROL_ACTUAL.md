@@ -850,3 +850,6 @@ Verificación previa: regresión `tests/*.sh` **52/52 PASS**; `bash -n`, Python 
 No iniciar C-03 sin aceptación y autorización específicas. No declarar completada Etapa 5 ni Etapa 2. No se modificaron runtime, servicios, certificados, firewall, puertos, red ni almacenes live; no se leyó `master.key`. La VPS de pruebas, `main` y `Xray-Normativa/` permanecen intactas.
 
 La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una vez confirmado el commit de GitHub y el HEAD de `/opt/xray-manager`.
+
+
+**Sincronización verificada (2026-11-04):** `3523368729a4e872d65dc7a37c8a2276a04f640e` en GitHub `origin/design/user-identity-association-v1` y en `Implementación-Xray:/opt/xray-manager`; push fast-forward, sin force, árbol limpio.
