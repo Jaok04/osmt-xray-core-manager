@@ -21,8 +21,8 @@ printf '%s\n' '{"log":{"loglevel":"error"},"inbounds":[],"outbounds":[{"protocol
 EMPTY="$("${CLI[@]}" create --name "Perfil vacío")"
 [[ "$(jq -r .config_present <<<"$EMPTY")" == false ]]
 if "${NO_KEY_CLI[@]}" create --name "No debe persistir" --config-file "$CONFIG" >"$TMP/no-key.out" 2>&1; then
-    echo "ERROR: se creó una revisión sin clave maestra." >&2
-    exit 1
+	echo "ERROR: se creó una revisión sin clave maestra." >&2
+	exit 1
 fi
 [[ ! -e "$TMP/missing-master.key" ]]
 [[ "$("${NO_KEY_CLI[@]}" list | jq length)" == 0 ]]
@@ -80,8 +80,8 @@ PYCRYPT2
 [[ "$(jq -r .description "$STORE/profiles/$DUP_ID/metadata.json")" == "Descripción copia" ]]
 [[ "$(jq -r .notes "$STORE/profiles/$DUP_ID/metadata.json")" == "Notas copia" ]]
 if "${CLI[@]}" create --name "perfil BASE" >"$TMP/duplicate-name.out" 2>&1; then
-    echo "ERROR: se aceptó un nombre duplicado." >&2
-    exit 1
+	echo "ERROR: se aceptó un nombre duplicado." >&2
+	exit 1
 fi
 grep -q 'Ya existe un perfil' "$TMP/duplicate-name.out"
 UPDATED="$("${CLI[@]}" update --profile-id "$ID" --description "Descripción nueva" --config-file "$CONFIG2")"
@@ -107,8 +107,8 @@ assert __import__("json").loads(plain)["log"]["loglevel"] == "warning"
 assert __import__("json").loads(plain)["test_secret"] == "profile-secret-marker"
 PYCRYPT3
 if "${WRONG_CLI[@]}" restore --profile-id "$ID" --revision r000003 >"$TMP/wrong-key.out" 2>&1; then
-    echo "ERROR: se aceptó una clave maestra incorrecta." >&2
-    exit 1
+	echo "ERROR: se aceptó una clave maestra incorrecta." >&2
+	exit 1
 fi
 VERSIONS="$("${CLI[@]}" versions --profile-id "$ID")"
 [[ "$(jq length <<<"$VERSIONS")" == 3 ]]
@@ -124,39 +124,39 @@ p.write_text(json.dumps(value, sort_keys=True, separators=(",", ":")))
 p.chmod(0o600)
 PYTAMPER
 if "${CLI[@]}" restore --profile-id "$ID" --revision r000003 >"$TMP/tampered-restore.out" 2>&1; then
-    echo "ERROR: se restauró una revisión alterada." >&2
-    exit 1
+	echo "ERROR: se restauró una revisión alterada." >&2
+	exit 1
 fi
 if "${CLI[@]}" list >"$TMP/tampered-list.out" 2>&1; then
-    echo "ERROR: el catálogo aceptó la revisión actual alterada." >&2
-    exit 1
+	echo "ERROR: el catálogo aceptó la revisión actual alterada." >&2
+	exit 1
 fi
 mv "$TMP/current-config.backup" "$PROFILE_DIR/revisions/r000003/config.enc.json"
 chmod 600 "$PROFILE_DIR/revisions/r000003/config.enc.json"
 printf '%s\n' '{"x":1,"x":2}' >"$TMP/duplicate-key.json"
 if "${CLI[@]}" create --name "Clave duplicada" --config-file "$TMP/duplicate-key.json" >"$TMP/bad.out" 2>&1; then
-    echo "ERROR: se aceptaron claves JSON duplicadas." >&2
-    exit 1
+	echo "ERROR: se aceptaron claves JSON duplicadas." >&2
+	exit 1
 fi
 printf '%s\n' '[]' >"$TMP/array.json"
 if "${CLI[@]}" create --name "Array" --config-file "$TMP/array.json" >"$TMP/bad-array.out" 2>&1; then
-    echo "ERROR: se aceptó una configuración que no es objeto." >&2
-    exit 1
+	echo "ERROR: se aceptó una configuración que no es objeto." >&2
+	exit 1
 fi
 ln -s "$CONFIG" "$TMP/source-link.json"
 if "${CLI[@]}" create --name "Symlink" --config-file "$TMP/source-link.json" >"$TMP/link.out" 2>&1; then
-    echo "ERROR: se aceptó symlink de origen." >&2
-    exit 1
+	echo "ERROR: se aceptó symlink de origen." >&2
+	exit 1
 fi
 ln "$CONFIG" "$TMP/source-hardlink.json"
 if "${CLI[@]}" create --name "Hardlink" --config-file "$TMP/source-hardlink.json" >"$TMP/hardlink.out" 2>&1; then
-    echo "ERROR: se aceptó hardlink de origen." >&2
-    exit 1
+	echo "ERROR: se aceptó hardlink de origen." >&2
+	exit 1
 fi
 ln -s "$STORE" "$TMP/store-link"
 if python3 "$ROOT/scripts/xray_profiles.py" --store "$TMP/store-link" list >"$TMP/store-link.out" 2>&1; then
-    echo "ERROR: se aceptó un almacén simbólico." >&2
-    exit 1
+	echo "ERROR: se aceptó un almacén simbólico." >&2
+	exit 1
 fi
 # Dos procesos que intentan registrar el mismo nombre deben serializarse.
 set +e
@@ -416,5 +416,187 @@ assert [x["name"] for x in restarted.list_profiles()] == ["Nombre inicial"]
 assert not restarted.transaction_path.exists()
 print("PASS: rollback rename/update/restore, WAL tras caída abrupta, recuperación al reabrir y limpieza create/duplicate.")
 PYTXN
+
+# Limpieza de temporales huérfanos: sólo ubicaciones/patrones conocidos y artefactos root-only.
+python3 - "$ROOT" "$TMP/orphan-cleanup-tests" <<'PYORPHAN'
+import os, pathlib, signal, stat, sys
+root = pathlib.Path(sys.argv[1])
+test_root = pathlib.Path(sys.argv[2])
+test_root.mkdir(mode=0o700)
+os.chmod(test_root, 0o700)
+key = test_root / "synthetic.key"
+key.write_bytes(os.urandom(32)); key.chmod(0o600)
+sys.path.insert(0, str(root / "scripts"))
+import xray_profiles as xp
+store = xp.ProfileStore(str(test_root / "store"), str(key))
+created = store.create("Perfil que debe conservarse", config_data=b'{"safe":true}')
+pid = created["profile_id"]
+profile = store.profiles / pid
+revisions = profile / "revisions"
+valid_revision = revisions / "r000001"
+
+def write_root_file(path, data=b"orphan", mode=0o600):
+    path.write_bytes(data)
+    os.chown(path, 0, 0)
+    os.chmod(path, mode)
+
+# Exact atomic-write temporary names at each controlled location.
+root_tmp = store.root / (".catalog.json." + "a" * 16 + ".tmp")
+wal_tmp = store.root / ("..profiles.transaction.json." + "9" * 16 + ".tmp")
+meta_tmp = profile / (".metadata.json." + "b" * 16 + ".tmp")
+config_tmp = valid_revision / (".config.enc.json." + "c" * 16 + ".tmp")
+manifest_tmp = valid_revision / (".manifest.json." + "d" * 16 + ".tmp")
+for path in (root_tmp, wal_tmp, meta_tmp, config_tmp, manifest_tmp):
+    write_root_file(path)
+
+# Fully recognizable interrupted create and revision staging directories.
+new_dir = store.profiles / (".new-" + "e" * 16)
+new_dir.mkdir(mode=0o700)
+os.chown(new_dir, 0, 0); os.chmod(new_dir, 0o700)
+(new_dir / "revisions").mkdir(mode=0o700)
+os.chown(new_dir / "revisions", 0, 0); os.chmod(new_dir / "revisions", 0o700)
+new_rev = new_dir / "revisions" / "r000001"
+new_rev.mkdir(mode=0o700)
+os.chown(new_rev, 0, 0); os.chmod(new_rev, 0o700)
+write_root_file(new_rev / "config.enc.json")
+write_root_file(new_rev / "manifest.json")
+
+revision_tmp_dir = revisions / (".revision-" + "f" * 16)
+revision_tmp_dir.mkdir(mode=0o700)
+os.chown(revision_tmp_dir, 0, 0); os.chmod(revision_tmp_dir, 0o700)
+write_root_file(revision_tmp_dir / "config.enc.json")
+write_root_file(revision_tmp_dir / "manifest.json")
+
+# Suspicious artifacts must be preserved and reported, never repaired/deleted.
+suspicious_dir = store.profiles / (".new-" + "1" * 16)
+suspicious_dir.mkdir(mode=0o755)
+os.chown(suspicious_dir, 0, 0); os.chmod(suspicious_dir, 0o755)
+bad_mode_tmp = store.root / (".catalog.json." + "2" * 16 + ".tmp")
+write_root_file(bad_mode_tmp, mode=0o644)
+symlink_tmp = store.root / (".catalog.json." + "3" * 16 + ".tmp")
+symlink_tmp.symlink_to(root_tmp)
+unknown_tmp = store.root / (".catalog.json.not-a-token.tmp")
+write_root_file(unknown_tmp)
+wrong_owner_tmp = store.root / (".catalog.json." + "4" * 16 + ".tmp")
+write_root_file(wrong_owner_tmp)
+os.chown(wrong_owner_tmp, 65534, 65534)
+hardlink_tmp = store.root / (".catalog.json." + "5" * 16 + ".tmp")
+write_root_file(hardlink_tmp)
+external_hardlink = test_root / "external-hardlink"
+os.link(hardlink_tmp, external_hardlink)
+
+# A real valid revision must survive cleanup.
+assert (valid_revision / "config.enc.json").is_file()
+first = store.list_profiles()  # recovery first, then cleanup while holding the exclusive lock
+assert len(first) == 1 and first[0]["profile_id"] == pid
+assert not root_tmp.exists() and not wal_tmp.exists() and not meta_tmp.exists() and not config_tmp.exists() and not manifest_tmp.exists()
+assert not new_dir.exists() and not revision_tmp_dir.exists()
+assert suspicious_dir.exists() and bad_mode_tmp.exists() and symlink_tmp.is_symlink()
+assert wrong_owner_tmp.exists() and hardlink_tmp.exists() and external_hardlink.exists() and unknown_tmp.exists()
+assert wrong_owner_tmp.exists() and hardlink_tmp.exists() and external_hardlink.exists()
+assert (valid_revision / "config.enc.json").is_file() and (valid_revision / "manifest.json").is_file()
+assert store._cleanup_report["removed_files"] == 5
+assert store._cleanup_report["removed_directories"] == 2
+assert len(store._cleanup_report["anomalies"]) >= 5
+second = store.cleanup_orphan_temps()
+assert second["removed_files"] == 0 and second["removed_directories"] == 0, second
+assert len(second["anomalies"]) == len(store._cleanup_report["anomalies"]), second
+
+# os.replace failure removes only the unpublished temp and preserves the old destination.
+original_replace = xp.os.replace
+destination = store.root / "catalog.json"
+before = destination.read_bytes()
+def fail_replace(_src, _dst):
+    raise OSError("injected replace failure")
+xp.os.replace = fail_replace
+try:
+    try:
+        xp.atomic_write(destination, b'{"must":"not publish"}')
+    except OSError:
+        pass
+    else:
+        raise AssertionError("replace fault did not escape")
+finally:
+    xp.os.replace = original_replace
+assert destination.read_bytes() == before
+assert set(store.root.glob(".catalog.json.*.tmp")) == {bad_mode_tmp, symlink_tmp, unknown_tmp, wrong_owner_tmp, hardlink_tmp}
+
+# Directory-fsync failure happens after replace: published destination must survive.
+original_fsync = xp.os.fsync
+catalog_after_fsync_failure = __import__("json").loads(before)
+catalog_after_fsync_failure["test_marker"] = "published"
+published_data = xp.json_bytes(catalog_after_fsync_failure)
+def fail_directory_fsync(fd):
+    if stat.S_ISDIR(os.fstat(fd).st_mode):
+        raise OSError("injected directory fsync failure")
+    return original_fsync(fd)
+xp.os.fsync = fail_directory_fsync
+try:
+    try:
+        xp.atomic_write(destination, published_data)
+    except OSError:
+        pass
+    else:
+        raise AssertionError("directory fsync fault did not escape")
+finally:
+    xp.os.fsync = original_fsync
+assert destination.read_bytes() == published_data
+assert set(store.root.glob(".catalog.json.*.tmp")) == {bad_mode_tmp, symlink_tmp, unknown_tmp, wrong_owner_tmp, hardlink_tmp}
+before = destination.read_bytes()
+
+# SIGKILL after atomic temp fsync and before replace leaves a temp that the next lock cleans.
+pid_child = os.fork()
+if pid_child == 0:
+    def kill_before_replace(_src, _dst):
+        os.kill(os.getpid(), signal.SIGKILL)
+    xp.os.replace = kill_before_replace
+    xp.atomic_write(destination, b'{"child":"must die"}')
+    os._exit(99)
+_, status = os.waitpid(pid_child, 0)
+assert os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGKILL
+crashed_atomic = [p for p in store.root.glob(".catalog.json.*.tmp") if p not in (bad_mode_tmp, symlink_tmp, unknown_tmp, wrong_owner_tmp, hardlink_tmp)]
+assert len(crashed_atomic) == 1
+store.list_profiles()
+assert not crashed_atomic[0].exists() and destination.read_bytes() == before
+
+# SIGKILL during profile creation leaves .new-* staging; next operation removes it.
+pid_child = os.fork()
+if pid_child == 0:
+    original_rename = xp.os.rename
+    def kill_new(src, dst):
+        if pathlib.Path(src).name.startswith(".new-"):
+            os.kill(os.getpid(), signal.SIGKILL)
+        return original_rename(src, dst)
+    xp.os.rename = kill_new
+    store.create("Alta interrumpida", config_data=b'{"child":true}')
+    os._exit(99)
+_, status = os.waitpid(pid_child, 0)
+assert os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGKILL
+crashed_new = [p for p in store.profiles.glob(".new-*") if p != suspicious_dir]
+assert len(crashed_new) == 1
+store.list_profiles()
+assert not crashed_new[0].exists()
+
+# SIGKILL during revision publication leaves .revision-* staging; next lock cleans it.
+pid_child = os.fork()
+if pid_child == 0:
+    original_rename = xp.os.rename
+    def kill_revision(src, dst):
+        if pathlib.Path(src).name.startswith(".revision-"):
+            os.kill(os.getpid(), signal.SIGKILL)
+        return original_rename(src, dst)
+    xp.os.rename = kill_revision
+    store.update(pid, config_data=b'{"child_revision":true}')
+    os._exit(99)
+_, status = os.waitpid(pid_child, 0)
+assert os.WIFSIGNALED(status) and os.WTERMSIG(status) == signal.SIGKILL
+crashed_revision = list(revisions.glob(".revision-*"))
+assert len(crashed_revision) == 1
+store.list_profiles()
+assert not crashed_revision[0].exists()
+assert [x["revision"] for x in store.versions(pid)] == ["r000001"]
+assert suspicious_dir.exists() and bad_mode_tmp.exists() and symlink_tmp.is_symlink()
+print("PASS: temporales exactos, WAL-before-cleanup, SIGKILL, idempotencia, anomalías preservadas y revisiones válidas.")
+PYORPHAN
 
 printf '%s\n' 'OK: almacén, menú, copias independientes, revisiones, restauración no destructiva, concurrencia, nombres únicos y controles de filesystem.'

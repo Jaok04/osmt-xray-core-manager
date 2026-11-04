@@ -753,3 +753,12 @@ Se excluye deliberadamente `scripts/__pycache__/` por ser un artefacto local de 
 - `tests/xray_profiles.sh` PASS; regresión completa posterior a la última modificación: 51/51 scripts PASS; Python AST, Bash syntax, ShellCheck focal y `git diff --check` PASS.
 - Estado: cambios locales NO PUBLICADOS; PF-01/PF-02 no se cierran hasta completar revisión final del diff y sincronización GitHub.
 - Límites: no se usa clave maestra real ni almacén live; no se crean perfiles reales ni se toca runtime/servicios/firewall/puertos/red. Temporales ocultos huérfanos anteriores al journal no se limpian automáticamente en esta fase.
+## Estado vigente — limpieza segura de temporales huérfanos (2026-11-04)
+
+- Checkout de trabajo: /opt/xray-manager, rama design/user-identity-association-v1, HEAD base 3f8f88d8146409acfdf457529ce53075242a5bcd; cambios de esta fase aún locales.
+- scripts/xray_profiles.py: locked() recupera WAL y después limpia temporales huérfanos bajo lock exclusivo. atomic_write() elimina su temporal propio ante fallo de replace/fsync sin borrar el destino publicado.
+- Limpieza limitada a .new-<16 hex>, .revision-<16 hex> y .<destino>.<16 hex>.tmp en rutas y destinos explícitos. Validación con lstat, root:root, modos 0700/0600, nlink=1 y estructura acotada. Candidatos sospechosos se preservan y notifican.
+- tests/xray_profiles.sh: pruebas de SIGKILL en procesos hijos, recuperación en siguiente operación, idempotencia, symlink/modo/owner/hardlink sospechosos preservados, revisión publicada intacta y destino conservado ante fallo de fsync posterior a replace.
+- Verificación: regresión tests/*.sh 51/51 PASS; Python AST 18/18; Bash syntax; ShellCheck focal (exclusiones SC2251/SC2034 preexistentes); shfmt focal; git diff --check.
+- Sin almacén live ni claves reales: no se accedió a master.key, no se creó/limpió /var/lib/xray-manager/profiles y no se modificó runtime, systemd, firewall, puertos, certificados o red.
+- Estado de publicación: cambios locales, revisión final y sincronización GitHub pendientes. No declarar aceptación formal de perfiles ni cierre de Etapa 5/Etapa 2.

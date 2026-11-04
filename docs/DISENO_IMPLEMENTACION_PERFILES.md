@@ -96,7 +96,7 @@ Pendiente:
 - Activación transaccional, verificación real y rollback.
 - Eliminación segura: sólo después de validar el registro activo y dependencias. La opción del menú permanece deshabilitada.
 - Integración con composición de configuraciones de conexiones, usuarios/asociaciones y referencias de certificados.
-- Validación de fallos de filesystem y recuperación de temporales huérfanos.
+- Validación de fallos de filesystem y recuperación automática de temporales huérfanos (implementada y probada el 2026-11-04).
 - Política de rotación y recuperación de la clave maestra, y migración explícita si se encontraran almacenes de perfiles anteriores en texto plano.
 
 El lector rechaza fail-closed cualquier revisión cuyo manifiesto no declare `aes-256-gcm`; no hay downgrade ni migración automática desde el formato plaintext inicial. La inspección de esta VPS no ha creado `/var/lib/xray-manager/profiles`, por lo que no hay datos live de perfiles que migrar.
@@ -129,6 +129,7 @@ El campo de estado activo se muestra como no integrado; no se presume que todo p
 - unicidad de nombres, modificación con nueva revisión, renombrado sin alterar el blob y restauración no destructiva;
 - JSON con claves duplicadas/estructura incorrecta, symlink/hardlink, almacén simbólico y concurrencia;
 - navegación/alta/consulta desde el menú con almacén y clave temporales.
+- limpieza de temporales exactos en raíz/perfil/revisión, árboles .new-*/.revision-*, validación de owner/group/mode/nlink, preservación de anomalías, revisión válida intacta, idempotencia, SIGKILL y fallo de os.replace().
 
 Verificación ejecutada en esta iteración: `tests/*.sh` 51/51 PASS; Python AST 18/18; `bash -n` de todos los shell scripts PASS; ShellCheck focal PASS; shfmt de los dos archivos nuevos PASS; `git diff --check` PASS después de normalizar el formato Markdown. Ninguna prueba utiliza `/etc/xray-manager/keys/master.key` ni `/var/lib/xray-manager/profiles` reales.
 
@@ -189,10 +190,40 @@ Si hay error de escritura, se reproduce la recuperación antes de propagar el er
 
 ### 12.4 Límites y tratamiento de fallos
 
-El journal protege las operaciones persistentes coordinadas enumeradas, pero no pretende hacer atómica la creación de cada archivo interno de una revisión: las revisiones se construyen en directorios temporales y se publican por rename; una caída anterior al registro transaccional puede dejar un temporal oculto no referenciado, que no se interpreta como revisión válida. La limpieza general de temporales huérfanos queda separada y no se hace automáticamente en esta fase.
+El journal protege las operaciones persistentes coordinadas enumeradas, pero no pretende hacer atómica la creación de cada archivo interno de una revisión: las revisiones se construyen en directorios temporales y se publican por rename; una caída anterior al registro transaccional puede dejar un temporal oculto no referenciado, que no se interpreta como revisión válida. La limpieza de temporales huérfanos se implementó como fase correctiva independiente y se ejecuta automáticamente después de recover_transaction(), todavía bajo el lock exclusivo. Su contrato y límites están descritos en §13.
 
 Un fallo de almacenamiento que impida escribir el journal o completar el rollback puede dejar el journal pendiente; el gestor falla cerrado y no permite nuevas operaciones hasta recuperar el estado. No se debe borrar manualmente el journal ni los snapshots. La ausencia del journal después del `fsync` de la raíz indica commit; si la sincronización de la retirada falla, el código intenta recrear el journal y revertir. Una pérdida física de almacenamiento que viole las garantías de `fsync` del filesystem/dispositivo no puede ser resuelta por software.
 
 ### 12.5 Pruebas añadidas
 
 `tests/xray_profiles.sh` incluye fallo al crear el journal, fallo de escritura del catálogo, fallo de `fsync` del directorio después de reemplazar metadatos, terminación abrupta entre escrituras, terminación después de reemplazar ambos destinos pero antes de retirar el journal, interrupción durante el propio rollback, catálogo inicialmente ausente y recuperación idempotente al reabrir el almacén. También verifica rollback y limpieza en create/duplicate/update/restore. Todas las pruebas usan almacén temporal y clave sintética.
+## 13. Fase correctiva — limpieza segura de temporales huérfanos (2026-11-04)
+
+### 13.1 Orden y coordinación
+
+ProfileStore.locked() adquiere el lock exclusivo, ejecuta primero recover_transaction() y sólo si la recuperación termina correctamente invoca cleanup_orphan_temps(). La limpieza nunca se ejecuta fuera del lock ni antes del WAL. Un journal inválido o una recuperación fallida bloquea la operación y evita que la limpieza se ejecute.
+
+### 13.2 Patrones y ubicaciones admitidos
+
+Se reconocen únicamente nombres generados por el código:
+- .new- seguido de exactamente 16 caracteres hexadecimales, sólo dentro de profiles/.
+- .revision- seguido de exactamente 16 caracteres hexadecimales, sólo dentro de profiles/<profile_id>/revisions/.
+- Temporales atómicos .<filename>.<16 hex>.tmp sólo en ubicaciones controladas y para destinos conocidos: raíz (catalog.json y .profiles.transaction.json), perfil (metadata.json), revisión (config.enc.json y manifest.json).
+
+No se usa rglob(), no se recorren rutas arbitrarias ni se siguen enlaces simbólicos. Los IDs de perfil recorridos deben corresponder al formato emitido por el generador (profile- más 32 hexadecimales); las revisiones publicadas se preservan.
+
+### 13.3 Validación antes de eliminar
+
+Cada candidato se inspecciona mediante lstat() sin seguir symlinks. Se exige tipo esperado, propietario y grupo root, permisos exactos (directorios 0700, archivos 0600) y nlink == 1 para archivos. Los árboles .new-* y .revision-* se validan con una estructura explícita y profundidad acotada antes de retirarlos.
+
+Si hay un tipo, propietario, grupo, modo, hardlink o contenido de directorio inesperado, el candidato se conserva íntegro y se emite una advertencia. No se corrigen permisos de candidatos sospechosos ni se intenta limpiar parcialmente un árbol no validado.
+
+### 13.4 Escritura atómica
+
+atomic_write() limpia su propio nombre temporal si la escritura, os.replace() o el fsync posterior fallan. La limpieza sólo intenta retirar el nombre temporal de esa operación; nunca elimina el destino. Si replace() ya publicó el destino y falla el fsync del directorio, el destino publicado permanece y el nombre temporal ya no existe.
+
+### 13.5 Pruebas añadidas y límites
+
+tests/xray_profiles.sh cubre temporales exactos en ubicaciones permitidas, staging .new-*/.revision-*, SIGKILL real antes de replace() y durante la publicación de perfiles/revisiones, idempotencia, preservación de revisiones válidas, symlinks, owner/group incorrectos, modos inseguros, hardlinks, nombres no canónicos, fallo inyectado de replace() y fallo de fsync del directorio después de publicar el destino. Todas las pruebas usan almacenes temporales y claves sintéticas.
+
+La regresión completa del repositorio ejecutó 51/51 scripts PASS. AST Python 18/18, bash -n, ShellCheck focal con exclusiones históricas SC2251/SC2034, shfmt focal y git diff --check PASS. La limpieza no se ejecutó sobre /var/lib/xray-manager/profiles, no se leyó master.key y no se modificó runtime, servicio, firewall, puertos, certificados o red. Esta fase no equivale a aceptación formal del subsistema de perfiles ni cierra Etapa 5 o Etapa 2.

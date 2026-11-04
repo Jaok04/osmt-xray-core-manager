@@ -131,26 +131,29 @@ def atomic_write(path: pathlib.Path, data: bytes) -> None:
     flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(temp, flags, 0o600)
     try:
-        os.fchown(fd, 0, 0)
-        os.fchmod(fd, 0o600)
-        view = memoryview(data)
-        while view:
-            written = os.write(fd, view)
-            view = view[written:]
-        os.fsync(fd)
-    except Exception:
-        os.close(fd)
-        with contextlib.suppress(FileNotFoundError):
-            temp.unlink()
-        raise
-    else:
-        os.close(fd)
-    os.replace(temp, path)
-    dirfd = os.open(parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-    try:
-        os.fsync(dirfd)
+        try:
+            os.fchown(fd, 0, 0)
+            os.fchmod(fd, 0o600)
+            view = memoryview(data)
+            while view:
+                written = os.write(fd, view)
+                if written <= 0:
+                    raise OSError("Escritura atómica incompleta.")
+                view = view[written:]
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        os.replace(temp, path)
+        dirfd = os.open(parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(dirfd)
+        finally:
+            os.close(dirfd)
     finally:
-        os.close(dirfd)
+        # If replace failed, remove only our unpublished temporary name.
+        # If replace succeeded, temp no longer exists; never touch destination.
+        with contextlib.suppress(OSError):
+            temp.unlink()
 
 
 def json_bytes(value: object) -> bytes:
@@ -220,6 +223,7 @@ class ProfileStore:
         self.catalog_path = self.root / "catalog.json"
         self.lock_path = self.root / ".profiles.lock"
         self.transaction_path = self.root / ".profiles.transaction.json"
+        self._cleanup_report = {"removed_files": 0, "removed_directories": 0, "anomalies": []}
 
     def master_key(self) -> bytes:
         if self._master_key is None:
@@ -325,11 +329,148 @@ class ProfileStore:
                 fail("Lock de perfiles inseguro.")
             fcntl.flock(fd, fcntl.LOCK_EX)
             self.recover_transaction()
+            self._cleanup_report = self.cleanup_orphan_temps()
             yield
         finally:
             with contextlib.suppress(OSError):
                 fcntl.flock(fd, fcntl.LOCK_UN)
             os.close(fd)
+
+    @staticmethod
+    def _cleanup_lstat(path: pathlib.Path, expected: str) -> os.stat_result | None:
+        try:
+            info = path.lstat()
+        except FileNotFoundError:
+            return None
+        if expected == "dir":
+            valid = stat.S_ISDIR(info.st_mode) and info.st_uid == 0 and info.st_gid == 0 and stat.S_IMODE(info.st_mode) == 0o700
+        else:
+            valid = (stat.S_ISREG(info.st_mode) and info.st_uid == 0 and info.st_gid == 0 and info.st_nlink == 1
+                     and stat.S_IMODE(info.st_mode) == 0o600)
+        return info if valid else None
+
+    @staticmethod
+    def _cleanup_temp_name(name: str, targets: tuple[str, ...]) -> bool:
+        return any(re.fullmatch(r"\." + re.escape(target) + r"\.[0-9a-f]{16}\.tmp", name)
+                   for target in targets)
+
+    def _cleanup_anomaly(self, report: dict, path: pathlib.Path, reason: str) -> None:
+        report["anomalies"].append(f"{path}: {reason}")
+
+    def _cleanup_temp_file(self, path: pathlib.Path, targets: tuple[str, ...], report: dict) -> None:
+        if not self._cleanup_temp_name(path.name, targets):
+            return
+        if self._cleanup_lstat(path, "file") is None:
+            self._cleanup_anomaly(report, path, "tipo, propietario, hardlinks o permisos inesperados; se conserva")
+            return
+        path.unlink()
+        self._fsync_dir(path.parent)
+        report["removed_files"] += 1
+
+    def _validate_temp_tree(self, path: pathlib.Path, kind: str, report: dict) -> bool:
+        if self._cleanup_lstat(path, "dir") is None:
+            self._cleanup_anomaly(report, path, "directorio temporal inseguro; se conserva")
+            return False
+
+        def validate_file(entry: pathlib.Path, allowed: tuple[str, ...]) -> bool:
+            if self._cleanup_temp_name(entry.name, allowed):
+                if self._cleanup_lstat(entry, "file") is None:
+                    self._cleanup_anomaly(report, entry, "temporal interno inseguro; se conserva el árbol")
+                    return False
+                return True
+            if entry.name not in allowed:
+                self._cleanup_anomaly(report, entry, "entrada desconocida; se conserva el árbol")
+                return False
+            if self._cleanup_lstat(entry, "file") is None:
+                self._cleanup_anomaly(report, entry, "archivo interno inseguro; se conserva el árbol")
+                return False
+            return True
+
+        try:
+            entries = list(path.iterdir())
+        except OSError as exc:
+            self._cleanup_anomaly(report, path, f"no se pudo inspeccionar: {exc}")
+            return False
+
+        if kind == "revision":
+            for entry in entries:
+                if not validate_file(entry, ("config.enc.json", "manifest.json")):
+                    return False
+            return True
+
+        for entry in entries:
+            if entry.name == "metadata.json" or self._cleanup_temp_name(entry.name, ("metadata.json",)):
+                if not validate_file(entry, ("metadata.json",)):
+                    return False
+            elif entry.name == "revisions":
+                if self._cleanup_lstat(entry, "dir") is None:
+                    self._cleanup_anomaly(report, entry, "directorio revisions inseguro; se conserva el árbol")
+                    return False
+                try:
+                    revisions = list(entry.iterdir())
+                except OSError as exc:
+                    self._cleanup_anomaly(report, entry, f"no se pudo inspeccionar: {exc}")
+                    return False
+                for revision in revisions:
+                    if revision.name != "r000001" or self._cleanup_lstat(revision, "dir") is None:
+                        self._cleanup_anomaly(report, revision, "entrada de revisión inesperada/insegura; se conserva el árbol")
+                        return False
+                    for child in revision.iterdir():
+                        if not validate_file(child, ("config.enc.json", "manifest.json")):
+                            return False
+            else:
+                self._cleanup_anomaly(report, entry, "entrada desconocida; se conserva el árbol")
+                return False
+        return True
+
+    def _remove_valid_temp_tree(self, path: pathlib.Path, kind: str, report: dict) -> None:
+        if not self._validate_temp_tree(path, kind, report):
+            return
+        import shutil
+        shutil.rmtree(path)
+        self._fsync_dir(path.parent)
+        report["removed_directories"] += 1
+
+    def cleanup_orphan_temps(self) -> dict:
+        """Remove only exact, root-owned temporary artifacts in known store locations."""
+        report = {"removed_files": 0, "removed_directories": 0, "anomalies": []}
+
+        # Store root: atomic writes for catalog and WAL journal.
+        for entry in list(self.root.iterdir()):
+            self._cleanup_temp_file(entry, ("catalog.json", ".profiles.transaction.json"), report)
+
+        profile_id_re = re.compile(r"^profile-[0-9a-f]{32}$")
+        for entry in list(self.profiles.iterdir()):
+            if re.fullmatch(r"\.new-[0-9a-f]{16}", entry.name):
+                self._remove_valid_temp_tree(entry, "profile", report)
+                continue
+            if not profile_id_re.fullmatch(entry.name):
+                continue
+            if self._cleanup_lstat(entry, "dir") is None:
+                self._cleanup_anomaly(report, entry, "directorio de perfil inseguro; se conserva")
+                continue
+            for temp_entry in list(entry.iterdir()):
+                self._cleanup_temp_file(temp_entry, ("metadata.json",), report)
+            revisions = entry / "revisions"
+            if self._cleanup_lstat(revisions, "dir") is None:
+                if revisions.exists() or revisions.is_symlink():
+                    self._cleanup_anomaly(report, revisions, "directorio revisions inseguro; se conserva")
+                continue
+            for revision_entry in list(revisions.iterdir()):
+                if re.fullmatch(r"\.revision-[0-9a-f]{16}", revision_entry.name):
+                    self._remove_valid_temp_tree(revision_entry, "revision", report)
+                    continue
+                if not re.fullmatch(r"r[0-9]{6}", revision_entry.name):
+                    continue
+                if self._cleanup_lstat(revision_entry, "dir") is None:
+                    self._cleanup_anomaly(report, revision_entry, "directorio de revisión inseguro; se conserva")
+                    continue
+                for temp_entry in list(revision_entry.iterdir()):
+                    self._cleanup_temp_file(temp_entry, ("config.enc.json", "manifest.json"), report)
+
+        for anomaly in report["anomalies"]:
+            print(f"ADVERTENCIA: temporal huérfano conservado: {anomaly}", file=sys.stderr)
+        return report
 
     def _fsync_dir(self, directory: pathlib.Path) -> None:
         fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))

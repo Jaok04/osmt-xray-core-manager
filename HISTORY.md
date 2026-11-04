@@ -828,3 +828,16 @@ Se corrigió `docs/DISENO_IMPLEMENTACION_PERFILES.md` para describir el hash rea
 ## 2026-11-03 — Inicio de remediación transaccional PF-01/PF-02
 
 Tras autorización expresa del propietario, se implementó localmente un journal WAL con snapshots de catálogo/metadatos, whitelist de rutas, rollback idempotente y recuperación al adquirir el lock. Integración en create/duplicate/rename/update/restore. Se añadieron pruebas de fallo de escritura, fsync posterior a replace, crash en varias fases e interrupción durante rollback. Prueba focal `tests/xray_profiles.sh` PASS. Regresión completa final: 51/51 scripts PASS; Python AST, Bash syntax, ShellCheck focal y `git diff --check` PASS. La revisión final del diff y publicación aún están pendientes. Sin secretos reales, perfiles live ni cambios runtime.
+## 2026-11-04 — Limpieza segura de temporales huérfanos de perfiles
+
+Se implementó en /opt/xray-manager sobre design/user-identity-association-v1 la fase correctiva previamente autorizada.
+
+- ProfileStore.locked() ejecuta recover_transaction() y, sólo después de una recuperación exitosa y aún bajo lock exclusivo, cleanup_orphan_temps().
+- Se reconocen sólo .new- + 16 hex dentro de profiles/, .revision- + 16 hex dentro de profiles/<profile_id>/revisions/ y temporales atómicos .<destino>.<16 hex>.tmp en ubicaciones controladas.
+- Validación lstat, tipo, root:root, permisos 0700/0600, nlink=1 y estructura acotada antes de eliminar. Symlinks, metadatos anómalos y entradas desconocidas se preservan y reportan.
+- atomic_write() retira su temporal si os.replace() falla; si el replace ya publicó el destino y falla el fsync del directorio, no elimina el destino.
+- Pruebas añadidas: SIGKILL real antes del replace, durante publicación .new-* y .revision-*, recuperación en siguiente operación, idempotencia, anomalías symlink/modo/owner/hardlink preservadas, revisión publicada conservada y destino publicado intacto ante fallo de fsync.
+
+Verificación: tests/*.sh 51/51 PASS; Python AST 18/18; bash -n; ShellCheck focal (SC2251/SC2034 preexistentes excluidos); shfmt focal; git diff --check. Las pruebas usan únicamente almacenes temporales y claves sintéticas. No se leyó master.key, no se creó/limpió almacén live y no se tocó runtime, systemd, firewall, puertos, certificados o red.
+
+Estado: cambios locales en VPS; revisión final y sincronización GitHub pendientes. No implica aceptación formal del almacén ni cierre de Etapa 5/Etapa 2.

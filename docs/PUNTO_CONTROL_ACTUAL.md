@@ -734,3 +734,21 @@ Autorización recibida. Implementación local: journal `.profiles.transaction.js
 Pruebas focales añadidas: fallo de creación del journal, fallo de catálogo, fsync posterior a replace, crash entre escrituras, crash tras ambos replaces, interrupción durante rollback, catálogo inicialmente ausente y recuperación al reabrir; limpieza de perfiles/revisiones no confirmados. `tests/xray_profiles.sh` PASS; regresión completa final 51/51 scripts PASS; Python AST, Bash syntax, ShellCheck focal y `git diff --check` PASS.
 
 **No publicar todavía.** Siguiente: revisión detallada del diff, repetición de las 51 pruebas, estáticos, comprobar estado Git limpio tras retirar artefactos temporales y luego commit/push a `design/user-identity-association-v1`. No modificar main/normativa; no usar master.key real ni crear perfiles live.
+## Punto de control vigente — fase de temporales huérfanos implementada (2026-11-04)
+
+Rama: design/user-identity-association-v1
+HEAD base: 3f8f88d8146409acfdf457529ce53075242a5bcd
+Checkout: /opt/xray-manager en la VPS accesible por Termalin.
+
+Implementación local:
+- Recuperación WAL antes de cualquier limpieza, bajo lock exclusivo.
+- Limpieza limitada a patrones/ubicaciones exactos para .new-*, .revision-* y temporales atómicos conocidos.
+- lstat, root:root, permisos exactos, hardlinks y estructura acotada antes de borrar.
+- Symlinks, permisos anómalos, propietarios/grupos incorrectos, hardlinks y contenido desconocido se conservan y reportan.
+- atomic_write() limpia sólo su temporal si replace/fsync falla; nunca retira el destino.
+
+Pruebas: suite completa 51/51 PASS; AST Python 18/18; Bash syntax; ShellCheck focal con exclusiones históricas SC2251/SC2034; shfmt focal; git diff --check. Incluye SIGKILL, idempotencia, anomalías de symlink/modo/owner/hardlink preservadas, revisión válida conservada y destino publicado intacto ante fallo de fsync. Todo en almacenes temporales y claves sintéticas.
+
+Límites: no se leyó master.key; no se creó ni limpió almacén live; no runtime apply ni cambios en servicios, systemd, firewall, puertos, certificados o red. Xray-Normativa/ y main no se modifican.
+
+Siguiente paso: revisión del diff, comprobar estado Git y publicar únicamente en design/user-identity-association-v1. La aceptación formal del almacén y el cierre de etapas siguen pendientes.

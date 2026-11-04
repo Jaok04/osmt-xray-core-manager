@@ -168,3 +168,17 @@ Tras la autorización expresa del propietario, se implementó en el árbol de tr
 La prueba focal `tests/xray_profiles.sh` ahora inyecta fallos al crear el journal, al escribir el catálogo y al sincronizar directorios después de replace; simula terminación entre escrituras, después de ambos replaces pero antes de retirar journal e interrupción durante rollback. También cubre catálogo inicialmente ausente, recuperación al reabrir y limpieza de operaciones create/duplicate/update/restore. Todas las pruebas usan almacén temporal y clave sintética.
 
 La regresión completa posterior a la última modificación ejecutó **51/51 scripts PASS**, además de Python AST, sintaxis Bash, ShellCheck focal y `git diff --check` PASS. La revisión final del diff y publicación GitHub aún están pendientes; por tanto, PF-01/PF-02 no se declaran cerrados/publicados hasta completar esos pasos. Los temporales ocultos no referenciados creados antes de escribir el journal pueden permanecer tras una caída; la limpieza automática de temporales huérfanos queda fuera de esta corrección.
+## 11. Actualización de remediación y temporales huérfanos — 2026-11-04
+
+La sección 10 describe el estado de la remediación transaccional antes de la fase de limpieza y queda superada en cuanto a los temporales ocultos pendientes. El código de la rama de trabajo incorpora ahora:
+- recuperación WAL primero y limpieza automática después, bajo el mismo lock exclusivo;
+- reconocimiento limitado de .new-<16 hex>, .revision-<16 hex> y temporales atómicos .<destino>.<16 hex>.tmp en rutas controladas;
+- validación lstat, tipo, root:root, modos 0700/0600, hardlinks y estructura permitida antes de borrar;
+- preservación y advertencia de candidatos sospechosos;
+- limpieza del temporal propio de atomic_write() ante fallos de replace/fsync, sin borrar el destino publicado.
+
+La prueba focal tests/xray_profiles.sh pasó, incluidos SIGKILL real en procesos hijos antes del replace y durante publicación de directorios, idempotencia, preservación de artefactos sospechosos (symlink, modo, owner y hardlink), revisión válida intacta y destino publicado preservado ante fallo de fsync posterior a replace. La regresión completa ejecutó 51/51 scripts PASS. Python AST 18/18, bash -n, ShellCheck focal (excluyendo SC2251/SC2034 históricos del archivo), shfmt focal y git diff --check también pasaron.
+
+Toda la prueba de limpieza se ejecutó con almacenes temporales y claves sintéticas. No se leyó /etc/xray-manager/keys/master.key, no se creó ni limpió el almacén live /var/lib/xray-manager/profiles y no se modificó Xray runtime, systemd, firewall, puertos, certificados o red.
+
+Estado: fase implementada y verificada en la VPS de trabajo; revisión final del diff y sincronización GitHub pendientes. Esto no constituye aceptación formal del almacén de perfiles ni cierre de Etapa 5/Etapa 2.
