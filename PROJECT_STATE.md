@@ -997,3 +997,29 @@ El propietario aceptó formalmente C-05C y autorizó publicar cambios y actualiz
 C-05D/E/F siguen sin autorización. Etapa 5 y Etapa 2 permanecen ABIERTAS. La publicación no alteró `main`, `Xray-Normativa/`, runtime, almacenes live, dependencias, servicios, certificados, firewall, puertos, red ni VPS de pruebas; no se leyó la clave maestra real.
 
 **Publicación C-05C:** commit `58c273a18ea32c1feddc02012d0318952c7a0689` (`58c273a`) en `design/user-identity-association-v1`; push fast-forward verificado. La sincronización del checkout de desarrollo en `/opt/xray-manager` corresponde al mismo commit.
+
+## Recuperación y verificación del punto C-05C — 2026-11-04
+
+- Estado vigente: C-05A/B/C aceptadas, auditadas, publicadas y sincronizadas. C-05D/E/F requieren autorizaciones independientes. Etapa 5 y Etapa 2 siguen ABIERTAS.
+- VPS /opt/xray-manager: rama design/user-identity-association-v1, HEAD 670e6ab371e620a8cb8b51f9431746f0a2270cda, árbol limpio.
+- GitHub confirma el mismo HEAD de la rama autorizada; main continúa en 656ecedc506a94a6461aee296b20871d51a38bf3.
+- SSH: primer git ls-remote origin falló, autenticación directa de las claves RW y RO aceptada y reintento posterior de git ls-remote origin satisfactorio. No se modificaron claves, configuración SSH, remoto ni credenciales. No existe ref local origin/main; la rama remota main sí fue consultada directamente.
+- Normativa Etapa 5: hashes SHA-256 del Markdown y YAML en Xray-Normativa/ coinciden con la copia aprobada bajo /root/Xray_Manager_Documentacion_Final_2026-10-31.
+- Se aclaró documentalmente que los estados antiguos de C-05C pendiente son históricos y están superados por el registro final de aceptación/publicación.
+- No se implementó C-05D, no se ejecutaron pruebas de escritura, no hubo commit/push, no se tocaron main, Xray-Normativa/, secretos, almacenes live, runtime, servicios, dependencias, certificados, firewall, puertos, red ni VPS de pruebas.
+- Próximo paso: preparar diseño y matriz de pruebas C-05D sin implementación. Requiere autorización expresa antes de codificar.
+
+## Registro de implementación C-05D — 2026-11-04
+
+El propietario autorizó C-05D: historial y comparación de informes de validación. Se implementó exclusivamente el servicio read-only `scripts/xray_validation_history.py` y su suite `tests/test_xray_validation_history.py`; se añadieron los documentos de implementación y auditoría. La modalidad aprobada es comparación de informes de una misma configuración, permitiendo revisiones distintas y rechazando configuraciones diferentes.
+
+Verificación local: C-05D focal H01–H38 38/38 PASS; regresión Python C-05A/B/C/D 76/76 PASS; suites shell existentes 56/56 PASS; `py_compile`, `bash -n`, `install.sh --check`, ShellCheck severidad error y `git diff --check` PASS. ShellCheck en severidad warning informa cuatro advertencias preexistentes en tests/stage1_header.sh (SC2034, dos), tests/uninstall.sh (SC2154) y tests/vless_backup_restore.sh (SC2174); no se modificaron por estar fuera del alcance.
+
+El servicio consulta el almacén C-05B bajo su lock, valida fechas ISO-8601 con zona horaria, ofrece filtros/paginación, detalle y comparación estructurada. No modifica informes/catálogo ni el esquema C-05B. Prueba WAL con SIGKILL, integridad, concurrencia, saneamiento y solo lectura PASS.
+
+Estado: C-05D IMPLEMENTADA, VERIFICADA Y AUDITADA LOCALMENTE; PENDIENTE DE ACEPTACIÓN FORMAL; NO PUBLICADA NI SINCRONIZADA. No se creó commit ni push. C-05E y C-05F siguen sin autorización; Etapa 5 y Etapa 2 permanecen ABIERTAS. No se modificaron main, Xray-Normativa/, almacenes live, clave maestra real, runtime, servicios, dependencias, certificados, firewall, puertos, red ni VPS de pruebas.
+
+
+## Aceptación formal y publicación C-05D — 2026-11-04
+
+El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar exclusivamente en `design/user-identity-association-v1`. La aceptación cubre el servicio de historial/comparación, sus pruebas focales y la auditoría documentada. C-05D queda ACEPTADA; C-05E y C-05F continúan sin autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS.

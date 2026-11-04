@@ -1052,3 +1052,30 @@ Validación antes de publicar: 13/13 pruebas focales C-05C; 38/38 pruebas Python
 C-05D/E/F siguen pendientes de autorizaciones independientes. Etapa 5 y Etapa 2 permanecen ABIERTAS. No se modificaron main, Xray-Normativa/, almacenes live, runtime, dependencias ni VPS de pruebas; no se leyó clave maestra real.
 
 Publicación GitHub C-05C verificada: commit `58c273a18ea32c1feddc02012d0318952c7a0689` (`58c273a`), push fast-forward desde `6ab158f436d2d88755d70e954114efb4fa2f6129` a `design/user-identity-association-v1`. La rama remota quedó en ese SHA tras el push.
+
+## 2026-11-04 — Recuperación documental y diagnóstico Git SSH tras C-05C
+
+Se recuperó el punto de control desde la conversación anterior y se verificó el checkout de Implementación-Xray:/opt/xray-manager contra GitHub. La rama autorizada design/user-identity-association-v1 coincide en 670e6ab371e620a8cb8b51f9431746f0a2270cda; el árbol de trabajo estaba limpio. GitHub confirma main en 656ecedc506a94a6461aee296b20871d51a38bf3. El commit 670e6ab tiene como padre la publicación C-05C 58c273a18ea32c1feddc02012d0318952c7a0689.
+
+Se detectaron registros históricos que describen C-05C antes de su aceptación/publicación. Se añadieron aclaraciones de precedencia temporal en los documentos de continuidad y punto de control, sin borrar entradas históricas. Se registró el estado actual en PROJECT_STATE.md.
+
+Diagnóstico SSH de solo lectura: primer git ls-remote origin falló; el alias SSH selecciona la identidad RW y la autenticación directa con claves RW y RO fue aceptada por GitHub. Un segundo git ls-remote origin terminó correctamente y devolvió los SHA actuales de la rama autorizada y main. No se cambiaron claves, credenciales, remoto ni configuración SSH. No existe una ref local origin/main, aunque la rama remota fue confirmada directamente en GitHub.
+
+Los SHA-256 de los documentos Markdown y YAML normativos de Etapa 5 coinciden entre Xray-Normativa/ y /root/Xray_Manager_Documentacion_Final_2026-10-31. No se modificó la normativa.
+
+No se implementó C-05D, no se ejecutaron pruebas de escritura, no se creó commit ni se publicó nada. No se tocaron main, secretos, almacenes live, runtime, servicios, dependencias, certificados, firewall, puertos, red ni VPS de pruebas. C-05D/E/F siguen requiriendo autorizaciones independientes; Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Registro de implementación C-05D — 2026-11-04
+
+El propietario autorizó C-05D: historial y comparación de informes de validación. Se implementó exclusivamente el servicio read-only `scripts/xray_validation_history.py` y su suite `tests/test_xray_validation_history.py`; se añadieron los documentos de implementación y auditoría. La modalidad aprobada es comparación de informes de una misma configuración, permitiendo revisiones distintas y rechazando configuraciones diferentes.
+
+Verificación local: C-05D focal H01–H38 38/38 PASS; regresión Python C-05A/B/C/D 76/76 PASS; suites shell existentes 56/56 PASS; `py_compile`, `bash -n`, `install.sh --check`, ShellCheck severidad error y `git diff --check` PASS. ShellCheck en severidad warning informa cuatro advertencias preexistentes en tests/stage1_header.sh (SC2034, dos), tests/uninstall.sh (SC2154) y tests/vless_backup_restore.sh (SC2174); no se modificaron por estar fuera del alcance.
+
+El servicio consulta el almacén C-05B bajo su lock, valida fechas ISO-8601 con zona horaria, ofrece filtros/paginación, detalle y comparación estructurada. No modifica informes/catálogo ni el esquema C-05B. Prueba WAL con SIGKILL, integridad, concurrencia, saneamiento y solo lectura PASS.
+
+Estado: C-05D IMPLEMENTADA, VERIFICADA Y AUDITADA LOCALMENTE; PENDIENTE DE ACEPTACIÓN FORMAL; NO PUBLICADA NI SINCRONIZADA. No se creó commit ni push. C-05E y C-05F siguen sin autorización; Etapa 5 y Etapa 2 permanecen ABIERTAS. No se modificaron main, Xray-Normativa/, almacenes live, clave maestra real, runtime, servicios, dependencias, certificados, firewall, puertos, red ni VPS de pruebas.
+
+
+## Aceptación formal y publicación C-05D — 2026-11-04
+
+El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar exclusivamente en `design/user-identity-association-v1`. La aceptación cubre el servicio de historial/comparación, sus pruebas focales y la auditoría documentada. C-05D queda ACEPTADA; C-05E y C-05F continúan sin autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS.
