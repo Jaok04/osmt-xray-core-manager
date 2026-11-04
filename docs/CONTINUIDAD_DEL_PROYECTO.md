@@ -861,6 +861,6 @@ La inspección confirmó que `/var/lib/xray-manager/profiles` no existe; no hay 
 
 **Verificación:** `tests/*.sh` 51/51 PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck focal PASS; shfmt de los archivos nuevos PASS; `git diff --check` PASS.
 
-**Estado:** cambios locales preparados en el índice desde la primera iteración y correcciones de cifrado verificadas en pruebas sintéticas; sin commit ni push de esta entrega. `scripts/__pycache__/` es un artefacto local preexistente y debe preservarse/excluirse. La rama autorizada sigue `design/user-identity-association-v1`; `main` permanece protegida.
+**Estado:** IMPLEMENTADO, VERIFICADO EN PRUEBAS SINTÉTICAS, PUBLICADO y SINCRONIZADO byte a byte en `design/user-identity-association-v1`. Commit funcional inicial `03b63ca109a2fabb262924daf5d2fe4a683b23d8`; commit de reconciliación byte a byte `4cec7496585390adbe72d8887cb6dacd94743c32`. El árbol Git local y remoto coincide. `scripts/__pycache__/` es un artefacto local preexistente y se preserva/excluye. `main` permanece protegida.
 
-**Próxima acción:** inspeccionar el diff completo y publicar sólo en la rama autorizada; luego comparar HEAD, archivos y árbol de trabajo de VPS con GitHub. No usar la clave maestra real en pruebas ni ejecutar activación runtime.
+**Próxima acción:** revisión del propietario y aceptación formal del subsistema o solicitud de ajustes. No usar la clave maestra real en pruebas ni ejecutar activación runtime.

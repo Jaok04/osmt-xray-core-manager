@@ -708,6 +708,7 @@ Se excluye deliberadamente `scripts/__pycache__/` por ser un artefacto local de 
 - Diseño: `docs/DISENO_IMPLEMENTACION_PERFILES.md`. Normativa contrastada: `Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md` y YAML; no se modificó `Xray-Normativa/`.
 - No se creó `/var/lib/xray-manager/profiles`, no se leyó/usó `master.key` real, no se alteró la conexión VLESS live ni se tocó runtime, systemd, firewall, puertos, certificados o red.
 - Verificación ejecutada: `tests/*.sh` 51/51 PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck focal PASS; shfmt de los dos archivos nuevos PASS; `git diff --check` PASS.
-- Estado de esta entrega: IMPLEMENTACIÓN LOCAL y VERIFICADA EN PRUEBAS SINTÉTICAS; aceptación formal del subsistema pendiente; commit/push/sincronización pendientes de revisión final y publicación. Etapa 2 continúa ABIERTA.
+- Estado de esta entrega: IMPLEMENTADA, VERIFICADA EN PRUEBAS SINTÉTICAS, PUBLICADA y SINCRONIZADA byte a byte en `design/user-identity-association-v1`; aceptación formal del subsistema pendiente. Commit funcional inicial `03b63ca109a2fabb262924daf5d2fe4a683b23d8`; commit de reconciliación byte a byte `4cec7496585390adbe72d8887cb6dacd94743c32`. La actualización documental final también quedó publicada.
+- Verificación de publicación: árbol Git de la VPS y árbol remoto idénticos; `main` sin cambios; `Xray-Normativa/` sin cambios (el README auxiliar sigue siendo el único archivo extra frente al respaldo). `scripts/__pycache__/` permanece local y excluido.
 
-**Siguiente paso:** revisar el diff completo, publicar exclusivamente en `design/user-identity-association-v1` y verificar el contenido real de GitHub y VPS. No activar perfiles ni ejecutar pruebas con secretos reales.
+**Siguiente paso:** revisión del propietario y aceptación formal del subsistema o indicación de ajustes. No activar perfiles ni ejecutar pruebas con secretos reales. Etapa 2 continúa ABIERTA.

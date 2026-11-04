@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-03
 **Rama de trabajo:** `design/user-identity-association-v1`
-**Estado:** implementación local con cifrado autenticado de revisiones; integración de validación nativa, activación y eliminación segura pendientes; aceptación formal del subsistema pendiente.
+**Estado:** implementación v1.1 publicada y sincronizada byte a byte; integración de validación nativa, activación y eliminación segura pendientes; aceptación formal del subsistema pendiente.
 
 ## 1. Base funcional y decisiones
 
@@ -141,3 +141,12 @@ Verificación ejecutada en esta iteración: `tests/*.sh` 51/51 PASS; Python AST 
 - No se escribió `/etc/xray/config.json`, no se ejecutó staging runtime desde un perfil, no se ejecutó `xray_service_prepare`, no se creó/inició/habilitó `xray.service`.
 - No se modificaron firewall, puertos, certificados ni reglas de red.
 - Xray sigue fuera del runtime; la Etapa 2 permanece ABIERTA.
+
+
+## 10. Publicación y sincronización
+
+- Commit funcional inicial: `03b63ca109a2fabb262924daf5d2fe4a683b23d8`.
+- Reconciliación de contenido byte a byte con el índice Git de la VPS: `4cec7496585390adbe72d8887cb6dacd94743c32`.
+- La publicación conserva exactamente los blobs Git del índice local; el árbol remoto se comparó con `git write-tree` de la VPS y ambos dieron el mismo SHA de árbol.
+- Rama `design/user-identity-association-v1`; `main` no se modificó. `Xray-Normativa/` no se modificó. `scripts/__pycache__/` se preservó y excluyó.
+- Estado de aceptación: pendiente de decisión formal del propietario. La publicación no declara completada Etapa 5 ni habilita runtime.
