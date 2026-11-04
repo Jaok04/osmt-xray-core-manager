@@ -1079,3 +1079,18 @@ Estado: C-05D IMPLEMENTADA, VERIFICADA Y AUDITADA LOCALMENTE; PENDIENTE DE ACEPT
 ## Aceptación formal y publicación C-05D — 2026-11-04
 
 El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar exclusivamente en `design/user-identity-association-v1`. La aceptación cubre el servicio de historial/comparación, sus pruebas focales y la auditoría documentada. C-05D queda ACEPTADA; C-05E y C-05F continúan sin autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+
+## 2026-11-04 — Implementación y auditoría local C-05E
+
+El propietario aprobó el diseño C-05E y autorizó la implementación completa, incluyendo integración Bash/Python, pruebas, auditoría y documentación, exclusivamente en `design/user-identity-association-v1`, sin commit ni push.
+
+Se conectó la opción `[2]` del menú `CONFIGURACIONES, PERFILES Y RESPALDOS` al submenú de validación. La validación guardada reutiliza C-05C con confirmación explícita y revisión exacta. Último informe, historial, detalle y comparación reutilizan C-05D/C-05B mediante una CLI JSON read-only. La ruta `XRAY_MANAGER_VALIDATION_DIR` quedó definida en `config/paths.sh`. Las opciones de archivo externo y configuración activa siguen deshabilitadas sin consultar ni modificar runtime.
+
+Documentos: `docs/IMPLEMENTACION_C05E_MENU_BASH_2026-11-04.md`, `docs/AUDITORIA_C05E_MENU_BASH_2026-11-04.md` y diseño `docs/DISENO_C05E_INTEGRACION_MENU_BASH_2026-11-04.md`. Resultados: prueba focal PASS; regresión Python C-05A/B/C/D 76/76 PASS; regresión shell 57/57 PASS; `bash -n`, ShellCheck severidad error, `install.sh --check` y `git diff --check` PASS.
+
+C-05E queda IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal. No hay commit, push ni sincronización. C-05F no fue iniciada ni autorizada. Etapa 5 y Etapa 2 siguen ABIERTAS. No se creó almacén live, no se leyó la clave maestra real, no se instalaron dependencias y no se modificaron runtime, servicios, certificados, firewall, puertos, red, `main`, `Xray-Normativa/` ni VPS de pruebas.
+
+## Aceptación formal de C-05E — 2026-11-04
+
+El propietario aceptó formalmente C-05E — Integración del menú Bash — tras revisar su implementación, resultados de pruebas, auditoría y limitaciones E01–E38. C-05E queda ACEPTADA. La aceptación no autoriza publicación: los cambios permanecen locales, sin commit ni push. C-05F no ha sido autorizada ni iniciada. Etapa 5 y Etapa 2 permanecen ABIERTAS.

@@ -1,10 +1,10 @@
 # Punto de control actual — Xray Core Manager
 
-> El punto de control operativo vigente es el último bloque C-05C al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
+> El punto de control operativo vigente es el último bloque C-05E al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
 
 **Fecha del corte:** 2026-11-04
-**Tarea activa:** continuar la planificación de C-05D, previa autorización independiente; C-05C está aceptada formalmente, publicada y sincronizada. C-01/C-02/C-03 aceptadas como componentes limitados; C-04A/B/C aceptadas y C-04 cerrada integralmente; C-05A/B aceptadas, publicadas y sincronizadas.
-**Estado vigente:** almacén de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO. Gestor independiente: C-01/C-02/C-03 aceptadas; C-04 cerrada; C-05A/B aceptadas y publicadas; C-05C aceptada, publicada y sincronizada. C-05D/E/F no autorizadas. Etapa 5 ABIERTA; Etapa 2 ABIERTA. Pendientes: creación de perfil desde configuración independiente, validador estático Xray por revisión e informes, historial separado de modificaciones y retención, perfil activo/composición, activación/verificación/rollback y backup/restore integral. La integración del menú de configuraciones independientes está implementada; no incluye activación ni aplicación al runtime. VLESS-WS live sigue draft y sin runtime apply.
+**Tarea activa:** revisión y aceptación formal de C-05E, implementada y auditada localmente, sin commit ni push; C-05A/B/C/D están aceptadas formalmente, publicadas y sincronizadas. C-01/C-02/C-03 aceptadas como componentes limitados; C-04A/B/C aceptadas y C-04 cerrada integralmente; C-05A/B aceptadas, publicadas y sincronizadas.
+**Estado vigente:** almacén de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO. Gestor independiente: C-01/C-02/C-03 aceptadas; C-04 cerrada; C-05A/B aceptadas y publicadas; C-05C/D aceptadas, publicadas y sincronizadas. C-05E implementada/auditada localmente, pendiente de aceptación; C-05F no autorizada. Etapa 5 ABIERTA; Etapa 2 ABIERTA. Pendientes: creación de perfil desde configuración independiente, validación de archivo externo y de configuración activa (fuera del alcance C-05E), historial separado de modificaciones y retención, perfil activo/composición, activación/verificación/rollback y backup/restore integral. La integración del menú de configuraciones independientes está implementada; no incluye activación ni aplicación al runtime. VLESS-WS live sigue draft y sin runtime apply.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -1012,3 +1012,27 @@ Estado: C-05D IMPLEMENTADA, VERIFICADA Y AUDITADA LOCALMENTE; PENDIENTE DE ACEPT
 ## Aceptación formal y publicación C-05D — 2026-11-04
 
 El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar exclusivamente en `design/user-identity-association-v1`. La aceptación cubre el servicio de historial/comparación, sus pruebas focales y la auditoría documentada. C-05D queda ACEPTADA; C-05E y C-05F continúan sin autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+
+## Punto de control vigente — C-05E implementada y auditada localmente (2026-11-04)
+
+- **Autorización:** el propietario aprobó el diseño C-05E y autorizó expresamente implementación completa, pruebas, auditoría y documentación; commit/push excluidos.
+- **Base:** `ed700c1e770063f6e67c6ebaeae4652172bb2f02`, rama `design/user-identity-association-v1`.
+- **Implementación:** `modules/xray_validation_menu.sh`; CLI read-only añadida a `scripts/xray_validation_history.py`; integración en `modules/profiles.sh`, `bin/xray-manager` y `config/paths.sh`.
+- **Pruebas:** focal C-05E PASS; Python C-05A/B/C/D 76/76 PASS; shell 57/57 PASS; `bash -n`, ShellCheck severidad error, `install.sh --check` y `git diff --check` PASS.
+- **Documentación:** `docs/IMPLEMENTACION_C05E_MENU_BASH_2026-11-04.md`; `docs/AUDITORIA_C05E_MENU_BASH_2026-11-04.md`; diseño actualizado.
+- **Estado:** IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal. Sin commit, push ni sincronización.
+- **Siguiente acción:** revisión del expediente y decisión expresa del propietario. No iniciar C-05F ni publicar sin autorización separada.
+- **Límites:** no se creó almacén live ni se leyó la clave maestra real; no hubo cambios de runtime, servicios, certificados, firewall, puertos, red o dependencias. `main`, `Xray-Normativa/` y VPS de pruebas permanecen intactas.
+- Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Punto de control vigente — C-05E aceptada formalmente (2026-11-04)
+
+- **Decisión:** el propietario aceptó formalmente C-05E — Integración del menú Bash.
+- **Evidencia:** `docs/IMPLEMENTACION_C05E_MENU_BASH_2026-11-04.md` y `docs/AUDITORIA_C05E_MENU_BASH_2026-11-04.md`; la auditoría conserva la trazabilidad real de E01–E38 y sus estados PASS/PARCIAL/PENDIENTE/regresión.
+- **Estado funcional:** C-05E ACEPTADA. C-05A/B/C/D continúan aceptadas y publicadas.
+- **Git:** cambios C-05E siguen sin commit ni push, en `design/user-identity-association-v1`, sobre base `ed700c1e770063f6e67c6ebaeae4652172bb2f02`.
+- **Publicación:** pendiente de autorización independiente; no hacer commit, push ni sincronización todavía.
+- **Siguiente paso:** obtener decisión expresa sobre publicación de C-05E. C-05F requiere autorización independiente y no se ha iniciado.
+- **Protecciones:** `main`, `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime e infraestructura no se modifican.
+- **Etapas:** Etapa 5 y Etapa 2 permanecen ABIERTAS.

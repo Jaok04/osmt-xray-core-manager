@@ -2,7 +2,12 @@
 """Consultas de historial y comparación read-only para informes C-05B."""
 from __future__ import annotations
 
+import argparse
 import datetime as dt
+import json
+import os
+import sys
+from pathlib import Path
 from typing import Any
 
 import xray_validation_store as storemod
@@ -156,4 +161,95 @@ class ValidationHistoryService:
         }
 
 
-__all__ = ["ValidationHistoryError", "ValidationHistoryService"]
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Consulta read-only del historial de validaciones Xray.")
+    parser.add_argument("--store", default=None, help="Ruta absoluta del almacén de informes")
+    sub = parser.add_subparsers(dest="command", required=True)
+    listing = sub.add_parser("list", help="Lista informes verificados")
+    listing.add_argument("--config-id")
+    listing.add_argument("--revision")
+    listing.add_argument("--result", choices=sorted(storemod.RESULTS))
+    listing.add_argument("--date-from")
+    listing.add_argument("--date-to")
+    listing.add_argument("--validation-type", choices=["static_and_native"])
+    listing.add_argument("--limit", type=int, default=20)
+    listing.add_argument("--offset", type=int, default=0)
+    latest = sub.add_parser("latest", help="Obtiene el último informe")
+    latest.add_argument("--config-id")
+    detail = sub.add_parser("show", help="Muestra un informe verificado")
+    detail.add_argument("--validation-id", required=True)
+    compare = sub.add_parser("compare", help="Compara dos informes de la misma configuración")
+    compare.add_argument("--first", required=True)
+    compare.add_argument("--second", required=True)
+    return parser
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _build_parser().parse_args(argv)
+    try:
+        root = args.store or os.environ.get("XRAY_MANAGER_VALIDATION_DIR", storemod.DEFAULT_ROOT)
+        if not os.path.isabs(root):
+            raise ValidationHistoryError("La ruta del almacén debe ser absoluta.")
+        candidate = Path(root)
+        for component in reversed((candidate, *candidate.parents)):
+            if component.exists() and component.is_symlink():
+                raise ValidationHistoryError("El almacén contiene una ruta simbólica no permitida.")
+        if args.command == "list":
+            if args.config_id is not None and (not isinstance(args.config_id, str) or not storemod.CONFIG_RE.fullmatch(args.config_id)):
+                raise ValidationHistoryError("config_id inválido.")
+            if args.revision is not None and (not isinstance(args.revision, str) or not storemod.REV_RE.fullmatch(args.revision)):
+                raise ValidationHistoryError("revision inválida.")
+            if type(args.limit) is not int or not 0 <= args.limit <= 1000 or type(args.offset) is not int or not 0 <= args.offset <= 1000000:
+                raise ValidationHistoryError("Paginación fuera de rango.")
+            _date_bound(args.date_from, "date_from")
+            _date_bound(args.date_to, "date_to")
+            if args.date_from and args.date_to and _date_bound(args.date_from, "date_from") > _date_bound(args.date_to, "date_to"):
+                raise ValidationHistoryError("date_from no puede ser posterior a date_to.")
+        elif args.command == "latest" and args.config_id is not None:
+            if not isinstance(args.config_id, str) or not storemod.CONFIG_RE.fullmatch(args.config_id):
+                raise ValidationHistoryError("config_id inválido.")
+        elif args.command == "show" and not storemod.ID_RE.fullmatch(args.validation_id):
+            raise ValidationHistoryError("validation_id inválido.")
+        elif args.command == "compare" and (not storemod.ID_RE.fullmatch(args.first) or not storemod.ID_RE.fullmatch(args.second)):
+            raise ValidationHistoryError("validation_id inválido.")
+        if not os.path.exists(root):
+            if os.path.islink(root):
+                raise ValidationHistoryError("El almacén contiene una ruta simbólica no permitida.")
+            if args.command == "list":
+                result = {"total": 0, "limit": args.limit, "offset": args.offset, "reports": []}
+            elif args.command == "latest":
+                result = None
+            else:
+                raise ValidationHistoryError("No hay almacén de informes inicializado.")
+            print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+            return 0
+        reports_dir = os.path.join(root, "reports")
+        lock_file = os.path.join(root, "validation.lock")
+        if (not os.path.isdir(root) or os.path.islink(root)
+                or not os.path.isdir(reports_dir) or os.path.islink(reports_dir)
+                or not os.path.isfile(lock_file) or os.path.islink(lock_file)):
+            raise ValidationHistoryError("El almacén no está inicializado o contiene rutas no permitidas; no se crea ni repara durante consultas.")
+        service = ValidationHistoryService(root)
+        if args.command == "list":
+            result = service.list_history(config_id=args.config_id, revision=args.revision,
+                                          date_from=args.date_from, date_to=args.date_to,
+                                          validation_type=args.validation_type, result=args.result,
+                                          limit=args.limit, offset=args.offset)
+        elif args.command == "latest":
+            result = service.get_latest_report(config_id=args.config_id)
+        elif args.command == "show":
+            result = service.get_report_detail(args.validation_id)
+        else:
+            result = service.compare_reports(args.first, args.second)
+        print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+        return 0
+    except (ValidationHistoryError, storemod.ValidationStoreError, OSError, ValueError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 1
+
+
+__all__ = ["ValidationHistoryError", "ValidationHistoryService", "main"]
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

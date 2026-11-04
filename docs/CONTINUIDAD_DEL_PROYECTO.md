@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-04:** C-01/C-02/C-03 aceptadas como componentes limitados; C-04A/B/C aceptadas y C-04 cerrada integralmente; C-05A/B/C aceptadas, publicadas y sincronizadas. C-05C aprobada tras auditoría 13/13 focal y 38/38 regresión Python combinada; suites shell anteriores PASS. La siguiente fase posible es C-05D (historial/comparación), que requiere autorización independiente. C-05E (menú) y C-05F (auditoría integral) también requieren autorización propia. Etapa 5 y Etapa 2 permanecen ABIERTAS. No usar clave maestra real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
+> **Punto de reanudación vigente — 2026-11-04:** C-05A/B/C/D aceptadas, publicadas y sincronizadas. C-05E (integración del menú Bash) implementada, verificada y auditada localmente; pendiente de aceptación formal, sin commit ni push. C-05F no iniciada ni autorizada. Etapa 5 y Etapa 2 permanecen ABIERTAS. Ver `docs/IMPLEMENTACION_C05E_MENU_BASH_2026-11-04.md` y `docs/AUDITORIA_C05E_MENU_BASH_2026-11-04.md`. No usar clave maestra real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -1156,3 +1156,9 @@ Estado: C-05D IMPLEMENTADA, VERIFICADA Y AUDITADA LOCALMENTE; PENDIENTE DE ACEPT
 ## Aceptación formal y publicación C-05D — 2026-11-04
 
 El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar exclusivamente en `design/user-identity-association-v1`. La aceptación cubre el servicio de historial/comparación, sus pruebas focales y la auditoría documentada. C-05D queda ACEPTADA; C-05E y C-05F continúan sin autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Addendum vigente — aceptación formal C-05E (2026-11-04)
+
+C-05E — Integración del menú Bash — fue ACEPTADA FORMALMENTE por el propietario. La aceptación cubre la implementación, las pruebas, la auditoría y las limitaciones E01–E38 documentadas en `docs/AUDITORIA_C05E_MENU_BASH_2026-11-04.md`. Las entradas anteriores que indican «pendiente de aceptación» son fotografías históricas previas a esta decisión y quedan superadas por este addendum.
+
+La aceptación no incluye publicación. Los cambios continúan locales en `design/user-identity-association-v1`, sin commit ni push; la base conocida es `ed700c1e770063f6e67c6ebaeae4652172bb2f02`. Antes de cualquier publicación se requiere autorización expresa independiente. C-05F no está autorizada ni iniciada. No se modificaron `main`, `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime ni infraestructura. Etapa 5 y Etapa 2 permanecen ABIERTAS.

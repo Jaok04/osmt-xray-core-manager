@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-04 — C-05A/B del gestor de configuraciones independientes aceptadas, publicadas y sincronizadas; C-05C aceptada formalmente, publicada y sincronizada. C-01/C-02/C-03 aceptadas como componentes limitados; C-04 cerrada integralmente; Etapa 5 y Etapa 2 ABIERTAS. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios documentados y probados. Los requisitos funcionales restantes de Etapa 5 siguen pendientes. Snapshot Writer v1 mantiene su aceptación limitada independiente; backup/restore integral pendiente. VLESS-WS live continúa draft, sin runtime apply ni conectividad externa.
+**Corte de estado:** 2026-11-04 — C-05A/B/C/D aceptadas, publicadas y sincronizadas; C-05E (integración del menú Bash) implementada, verificada y auditada localmente, pendiente de aceptación formal y sin commit/push. C-01/C-02/C-03 aceptadas como componentes limitados; C-04 cerrada integralmente; Etapa 5 y Etapa 2 ABIERTAS. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios documentados y probados. Los requisitos funcionales restantes de Etapa 5 siguen pendientes. Snapshot Writer v1 mantiene su aceptación limitada independiente; backup/restore integral pendiente. VLESS-WS live continúa draft, sin runtime apply ni conectividad externa.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -1023,3 +1023,25 @@ Estado: C-05D IMPLEMENTADA, VERIFICADA Y AUDITADA LOCALMENTE; PENDIENTE DE ACEPT
 ## Aceptación formal y publicación C-05D — 2026-11-04
 
 El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar exclusivamente en `design/user-identity-association-v1`. La aceptación cubre el servicio de historial/comparación, sus pruebas focales y la auditoría documentada. C-05D queda ACEPTADA; C-05E y C-05F continúan sin autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+
+## Estado vigente — C-05E implementada y auditada localmente (2026-11-04)
+
+- C-05A/B/C/D continúan aceptadas, publicadas y sincronizadas en `design/user-identity-association-v1`.
+- C-05E integra el submenú Bash con C-05C para validar configuraciones guardadas y C-05D para último informe, historial, detalle y comparación.
+- Opciones de validación de archivo externo y configuración activa siguen deshabilitadas.
+- Evidencias: `docs/IMPLEMENTACION_C05E_MENU_BASH_2026-11-04.md` y `docs/AUDITORIA_C05E_MENU_BASH_2026-11-04.md`. Regresión C-05A/B/C/D: 76/76 Python PASS; shell: 57/57 PASS; focal C-05E PASS; `bash -n`, ShellCheck severidad error, `install.sh --check` y `git diff --check` PASS.
+- C-05E está IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal. Sin commit ni push. C-05F no iniciada ni autorizada.
+- No se creó almacén live ni se leyó la clave maestra real. No se instalaron dependencias ni se modificaron runtime, servicios, certificados, firewall, puertos, red, `main`, `Xray-Normativa/` o VPS de pruebas.
+- Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Aceptación formal C-05E — 2026-11-04
+
+- **Estado:** C-05E ACEPTADA FORMALMENTE por el propietario.
+- **Alcance aceptado:** integración del menú Bash, CLI read-only de historial, pruebas y auditoría C-05E, con las limitaciones E01–E38 expresamente documentadas.
+- **Git:** cambios C-05E continúan sin commit ni push en `design/user-identity-association-v1`; base HEAD `ed700c1e770063f6e67c6ebaeae4652172bb2f02`.
+- **Publicación:** no autorizada. No ejecutar commit, push ni sincronización hasta autorización expresa independiente.
+- **Siguiente decisión:** solicitar autorización separada para publicar C-05E o recibir instrucciones para ampliar pruebas; no asumir ninguna de ellas.
+- **C-05F:** no autorizada ni iniciada.
+- **Límites:** `main`, `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime e infraestructura permanecen fuera del alcance.
+- **Etapas:** Etapa 5 y Etapa 2 siguen ABIERTAS.

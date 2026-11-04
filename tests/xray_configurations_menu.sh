@@ -81,7 +81,7 @@ grep -q '"deleted": true' "$TMP/delete.out"
 # Integración del menú normativo: [1] abre el gestor y [0] retorna correctamente.
 printf '1\n0\n0\n' | menu_config_profiles_backups >"$TMP/navigation.out" 2>&1
 grep -q 'GESTIONAR CONFIGURACIONES DE XRAY' "$TMP/navigation.out"
-grep -q 'Validar archivos de configuración (pendiente)' "$TMP/navigation.out"
+grep -q 'Validar archivos de configuración' "$TMP/navigation.out"
 
 # Recorrido desde el menú principal hasta el gestor y retorno completo, sin acciones live.
 printf '4\n1\n0\n0\n0\ns\n' | menu_main >"$TMP/main-navigation.out" 2>&1
