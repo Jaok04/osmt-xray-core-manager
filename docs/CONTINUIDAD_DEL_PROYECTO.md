@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-04:** C-01 del gestor de configuraciones independientes está aceptado formalmente como componente limitado; C-02 (importación/exportación) está implementado, auditado y probado, pero pendiente de aceptación expresa. Última regresión completa: 52/52 PASS. La sincronización GitHub/VPS se registra en el bloque final vigente de este documento. Etapa 5 y Etapa 2 permanecen ABIERTAS. No usar `master.key` real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o la VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
+> **Punto de reanudación vigente — 2026-11-04:** C-01 y C-02 del gestor de configuraciones independientes están aceptados formalmente como componentes limitados; C-03 (edición/diff/comparación) está aceptada formalmente como componente limitado conforme a su auditoría. Última regresión completa: 53/53 PASS. La sincronización GitHub/VPS se registra en el bloque final vigente de este documento. Etapa 5 y Etapa 2 permanecen ABIERTAS. No usar `master.key` real ni tocar almacenes live, runtime, servicios, certificados, firewall, puertos, red o la VPS de pruebas. `main` y `Xray-Normativa/` permanecen protegidas.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -1016,3 +1016,18 @@ Límites: sólo temporales y claves sintéticas. No se leyó `master.key`, no se
 
 
 **Resultado de sincronización:** commit `3523368729a4e872d65dc7a37c8a2276a04f640e` publicado en `origin/design/user-identity-association-v1`; checkout `Implementación-Xray:/opt/xray-manager` verificado en el mismo SHA. Push fast-forward y árbol limpio. C-02 continúa pendiente de aceptación formal; Etapa 5/Etapa 2 abiertas.
+
+## Punto de reanudación vigente — C-03 implementada y pendiente de aceptación (2026-11-04)
+
+C-01 y C-02 del gestor independiente están aceptados formalmente como componentes limitados. C-03 está implementada y auditada localmente en `scripts/xray_configurations.py`, con pruebas en `tests/xray_configurations_c03.sh`. Leer `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md` antes de aceptarla.
+
+Operaciones añadidas: `preview-edit`, `edit`, `compare`, `revisions`. La edición requiere hash de preview, revisión base y confirmación; crea una revisión nueva cifrada, conserva la anterior y utiliza WAL. Diff por JSON Pointer sin valores, objetos insensibles al orden de claves, arrays sensibles al orden. JSON inválido no produce diff estructural y sólo se conserva como Borrador con aceptación expresa. No hay validador Xray ni promoción a Validada.
+
+Prueba focal C-03 PASS; regresión completa `tests/*.sh` 53/53 PASS. Python compile, `bash -n`, ShellCheck de la nueva prueba y `git diff --check` PASS. ShellCheck global presenta diagnósticos históricos en otros scripts/tests.
+
+C-03 pendiente de aceptación formal. C-04 no autorizada/iniciada. No publicar ni sincronizar sin autorización independiente. Etapa 5 y Etapa 2 permanecen ABIERTAS. Sólo temporales y claves sintéticas; sin clave maestra real, almacén live, runtime, servicios, dependencias, certificados, firewall, puertos, red, VPS de pruebas, `main` o `Xray-Normativa/`.
+
+
+## Aceptación C-03 y sincronización autorizada — 2026-11-04
+
+El propietario aceptó formalmente C-03 como componente limitado dentro de `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`. Se autoriza publicar únicamente los cambios de C-03 y su documentación en `design/user-identity-association-v1` y sincronizar `/opt/xray-manager` con ese commit. C-04 no se inicia por esta aceptación. Etapa 5 y Etapa 2 permanecen ABIERTAS. `main`, `Xray-Normativa/`, runtime, servicios y VPS de pruebas quedan fuera del alcance.

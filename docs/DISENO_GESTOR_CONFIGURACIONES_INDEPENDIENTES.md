@@ -3,7 +3,7 @@
 **Fecha:** 2026-11-04
 **Rama:** design/user-identity-association-v1
 **Normativa:** Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md §§ 2–5 y 14; YAML aprobado correspondiente.
-**Estado:** C-01 aceptado formalmente como componente limitado; C-02 implementado localmente y pendiente de aceptación. C-03–C-06 no implementadas.
+**Estado:** C-01 y C-02 aceptados formalmente dentro de sus auditorías limitadas; C-03 aceptada formalmente como componente limitado conforme a su auditoría. C-04–C-06 no implementadas.
 
 ## 1. Objetivo y límites
 
@@ -222,11 +222,16 @@ Los comandos devuelven JSON estructurado para la interfaz Bash. No habrá comand
 - [x] Importación de archivo sin modificar fuente, preview, borrador inválido y exportación verificada.
 - [x] Pruebas de symlink/hardlink, UTF-8/BOM, tamaño, sobrescritura y fallos de escritura.
 - Auditoría: `docs/AUDITORIA_C02_IMPORTACION_EXPORTACION_2026-11-04.md`.
-- Estado: implementado y probado localmente; pendiente de aceptación expresa.
+- Estado: implementado, auditado y aceptado formalmente como componente limitado conforme a `docs/AUDITORIA_C02_IMPORTACION_EXPORTACION_2026-11-04.md`.
 
 **Fase C-03 — edición, diff y comparación**
-- edición sobre copia temporal, confirmación, nueva revisión y diff por secciones.
-- Comparación entre dos objetos/revisiones y casos JSON inválidos.
+- [x] `preview-edit` y `edit` con copia de origen, hash confirmado, revisión base y confirmación explícita.
+- [x] Nueva revisión inmutable cifrada; revisión anterior preservada y metadata publicada con WAL.
+- [x] Diff estructural JSON Pointer por secciones, sin valores; objetos ignoran orden de claves y arrays conservan orden.
+- [x] Comparación de solo lectura entre objetos/revisiones; JSON inválido informa que el diff estructural no está disponible.
+- [x] Historial de revisiones y pruebas de concurrencia optimista/hash, BOM, secretos y recuperación SIGKILL.
+- Auditoría: `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`.
+- Estado: implementado, verificado y aceptado formalmente como componente limitado (2026-11-04). No cierra la Etapa 5.
 
 **Fase C-04 — interfaz y eliminación**
 - Integrar submenú aprobado, navegación, errores recuperables, exportación múltiple y eliminación segura.
@@ -266,3 +271,14 @@ Todas las pruebas utilizarán directorios temporales y claves sintéticas. No se
 5. Alcance inicial: implementar primero C-01 y C-02; mantener C-03 a C-06 como fases separadas y sujetas a aceptación.
 
 **Estado actualizado (2026-11-04):** C-01 aceptado como componente limitado. C-02 implementado localmente y auditado; pendiente de aceptación. C-03–C-06 siguen sin implementar. No se modificó runtime ni se usó clave real.
+
+## Addendum C-03 — implementación local (2026-11-04)
+
+C-03 añade `preview-edit`, `edit`, `compare` y `revisions` al motor. La edición recibe un archivo fuente UTF-8 (máximo 16 MiB), preserva bytes/BOM, exige SHA-256 de preview, revisión base esperada y confirmación; JSON inválido requiere aceptación expresa. Cada edición crea una revisión AES-256-GCM inmutable con `source=edit` y estado de validación pendiente. El WAL admite sólo las rutas exactas de staging/revisión para recuperación.
+
+El diff ignora orden de claves JSON, conserva orden de arrays, agrupa por secciones y no devuelve valores. Está limitado a 10.000 diferencias, 100.000 nodos y profundidad 128; los casos no JSON válido no producen diff estructural. La comparación es de solo lectura entre objetos/revisiones.
+
+Prueba focal PASS; regresión `tests/*.sh` 53/53 PASS; AST/compilación Python, `bash -n` global y `git diff --check` PASS; ShellCheck de la nueva prueba focal PASS. C-03 está implementada y auditada localmente, pendiente de aceptación. C-04–C-06 no iniciadas. Etapa 5/Etapa 2 abiertas.
+
+
+**Decisión vigente (2026-11-04):** C-03 queda aceptada formalmente como componente limitado conforme a `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`. C-04 sigue pendiente de diseño, aprobación y autorización independientes. Etapa 5 y Etapa 2 permanecen abiertas.

@@ -3,8 +3,8 @@
 > El registro operativo vigente es el bloque «Decisión vigente — aceptación limitada del almacén de perfiles v1.1 (2026-11-04)» al final de este documento; los estados anteriores se conservan sólo como trazabilidad histórica.
 
 **Fecha del corte:** 2026-11-04
-**Tarea activa:** continuar Etapa 5 desde el punto de control del almacén de persistencia v1.1, formalmente aceptado sólo como componente limitado. Identificar el siguiente requisito normativo pendiente y preparar su diseño/plan antes de implementar, con autorización expresa.
-**Estado vigente:** almacén de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios probados. Etapa 5 ABIERTA; Etapa 2 ABIERTA. Preview/diff, creación desde configuración independiente, validación Xray por revisión, comparación, historial/retención, perfil activo, eliminación integrada, activación/rollback y backup/restore integral siguen pendientes. VLESS-WS live sigue draft y sin runtime apply.
+**Tarea activa:** preparar el diseño y la matriz de implementación de C-04. C-01, C-02 y C-03 están aceptadas formalmente como componentes limitados. C-04 no iniciada ni autorizada.
+**Estado vigente:** almacén de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO. Gestor de configuraciones independientes: C-01/C-02/C-03 aceptadas formalmente como componentes limitados. Etapa 5 ABIERTA; Etapa 2 ABIERTA. Pendientes: creación de perfil desde configuración independiente, validador estático Xray por revisión e informes, historial separado de modificaciones y retención, perfil activo/composición, eliminación integrada, activación/verificación/rollback y backup/restore integral. C-03 no incluye menú ni editor interactivo. VLESS-WS live sigue draft y sin runtime apply.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -853,3 +853,15 @@ La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una 
 
 
 **Sincronización verificada (2026-11-04):** `3523368729a4e872d65dc7a37c8a2276a04f640e` en GitHub `origin/design/user-identity-association-v1` y en `Implementación-Xray:/opt/xray-manager`; push fast-forward, sin force, árbol limpio.
+
+## Punto de control vigente — C-03 aceptada; C-04 pendiente de diseño (2026-11-04)
+
+- C-01 y C-02 del gestor de configuraciones independientes: aceptadas formalmente como componentes limitados.
+- C-03: aceptada formalmente como componente limitado. Auditoría: `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`.
+- Operaciones: `preview-edit`, `edit`, `compare`, `revisions`. Revisión inmutable, AES-256-GCM, hash de preview, revisión base esperada, confirmación, WAL y recuperación SIGKILL. Diff estructural sin valores, comparación de solo lectura, preservación exacta UTF-8/BOM.
+- Prueba focal PASS; `tests/*.sh` 53/53 PASS. Python compile, Bash syntax global, ShellCheck focal y `git diff --check` PASS. ShellCheck global mantiene diagnósticos preexistentes fuera de C-03.
+- C-04–C-06 no iniciadas. Sin menú, validador Xray, promoción a Validada, eliminación, activación ni integración perfil. Etapa 5/Etapa 2 abiertas.
+- No se leyó `master.key` ni se creó almacén live. Sin cambios en runtime, servicios, certificados, firewall, puertos, red, dependencias, VPS de pruebas, `main` o `Xray-Normativa/`.
+- C-03 aceptada formalmente. La sincronización se registra en el bloque de publicación de este corte. C-04 requiere diseño, aprobación y autorización independientes.
+
+**Decisión vigente del propietario (2026-11-04):** C-03 aceptada formalmente como componente limitado según su auditoría. Próximo trabajo propuesto: diseño de C-04; no implementarla hasta obtener aprobación y autorización explícitas. Etapa 5 y Etapa 2 siguen abiertas.

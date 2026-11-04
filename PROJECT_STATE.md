@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-04 — almacén de persistencia de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO; Etapa 5 y Etapa 2 ABIERTAS. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios documentados y probados. Los requisitos funcionales restantes de Etapa 5 siguen pendientes. Snapshot Writer v1 mantiene su aceptación limitada independiente; backup/restore integral pendiente. VLESS-WS live continúa draft, sin runtime apply ni conectividad externa.
+**Corte de estado:** 2026-11-04 — almacén de persistencia de perfiles v1.1 ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO; gestor de configuraciones independientes C-01/C-02/C-03 aceptados formalmente como componentes limitados; Etapa 5 y Etapa 2 ABIERTAS. PF-01/PF-02 y PF-06 a PF-12 corregidos dentro de los escenarios documentados y probados. Los requisitos funcionales restantes de Etapa 5 siguen pendientes. Snapshot Writer v1 mantiene su aceptación limitada independiente; backup/restore integral pendiente. VLESS-WS live continúa draft, sin runtime apply ni conectividad externa.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -877,3 +877,16 @@ No se leyó clave real, no se creó almacén live ni se tocó perfiles, VLESS/VM
 
 
 **Sincronización verificada (2026-11-04):** commit `3523368729a4e872d65dc7a37c8a2276a04f640e` publicado en `origin/design/user-identity-association-v1`; checkout `Implementación-Xray:/opt/xray-manager` en el mismo SHA. Publicación fast-forward. `git status --short` vacío. `main`, `Xray-Normativa/` y `Vps de Pruebas` fuera del alcance.
+
+## Estado vigente — gestor de configuraciones independientes C-01/C-02/C-03 (2026-11-04)
+
+- C-01: **ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO** conforme a su auditoría.
+- C-02: **ACEPTADO FORMALMENTE COMO COMPONENTE LIMITADO** conforme a `docs/AUDITORIA_C02_IMPORTACION_EXPORTACION_2026-11-04.md`.
+- C-03: edición, diff estructural, comparación y listado de revisiones **ACEPTADOS FORMALMENTE COMO COMPONENTE LIMITADO** conforme a `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md` (aceptación del propietario: 2026-11-04). Auditoría: `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`.
+- CLI C-03: `preview-edit`, `edit`, `compare`, `revisions`. Edición exige hash de preview, revisión base y confirmación; crea nueva revisión AES-256-GCM inmutable y conserva la anterior. Diff no expone valores, ignora orden de claves JSON y conserva orden de arrays. JSON inválido sólo se guarda con aceptación expresa como Borrador.
+- Prueba focal C-03 PASS. Regresión completa `tests/*.sh` 53/53 PASS. `python3 -m py_compile scripts/*.py`, `bash -n` en scripts/tests, ShellCheck focal y `git diff --check` PASS. ShellCheck global conserva diagnósticos preexistentes en otros archivos y no se declara limpio globalmente.
+- C-04–C-06 no iniciadas. No hay menú integrado, validador estático Xray, promoción a Validada, eliminación, activación ni creación de perfil desde configuración independiente. Etapa 5 y Etapa 2 siguen ABIERTAS.
+- Sólo almacenes temporales y claves sintéticas. No se leyó `master.key`, no se creó almacén live, no se modificó runtime/servicios/systemd/certificados/firewall/puertos/red, no se tocaron dependencias, VPS de pruebas, `main` o `Xray-Normativa/`. Sin commit, push ni sincronización.
+- El código y la auditoría C-03 se publican en la rama autorizada y se sincronizan con `Implementación-Xray:/opt/xray-manager` mediante el commit de sincronización documentado más abajo. No se inició C-04.
+
+**Aceptación y sincronización C-03 (2026-11-04):** el propietario aceptó C-03 como componente limitado conforme a su auditoría. Se publica el código, la prueba focal y la documentación en `design/user-identity-association-v1`; la VPS de desarrollo debe quedar en el mismo SHA. Sin force push. `main`, `Xray-Normativa/` y `Vps de Pruebas` permanecen fuera del alcance. Etapa 5 y Etapa 2 continúan ABIERTAS; C-04 no autorizada ni iniciada.

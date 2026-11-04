@@ -31,7 +31,7 @@ def strict_json(data, label):
                 out[key] = value
             return out
         return json.loads(data.decode("utf-8"), object_pairs_hook=pairs, parse_constant=lambda x: fail(f"{label}: constante no válida"))
-    except (UnicodeError, json.JSONDecodeError) as exc: fail(f"{label}: JSON inválido: {exc}")
+    except (UnicodeError, json.JSONDecodeError, RecursionError) as exc: fail(f"{label}: JSON inválido o con anidamiento excesivo: {exc}")
 
 def safe_components(path):
     if not path.is_absolute(): fail("La ruta debe ser absoluta.")
@@ -205,8 +205,14 @@ class ConfigurationStore:
         dirs = []
         seen_dirs = set()
         for rel in journal["remove_dirs"]:
-            if (not isinstance(rel, str) or rel in seen_dirs
-                    or not (re.fullmatch(r"items/config-[0-9a-f]{32}", rel) or re.fullmatch(r"items/\.stage-[0-9a-f]{16}", rel))): fail("Directorio WAL no permitido o duplicado.")
+            if not isinstance(rel, str) or rel in seen_dirs:
+                fail("Directorio WAL no permitido o duplicado.")
+            allowed_dir = (re.fullmatch(r"items/config-[0-9a-f]{32}", rel)
+                           or re.fullmatch(r"items/[.]stage-[0-9a-f]{16}", rel)
+                           or re.fullmatch(r"items/config-[0-9a-f]{32}/revisions/r[0-9]{6}", rel)
+                           or re.fullmatch(r"items/config-[0-9a-f]{32}/revisions/[.]stage-r[0-9]{6}-[0-9a-f]{8}", rel))
+            if not allowed_dir:
+                fail("Directorio WAL no permitido o duplicado.")
             seen_dirs.add(rel)
             dirs.append(self.resolve(rel))
         if any(target == directory or directory in target.parents for target, _ in changes for directory in dirs): fail("Journal contiene destinos solapados con directorios de rollback.")
@@ -230,11 +236,22 @@ class ConfigurationStore:
             entries.append({"path": rel, "old": old, "new": base64.b64encode(new).decode()})
         removals = [self.rel(x) for x in remove_dirs]
         for rel in removals:
-            if not (re.fullmatch(r"items/config-[0-9a-f]{32}", rel) or re.fullmatch(r"items/\.stage-[0-9a-f]{16}", rel)): fail("Rollback fuera de alcance.")
+            allowed_removal = (
+                re.fullmatch(r"items/config-[0-9a-f]{32}", rel)
+                or re.fullmatch(r"items/\.stage-[0-9a-f]{16}", rel)
+                or re.fullmatch(r"items/config-[0-9a-f]{32}/revisions/r[0-9]{6}", rel)
+                or re.fullmatch(r"items/config-[0-9a-f]{32}/revisions/\.stage-r[0-9]{6}-[0-9a-f]{8}", rel)
+            )
+            if not allowed_removal: fail("Rollback fuera de alcance.")
         publications = []
         for source, destination in publish_dirs:
             source_rel, destination_rel = self.rel(source), self.rel(destination)
-            if not re.fullmatch(r"items/\.stage-[0-9a-f]{16}", source_rel) or not re.fullmatch(r"items/config-[0-9a-f]{32}", destination_rel): fail("Publicación de directorio fuera de alcance.")
+            initial_publish = (re.fullmatch(r"items/[.]stage-[0-9a-f]{16}", source_rel)
+                               and re.fullmatch(r"items/config-[0-9a-f]{32}", destination_rel))
+            revision_publish = (re.fullmatch(r"items/config-[0-9a-f]{32}/revisions/[.]stage-r[0-9]{6}-[0-9a-f]{8}", source_rel)
+                                and re.fullmatch(r"items/config-[0-9a-f]{32}/revisions/r[0-9]{6}", destination_rel)
+                                and source_rel.rsplit("/", 1)[0] == destination_rel.rsplit("/", 1)[0])
+            if not (initial_publish or revision_publish): fail("Publicación de directorio fuera de alcance.")
             check_dir(source)
             if destination.exists() or destination.is_symlink(): fail("El destino de publicación ya existe.")
             publications.append((source, destination))
@@ -307,7 +324,7 @@ class ConfigurationStore:
         c = manifest["config"]
         if not isinstance(c, dict) or set(c) != cf or c["file"] != "config.enc.json" or c["storage"] != "aes-256-gcm" or type(c["crypto_format_version"]) is not int or c["crypto_format_version"] != 1 or type(c["plaintext_size_bytes"]) is not int or not 0 <= c["plaintext_size_bytes"] <= MAX_CONFIG or type(c["stored_size_bytes"]) is not int or c["stored_size_bytes"] != len(blob) or not isinstance(c["ciphertext_sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", c["ciphertext_sha256"]): fail("Metadatos de contenido en manifiesto inválidos.")
         if hashlib.sha256(blob).hexdigest() != c["ciphertext_sha256"]: fail("Hash del ciphertext no coincide.")
-        if manifest["source"] not in ("template_empty", "template_minimal", "import"): fail("Origen de revisión no permitido.")
+        if manifest["source"] not in ("template_empty", "template_minimal", "import", "edit"): fail("Origen de revisión no permitido.")
         if manifest["validation"] != {"json_syntax": "not_run", "xray_static": "not_run", "status": "pending"}: fail("Estado de validación del manifiesto incoherente.")
         plain = self.decrypt(blob, cid, rev)
         if len(plain) != c["plaintext_size_bytes"]: fail("Tamaño de contenido no coincide.")
@@ -415,6 +432,275 @@ class ConfigurationStore:
         result = self._create_content(name, data, "import")
         return {"preview": preview, "configuration": result, "imported_as": "draft", "source_modified": False}
 
+
+    def _document_info(self, data, label):
+        try:
+            decoded = data.decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            fail(f"{label}: el contenido no es UTF-8 válido: {exc}")
+        parsed, valid, diagnostic = None, False, None
+        if not data:
+            diagnostic = "El documento está vacío."
+        else:
+            try:
+                parsed = strict_json(decoded.encode("utf-8"), label)
+                valid = True
+                if not isinstance(parsed, dict):
+                    diagnostic = "La raíz JSON no es un objeto; permanece como Borrador."
+            except ConfigurationError as exc:
+                diagnostic = str(exc)
+        return {
+            "json_valid": valid,
+            "root_type": type(parsed).__name__ if parsed is not None else None,
+            "utf8_bom": data.startswith(b"\xef\xbb\xbf"),
+            "diagnostic": diagnostic,
+        }, parsed
+
+    @staticmethod
+    def _pointer_part(value):
+        return str(value).replace("~", "~0").replace("/", "~1")
+
+    def _structural_diff(self, first, second):
+        changes = []
+        visited = 0
+        truncated = False
+
+        def add(path, kind):
+            nonlocal truncated
+            if len(changes) >= 10000:
+                truncated = True
+                return
+            first_part = path.split("/", 2)[1] if path.startswith("/") else ""
+            section = first_part if first_part in ("inbounds", "outbounds", "routing", "dns") else "otras"
+            changes.append({"path": path or "/", "section": section, "change": kind})
+
+        def walk(a, b, path, depth=0):
+            nonlocal visited, truncated
+            visited += 1
+            if depth > 128:
+                truncated = True
+                return
+            if visited > 100000:
+                truncated = True
+                return
+            if type(a) is not type(b):
+                add(path, "changed")
+                return
+            if isinstance(a, dict):
+                for key in sorted(set(a) | set(b)):
+                    child = path + "/" + self._pointer_part(key)
+                    if key not in a:
+                        add(child, "added")
+                    elif key not in b:
+                        add(child, "removed")
+                    else:
+                        walk(a[key], b[key], child, depth + 1)
+            elif isinstance(a, list):
+                for index in range(max(len(a), len(b))):
+                    child = path + "/" + str(index)
+                    if index >= len(a):
+                        add(child, "added")
+                    elif index >= len(b):
+                        add(child, "removed")
+                    else:
+                        walk(a[index], b[index], child, depth + 1)
+            elif a != b:
+                add(path, "changed")
+
+        walk(first, second, "")
+        counts = {key: sum(1 for item in changes if item["change"] == key)
+                  for key in ("added", "removed", "changed")}
+        sections = {key: sum(1 for item in changes if item["section"] == key)
+                    for key in ("inbounds", "outbounds", "routing", "dns", "otras")}
+        return {
+            "equal": not changes and not truncated,
+            "total_changes": sum(counts.values()),
+            "counts": counts,
+            "sections": sections,
+            "changes": changes,
+            "truncated": truncated,
+            "values_omitted": True,
+        }
+
+    def _diff_bytes(self, first_bytes, second_bytes, label):
+        first_info, first = self._document_info(first_bytes, f"{label} (primera)")
+        second_info, second = self._document_info(second_bytes, f"{label} (segunda)")
+        if not first_info["json_valid"] or not second_info["json_valid"]:
+            return {
+                "structural_available": False,
+                "reason": "Ambas revisiones deben contener JSON sintácticamente válido.",
+                "first": first_info,
+                "second": second_info,
+                "diff": None,
+            }
+        return {
+            "structural_available": True,
+            "first": first_info,
+            "second": second_info,
+            "diff": self._structural_diff(first, second),
+        }
+
+    def _registered_metadata(self, cid):
+        meta = self.load_metadata(cid)
+        if not any(item["config_id"] == cid and item["name"] == meta["name"]
+                   for item in self.load_catalog()["configurations"]):
+            fail("Objeto no registrado en catálogo.")
+        return meta
+
+    def preview_edit(self, cid, source):
+        path, proposed = self._read_import_source(source)
+        with self.locked():
+            meta = self._registered_metadata(cid)
+            current = b"" if meta["current_revision"] is None else self.verify_revision(cid, meta["current_revision"])[0]
+            info, _ = self._document_info(proposed, "Documento propuesto")
+            comparison = self._diff_bytes(current, proposed, "Edición")
+            return {
+                "config_id": cid,
+                "current_revision": meta["current_revision"],
+                "source": str(path),
+                "size_bytes": len(proposed),
+                "sha256": hashlib.sha256(proposed).hexdigest(),
+                "proposed": info,
+                "diff": comparison,
+                "will_be_saved_as": "draft",
+                "previous_revision_unchanged": True,
+                "secret_values_in_diff": False,
+            }
+
+    def edit(self, cid, source, expected_sha256, expected_revision, accept_invalid=False):
+        path, proposed = self._read_import_source(source)
+        info, _ = self._document_info(proposed, "Documento propuesto")
+        digest = hashlib.sha256(proposed).hexdigest()
+        if not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256) or digest != expected_sha256:
+            fail("El SHA-256 del documento cambió desde la vista previa; vuelve a previsualizar.")
+        if not info["json_valid"] and not accept_invalid:
+            fail("El documento no es JSON válido; revisa la vista previa y usa --accept-invalid para conservarlo como Borrador.")
+        with self.locked():
+            meta = self._registered_metadata(cid)
+            if meta["current_revision"] != expected_revision:
+                fail("La revisión actual cambió desde la vista previa; vuelve a previsualizar antes de editar.")
+            previous = b"" if expected_revision is None else self.verify_revision(cid, expected_revision)[0]
+            comparison = self._diff_bytes(previous, proposed, "Edición")
+            if hashlib.sha256(previous).digest() == hashlib.sha256(proposed).digest():
+                fail("El contenido no presenta cambios; no se creó una revisión redundante.")
+            revisions = self.items / cid / "revisions"
+            created_revisions_dir = not revisions.exists()
+            if created_revisions_dir:
+                revisions.mkdir(mode=0o700)
+                os.chown(revisions, 0, 0)
+                os.chmod(revisions, 0o700)
+                fsync_dir(revisions.parent)
+            else:
+                check_dir(revisions)
+            names = [entry.name for entry in revisions.iterdir()]
+            if any(not REV_RE.fullmatch(name) for name in names):
+                fail("La carpeta de revisiones contiene entradas inesperadas.")
+            for name in names:
+                self.verify_revision(cid, name)
+            previous_number = max((int(name[1:]) for name in names), default=0)
+            if previous_number >= 999999:
+                fail("Se alcanzó el máximo de revisiones.")
+            revision = f"r{previous_number + 1:06d}"
+            final = revisions / revision
+            stage = revisions / f".stage-{revision}-{secrets.token_hex(4)}"
+            stage.mkdir(mode=0o700)
+            os.chown(stage, 0, 0)
+            os.chmod(stage, 0o700)
+            try:
+                blob = self.encrypt(proposed, cid, revision)
+                atomic_write(stage / "config.enc.json", blob)
+                created = now()
+                manifest = {
+                    "schema_version": 1,
+                    "config_id": cid,
+                    "revision": revision,
+                    "created_at": created,
+                    "config": {
+                        "file": "config.enc.json",
+                        "plaintext_size_bytes": len(proposed),
+                        "stored_size_bytes": len(blob),
+                        "ciphertext_sha256": hashlib.sha256(blob).hexdigest(),
+                        "storage": "aes-256-gcm",
+                        "crypto_format_version": 1,
+                    },
+                    "source": "edit",
+                    "validation": {"json_syntax": "not_run", "xray_static": "not_run", "status": "pending"},
+                }
+                atomic_write(stage / "manifest.json", json_bytes(manifest))
+                fsync_dir(stage)
+                updated = dict(meta)
+                updated["current_revision"] = revision
+                updated["config_present"] = True
+                updated["modified_at"] = created
+                self.transact(
+                    {self.items / cid / "metadata.json": json_bytes(updated)},
+                    remove_dirs=[stage, final],
+                    publish_dirs=[(stage, final)],
+                )
+            except Exception:
+                if stage.exists() and not self.wal_path.exists():
+                    check_dir(stage)
+                    shutil.rmtree(stage)
+                    fsync_dir(revisions)
+                if created_revisions_dir and revisions.exists() and not any(revisions.iterdir()):
+                    revisions.rmdir()
+                    fsync_dir(revisions.parent)
+                raise
+            result = self.show_unlocked(cid)
+            return {
+                "configuration": result,
+                "created_revision": revision,
+                "previous_revision": expected_revision,
+                "saved_as": "draft",
+                "diff": comparison,
+                "source": str(path),
+                "source_sha256": digest,
+                "previous_revision_unchanged": True,
+                "validation_status": "not_validated",
+            }
+
+    def compare(self, first_id, second_id, first_revision=None, second_revision=None):
+        with self.locked():
+            first_meta = self._registered_metadata(first_id)
+            second_meta = self._registered_metadata(second_id)
+            first_rev = first_meta["current_revision"] if first_revision is None else first_revision
+            second_rev = second_meta["current_revision"] if second_revision is None else second_revision
+            if first_rev is None or second_rev is None:
+                fail("Ambas configuraciones deben tener contenido.")
+            first, _ = self.verify_revision(first_id, first_rev)
+            second, _ = self.verify_revision(second_id, second_rev)
+            result = self._diff_bytes(first, second, "Comparación")
+            return {
+                "first": {"config_id": first_id, "name": first_meta["name"], "revision": first_rev},
+                "second": {"config_id": second_id, "name": second_meta["name"], "revision": second_rev},
+                **result,
+                "read_only": True,
+                "secret_values_in_diff": False,
+            }
+
+    def revisions(self, cid):
+        with self.locked():
+            meta = self._registered_metadata(cid)
+            if meta["current_revision"] is None:
+                return {"config_id": cid, "revisions": []}
+            directory = self.items / cid / "revisions"
+            check_dir(directory)
+            result = []
+            for entry in sorted(directory.iterdir(), key=lambda item: item.name):
+                if not REV_RE.fullmatch(entry.name):
+                    fail("La carpeta de revisiones contiene entradas inesperadas.")
+                _, manifest = self.verify_revision(cid, entry.name)
+                result.append({
+                    "revision": entry.name,
+                    "created_at": manifest["created_at"],
+                    "source": manifest["source"],
+                    "size_bytes": manifest["config"]["plaintext_size_bytes"],
+                    "sha256_ciphertext": manifest["config"]["ciphertext_sha256"],
+                    "current": entry.name == meta["current_revision"],
+                    "validation_status": "not_validated",
+                })
+            return {"config_id": cid, "current_revision": meta["current_revision"], "revisions": result}
+
     def export_file(self, cid, destination, revision=None, overwrite=False):
         if not isinstance(destination, str) or not destination: fail("Destino de exportación vacío.")
         target = pathlib.Path(destination)
@@ -509,6 +795,10 @@ def build_parser():
     s = sub.add_parser("show"); s.add_argument("--config-id", required=True)
     pi = sub.add_parser("preview-import"); pi.add_argument("--source", required=True)
     im = sub.add_parser("import"); im.add_argument("--source", required=True); im.add_argument("--name", required=True); im.add_argument("--expected-sha256", required=True); im.add_argument("--confirm", action="store_true"); im.add_argument("--accept-invalid", action="store_true")
+    pe = sub.add_parser("preview-edit"); pe.add_argument("--config-id", required=True); pe.add_argument("--source", required=True)
+    ed = sub.add_parser("edit"); ed.add_argument("--config-id", required=True); ed.add_argument("--source", required=True); ed.add_argument("--expected-sha256", required=True); ed.add_argument("--expected-revision", required=True); ed.add_argument("--confirm", action="store_true"); ed.add_argument("--accept-invalid", action="store_true")
+    cp = sub.add_parser("compare"); cp.add_argument("--first", required=True); cp.add_argument("--second", required=True); cp.add_argument("--first-revision"); cp.add_argument("--second-revision")
+    rv = sub.add_parser("revisions"); rv.add_argument("--config-id", required=True)
     ex = sub.add_parser("export"); ex.add_argument("--config-id", required=True); ex.add_argument("--revision"); ex.add_argument("--destination", required=True); ex.add_argument("--overwrite", action="store_true")
     return p
 
@@ -523,6 +813,13 @@ def main():
         elif args.command == "import":
             if not args.confirm: fail("La importación requiere --confirm después de revisar preview-import.")
             result = store.import_file(args.name, args.source, args.expected_sha256, args.accept_invalid)
+        elif args.command == "preview-edit": result = store.preview_edit(args.config_id, args.source)
+        elif args.command == "edit":
+            if not args.confirm: fail("La edición requiere --confirm después de revisar preview-edit.")
+            expected_revision = None if args.expected_revision == "none" else args.expected_revision
+            result = store.edit(args.config_id, args.source, args.expected_sha256, expected_revision, args.accept_invalid)
+        elif args.command == "compare": result = store.compare(args.first, args.second, args.first_revision, args.second_revision)
+        elif args.command == "revisions": result = store.revisions(args.config_id)
         else: result = store.export_file(args.config_id, args.destination, args.revision, args.overwrite)
         print(json.dumps(result, ensure_ascii=False, sort_keys=True)); return 0
     except (ConfigurationError, OSError, ValueError, CertificateCryptoError) as exc:

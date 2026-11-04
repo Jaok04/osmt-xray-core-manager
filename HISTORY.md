@@ -931,3 +931,20 @@ La sincronización no cierra Etapa 5 ni Etapa 2 ni autoriza C-03. No se tocó ru
 
 
 Sincronización completada: commit de implementación/documentación `3523368729a4e872d65dc7a37c8a2276a04f640e` publicado en `origin/design/user-identity-association-v1`; `/opt/xray-manager` quedó en ese mismo commit. Publicación fast-forward, sin force push. Árbol de trabajo limpio tras la verificación. C-02 permanece pendiente de aceptación expresa.
+
+## 2026-11-04 — Aceptación C-02 e implementación local C-03
+
+El propietario aceptó formalmente C-02 dentro del alcance de su auditoría y autorizó C-03. Se implementaron `preview-edit`, `edit`, `compare` y `revisions` en `scripts/xray_configurations.py`.
+
+La edición trabaja desde un archivo UTF-8/BOM fuente de hasta 16 MiB, preserva bytes, exige SHA-256 de preview, revisión base y confirmación; un documento JSON inválido requiere `--accept-invalid` y queda Borrador. Cada edición genera una revisión nueva e inmutable cifrada con AES-256-GCM, `source=edit` y validación pendiente. Las revisiones anteriores no se alteran. La publicación se integra con el lock/WAL y tiene recuperación probada tras SIGKILL.
+
+El diff estructural ignora el orden de claves JSON, mantiene el orden de arrays, informa rutas JSON Pointer/secciones/tipos de cambio y omite valores. La comparación es de solo lectura entre dos objetos/revisiones; si un documento no es JSON válido no se presenta diff estructural. Los límites de recorrido/salida se registran en la auditoría.
+
+Nueva prueba `tests/xray_configurations_c03.sh` PASS. Regresión completa `tests/*.sh` 53/53 PASS. Python compile/AST, `bash -n` global, ShellCheck focal y `git diff --check` PASS. ShellCheck global tiene diagnósticos preexistentes en otros tests y no se declara limpio globalmente. Auditoría: `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`.
+
+C-02 queda aceptado formalmente como componente limitado. C-03 implementada y auditada localmente, pendiente de aceptación. C-04–C-06 no iniciadas; Etapa 5 y Etapa 2 permanecen ABIERTAS. No se leyó clave real ni se tocó almacén live, perfiles, VLESS/VMess, runtime, servicios, certificados, firewall, puertos, red, dependencias, VPS de pruebas, `main` o `Xray-Normativa/`. Sin commit/push/sync.
+
+
+## 2026-11-04 — Aceptación formal C-03 y autorización de sincronización
+
+El propietario aceptó formalmente C-03 como componente limitado conforme a `docs/AUDITORIA_C03_EDICION_DIFF_COMPARACION_2026-11-04.md`. La aceptación cubre únicamente el alcance, pruebas, controles y exclusiones documentados; no cierra Etapa 5 ni Etapa 2 y no autoriza C-04. El propietario autorizó sincronizar los cambios de C-03 y su documentación desde la VPS de desarrollo hacia GitHub y dejar ambos en el mismo commit, exclusivamente en `design/user-identity-association-v1`. `main`, `Xray-Normativa/`, `Vps de Pruebas` y runtime permanecen fuera del alcance.
