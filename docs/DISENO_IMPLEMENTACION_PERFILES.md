@@ -157,3 +157,42 @@ Verificación ejecutada en esta iteración: `tests/*.sh` 51/51 PASS; Python AST 
 La revisión formal de solo lectura contra Etapa 5 está registrada en `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`. Se confirma el alcance de almacenamiento cifrado y versionado implementado, pero se identificó un bloqueo de consistencia transaccional en `update()` ante fallo de escritura del catálogo, reproducido mediante inyección de fallo en un almacén temporal. También permanecen pendientes los requisitos de validación Xray, vista previa/diff, comparación/retención/historial, composición y activación.
 
 **Estado de aceptación:** no se recomienda aceptar todavía el subsistema v1.1 como componente terminado hasta resolver y probar la consistencia entre catálogo y metadatos en los caminos de actualización/restauración/renombrado y la recuperación ante fallos/crash. No se modificó código durante la auditoría. La decisión final corresponde al propietario.
+
+
+## 12. Fase correctiva PF-01/PF-02 — journal transaccional (2026-11-03)
+
+Se incorporó un journal de recuperación en `.profiles.transaction.json`, protegido por el lock exclusivo existente. La presencia del journal significa que la transacción no alcanzó su punto de confirmación y debe revertirse.
+
+### 12.1 Secuencia de commit
+
+1. Bajo `flock`, leer los bytes previos de los destinos persistentes y preparar los nuevos bytes en memoria.
+2. Escribir el journal mediante `atomic_write` (archivo temporal exclusivo, `fsync` del archivo, `os.replace` y `fsync` del directorio raíz). El journal conserva snapshots Base64 del catálogo/metadatos anteriores y las rutas de directorios que deben retirarse si hay rollback. No almacena configuraciones ni secretos.
+3. Escribir cada destino mediante `atomic_write`, que sincroniza el archivo y su directorio.
+4. Retirar el journal y sincronizar el directorio raíz. La ausencia durable del journal es el punto de confirmación.
+
+Si hay error de escritura, se reproduce la recuperación antes de propagar el error. Si el proceso termina abruptamente, la siguiente operación que obtiene el lock ejecuta recuperación antes de leer o mutar el almacén.
+
+### 12.2 Recuperación
+
+- Validar tipo, propietario, permisos, estructura, Base64 y rutas permitidas del journal; cualquier journal inválido provoca fallo cerrado.
+- Restaurar snapshots anteriores de catálogo y metadatos con escritura atómica; eliminar revisiones/directorios nuevos indicados por el journal.
+- Sincronizar los directorios afectados, retirar el journal y sincronizar la raíz.
+- El procedimiento es idempotente: si la recuperación también se interrumpe, el journal permanece y la siguiente operación repite el rollback.
+- Las rutas se limitan a `catalog.json`, `profiles/<id>/metadata.json`, `profiles/<id>` y `profiles/<id>/revisions/rNNNNNN`; no se aceptan rutas absolutas, traversal ni destinos arbitrarios.
+
+### 12.3 Operaciones cubiertas
+
+- `rename()` y `update()` confirman catálogo y metadatos como una sola unidad recuperable.
+- `restore()` confirma la nueva revisión actual junto con metadatos/catálogo; si se revierte, elimina la revisión no confirmada.
+- `create()` y `duplicate()` publican el directorio completo, sincronizan `profiles/` y registran el catálogo en una transacción que elimina el nuevo directorio durante rollback.
+- `update()` elimina la nueva revisión si la transacción de metadatos/catálogo no confirma.
+
+### 12.4 Límites y tratamiento de fallos
+
+El journal protege las operaciones persistentes coordinadas enumeradas, pero no pretende hacer atómica la creación de cada archivo interno de una revisión: las revisiones se construyen en directorios temporales y se publican por rename; una caída anterior al registro transaccional puede dejar un temporal oculto no referenciado, que no se interpreta como revisión válida. La limpieza general de temporales huérfanos queda separada y no se hace automáticamente en esta fase.
+
+Un fallo de almacenamiento que impida escribir el journal o completar el rollback puede dejar el journal pendiente; el gestor falla cerrado y no permite nuevas operaciones hasta recuperar el estado. No se debe borrar manualmente el journal ni los snapshots. La ausencia del journal después del `fsync` de la raíz indica commit; si la sincronización de la retirada falla, el código intenta recrear el journal y revertir. Una pérdida física de almacenamiento que viole las garantías de `fsync` del filesystem/dispositivo no puede ser resuelta por software.
+
+### 12.5 Pruebas añadidas
+
+`tests/xray_profiles.sh` incluye fallo al crear el journal, fallo de escritura del catálogo, fallo de `fsync` del directorio después de reemplazar metadatos, terminación abrupta entre escrituras, terminación después de reemplazar ambos destinos pero antes de retirar el journal, interrupción durante el propio rollback, catálogo inicialmente ausente y recuperación idempotente al reabrir el almacén. También verifica rollback y limpieza en create/duplicate/update/restore. Todas las pruebas usan almacén temporal y clave sintética.

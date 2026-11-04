@@ -725,3 +725,12 @@ La evidencia no acredita `xray.service` administrado, runtime apply, activación
 **Estado:** código sin cambios; implementación publicada/sincronizada; NO ACEPTADA formalmente. No se leyó `master.key`, no se creó almacén/perfil live, no se tocó runtime, servicios, firewall, puertos, certificados reales o red.
 
 **Siguiente acción permitida:** solicitar decisión del propietario para autorizar una corrección acotada PF-01/PF-02, con diseño previo, pruebas de fault injection/crash recovery en almacén temporal y nueva auditoría. No implementar hasta recibir autorización expresa. Etapa 2 continúa ABIERTA.
+
+
+## Punto de control — fase correctiva transaccional PF-01/PF-02 en curso
+
+Autorización recibida. Implementación local: journal `.profiles.transaction.json`, snapshots previos de catálogo/metadatos, rutas permitidas, rollback idempotente y recuperación automática bajo lock. Integrado en create/duplicate/rename/update/restore.
+
+Pruebas focales añadidas: fallo de creación del journal, fallo de catálogo, fsync posterior a replace, crash entre escrituras, crash tras ambos replaces, interrupción durante rollback, catálogo inicialmente ausente y recuperación al reabrir; limpieza de perfiles/revisiones no confirmados. `tests/xray_profiles.sh` PASS; regresión completa final 51/51 scripts PASS; Python AST, Bash syntax, ShellCheck focal y `git diff --check` PASS.
+
+**No publicar todavía.** Siguiente: revisión detallada del diff, repetición de las 51 pruebas, estáticos, comprobar estado Git limpio tras retirar artefactos temporales y luego commit/push a `design/user-identity-association-v1`. No modificar main/normativa; no usar master.key real ni crear perfiles live.

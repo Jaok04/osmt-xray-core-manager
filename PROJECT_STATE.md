@@ -742,3 +742,14 @@ Se excluye deliberadamente `scripts/__pycache__/` por ser un artefacto local de 
 **Estado:** IMPLEMENTADO y PUBLICADO/SINCRONIZADO; pruebas focales PASS; **NO ACEPTADO FORMALMENTE** por PF-01/PF-02. No se modificó código ni normativa; no se leyó la clave maestra real ni se creó almacén/perfil live.
 
 **Siguiente paso:** esperar autorización expresa para corregir PF-01/PF-02 y añadir fault injection/crash recovery en almacén temporal. No ejecutar cambios sobre runtime ni secretos reales. Etapa 2 permanece ABIERTA.
+
+
+## Fase correctiva PF-01/PF-02 — implementación local bajo prueba (2026-11-03)
+
+- Autorización del propietario recibida para corregir consistencia transaccional y probar fault/crash recovery.
+- Implementado localmente `.profiles.transaction.json` (WAL) con snapshots de catálogo/metadatos, whitelist de rutas, rollback idempotente y recuperación automática al adquirir el lock.
+- Integrado en create/duplicate/rename/update/restore; sincronización explícita de `profiles/` tras publicar directorios nuevos; limpieza de directorios/revisiones no confirmados.
+- Pruebas nuevas cubren fallo de escritura de catálogo, fallo de fsync después de replace, crash entre escrituras, crash después de ambos replaces antes de retirar WAL, interrupción durante rollback y recuperación al reabrir.
+- `tests/xray_profiles.sh` PASS; regresión completa posterior a la última modificación: 51/51 scripts PASS; Python AST, Bash syntax, ShellCheck focal y `git diff --check` PASS.
+- Estado: cambios locales NO PUBLICADOS; PF-01/PF-02 no se cierran hasta completar revisión final del diff y sincronización GitHub.
+- Límites: no se usa clave maestra real ni almacén live; no se crean perfiles reales ni se toca runtime/servicios/firewall/puertos/red. Temporales ocultos huérfanos anteriores al journal no se limpian automáticamente en esta fase.

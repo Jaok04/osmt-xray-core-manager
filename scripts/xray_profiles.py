@@ -219,6 +219,7 @@ class ProfileStore:
         self.profiles = self.root / "profiles"
         self.catalog_path = self.root / "catalog.json"
         self.lock_path = self.root / ".profiles.lock"
+        self.transaction_path = self.root / ".profiles.transaction.json"
 
     def master_key(self) -> bytes:
         if self._master_key is None:
@@ -323,11 +324,167 @@ class ProfileStore:
             if not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_nlink != 1 or stat.S_IMODE(info.st_mode) != 0o600:
                 fail("Lock de perfiles inseguro.")
             fcntl.flock(fd, fcntl.LOCK_EX)
+            self.recover_transaction()
             yield
         finally:
             with contextlib.suppress(OSError):
                 fcntl.flock(fd, fcntl.LOCK_UN)
             os.close(fd)
+
+    def _fsync_dir(self, directory: pathlib.Path) -> None:
+        fd = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+
+    def _relative_store_path(self, path: pathlib.Path) -> str:
+        try:
+            relative = path.relative_to(self.root)
+        except ValueError:
+            fail("Ruta transaccional fuera del almacén.")
+        if not relative.parts or any(part in (".", "..") for part in relative.parts):
+            fail("Ruta transaccional no válida.")
+        return relative.as_posix()
+
+    def recover_transaction(self) -> None:
+        """Idempotently roll back an interrupted multi-file transaction."""
+        if not (self.transaction_path.exists() or self.transaction_path.is_symlink()):
+            return
+        check_regular(self.transaction_path)
+        journal = strict_json(read_regular(self.transaction_path, 32 * 1024 * 1024), "Journal transaccional")
+        if (not isinstance(journal, dict) or set(journal) != {"schema_version", "changes", "remove_dirs"} or
+                type(journal.get("schema_version")) is not int or journal["schema_version"] != 1 or
+                not isinstance(journal.get("changes"), list) or not 1 <= len(journal["changes"]) <= 2 or
+                not isinstance(journal.get("remove_dirs"), list) or len(journal["remove_dirs"]) > 2):
+            fail("Journal transaccional inválido; recuperación detenida de forma segura.")
+        seen_paths = set()
+        for change in journal["changes"]:
+            if (not isinstance(change, dict) or set(change) != {"path", "old"} or
+                    not isinstance(change.get("path"), str)):
+                fail("Entrada de journal transaccional inválida.")
+            relative = pathlib.PurePosixPath(change["path"])
+            if relative.as_posix() in seen_paths:
+                fail("Journal transaccional con destinos duplicados.")
+            seen_paths.add(relative.as_posix())
+            if relative.is_absolute() or not relative.parts or any(part in (".", "..") for part in relative.parts):
+                fail("Ruta inválida en journal transaccional.")
+            if not (relative.as_posix() == "catalog.json" or
+                    (len(relative.parts) == 3 and relative.parts[0] == "profiles" and
+                     TOKEN_RE.fullmatch(relative.parts[1]) and relative.parts[2] == "metadata.json")):
+                fail("Destino no permitido en journal transaccional.")
+            target = self.root.joinpath(*relative.parts)
+            check_no_symlink_components(target)
+            old = change["old"]
+            if old is None:
+                if target.exists() or target.is_symlink():
+                    check_regular(target)
+                    target.unlink()
+                    self._fsync_dir(target.parent)
+            else:
+                if not isinstance(old, str):
+                    fail("Snapshot inválido en journal transaccional.")
+                try:
+                    payload = base64.b64decode(old, validate=True)
+                except (ValueError, binascii.Error):
+                    fail("Snapshot corrupto en journal transaccional.")
+                if len(payload) > 4 * 1024 * 1024:
+                    fail("Snapshot excesivo en journal transaccional.")
+                atomic_write(target, payload)
+        seen_dirs = set()
+        for item in journal["remove_dirs"]:
+            if not isinstance(item, str) or item in seen_dirs:
+                fail("Directorio de rollback inválido o duplicado en journal transaccional.")
+            seen_dirs.add(item)
+            relative = pathlib.PurePosixPath(item)
+            if relative.is_absolute() or not relative.parts or any(part in (".", "..") for part in relative.parts):
+                fail("Ruta de rollback inválida en journal transaccional.")
+            allowed_profile_dir = (len(relative.parts) == 2 and relative.parts[0] == "profiles" and
+                                   TOKEN_RE.fullmatch(relative.parts[1]))
+            allowed_revision_dir = (len(relative.parts) == 4 and relative.parts[0] == "profiles" and
+                                    TOKEN_RE.fullmatch(relative.parts[1]) and relative.parts[2] == "revisions" and
+                                    re.fullmatch(r"r[0-9]{6}", relative.parts[3]))
+            if not (allowed_profile_dir or allowed_revision_dir):
+                fail("Directorio no permitido en rollback transaccional.")
+            target = self.root.joinpath(*relative.parts)
+            check_no_symlink_components(target)
+            if target.exists():
+                check_dir(target)
+                import shutil
+                shutil.rmtree(target)
+                self._fsync_dir(target.parent)
+        self.transaction_path.unlink()
+        self._fsync_dir(self.root)
+
+    def commit_transaction(self, changes: dict[pathlib.Path, bytes],
+                           remove_dirs: list[pathlib.Path] | None = None) -> None:
+        """Commit several files as one recoverable unit; journal means rollback."""
+        if self.transaction_path.exists() or self.transaction_path.is_symlink():
+            fail("Existe una transacción pendiente; se requiere recuperación antes de continuar.")
+        if not 1 <= len(changes) <= 2 or len(remove_dirs or []) > 2:
+            fail("Tamaño de transacción fuera de los límites permitidos.")
+        entries = []
+        for target, new_data in changes.items():
+            relative_target = self._relative_store_path(target)
+            allowed_target = (relative_target == "catalog.json" or
+                              (len(pathlib.PurePosixPath(relative_target).parts) == 3 and
+                               pathlib.PurePosixPath(relative_target).parts[0] == "profiles" and
+                               TOKEN_RE.fullmatch(pathlib.PurePosixPath(relative_target).parts[1]) and
+                               pathlib.PurePosixPath(relative_target).parts[2] == "metadata.json"))
+            if not allowed_target or not isinstance(new_data, bytes) or len(new_data) > 4 * 1024 * 1024:
+                fail("Destino o contenido no permitido en transacción.")
+            check_no_symlink_components(target)
+            if target.exists() or target.is_symlink():
+                check_regular(target)
+                old_data = read_regular(target, 32 * 1024 * 1024)
+                old_encoded = base64.b64encode(old_data).decode("ascii")
+            else:
+                old_encoded = None
+            entries.append({"path": self._relative_store_path(target), "old": old_encoded,
+                            "new": base64.b64encode(new_data).decode("ascii")})
+        removals = [self._relative_store_path(path) for path in (remove_dirs or [])]
+        for item in removals:
+            parts = pathlib.PurePosixPath(item).parts
+            allowed_profile_dir = len(parts) == 2 and parts[0] == "profiles" and TOKEN_RE.fullmatch(parts[1])
+            allowed_revision_dir = (len(parts) == 4 and parts[0] == "profiles" and TOKEN_RE.fullmatch(parts[1])
+                                    and parts[2] == "revisions" and re.fullmatch(r"r[0-9]{6}", parts[3]))
+            if not (allowed_profile_dir or allowed_revision_dir):
+                fail("Directorio de rollback fuera de alcance.")
+        journal = {"schema_version": 1, "changes": [
+            {"path": entry["path"], "old": entry["old"]} for entry in entries
+        ], "remove_dirs": removals}
+        try:
+            atomic_write(self.transaction_path, json_bytes(journal))
+        except Exception:
+            if self.transaction_path.exists() or self.transaction_path.is_symlink():
+                self.recover_transaction()
+            else:
+                # No destination was touched; discard any prebuilt revision/directory.
+                for directory in (remove_dirs or []):
+                    check_no_symlink_components(directory)
+                    if directory.exists():
+                        check_dir(directory)
+                        import shutil
+                        shutil.rmtree(directory)
+                        self._fsync_dir(directory.parent)
+            raise
+        try:
+            for entry in entries:
+                target = self.root.joinpath(*pathlib.PurePosixPath(entry["path"]).parts)
+                atomic_write(target, base64.b64decode(entry["new"], validate=True))
+        except Exception:
+            # Keep the journal for recovery if rollback itself cannot complete.
+            self.recover_transaction()
+            raise
+        try:
+            self.transaction_path.unlink()
+            self._fsync_dir(self.root)
+        except Exception:
+            # If unlink durability is uncertain, recreate the WAL and roll back.
+            if not self.transaction_path.exists():
+                atomic_write(self.transaction_path, json_bytes(journal))
+            self.recover_transaction()
+            raise
 
     def load_catalog(self) -> dict:
         if not self.catalog_path.exists():
@@ -511,9 +668,10 @@ class ProfileStore:
                     fail("La identidad de perfil ya existe; no se sobrescribirá.")
                 os.rename(temp, final)
                 published = True
+                self._fsync_dir(self.profiles)
                 catalog["profiles"].append({"profile_id": profile_id, "name": clean_name,
                                              "created_at": now, "modified_at": now})
-                self.save_catalog(catalog)
+                self.commit_transaction({self.catalog_path: json_bytes(catalog)}, remove_dirs=[final])
             except Exception:
                 if temp.exists():
                     import shutil
@@ -558,21 +716,17 @@ class ProfileStore:
             catalog = self.load_catalog()
             meta = self.load_metadata(profile_id)
             clean = self.unique_name(catalog, name, exclude=profile_id)
-            old = meta["name"]
             meta["name"] = clean
             meta["modified_at"] = utc_now()
-            self.save_metadata(profile_id, meta)
             for item in catalog["profiles"]:
                 if item["profile_id"] == profile_id:
                     item["name"] = clean
                     item["modified_at"] = meta["modified_at"]
                     break
-            try:
-                self.save_catalog(catalog)
-            except Exception:
-                meta["name"] = old
-                self.save_metadata(profile_id, meta)
-                raise
+            self.commit_transaction({
+                self.profile_dir(profile_id) / "metadata.json": json_bytes(meta),
+                self.catalog_path: json_bytes(catalog),
+            })
             return {"status": "RENAMED", "profile_id": profile_id, "name": clean}
 
     def duplicate(self, profile_id: str, name: str, description: str | None = None, notes: str | None = None) -> dict:
@@ -625,9 +779,10 @@ class ProfileStore:
                     fail("La identidad de perfil ya existe; no se sobrescribirá.")
                 os.rename(temp, final)
                 published = True
+                self._fsync_dir(self.profiles)
                 catalog["profiles"].append({"profile_id": new_id, "name": clean,
                                              "created_at": now, "modified_at": now})
-                self.save_catalog(catalog)
+                self.commit_transaction({self.catalog_path: json_bytes(catalog)}, remove_dirs=[final])
             except Exception:
                 import shutil
                 if temp.exists():
@@ -650,19 +805,24 @@ class ProfileStore:
             if notes is not None:
                 meta["notes"] = notes.strip()
             revision = meta.get("current_revision")
+            new_revision = None
             if config_data is not None:
                 revision = self.add_revision(profile_id, config_data, source="user_update")
+                new_revision = revision
                 meta["current_revision"] = revision
                 meta["config_present"] = True
                 meta["validation_status"] = "not_validated"
             meta["modified_at"] = utc_now()
-            self.save_metadata(profile_id, meta)
             for item in catalog["profiles"]:
                 if item["profile_id"] == profile_id:
                     item["name"] = meta["name"]
                     item["modified_at"] = meta["modified_at"]
                     break
-            self.save_catalog(catalog)
+            self.commit_transaction({
+                self.profile_dir(profile_id) / "metadata.json": json_bytes(meta),
+                self.catalog_path: json_bytes(catalog),
+            }, remove_dirs=([self.profile_dir(profile_id) / "revisions" / new_revision]
+                            if new_revision is not None else []))
             return {"status": "UPDATED", "profile_id": profile_id, "name": meta["name"],
                     "current_revision": revision, "config_present": bool(meta.get("config_present"))}
 
@@ -690,12 +850,14 @@ class ProfileStore:
             meta["config_present"] = True
             meta["validation_status"] = "not_validated"
             meta["modified_at"] = utc_now()
-            self.save_metadata(profile_id, meta)
             catalog = self.load_catalog()
             for item in catalog["profiles"]:
                 if item["profile_id"] == profile_id:
                     item["modified_at"] = meta["modified_at"]
-            self.save_catalog(catalog)
+            self.commit_transaction({
+                self.profile_dir(profile_id) / "metadata.json": json_bytes(meta),
+                self.catalog_path: json_bytes(catalog),
+            }, remove_dirs=[self.profile_dir(profile_id) / "revisions" / new_revision])
             return {"status": "RESTORED_AS_NEW_REVISION", "profile_id": profile_id,
                     "source_revision": revision, "current_revision": new_revision}
 

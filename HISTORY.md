@@ -823,3 +823,8 @@ Se completó la revisión de solo lectura del almacén de perfiles contra Etapa 
 PF-01 BLOQUEANTE reproducido mediante fault injection en un almacén temporal: `update()` puede guardar metadatos y fallar al guardar catálogo, dejando discrepancia que hace fallar `list_profiles()`. PF-02 ALTO: las operaciones multiarchivo requieren transacción recuperable y pruebas de write/replace/fsync/crash. Se documentaron además pendientes funcionales de Etapa 5. No se modificó código ni normativa. No se leyó `master.key`, no se creó almacén/perfil live ni se tocó runtime.
 
 Se corrigió `docs/DISENO_IMPLEMENTACION_PERFILES.md` para describir el hash real del manifiesto (SHA-256 del ciphertext y tamaño del plaintext). Informe: `docs/AUDITORIA_FORMAL_PERFILES_V1_1_2026-11-03.md`. Recomendación: no aceptar aún v1.1 hasta resolver PF-01/PF-02. Siguiente paso sujeto a autorización expresa del propietario.
+
+
+## 2026-11-03 — Inicio de remediación transaccional PF-01/PF-02
+
+Tras autorización expresa del propietario, se implementó localmente un journal WAL con snapshots de catálogo/metadatos, whitelist de rutas, rollback idempotente y recuperación al adquirir el lock. Integración en create/duplicate/rename/update/restore. Se añadieron pruebas de fallo de escritura, fsync posterior a replace, crash en varias fases e interrupción durante rollback. Prueba focal `tests/xray_profiles.sh` PASS. Regresión completa final: 51/51 scripts PASS; Python AST, Bash syntax, ShellCheck focal y `git diff --check` PASS. La revisión final del diff y publicación aún están pendientes. Sin secretos reales, perfiles live ni cambios runtime.

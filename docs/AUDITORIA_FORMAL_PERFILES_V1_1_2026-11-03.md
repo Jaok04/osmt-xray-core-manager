@@ -159,3 +159,12 @@ Una vez corregidos los bloqueos, el propietario podrá decidir si acepta el alma
 - La prueba de fallo se realizó únicamente con almacén temporal y clave sintética.
 
 **Conclusión:** perfiles v1.1 tiene un núcleo criptográfico y de persistencia útil, con pruebas focales satisfactorias, pero la auditoría detectó un fallo reproducible de consistencia tras un error de escritura y ventanas de commit multiarchivo sin recuperación suficiente. Se conserva publicado, no se modifica el código y la aceptación formal queda pendiente de corregir esos hallazgos y recibir la decisión expresa del propietario.
+
+
+## 10. Remediación PF-01/PF-02 — implementación inicial en rama de trabajo
+
+Tras la autorización expresa del propietario, se implementó en el árbol de trabajo un journal de recuperación `.profiles.transaction.json` con snapshots de catálogo/metadatos anteriores, rutas restringidas y rollback idempotente al adquirir el lock. Se integró en create/duplicate/rename/update/restore; los cambios de catálogo y metadatos se confirman como unidad y las revisiones/directorios no confirmados se retiran durante rollback. La documentación del protocolo está en §12 de `docs/DISENO_IMPLEMENTACION_PERFILES.md`.
+
+La prueba focal `tests/xray_profiles.sh` ahora inyecta fallos al crear el journal, al escribir el catálogo y al sincronizar directorios después de replace; simula terminación entre escrituras, después de ambos replaces pero antes de retirar journal e interrupción durante rollback. También cubre catálogo inicialmente ausente, recuperación al reabrir y limpieza de operaciones create/duplicate/update/restore. Todas las pruebas usan almacén temporal y clave sintética.
+
+La regresión completa posterior a la última modificación ejecutó **51/51 scripts PASS**, además de Python AST, sintaxis Bash, ShellCheck focal y `git diff --check` PASS. La revisión final del diff y publicación GitHub aún están pendientes; por tanto, PF-01/PF-02 no se declaran cerrados/publicados hasta completar esos pasos. Los temporales ocultos no referenciados creados antes de escribir el journal pueden permanecer tras una caída; la limpieza automática de temporales huérfanos queda fuera de esta corrección.

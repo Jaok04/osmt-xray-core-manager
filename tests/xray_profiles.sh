@@ -189,4 +189,232 @@ printf '2\n0\n' | menu_profiles >"$TMP/menu-list.out"
 grep -q 'CONSULTAR PERFILES' "$TMP/menu-list.out"
 grep -q 'Perfil desde menú' "$TMP/menu-list.out"
 
+# Transacciones multiarchivo: fallo normal, caída abrupta y recuperación WAL.
+python3 - "$ROOT" "$TMP/transaction-tests" <<'PYTXN'
+import os, pathlib, sys
+root = pathlib.Path(sys.argv[1])
+test_root = pathlib.Path(sys.argv[2])
+test_root.mkdir(mode=0o700)
+os.chmod(test_root, 0o700)
+key = test_root / "synthetic.key"
+key.write_bytes(os.urandom(32)); key.chmod(0o600)
+sys.path.insert(0, str(root / "scripts"))
+import xray_profiles as xp
+store = xp.ProfileStore(str(test_root / "store"), str(key))
+created = store.create("Nombre inicial", config_data=b'{"version":1}')
+pid = created["profile_id"]
+original_atomic_write = xp.atomic_write
+# Fail exactly when writing the new catalog, after metadata has been written.
+failed = {"done": False}
+def fail_catalog(path, data):
+    if pathlib.Path(path) == store.catalog_path and not failed["done"]:
+        failed["done"] = True
+        raise OSError("injected catalog write failure")
+    return original_atomic_write(path, data)
+xp.atomic_write = fail_catalog
+try:
+    store.rename(pid, "Nombre que debe revertirse")
+except OSError:
+    pass
+else:
+    raise AssertionError("injected write failure did not escape")
+finally:
+    xp.atomic_write = original_atomic_write
+assert store.list_profiles()[0]["name"] == "Nombre inicial"
+assert not store.transaction_path.exists()
+# Directory-fsync failure after metadata replace must trigger rollback.
+import stat
+original_fsync = xp.os.fsync
+failed = {"done": False}
+def fail_first_directory_fsync(fd):
+    if stat.S_ISDIR(os.fstat(fd).st_mode) and not failed["done"]:
+        failed["done"] = True
+        raise OSError("injected directory fsync failure")
+    return original_fsync(fd)
+def arm_fsync_after_journal(path, data):
+    result = original_atomic_write(path, data)
+    if pathlib.Path(path) == store.transaction_path:
+        xp.os.fsync = fail_first_directory_fsync
+    return result
+xp.atomic_write = arm_fsync_after_journal
+try:
+    store.rename(pid, "Nombre con fsync fallido")
+except OSError:
+    pass
+else:
+    raise AssertionError("directory fsync fault was not propagated")
+finally:
+    xp.atomic_write = original_atomic_write
+    xp.os.fsync = original_fsync
+assert store.list_profiles()[0]["name"] == "Nombre inicial"
+assert not store.transaction_path.exists()
+# Update writes a new revision plus metadata/catalog; failure removes the uncommitted revision.
+before_revisions = len(store.versions(pid))
+failed = {"done": False}
+def fail_update_catalog(path, data):
+    if pathlib.Path(path) == store.catalog_path and not failed["done"]:
+        failed["done"] = True
+        raise OSError("injected update catalog failure")
+    return original_atomic_write(path, data)
+xp.atomic_write = fail_update_catalog
+try:
+    store.update(pid, name="Nombre update fallido", config_data=b'{"version":2}')
+except OSError:
+    pass
+else:
+    raise AssertionError("update fault injection did not escape")
+finally:
+    xp.atomic_write = original_atomic_write
+assert store.list_profiles()[0]["name"] == "Nombre inicial"
+assert len(store.versions(pid)) == before_revisions, "failed update must remove its uncommitted revision"
+# Failure to publish the WAL itself must not leave an uncommitted revision behind.
+before_revisions = len(store.versions(pid))
+def fail_journal_write(path, data):
+    if pathlib.Path(path) == store.transaction_path:
+        raise OSError("injected journal creation failure")
+    return original_atomic_write(path, data)
+xp.atomic_write = fail_journal_write
+try:
+    store.update(pid, config_data=b'{"version":3}')
+except OSError:
+    pass
+else:
+    raise AssertionError("journal creation failure did not escape")
+finally:
+    xp.atomic_write = original_atomic_write
+assert len(store.versions(pid)) == before_revisions, "journal failure must clean the prebuilt revision"
+assert not store.transaction_path.exists()
+# Simulate abrupt process death after metadata replace and before catalog replace.
+def crash_before_catalog(path, data):
+    if pathlib.Path(path) == store.catalog_path:
+        raise SystemExit("simulated process termination")
+    return original_atomic_write(path, data)
+xp.atomic_write = crash_before_catalog
+try:
+    store.rename(pid, "Nombre no confirmado")
+except SystemExit:
+    pass
+else:
+    raise AssertionError("simulated crash was not triggered")
+finally:
+    xp.atomic_write = original_atomic_write
+assert store.transaction_path.exists(), "WAL must survive simulated process death"
+restarted = xp.ProfileStore(str(test_root / "store"), str(key))
+assert restarted.list_profiles()[0]["name"] == "Nombre inicial"
+assert not restarted.transaction_path.exists(), "startup recovery must consume WAL"
+# Simulate death after both target files were replaced but before journal removal.
+def crash_after_catalog(path, data):
+    result = original_atomic_write(path, data)
+    if pathlib.Path(path) == store.catalog_path:
+        raise SystemExit("simulated termination after catalog replace")
+    return result
+xp.atomic_write = crash_after_catalog
+try:
+    store.rename(pid, "Nombre con commit incompleto")
+except SystemExit:
+    pass
+else:
+    raise AssertionError("post-catalog crash was not triggered")
+finally:
+    xp.atomic_write = original_atomic_write
+assert store.transaction_path.exists()
+restarted = xp.ProfileStore(str(test_root / "store"), str(key))
+# Recovery itself may be interrupted; the same WAL must make rollback idempotent.
+def crash_during_recovery(path, data):
+    if pathlib.Path(path) == store.catalog_path:
+        raise SystemExit("simulated termination during rollback")
+    return original_atomic_write(path, data)
+xp.atomic_write = crash_during_recovery
+try:
+    restarted.recover_transaction()
+except SystemExit:
+    pass
+else:
+    raise AssertionError("recovery interruption was not triggered")
+finally:
+    xp.atomic_write = original_atomic_write
+assert restarted.transaction_path.exists(), "journal must remain after interrupted recovery"
+restarted = xp.ProfileStore(str(test_root / "store"), str(key))
+assert restarted.list_profiles()[0]["name"] == "Nombre inicial"
+assert not restarted.transaction_path.exists()
+# First-ever create: catalog did not exist when the WAL was written.
+empty_store = xp.ProfileStore(str(test_root / "empty-store"), str(key))
+def crash_initial_catalog(path, data):
+    if pathlib.Path(path) == empty_store.catalog_path:
+        raise SystemExit("simulated initial catalog interruption")
+    return original_atomic_write(path, data)
+xp.atomic_write = crash_initial_catalog
+try:
+    empty_store.create("Alta inicial interrumpida")
+except SystemExit:
+    pass
+else:
+    raise AssertionError("initial create interruption was not triggered")
+finally:
+    xp.atomic_write = original_atomic_write
+assert empty_store.transaction_path.exists()
+empty_restarted = xp.ProfileStore(str(test_root / "empty-store"), str(key))
+assert empty_restarted.list_profiles() == []
+assert not empty_restarted.catalog_path.exists(), "rollback must preserve initially absent catalog"
+assert not empty_restarted.transaction_path.exists()
+assert len(list(empty_restarted.profiles.glob("profile-*"))) == 0
+# The same transaction primitive must roll back a new directory if catalog write fails.
+failed = {"done": False}
+def fail_create_catalog(path, data):
+    if pathlib.Path(path) == restarted.catalog_path and not failed["done"]:
+        failed["done"] = True
+        raise OSError("injected create catalog failure")
+    return original_atomic_write(path, data)
+xp.atomic_write = fail_create_catalog
+try:
+    restarted.create("Alta que debe revertirse")
+except OSError:
+    pass
+else:
+    raise AssertionError("create fault injection did not escape")
+finally:
+    xp.atomic_write = original_atomic_write
+assert [x["name"] for x in restarted.list_profiles()] == ["Nombre inicial"]
+assert len(list(restarted.profiles.glob("profile-*"))) == 1, "failed create must remove its published profile directory"
+# A failed restore must remove the revision that was not committed as current.
+restarted.update(pid, config_data=b'{"version":2}')
+before_revisions = len(restarted.versions(pid))
+failed = {"done": False}
+def fail_restore_catalog(path, data):
+    if pathlib.Path(path) == restarted.catalog_path and not failed["done"]:
+        failed["done"] = True
+        raise OSError("injected restore catalog failure")
+    return original_atomic_write(path, data)
+xp.atomic_write = fail_restore_catalog
+try:
+    restarted.restore(pid, "r000001")
+except OSError:
+    pass
+else:
+    raise AssertionError("restore fault injection did not escape")
+finally:
+    xp.atomic_write = original_atomic_write
+assert len(restarted.versions(pid)) == before_revisions, "failed restore must remove its uncommitted revision"
+assert restarted.show(pid)["metadata"]["current_revision"] == "r000002"
+# A failed duplicate must not leave a catalog-visible or orphaned destination.
+failed = {"done": False}
+def fail_duplicate_catalog(path, data):
+    if pathlib.Path(path) == restarted.catalog_path and not failed["done"]:
+        failed["done"] = True
+        raise OSError("injected duplicate catalog failure")
+    return original_atomic_write(path, data)
+xp.atomic_write = fail_duplicate_catalog
+try:
+    restarted.duplicate(pid, "Copia que debe revertirse")
+except OSError:
+    pass
+else:
+    raise AssertionError("duplicate fault injection did not escape")
+finally:
+    xp.atomic_write = original_atomic_write
+assert [x["name"] for x in restarted.list_profiles()] == ["Nombre inicial"]
+assert not restarted.transaction_path.exists()
+print("PASS: rollback rename/update/restore, WAL tras caída abrupta, recuperación al reabrir y limpieza create/duplicate.")
+PYTXN
+
 printf '%s\n' 'OK: almacén, menú, copias independientes, revisiones, restauración no destructiva, concurrencia, nombres únicos y controles de filesystem.'
