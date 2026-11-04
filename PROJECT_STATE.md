@@ -931,3 +931,23 @@ C-04B (exportación múltiple) y C-04C (integración del menú Bash) no están a
 El propietario aceptó formalmente C-04B como componente limitado conforme a `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`. La aceptación cubre exclusivamente la exportación múltiple, el contrato de manifiesto, las comprobaciones previas, la confirmación por hashes, la ejecución parcial y las pruebas documentadas. No cierra C-04 completa, Etapa 5 ni Etapa 2.
 
 C-04B permanece implementada, verificada y aceptada localmente. La publicación/sincronización no se entiende autorizada por esta aceptación. C-04C (integración del menú Bash) no se inicia sin autorización específica. `main`, `Xray-Normativa/`, runtime, servicios y VPS de pruebas permanecen fuera del alcance.
+
+
+## C-04C — integración del menú Bash (2026-11-04)
+
+El propietario autorizó expresamente C-04C, limitada a conectar el gestor independiente con el menú Bash, después de publicar y verificar primero C-04B.
+
+Se incorporó modules/xray_configurations_menu.sh, se cargó desde bin/xray-manager y se conectó la opción [1] Gestionar configuraciones de Xray de menu_config_profiles_backups. config/paths.sh define la ruta del almacén independiente y la ruta configurable de la clave maestra existente.
+
+El submenú integra consulta/metadatos y visualización opcional del JSON con confirmación, creación, edición con preview/hash/revisión base, importación con preview/hash, exportación individual y múltiple, comparación sin valores secretos, historial de revisiones y eliminación con preview y doble confirmación. No existe acción apply/activate.
+
+Nueva prueba tests/xray_configurations_menu.sh: PASS con almacén temporal y clave sintética. tests/smoke.sh y tests/stage1_menu.sh: PASS. Regresión completa tests/*.sh: 56/56 PASS. Bash syntax global, ShellCheck focal, Python compile y git diff --check: PASS. Auditoría: docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md.
+
+Estado: C-04C IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal. No se hizo commit/push/sync de C-04C. C-04, Etapa 5 y Etapa 2 siguen ABIERTAS. No se accedió al almacén real ni se leyó la clave maestra; no se tocaron runtime, servicios, dependencias, certificados, firewall, puertos, red, VPS de pruebas, main ni Xray-Normativa/.
+
+
+## Aceptación formal C-04C — 2026-11-04
+
+El propietario aceptó formalmente C-04C conforme a la auditoría `docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md`. La aceptación cubre exclusivamente la integración de las operaciones del gestor independiente en el menú Bash y las pruebas documentadas. No cierra C-04 completa, Etapa 5 ni Etapa 2, y no autoriza C-05.
+
+Se autoriza expresamente publicar los cambios C-04C aceptados. La implementación, pruebas, auditoría y registro de aceptación se publicarán en `design/user-identity-association-v1`; `main` y `Xray-Normativa/` permanecen protegidas.

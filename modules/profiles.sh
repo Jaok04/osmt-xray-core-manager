@@ -248,14 +248,15 @@ menu_config_profiles_backups() {
     while true; do
         ui_clear
         ui_title "CONFIGURACIONES, PERFILES Y RESPALDOS"
-        printf '\n  CONFIGURACIONES\n  [1] Gestionar configuraciones de Xray (pendiente)\n  [2] Validar archivos de configuración (pendiente)\n'
+        printf '\n  CONFIGURACIONES\n  [1] Gestionar configuraciones de Xray\n  [2] Validar archivos de configuración (pendiente)\n'
         printf '  PERFILES\n  [3] Gestionar perfiles\n  [4] Cambiar perfil activo (pendiente de integración runtime)\n'
         printf '  RESPALDOS\n  [5] Crear respaldo (pendiente)\n  [6] Gestionar respaldos (pendiente)\n  [7] Restaurar respaldo (pendiente)\n  [0] Volver\n\n'
         ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
+            1) menu_independent_configurations || true ;;
             3) menu_profiles || true ;;
             0) return 0 ;;
-            1 | 2 | 4 | 5 | 6 | 7)
+            2 | 4 | 5 | 6 | 7)
                 printf '\nEste apartado todavía no está implementado. No se modificó ninguna configuración ni servicio.\n'
                 ui_pause
                 ;;

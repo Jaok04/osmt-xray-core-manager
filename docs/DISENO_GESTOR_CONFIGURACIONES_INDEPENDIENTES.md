@@ -236,7 +236,7 @@ Los comandos devuelven JSON estructurado para la interfaz Bash. No habrá comand
 **Fase C-04 — interfaz y eliminación (desglosada por autorización)**
 - [x] C-04A: eliminación segura transaccional; auditoría `docs/AUDITORIA_C04A_ELIMINACION_SEGURA_2026-11-04.md`; aceptada y publicada.
 - [x] C-04B: exportación múltiple mediante manifiesto explícito, preview/hash de confirmación y resultados parciales; auditoría `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`; implementada, verificada y aceptada formalmente como componente limitado.
-- [ ] C-04C: integración del menú Bash; no autorizada ni iniciada.
+- [x] C-04C: integración del menú Bash; implementada, verificada y auditada localmente, pendiente de aceptación formal. Auditoría docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md.
 - C-04 no se considera completa hasta completar las fases autorizadas, su auditoría y aceptación.
 
 **Fase C-05 — integración con validador**
@@ -309,3 +309,29 @@ CLI: `preview-export-batch --manifest` y `export-batch --manifest --expected-man
 Cada salida reutiliza la escritura individual atómica/0600 y verificación byte a byte. Los errores son por entrada y no cancelan las restantes; el resultado reporta éxitos/errores y advierte que los archivos están en claro. Destinos duplicados bloquean todas las entradas afectadas. No se añadió patrón de nombres ni generación automática de rutas: cada destino se declara explícitamente.
 
 Estado C-04B: implementada, verificada y aceptada formalmente como componente limitado. C-04C (menú Bash) no autorizada/iniciada. Sin commit/push/sync.
+
+
+## 13. C-04C — integración del menú Bash (2026-11-04)
+
+El propietario autorizó C-04C después de verificar la publicación de C-04B. El alcance se limitó a integrar las operaciones existentes del gestor independiente en la interfaz Bash; no se amplió el motor ni se modificó su contrato.
+
+modules/xray_configurations_menu.sh proporciona:
+- selección desde el catálogo y consulta de metadatos; la visualización del JSON descifrado es opcional y requiere confirmación;
+- creación desde plantilla vacía o mínima;
+- importación y edición con preview, SHA-256 y confirmación; edición también liga la revisión base;
+- exportación individual y por manifiesto, manteniendo los controles de C-02/C-04B;
+- comparación de solo lectura sin valores secretos e historial de revisiones;
+- eliminación con preview y doble confirmación, incluida la afirmación --assert-not-active.
+
+El módulo se carga desde bin/xray-manager y la opción [1] Gestionar configuraciones de Xray de menu_config_profiles_backups lo invoca. config/paths.sh define /var/lib/xray-manager/configurations como almacén predeterminado y conserva como clave predeterminada la clave maestra existente, sin crearla ni regenerarla.
+
+La interfaz requiere root, Python 3 y jq; no instala dependencias. No ofrece apply ni activate, no escribe el runtime y no llama a systemd. La prueba focal usa almacén temporal y clave sintética.
+
+Auditoría: docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md. Prueba focal, smoke y navegación PASS; regresión completa tests/*.sh 56/56 PASS; Bash syntax global, ShellCheck focal, Python compile y git diff --check PASS.
+
+Estado: C-04C implementada, verificada y auditada localmente; pendiente de aceptación formal. Sin commit/push/sync de C-04C. C-04, Etapa 5 y Etapa 2 siguen abiertas.
+
+
+## 14. Aceptación formal C-04C — 2026-11-04
+
+El propietario acepta formalmente C-04C conforme a la auditoría `docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md`. La integración del menú Bash queda aceptada como componente limitado. Se autoriza publicar los cambios de C-04C, sus pruebas, auditoría y registro de aceptación en `design/user-identity-association-v1`. Esta aceptación no cierra C-04 completa, Etapa 5 ni Etapa 2 y no autoriza C-05. `main` y `Xray-Normativa/` permanecen protegidas.

@@ -911,3 +911,24 @@ La sincronización final se identifica en `PROJECT_STATE.md` y `HISTORY.md` una 
 - **Publicación:** no se hizo commit, push ni sincronización; la aceptación de C-04B no autoriza esas acciones.
 - **Exclusiones:** no se modificaron `main`, `Xray-Normativa/`, runtime, servicios, dependencias, certificados, firewall, puertos, red ni VPS de pruebas.
 - C-04, Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+
+## Punto de control vigente — C-04C integrada y auditada localmente (2026-11-04)
+
+- Autorización: el propietario autorizó C-04C limitada a integrar el gestor independiente con el menú Bash, después de publicar C-04B.
+- C-04B: publicada y sincronizada en 0f8ea9df5fa4927c27deafab405c446f1c4dc4dd.
+- Integración: bin/xray-manager carga modules/xray_configurations_menu.sh; modules/profiles.sh enruta la opción [1] Gestionar configuraciones de Xray; config/paths.sh declara las rutas del almacén y la clave maestra existente.
+- Operaciones: consulta, creación, edición, importación, exportación individual/múltiple, comparación, historial de revisiones y eliminación. No hay apply/activate. Mostrar contenido descifrado exige confirmación; eliminar requiere preview y doble confirmación.
+- Pruebas: tests/xray_configurations_menu.sh, tests/smoke.sh y tests/stage1_menu.sh PASS. Regresión completa tests/*.sh: 56/56 PASS. Bash syntax global, ShellCheck focal, Python compile y git diff --check PASS.
+- Auditoría: docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md.
+- Estado: C-04C IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal. Sin commit/push/sync.
+- Exclusiones: sólo almacén temporal y clave sintética en pruebas. No se leyó clave maestra real ni se accedió al almacén live. Sin cambios en runtime, servicios, dependencias, certificados, firewall, puertos, red, VPS de pruebas, main o Xray-Normativa/.
+- C-04 completa, Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+
+## Aceptación formal C-04C y publicación autorizada — 2026-11-04
+
+- C-04C aceptada formalmente conforme a `docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md`.
+- Publicación autorizada expresamente: implementación, prueba, auditoría y registro de aceptación, sólo en `design/user-identity-association-v1`.
+- No se autoriza C-05 ni se cierra C-04 completa, Etapa 5 o Etapa 2.
+- `main`, `Xray-Normativa/`, runtime, servicios e infraestructura permanecen fuera del alcance.

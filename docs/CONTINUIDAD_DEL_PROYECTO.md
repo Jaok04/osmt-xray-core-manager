@@ -1066,3 +1066,19 @@ Estado: C-04B implementada/verificada localmente, pendiente de aceptación forma
 ## Aceptación C-04B — 2026-11-04
 
 El propietario aceptó formalmente C-04B como componente limitado conforme a `docs/AUDITORIA_C04B_EXPORTACION_MULTIPLE_2026-11-04.md`. La implementación y sus pruebas quedan aceptadas localmente. La aceptación no implica publicación, commit, push ni sincronización. C-04C (integración del menú Bash) requiere autorización específica antes de iniciar. C-04 no está completa; Etapa 5 y Etapa 2 siguen abiertas. No se modificaron `main`, `Xray-Normativa/`, runtime, servicios, dependencias ni VPS de pruebas.
+
+
+## Continuidad vigente — C-04C menú Bash implementado localmente (2026-11-04)
+
+C-04B fue publicada y verificada en GitHub/VPS en el commit 0f8ea9df5fa4927c27deafab405c446f1c4dc4dd. Después de esa publicación, el propietario autorizó C-04C, limitada a la integración del menú Bash.
+
+El menú aprobado CONFIGURACIONES, PERFILES Y RESPALDOS conecta ahora [1] Gestionar configuraciones de Xray con menu_independent_configurations. El módulo modules/xray_configurations_menu.sh integra consulta, creación, edición, importación, exportación individual y múltiple, comparación, revisiones y eliminación. Consulta de contenido descifrado y eliminación requieren confirmaciones específicas. No hay apply/activate ni conexión con runtime.
+
+Auditoría: docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md. Prueba focal PASS; tests/smoke.sh y tests/stage1_menu.sh PASS; regresión completa tests/*.sh 56/56 PASS. Bash syntax global, ShellCheck focal, Python compile y git diff --check PASS.
+
+C-04C está IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal. No commit/push/sync de C-04C. No se accedió al almacén real ni se leyó la clave maestra; no se modificaron runtime, servicios, dependencias, certificados, firewall, puertos, red, VPS de pruebas, main ni Xray-Normativa/. C-04, Etapa 5 y Etapa 2 continúan ABIERTAS.
+
+
+## Aceptación formal C-04C y autorización de publicación — 2026-11-04
+
+El propietario aceptó C-04C conforme a `docs/AUDITORIA_C04C_INTEGRACION_MENU_BASH_2026-11-04.md` y autorizó expresamente publicar la implementación, pruebas, auditoría y registro de aceptación en `design/user-identity-association-v1`. La aceptación es limitada a C-04C; C-04 completa, Etapa 5 y Etapa 2 siguen abiertas. No se inicia C-05. `main` y `Xray-Normativa/` continúan protegidas.
