@@ -1221,6 +1221,7 @@ La aprobación no autoriza todavía implementación R-01–R-05 ni ensayo live R
 
 
 ## Continuidad vigente — R-01 runtime por perfil/revisión (2026-11-04)
+- Publicación: commit c605b3efc904d75a142e9e8c539210eb65070acd (c605b3e) en design/user-identity-association-v1; GitHub confirmó el SHA; checkout /opt/xray-manager limpio y sincronizado. main y Xray-Normativa/ intactas.
 
 El propietario aprobó desarrollar R-01–R-05 exclusivamente en entornos aislados y aprobó corregir el diseño runtime para que toda identidad sea profile_id + revision, conforme a Etapa 5 §3.1. No usar informes C-05B/C-05C de configuraciones independientes como prueba de validación de perfiles.
 

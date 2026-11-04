@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-04
 **Dictamen:** PASS técnico del alcance implementado en entorno aislado.
-**Estado:** AUDITADA LOCALMENTE; aceptación formal pendiente.
+**Estado:** AUDITADA LOCALMENTE, PUBLICADA Y SINCRONIZADA (c605b3e); aceptación formal pendiente.
 
 ## 1. Contraste normativo
 
@@ -60,7 +60,7 @@ No se modificó Xray-Normativa/. Los 14 archivos normativos Markdown/YAML del re
 
 **PASS técnico de R-01 en entorno aislado.** El administrador ya dispone de un flujo CLI/menú para validar una revisión exacta y persistir su informe vinculado a profile_id + revision. El preflight puede comprobar esa prueba sin confundirla con una validación C-05B/C-05C de configuración independiente.
 
-R-01: IMPLEMENTADA / INTEGRADA EN CLI-MENÚ / VERIFICADA EN FIXTURES / AUDITADA LOCALMENTE / ACEPTACIÓN FORMAL PENDIENTE.
+R-01: IMPLEMENTADA / INTEGRADA EN CLI-MENÚ / VERIFICADA EN FIXTURES / AUDITADA / PUBLICADA / SINCRONIZADA (c605b3e) / ACEPTACIÓN FORMAL PENDIENTE.
 R-02–R-05: NO INICIADAS.
 R-06/live: NO AUTORIZADA.
 Etapa 5: ABIERTA.

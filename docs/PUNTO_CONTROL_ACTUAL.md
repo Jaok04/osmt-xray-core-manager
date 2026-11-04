@@ -1133,6 +1133,7 @@ U-01 está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Co
 
 
 ## Punto de control vigente — R-01 preflight runtime por perfil/revisión (2026-11-04)
+- Publicación/sincronización: commit c605b3efc904d75a142e9e8c539210eb65070acd (c605b3e) en design/user-identity-association-v1; SHA remoto confirmado y checkout /opt/xray-manager limpio. main permanece intacta.
 
 - Autorización: R-01–R-05 solo en entornos aislados; R-06/live requiere autorización nueva. El propietario aprobó además que el diseño use exclusivamente profile_id + revision.
 - Rama/base: design/user-identity-association-v1; base de trabajo verificada al inicio: 28235a1507914f34b20d3f3fcee29108ce696a9e.

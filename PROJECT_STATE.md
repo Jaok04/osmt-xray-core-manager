@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-04 — U-01 aceptada formalmente; diseño runtime corregido y R-01 implementada, integrada en CLI/menú y verificada en fixtures. El administrador puede validar una revisión exacta, persistir su informe con hash y ejecutar preflight read-only. R-01 focal 28/28 PASS; Python 108/108 PASS; shell 58/58 PASS. No se ejecutó contra almacén/clave reales. R-02–R-05 no iniciadas; R-06/live no autorizada. Etapas 2, 3 y 5 siguen ABIERTAS.
+**Corte de estado:** 2026-11-04 — U-01 aceptada formalmente; diseño runtime corregido y R-01 implementada, integrada en CLI/menú y verificada en fixtures. El administrador puede validar una revisión exacta, persistir su informe con hash y ejecutar preflight read-only. R-01 focal 28/28 PASS; Python 108/108 PASS; shell 58/58 PASS. Publicado y sincronizado en c605b3e (c605b3efc904d75a142e9e8c539210eb65070acd); no se ejecutó contra almacén/clave reales. R-02–R-05 no iniciadas; R-06/live no autorizada. Etapas 2, 3 y 5 siguen ABIERTAS.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -1125,6 +1125,7 @@ U-01 y su auditoría fueron aceptadas formalmente por el propietario. Se autoriz
 
 
 ## Estado vigente — diseño runtime corregido y R-01 aislada (2026-11-04)
+- Publicación: commit c605b3efc904d75a142e9e8c539210eb65070acd en design/user-identity-association-v1; SHA remoto confirmado; checkout /opt/xray-manager limpio y sincronizado. main sin cambios.
 
 - El propietario aprobó que R-01–R-05 se desarrollen y prueben exclusivamente en entornos aislados.
 - El propietario aprobó corregir el diseño para usar profile_id + revision, conforme a Etapa 5 §3.1. Las configuraciones independientes no son una vía alternativa de activación.

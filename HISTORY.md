@@ -1157,3 +1157,8 @@ Se integró la opción 8 “Validar revisión del perfil” en modules/profiles.
 Pruebas focales: preflight 18/18 PASS; integración validación de perfiles 10/10 PASS; total R-01 28/28 PASS. Regresión Python 108/108 PASS; regresión shell 58/58 PASS; py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS. Todos los perfiles, claves y binarios usados por las pruebas son sintéticos y temporales.
 
 R-01 está IMPLEMENTADA, INTEGRADA EN CLI/MENÚ, VERIFICADA EN FIXTURES y AUDITADA LOCALMENTE; aceptación formal pendiente. No se ejecutó contra el almacén/clave reales ni systemd real. La validación nativa todavía corre con la identidad del llamador; R-02 debe validar staging/leases bajo identidad de servicio simulada. R-02–R-05 no iniciadas; R-06/live no autorizada. Etapas 2, 3 y 5 siguen abiertas.
+
+
+## Publicación R-01 — 2026-11-04
+
+El incremento R-01 se confirmó y publicó en la rama autorizada design/user-identity-association-v1 mediante el commit c605b3efc904d75a142e9e8c539210eb65070acd (feat(runtime): validate exact profile revisions). Push fast-forward desde 28235a1507914f34b20d3f3fcee29108ce696a9e; GitHub confirmó el mismo SHA remoto. El checkout /opt/xray-manager quedó limpio y alineado con origin/design/user-identity-association-v1. main permanece en 656ecedc506a94a6461aee296b20871d51a38bf3. No se modificó Xray-Normativa/ ni la VPS de pruebas.

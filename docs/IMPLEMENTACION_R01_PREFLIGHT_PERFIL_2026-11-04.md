@@ -1,7 +1,7 @@
 # Implementación R-01 — validación y preflight runtime por perfil/revisión
 
 **Fecha:** 2026-11-04
-**Estado:** IMPLEMENTADA, INTEGRADA EN CLI/MENÚ Y VERIFICADA EN FIXTURES.
+**Estado:** IMPLEMENTADA, INTEGRADA EN CLI/MENÚ, VERIFICADA EN FIXTURES, PUBLICADA Y SINCRONIZADA (c605b3e).
 **Rama:** design/user-identity-association-v1
 **Alcance:** R-01 aislada; no aplica runtime real.
 
