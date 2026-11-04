@@ -16,6 +16,7 @@ source "$ROOT/modules/connections.sh"
 source "$ROOT/modules/users.sh"
 source "$ROOT/modules/users_v2_menu.sh"
 source "$ROOT/modules/vless_backup.sh"
+source "$ROOT/modules/profiles.sh"
 source "$ROOT/modules/xray_service.sh"
 source "$ROOT/modules/main_menu.sh"
 
@@ -131,6 +132,10 @@ menu_placeholder() {
     echo placeholder >>"$TOP_LEVEL_CALLS"
     return 1
 }
+menu_config_profiles_backups() {
+    echo placeholder >>"$TOP_LEVEL_CALLS"
+    return 1
+}
 menu_xray_service() {
     echo xray-service >>"$TOP_LEVEL_CALLS"
     return 1
@@ -152,6 +157,10 @@ printf '1\n2\n3\n4\n5\n6\n7\n8\n9\n0\n' | menu_main >"$tmp/all-main-returns.out"
 source "$ROOT/modules/connections.sh"
 source "$ROOT/modules/users.sh"
 source "$ROOT/modules/users_v2_menu.sh"
+source "$ROOT/modules/profiles.sh"
+printf '3\n0\n0\n' | menu_config_profiles_backups >"$tmp/profiles-navigation.out"
+grep -q 'GESTIONAR PERFILES' "$tmp/profiles-navigation.out"
+grep -q '\[7\] Historial y restaurar versión' "$tmp/profiles-navigation.out"
 
 source "$ROOT/modules/system_admin.sh"
 source "$ROOT/modules/admin_settings.sh"

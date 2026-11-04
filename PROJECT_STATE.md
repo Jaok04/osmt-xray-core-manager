@@ -695,3 +695,19 @@ Por autorización expresa del propietario, se publica en GitHub la implementaci�
 Archivos incluidos: `scripts/xray_runtime_candidates.py`, `tests/xray_runtime_candidates.sh`, `tests/users.sh`, `docs/DISENO_IMPLEMENTACION_RUNTIME_PERFILES.md`, `docs/VALIDACION_LIVE_XRAY_VLESS_WS_2026-11-03.md`, `PROJECT_STATE.md`, `docs/CONTINUIDAD_DEL_PROYECTO.md`, `docs/PUNTO_CONTROL_ACTUAL.md` y `HISTORY.md`.
 
 Se excluye deliberadamente `scripts/__pycache__/` por ser un artefacto local de Python. No se modifica `Xray-Normativa/`, `main`, el servicio Xray, la configuración runtime, firewall, puertos ni certificados. Etapa 2 continúa ABIERTA; el subsistema de perfiles aún no está implementado y el staging no es activación.
+
+## Estado vigente — almacén de perfiles v1.1 cifrado (2026-11-03)
+
+- El propietario eligió explícitamente AES-256-GCM para el almacenamiento de las configuraciones de perfil, en lugar del texto plano de la primera implementación local. La primera implementación plaintext no fue publicada y se corrigió antes de sincronizar.
+- `scripts/xray_profiles.py` cifra el JSON completo de cada revisión en `config.enc.json` con AES-256-GCM. Nonce aleatorio de 12 bytes; AAD vincula versión, `profile_id` y revisión; envelope versionado; manifiesto conserva tamaño del plaintext, tamaño almacenado y SHA-256 del ciphertext. Sólo el ciphertext se escribe en el almacén.
+- La clave se carga desde la clave maestra existente (`/etc/xray-manager/keys/master.key` por defecto) mediante `certificate_crypto.load_master_key`. No se crea, lee ni modifica la clave real durante las pruebas; no hay fallback plaintext. Clave ausente/inválida, ciphertext alterado o AAD/identidad incorrectos provocan fallo cerrado.
+- Las pruebas focales usan claves sintéticas temporales y cubren ausencia de clave sin creación automática, no exposición del marcador secreto, descifrado, copia independiente con AAD nuevo, clave incorrecta, alteración GCM, versionado, restauración no destructiva, concurrencia y controles de filesystem.
+- Operaciones funcionales disponibles: crear desde cero/JSON, consultar, modificar, duplicar, renombrar, historial y restauración como nueva revisión. Eliminar sigue deshabilitado; no hay validación Xray nativa, composición integral, registro activo ni activación.
+- Los manifests con formato plaintext/no reconocido se rechazan fail-closed. No hay migración automática. La inspección confirmó que `/var/lib/xray-manager/profiles` no existe, por lo que no hay perfiles live que migrar.
+- Protección filesystem: directorios root:root 0700 y archivos root:root 0600; escritura atómica/fsync y lock. La pérdida de la clave maestra impediría recuperar perfiles; rotación/recuperación de clave sigue pendiente.
+- Diseño: `docs/DISENO_IMPLEMENTACION_PERFILES.md`. Normativa contrastada: `Xray-Normativa/05_Configuraciones_Perfiles/Etapa_5_Configuraciones_Perfiles.md` y YAML; no se modificó `Xray-Normativa/`.
+- No se creó `/var/lib/xray-manager/profiles`, no se leyó/usó `master.key` real, no se alteró la conexión VLESS live ni se tocó runtime, systemd, firewall, puertos, certificados o red.
+- Verificación ejecutada: `tests/*.sh` 51/51 PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck focal PASS; shfmt de los dos archivos nuevos PASS; `git diff --check` PASS.
+- Estado de esta entrega: IMPLEMENTACIÓN LOCAL y VERIFICADA EN PRUEBAS SINTÉTICAS; aceptación formal del subsistema pendiente; commit/push/sincronización pendientes de revisión final y publicación. Etapa 2 continúa ABIERTA.
+
+**Siguiente paso:** revisar el diff completo, publicar exclusivamente en `design/user-identity-association-v1` y verificar el contenido real de GitHub y VPS. No activar perfiles ni ejecutar pruebas con secretos reales.

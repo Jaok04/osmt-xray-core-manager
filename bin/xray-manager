@@ -48,6 +48,8 @@ source "$APP_ROOT/modules/vmess_assistant.sh"
 # shellcheck disable=SC1091
 source "$APP_ROOT/modules/vless_backup.sh"
 # shellcheck disable=SC1091
+source "$APP_ROOT/modules/profiles.sh"
+# shellcheck disable=SC1091
 source "$APP_ROOT/modules/xray_admin.sh"
 # shellcheck disable=SC1091
 source "$APP_ROOT/modules/xray_service.sh"

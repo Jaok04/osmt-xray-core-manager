@@ -26,7 +26,7 @@ menu_main() {
             1) connections_menu || true ;;
             2) users_menu_dispatch || true ;;
             3) menu_placeholder "Certificados SSL/TLS y dominios" || true ;;
-            4) menu_placeholder "Configuraciones, perfiles y respaldos" || true ;;
+            4) menu_config_profiles_backups || true ;;
             5) menu_xray_service || true ;;
             6) menu_placeholder "Diagnóstico y registros" || true ;;
             7) menu_placeholder "Seguridad, red y mantenimiento" || true ;;

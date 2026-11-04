@@ -1,10 +1,10 @@
 # Punto de control actual — Xray Core Manager
 
-> Los puntos anteriores son históricos. El punto operativo vigente es el último bloque «Validación live inicial de Xray-core y VLESS-WS — 2026-11-03».
+> Los puntos anteriores son históricos. El punto operativo vigente es el último bloque «Almacén de perfiles v1.1 cifrado — 2026-11-03» al final de este documento.
 
 **Fecha del corte:** 2026-11-03
-**Tarea activa:** continuar la validación live de Xray Manager. Xray-core 26.10.31 instalado y VLESS-WS creado, persistido y validado; el borrador sigue sin aplicar a runtime. Próximo frente: revisar/diseñar el flujo de aplicación segura de configuración, sin iniciar servicio ni abrir red hasta autorización expresa. Backup/restore integral sigue pendiente; Snapshot Writer v1 aceptado con limitaciones; VM-48 pendiente.
-**Estado vigente:** contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA; VM-38/39/40 focal PASS; suite 40/40 PASS; VM-46 live PASS; VM-47 VMess-TLS loopback PASS. Adicionalmente, Xray-core 26.10.31 está instalado en la VPS; VLESS-WS (conn-1793749234-670662) está creado/persistido/validado como draft, sin runtime apply ni listener. Etapa 2 ABIERTA.
+**Tarea activa:** cerrar verificación y publicación del almacén de perfiles v1.1 con AES-256-GCM. La primera implementación plaintext no fue publicada; el propietario eligió cifrado autenticado. La nueva versión cifra el JSON completo en `config.enc.json` y usa sólo la clave maestra existente, sin crearla ni regenerarla. Regresión integral ejecutada: 51/51 scripts PASS; AST 18/18; bash -n global PASS; ShellCheck focal PASS; shfmt de los dos archivos nuevos PASS. Pendientes: revisión final del diff, commit/push y sincronización GitHub/VPS.
+**Estado vigente:** almacén de perfiles v1.1 IMPLEMENTADO LOCALMENTE; aceptación formal pendiente. Regresión integral y publicación pendientes. Contenedor compartido v1 IMPLEMENTADO/VERIFICADO en aislamiento; backup/restore integral PENDIENTE. F-01 a F-05 RESUELTOS/VERIFICADOS; VM-28 VERIFICADO; VM-32 VERIFICADO CON LÍMITE TRANSACCIONAL DOCUMENTADO; VM-33 NO APLICA; VM-38/39/40 focal PASS; suite 40/40 PASS; VM-46 live PASS; VM-47 VMess-TLS loopback PASS. Adicionalmente, Xray-core 26.10.31 está instalado en la VPS; VLESS-WS (conn-1793749234-670662) está creado/persistido/validado como draft, sin runtime apply ni listener. Etapa 2 ABIERTA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -631,3 +631,53 @@ Se corrigió tests/users.sh para fijar las rutas de datos y lock temporales ante
 Por autorización expresa, los cambios pendientes fueron preparados para publicación en la rama autorizada `design/user-identity-association-v1`: primitiva de staging, prueba focal, aislamiento de `tests/users.sh`, documentación de diseño, validación live y registros de estado/continuidad/historial. El artefacto local `scripts/__pycache__/` se excluye.
 
 La publicación es exclusivamente de código y documentación. No implica que exista ya un gestor de perfiles ni que el runtime esté implementado/activado. La conexión de prueba continúa draft, sin runtime apply y sin listener. `Xray-Normativa/` y `main` no se modifican. Etapa 2 sigue ABIERTA.
+
+
+## Punto de control — almacén de perfiles v1 (2026-11-03)
+
+**Estado:** IMPLEMENTADO LOCALMENTE / REGRESIÓN PASS / NO PUBLICADO TODAVÍA / NO ACEPTADO FORMALMENTE COMO SUBSISTEMA COMPLETO.
+
+**[DECISIÓN HISTÓRICA SUPERADA EL 2026-11-03]** La primera implementación local contempló configuraciones JSON de perfiles en texto plano. El propietario eligió después AES-256-GCM; la versión plaintext no fue publicada. Consultar el último punto de control.
+
+**Archivos nuevos:**
+- `scripts/xray_profiles.py`
+- `modules/profiles.sh`
+- `tests/xray_profiles.sh`
+- `docs/DISENO_IMPLEMENTACION_PERFILES.md`
+
+**Archivos integrados/modificados:**
+- `bin/xray-manager`
+- `modules/main_menu.sh`
+- `tests/stage1_menu.sh`
+- `tests/smoke.sh`
+- `PROJECT_STATE.md`
+- `docs/CONTINUIDAD_DEL_PROYECTO.md`
+- `docs/PUNTO_CONTROL_ACTUAL.md`
+- `HISTORY.md`
+
+**Funcionalidad presente en la primera iteración (histórico):** crear desde cero o JSON; consultar; modificar; duplicar; renombrar; listar revisiones y restaurar como revisión nueva. La persistencia plaintext fue sustituida antes de publicar por `config.enc.json` con AES-256-GCM. Eliminación deshabilitada.
+
+**Validación:** sólo JSON estricto acreditado; validación nativa Xray no ejecutada (`xray_static=not_run`); estado `not_validated`. Estado activo `not_integrated`. No activar ni publicar runtime.
+
+**Pruebas:** 51/51 scripts PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck/shfmt focal PASS; `git diff --check` PASS.
+
+**Límites:** pruebas en almacenes temporales; no se creó `/var/lib/xray-manager/profiles` ni perfil real. No se tocó `Prueba-VLESS-WS-Real`, `/etc/xray/config.json`, servicio Xray, systemd, firewall, puertos, certificados o red. No `master.key`. `Xray-Normativa/` y `main` intactas. Etapa 2 sigue ABIERTA.
+
+**Siguiente acción:** auditar diff/diseño y construir la validación estática Xray por revisión, con informe y pruebas de fallo/rollback. Mantener eliminación y activación deshabilitadas. No ampliar a composición/activación hasta terminar la auditoría del almacén y aprobar el siguiente bloque.
+
+
+## Almacén de perfiles v1.1 cifrado — 2026-11-03
+
+**Decisión:** el propietario eligió AES-256-GCM para el almacenamiento de perfiles. No se autorizó la persistencia plaintext y esa primera versión local no se publicó.
+
+**Implementación local actual:**
+- `scripts/xray_profiles.py` cifra el JSON completo por revisión en `config.enc.json` con AES-256-GCM, nonce aleatorio de 12 bytes y AAD asociado a perfil/revisión.
+- La clave se lee desde la clave maestra existente mediante el cargador seguro. No hay creación automática, regeneración ni fallback plaintext.
+- Clave ausente/incorrecta, blob alterado, formato no reconocido o manifiesto plaintext: rechazo fail-closed.
+- Las pruebas usan claves sintéticas temporales. Se cubre no exposición de un marcador secreto, descifrado, copia con nueva AAD, clave incorrecta, alteración GCM, no creación automática de clave, versionado y restauración no destructiva.
+- El almacén live `/var/lib/xray-manager/profiles` no existe; no hay perfiles reales que migrar. No se leyó ni modificó la clave maestra real.
+- Diseño técnico actualizado: `docs/DISENO_IMPLEMENTACION_PERFILES.md`.
+
+**Verificación:** `tests/*.sh` 51/51 PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck focal PASS; shfmt de los archivos nuevos PASS; `git diff --check` PASS.
+
+**Pendiente:** revisar diff completo; registrar commit; publicar en `design/user-identity-association-v1`; verificar archivos/HEAD remotos y sincronizar la VPS sin reset/clean destructivo. No modificar `main` ni `Xray-Normativa/`. No tocar runtime, servicios, firewall, puertos, certificados o red. Etapa 2 continúa ABIERTA.

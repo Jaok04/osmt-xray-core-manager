@@ -46,6 +46,17 @@ Verificación posterior: los cinco archivos se recuperaron desde GitHub y se com
 
 # Historial de hitos — Xray Core Manager
 
+## 2026-11-03 — Cifrado AES-256-GCM del almacén de perfiles v1.1
+
+- Durante el contraste de la primera implementación local se detectó que persistir `config.json` en texto plano contradecía Etapa 5 normativa (no guardar credenciales ni claves privadas en texto plano). Esa versión no se publicó.
+- El propietario eligió explícitamente la opción 1: cifrado AES-256-GCM en reposo.
+- `scripts/xray_profiles.py` ahora cifra el JSON completo de cada revisión en `config.enc.json`, con nonce aleatorio de 12 bytes y AAD que vincula versión, perfil y revisión. El manifiesto conserva tamaño del plaintext, tamaño almacenado y SHA-256 del ciphertext; el archivo persistido contiene sólo ciphertext.
+- La clave se carga desde la clave maestra existente mediante `certificate_crypto.load_master_key`; no se crea, regenera, rota ni modifica. Clave ausente/incorrecta y ciphertext alterado fallan de forma cerrada. No hay fallback ni migración automática de plaintext.
+- Las pruebas usan claves sintéticas temporales; no se lee ni modifica `master.key` real. Se confirmó que `/var/lib/xray-manager/profiles` no existe y no hay perfiles live que migrar.
+- Se actualizó `docs/DISENO_IMPLEMENTACION_PERFILES.md` y se incorporó el estado de esta decisión en los documentos de continuidad.
+- Verificación: `tests/*.sh` 51/51 PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck focal PASS; shfmt de los dos archivos nuevos PASS; `git diff --check` PASS. Pruebas sintéticas únicamente.
+- No se modificaron `Xray-Normativa/`, `main`, runtime, systemd, firewall, puertos, certificados, red ni la conexión VLESS live.
+
 ## 2026-11-02 — Corrección de recuperación P4 y pruebas de interrupción
 
 Se corrigió el journal de `scripts/vless_backup.py` para registrar si existían los directorios de conexiones y secretos antes de la restauración. Se añadieron `fsync` de directorios padres después de los renombrados y recuperación conservadora compatible con journals legacy sin esos campos.
@@ -782,3 +793,16 @@ Regresión completa 50/50 PASS; AST Python 17/17 PASS; bash -n en todos los arch
 Por autorización expresa del propietario se publica en `design/user-identity-association-v1` el componente de staging de candidatos runtime por perfil, su prueba focal, la corrección de aislamiento de `tests/users.sh`, y los documentos de diseño, validación live, estado, continuidad y punto de control. Se excluye `scripts/__pycache__/` por ser un artefacto local.
 
 La publicación no crea ni activa el subsistema de perfiles, no publica configuración runtime, no prepara/inicia Xray, no abre puertos ni modifica firewall/certificados. `Xray-Normativa/` y `main` permanecen intactas. Etapa 2 continúa ABIERTA.
+
+
+## 2026-11-03 — Implementación inicial del almacén de perfiles v1
+
+[DECISIÓN HISTÓRICA SUPERADA EL 2026-11-03] La primera implementación local contempló texto plano, con permisos root-only. El propietario eligió posteriormente AES-256-GCM antes de la publicación de cualquier versión del almacén de perfiles; consultar la entrada cronológica más reciente al inicio de este historial.
+
+Se añadieron `scripts/xray_profiles.py`, `modules/profiles.sh`, `tests/xray_profiles.sh` y `docs/DISENO_IMPLEMENTACION_PERFILES.md`. Se integró la carga del módulo en `bin/xray-manager`, el submenú en `modules/main_menu.sh` y la regresión de navegación en `tests/stage1_menu.sh`/`tests/smoke.sh`.
+
+El almacén soporta creación desde cero o JSON, consulta, modificación de metadatos/configuración, duplicación independiente, renombrado, historial de revisiones y restauración no destructiva mediante nueva revisión. IDs inmutables, nombres únicos, JSON estricto hasta 16 MiB, manifiesto SHA-256, bloqueo exclusivo, archivos temporales/atómicos y controles de filesystem. Eliminación permanece deshabilitada hasta integrar y verificar perfil activo/dependencias.
+
+Verificación ejecutada: 51/51 scripts PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck y shfmt focal PASS; `git diff --check` PASS. Pruebas de perfiles aisladas en almacenes temporales.
+
+Limitaciones: validación Xray nativa aún `not_run`; perfiles `not_validated`; estado activo `not_integrated`; no composición integral ni activación/rollback. No se creó `/var/lib/xray-manager/profiles` ni perfil real. No se modificó la conexión live, runtime, servicio, systemd, firewall, puertos, certificados o red. No se leyó/uso `master.key`. `Xray-Normativa/` y `main` intactas. Etapa 2 permanece ABIERTA.

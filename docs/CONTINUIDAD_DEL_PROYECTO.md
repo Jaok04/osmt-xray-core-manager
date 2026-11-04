@@ -1,5 +1,7 @@
 # Protocolo de continuidad — Xray Core Manager
 
+> **Punto de reanudación vigente — 2026-11-03:** almacén de perfiles v1.1 implementado localmente con AES-256-GCM para cifrar el JSON completo de cada revisión. La decisión de texto plano de la primera iteración fue sustituida por elección expresa del propietario (opción 1); la versión plaintext no se publicó. Consultar `docs/DISENO_IMPLEMENTACION_PERFILES.md`, `PROJECT_STATE.md` y el último bloque de este documento. No leer ni modificar `master.key` real, no crear perfiles live, no activar runtime. La regresión integral y la publicación siguen pendientes.
+
 > Los apartados cronológicos antiguos se conservan como historial. Para el estado actual y el punto de reanudación prevalece el bloque «Punto de reanudación posterior a la aceptación del Snapshot Writer v1» al final del documento.
 
 > Frente activo 2026-11-03: aceptación formal del Snapshot Writer v1 con limitaciones documentadas. La corrección A-16 y B-01/B-02/B-03 están publicadas; se añadieron diez negativos A-16 y una matriz de trazabilidad A-01–A-19 en §10.20. Última regresión: 49/49 scripts PASS; AST 16/16; bash -n 74 archivos; ShellCheck, shfmt y diff-check PASS. Writer ACEPTADO FORMALMENTE CON LIMITACIONES DOCUMENTADAS el 2026-11-03. No crear backups reales ni leer secretos/master.key; no restore/verify independiente ni runtime apply. Xray-Normativa inmutable; no tocar VPS de pruebas.
@@ -810,3 +812,55 @@ Regresión completa: 50/50 scripts PASS; Python AST 17/17; bash -n de todos los 
 Por autorización expresa del propietario, se sincronizan con GitHub en `design/user-identity-association-v1` los cambios locales de la infraestructura de staging por perfiles, el aislamiento de `tests/users.sh` y los documentos de continuidad/diseño/validación live. Se incluyen los nueve archivos de proyecto identificados en el punto de control de esta publicación. Se excluye `scripts/__pycache__/`, que permanece como artefacto local y no forma parte del repositorio.
 
 La publicación no activa Xray ni altera el estado operativo: `Prueba-VLESS-WS-Real` permanece draft y `runtime_applied=false`; no existe configuración runtime aplicada ni listener 10001. No se ejecutó preparación/arranque del servicio ni se modificó firewall, red o certificados. `Xray-Normativa/` y `main` permanecen intactas. Etapa 2 continúa ABIERTA; el siguiente bloque de desarrollo es el subsistema de perfiles, conforme a la opción A aprobada.
+
+
+## Continuidad — almacén de perfiles v1 (2026-11-03)
+
+[SUPERADO EL 2026-11-03] La decisión provisional de la primera iteración fue mantener las configuraciones de perfiles en texto plano. El propietario eligió después AES-256-GCM; consultar el punto de reanudación vigente y el último bloque de este documento. Los datos se protegen mediante directorios `root:root 0700` y archivos `root:root 0600`; esta protección no equivale a cifrado y root puede leer el contenido.
+
+### Implementación disponible
+
+- `scripts/xray_profiles.py`: CLI y persistencia del catálogo, perfiles y revisiones.
+- `modules/profiles.sh`: submenú funcional inicial.
+- `tests/xray_profiles.sh`: pruebas sintéticas focales.
+- `bin/xray-manager`: carga el módulo.
+- `modules/main_menu.sh`: opción principal de configuraciones/perfiles/respaldo conectada al submenú normativo.
+- `docs/DISENO_IMPLEMENTACION_PERFILES.md`: diseño, estructura, controles, operaciones y límites.
+
+El almacén usa `/var/lib/xray-manager/profiles/` cuando se invoque desde el Manager; las pruebas usan exclusivamente `--store`/`XRAY_MANAGER_PROFILES_DIR` en rutas temporales. El catálogo tiene IDs inmutables y nombres únicos; cada perfil mantiene metadatos y directorios de revisiones. [DESCRIPCIÓN HISTÓRICA SUPERADA] La primera implementación guardaba `config.json` en texto plano. La versión vigente usa `config.enc.json` cifrado con AES-256-GCM; consultar el último bloque de este documento y `docs/DISENO_IMPLEMENTACION_PERFILES.md`. Renombrar no cambia JSON ni ID.
+
+### Operaciones que ya se pueden usar
+
+Crear desde cero sin JSON; crear copiando un archivo JSON externo; consultar perfiles y revisiones; modificar nombre/descripción/notas y/o importar una nueva configuración; duplicar; renombrar; consultar hashes de revisiones; restaurar una revisión como nueva. La eliminación aparece deshabilitada hasta integrar/verificar el registro activo y dependencias.
+
+### Límites y pendientes vinculantes
+
+- Una importación sólo acredita sintaxis JSON estricta. `xray_static=not_run`; `validation_status=not_validated`. No afirmar Validada ni Aplicada.
+- El estado activo se informa como no integrado. No se ha creado el registro `active-profile.json` ni conectado el antiguo indicador de perfil activo.
+- No existe validación Xray nativa asociada a cada revisión, informes de validación, comparación de revisiones, historial de modificaciones ni retención configurable.
+- No hay composición integral de conexiones/usuarios/asociaciones/certificados en un perfil.
+- No hay activación, publicación runtime, verificación del servicio ni rollback de activación. La regla opción A permanece: sólo el cambio de perfil activo podrá ser la vía de activación.
+- No hay eliminación real de perfiles; no habilitarla antes de proteger perfil activo, dependencias y conservación de JSON.
+
+### Verificación ejecutada
+
+En la VPS: `tests/xray_profiles.sh`, `tests/stage1_menu.sh`, `tests/smoke.sh` y regresión `tests/*.sh`: 51/51 PASS; Python AST 18/18; `bash -n` todos los shell scripts; ShellCheck/shfmt focal; `git diff --check`. La suite nueva cubre permisos, ciphertext sin marcador plaintext, descifrado, clave ausente/incorrecta, autenticación GCM/AAD, copias independientes, nombres únicos, modificación/versionado, rename sin cambio de blob, restore no destructivo, JSON malformado/duplicado, symlink/hardlink, almacén simbólico y concurrencia por nombre.
+
+Las pruebas usan almacenes temporales. No se creó `/var/lib/xray-manager/profiles`, no hay perfiles reales y no se alteró la conexión live. No se escribió `/etc/xray/config.json`, no se inició Xray ni se tocaron systemd, firewall, puertos, certificados o red. No se leyó ni usó `master.key`. `Xray-Normativa/` y `main` siguen intactas. Etapa 2 continúa ABIERTA.
+
+**Punto exacto de reanudación:** revisar el diff completo y el diseño; después implementar validación estática Xray por revisión con pruebas sintéticas/aisladas, sin iniciar el servicio ni publicar runtime. Mantener deshabilitada la eliminación y no crear flujo de activación todavía.
+
+
+## Punto de reanudación posterior a la implementación de cifrado de perfiles — 2026-11-03
+
+La primera versión local del gestor de perfiles almacenaba `config.json` en texto plano. Al contrastarla con Etapa 5 normativa se detectó que esto contradecía la regla de no guardar credenciales ni claves privadas en texto plano. No se publicó aquella versión. El propietario eligió explícitamente AES-256-GCM (opción 1).
+
+La implementación local actual cifra todo el JSON por revisión en `config.enc.json` con nonce aleatorio y AAD ligado a `profile_id`/revisión. Lee únicamente la clave maestra existente por el cargador seguro; no la crea ni la regenera. Las pruebas utilizan claves sintéticas temporales. Clave ausente o incorrecta y ciphertext manipulado se rechazan fail-closed. Los manifests plaintext/no reconocidos también se rechazan; no existe migración automática.
+
+La inspección confirmó que `/var/lib/xray-manager/profiles` no existe; no hay perfiles reales que migrar. No se ha leído ni modificado `/etc/xray-manager/keys/master.key`. No se modificó runtime, servicio, firewall, puertos, certificados, conexión live ni `Xray-Normativa/`.
+
+**Verificación:** `tests/*.sh` 51/51 PASS; Python AST 18/18; `bash -n` global PASS; ShellCheck focal PASS; shfmt de los archivos nuevos PASS; `git diff --check` PASS.
+
+**Estado:** cambios locales preparados en el índice desde la primera iteración y correcciones de cifrado verificadas en pruebas sintéticas; sin commit ni push de esta entrega. `scripts/__pycache__/` es un artefacto local preexistente y debe preservarse/excluirse. La rama autorizada sigue `design/user-identity-association-v1`; `main` permanece protegida.
+
+**Próxima acción:** inspeccionar el diff completo y publicar sólo en la rama autorizada; luego comparar HEAD, archivos y árbol de trabajo de VPS con GitHub. No usar la clave maestra real en pruebas ni ejecutar activación runtime.
