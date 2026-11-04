@@ -1129,3 +1129,9 @@ U-01 queda IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; aceptación formal pe
 ## 2026-11-04 — Publicación U-01 Usuarios V2 → VLESS
 
 Tras la revisión final y la regresión 58/58 PASS, U-01 se publicó en `design/user-identity-association-v1` mediante commit `1c2cd12f15be75d9f3a080ce028951724618c492` (`feat(vless): integrate V2 users into candidate generation`). Push fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`; GitHub confirmó el mismo SHA remoto. Se actualizaron los expedientes de implementación/auditoría y continuidad. U-01 queda IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA; aceptación formal pendiente. `main` y `Xray-Normativa/` permanecen intactas.
+
+## 2026-11-04 — aceptación U-01 y diseño de aplicación runtime
+
+- El propietario aceptó formalmente U-01 y su auditoría.
+- Se preparó `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md` como propuesta, con staging, validación final, snapshot/journal, publicación atómica, reinicio systemd, verificación y rollback.
+- No se implementó ni ejecutó aplicación runtime. R-06 live requiere autorización separada. Etapas 2, 3 y 5 permanecen abiertas.

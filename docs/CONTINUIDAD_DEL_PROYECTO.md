@@ -1204,3 +1204,11 @@ El propietario aprobó el diseño U-01 y autorizó su implementación con el alc
 ## Registro de publicación U-01 — 2026-11-04
 
 U-01 se publicó en `design/user-identity-association-v1` mediante commit `1c2cd12f15be75d9f3a080ce028951724618c492` (`feat(vless): integrate V2 users into candidate generation`). Push fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`; no se utilizó force push. La consulta a GitHub confirmó el SHA remoto. La aceptación formal del propietario sigue pendiente. `main`, `Xray-Normativa/`, VPS de pruebas, almacenes live, runtime e infraestructura permanecen intactos.
+
+## Aceptación formal U-01 y auditoría — 2026-11-04
+
+El propietario respondió afirmativamente a la solicitud de aceptación formal de U-01 y su auditoría, autorizando avanzar al diseño del mecanismo de aplicación runtime. U-01 queda **ACEPTADA FORMALMENTE** junto con su auditoría. La aceptación no cierra Etapa 2, Etapa 3 ni Etapa 5, y no convierte la validación `xray run -test` en una prueba de conectividad real.
+
+U-01 permanece IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Referencias de publicación: `1c2cd12f15be75d9f3a080ce028951724618c492` y `bcb3338a527e3f4021489815d92797b9a59fdd62`. La documentación normativa y `main` no se modificaron.
+
+Se preparó `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md`. Es una propuesta técnica, no una autorización de implementación ni de aplicación live. Separa validación, staging, publicación atómica, reinicio systemd, verificación y rollback; define R-01–R-06 y una matriz inicial de 15 criterios. Las decisiones de §9 deben ser revisadas por el propietario antes de implementar. R-06 exige autorización independiente y específica.

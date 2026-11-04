@@ -1109,3 +1109,14 @@ El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar 
 ## Addendum de publicación U-01 — 2026-11-04
 
 U-01 está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Commit: `1c2cd12f15be75d9f3a080ce028951724618c492` (`feat(vless): integrate V2 users into candidate generation`), push fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`. La consulta posterior confirmó el SHA remoto. Aceptación formal pendiente. `main` y `Xray-Normativa/` permanecen intactas.
+
+
+## Punto de control vigente — U-01 aceptada; diseño runtime preparado (2026-11-04)
+
+- **Decisión del propietario:** U-01 y su auditoría ACEPTADAS FORMALMENTE.
+- **Publicación:** rama `design/user-identity-association-v1`, commit remoto/local verificado `bcb3338a527e3f4021489815d92797b9a59fdd62`; árbol limpio antes de este registro. `main` y `Xray-Normativa/` permanecen intactas.
+- **Diseño siguiente:** `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md`, propuesta pendiente de revisión y autorización de implementación.
+- **Principio de seguridad:** ninguna revisión se aplica por el mero hecho de estar validada. Se requiere revisión/hash exacto, staging con lease TLS, validación como usuario de servicio, snapshot/journal, publicación atómica, restart systemd, verificación posterior y rollback recuperable.
+- **Decisiones pendientes:** estrategia restart vs hot reload; primera aplicación sin config previa; restauración del estado previo del servicio; señales locales de verificación; alcance R-01–R-05 aislado y R-06 live.
+- **No autorizado/ejecutado:** implementación runtime, escritura de `/etc/xray/config.json`, restart/start Xray, ACME/Cloudflare, instalación de dependencias, firewall/puertos/red, VPS de pruebas o prueba NetMod.
+- **Etapas:** U-01 aceptada; Etapas 2, 3 y 5 siguen ABIERTAS. La prueba real VLESS-WS-TLS aún no está hecha.

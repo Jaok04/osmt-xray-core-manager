@@ -1118,3 +1118,7 @@ El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar 
 ### Publicación U-01 — 2026-11-04
 
 U-01 se publicó mediante commit `1c2cd12f15be75d9f3a080ce028951724618c492` (`feat(vless): integrate V2 users into candidate generation`) en `design/user-identity-association-v1`. Push fast-forward desde `ca6d76895821310a3072d9de47268f925ecea7ba`; SHA remoto confirmado. Aceptación formal pendiente. `main`, `Xray-Normativa/`, VPS de pruebas, almacenes live, runtime e infraestructura permanecen intactos.
+
+## Aceptación formal U-01 — 2026-11-04
+
+U-01 y su auditoría fueron aceptadas formalmente por el propietario. Se autoriza avanzar al diseño del mecanismo de aplicación runtime, no a implementarlo ni ejecutarlo. Diseño propuesto: `docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md`. R-01–R-05 requieren aprobación de alcance/decisiones antes de implementación; R-06 requiere autorización live independiente. Etapas 2, 3 y 5 permanecen abiertas.
