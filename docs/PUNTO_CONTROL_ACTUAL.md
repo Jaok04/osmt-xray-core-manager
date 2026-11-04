@@ -1047,3 +1047,47 @@ El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar 
 - **Siguiente decisión:** C-05F no está autorizada ni iniciada; requiere autorización expresa independiente.
 - **Protecciones:** `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime e infraestructura no fueron modificados.
 - **Etapas:** Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## Punto de control — diseño C-05F preparado (2026-11-04)
+
+- **Trabajo autorizado:** preparar diseño técnico y matriz de C-05F. No se ha autorizado todavía ejecutar la auditoría ni corregir/implementar hallazgos.
+- **Documentos:** `docs/DISENO_C05F_AUDITORIA_INTEGRAL_2026-11-04.md` y `docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md`.
+- **Alcance propuesto:** auditoría transversal C-05A–C-05E del subsistema de validación Xray; no cierra ni audita integralmente toda Etapa 5.
+- **Matriz:** F01–F71 y G01–G15; todos pendientes de ejecución o decisión.
+- **Decisiones requeridas:** confirmar alcance del subsistema C-05A–E; confirmar que validación externa/activa deshabilitadas se documenten como divergencias sin implementarlas en C-05F; confirmar que las correcciones de hallazgos requieren autorización separada.
+- **Estado Git:** documentos locales sin commit/push; rama autorizada y base publicada `a4f2c6356652e04206918c410ddf3f6aa3181808`.
+- **Protecciones:** no se modificaron código, pruebas, `main`, `Xray-Normativa/`, secretos, almacenes live, runtime, infraestructura ni VPS de pruebas.
+
+## Punto de control — C-05F ejecutada, pendiente de aceptación (2026-11-04)
+
+- C-05F fue autorizada bajo las tres condiciones aprobadas y ejecutada localmente.
+- Expediente: docs/AUDITORIA_C05F_AUDITORIA_INTEGRAL_2026-11-04.md.
+- Matriz final: docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md.
+- Resultado: PASS técnico con H-01 de baja severidad y divergencias D-01–D-05.
+- Python 76/76 PASS; shell 57/57 PASS; flujo integral A→E con Xray real y almacenes temporales PASS; cuatro validaciones concurrentes PASS.
+- H-01: symlink roto en componente padre de la ruta CLI se interpreta como almacén ausente; no corregido, requiere autorización separada.
+- D-01/D-02: validación externa y activa deshabilitadas respecto de normativa. D-03: prueba runtime pendiente. D-04: backup/restore fuera del alcance C-05F. D-05: filtros UI parciales frente a CLI.
+- No se modificó código ni normativa; no commit/push. Rama y HEAD siguen en a4f2c6356652e04206918c410ddf3f6aa3181808.
+- main, Xray-Normativa/, clave maestra real, almacenes live, runtime/infraestructura y VPS de pruebas intactos.
+- **Siguiente control:** revisión del propietario y aceptación formal C-05F. Correcciones solo con autorización independiente. Etapa 5 y Etapa 2 continúan abiertas.
+
+
+## Punto de control vigente — C-05F aceptada formalmente (2026-11-04)
+
+- **Decisión del propietario:** C-05F ACEPTADA FORMALMENTE, incluyendo dictamen PASS, H-01 y D-01–D-05.
+- **Expediente:** docs/AUDITORIA_C05F_AUDITORIA_INTEGRAL_2026-11-04.md.
+- **Matriz final:** docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md.
+- **H-01:** abierto, no corregido; requiere autorización separada.
+- **D-01–D-05:** permanecen como divergencias/pendientes documentados; aceptación no los resuelve ni autoriza implementarlos.
+- **Git:** cambios de aceptación exclusivamente documentales, locales, rama design/user-identity-association-v1, base HEAD a4f2c6356652e04206918c410ddf3f6aa3181808. Sin commit, push ni sincronización autorizados.
+- main, Xray-Normativa/, runtime, infraestructura, secretos, almacenes live y VPS de pruebas permanecen fuera del alcance.
+- **Etapas:** Etapa 5 y Etapa 2 siguen ABIERTAS.
+
+## Punto de control vigente — H-01 corregido (2026-11-04)
+
+- C-05F permanece ACEPTADA FORMALMENTE.
+- H-01: CORREGIDO Y VERIFICADO mediante lstat() en cada componente de la ruta CLI del almacén.
+- Pruebas: H39–H42; historial 42/42; Python 80/80; shell 57/57; verificaciones estáticas y install.sh --check PASS.
+- Evidencia: docs/CORRECCION_H01_RUTAS_SYMLINK_C05F_2026-11-04.md.
+- D-01–D-05 siguen documentados y sin resolver. No se ha autorizado implementar validación externa/activa, mecanismo runtime ni ampliaciones UI.
+- Etapa 5 y Etapa 2 siguen ABIERTAS.

@@ -1166,3 +1166,20 @@ La aceptación no incluye publicación. Los cambios continúan locales en `desig
 ## Addendum de publicación — C-05E (2026-11-04)
 
 C-05E está ACEPTADA, AUDITADA, PUBLICADA y SINCRONIZADA. Commit publicado en `design/user-identity-association-v1`: `8378ca47a751678f4eeeab20a5e2d06effd47fff` (`feat(validation): integrate C-05E validation menu`). Push fast-forward desde `ed700c1e770063f6e67c6ebaeae4652172bb2f02`; la consulta posterior a GitHub confirmó el SHA remoto idéntico. `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`. La aceptación y publicación de C-05E no autorizan C-05F. `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime e infraestructura permanecen intactos. Etapa 5 y Etapa 2 siguen ABIERTAS.
+
+## Addendum de continuidad — diseño C-05F preparado (2026-11-04)
+
+El propietario autorizó preparar el diseño y la matriz de C-05F, no ejecutar aún la auditoría ni implementar correcciones. Consultar `docs/DISENO_C05F_AUDITORIA_INTEGRAL_2026-11-04.md` y `docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md`. El alcance propuesto es una auditoría transversal del subsistema C-05A–C-05E frente a la parte de validación de Etapa 5; no es el cierre integral de Etapa 5. La matriz define 71 criterios y 15 huecos conocidos, sin resultados de ejecución. Antes de iniciar, obtener confirmación del propietario sobre el alcance, el tratamiento de las opciones normativa de validación externa/activa actualmente deshabilitadas y la separación entre auditoría y corrección. No modificar código ni ejecutar la auditoría hasta recibir esa autorización. Los documentos se encuentran locales, sin commit ni push. C-05A–E siguen aceptadas/publicadas; C-05F no ejecutada. Etapa 5 y Etapa 2 siguen abiertas.
+
+## Addendum de continuidad — C-05F ejecutada (2026-11-04)
+
+C-05F se ejecutó después de que el propietario aprobara las condiciones de alcance. Revisar primero docs/AUDITORIA_C05F_AUDITORIA_INTEGRAL_2026-11-04.md y docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md. La auditoría se limitó a C-05A–C-05E; no cierra Etapa 5. Resultado técnico PASS con hallazgo menor H-01 (symlink roto en componente padre de la ruta CLI tratado como almacén ausente) y divergencias D-01/D-02 (validación externa/activa deshabilitadas), D-03 (mecanismo runtime pendiente), D-04 (backup/restore fuera de alcance C-05F) y D-05 (filtros UI parciales). Regresión: 76/76 Python y 57/57 shell PASS. Flujo A→E y concurrencia con datos sintéticos/almacenes temporales PASS. No se corrigió código, no se tocó normativa ni infraestructura y no se hizo commit/push. C-05F está pendiente de aceptación formal. La corrección H-01 y la implementación de funciones pendientes requieren autorización separada. Etapa 5 y Etapa 2 permanecen abiertas.
+
+
+## Continuidad — C-05F aceptada formalmente (2026-11-04)
+
+El propietario aceptó formalmente C-05F, considerando el dictamen PASS, H-01 y D-01–D-05. Consultar el expediente y la matriz C-05F para los resultados y límites completos. La aceptación es administrativa: H-01 permanece abierto y no corregido; validación externa/activa y mecanismo runtime no se implementaron; backup/restore y filtros UI conservan sus pendientes documentados. No se autorizó publicación, commit, push ni sincronización. Tampoco se autorizó cerrar Etapa 5 o Etapa 2. Para continuar, solicitar decisión expresa sobre el siguiente trabajo concreto, especialmente si se propone corregir H-01.
+
+## Continuidad — remediación H-01 completada (2026-11-04)
+
+H-01 de C-05F quedó CORREGIDO Y VERIFICADO bajo autorización expresa del propietario. La CLI inspecciona con lstat() cada componente de la ruta absoluta del almacén y rechaza symlinks rotos o válidos. Pruebas H39–H42; historial 42/42, Python 80/80 y shell 57/57 PASS. Consultar docs/CORRECCION_H01_RUTAS_SYMLINK_C05F_2026-11-04.md. D-01–D-05 continúan pendientes/documentados; no se implementó validación externa/activa ni prueba runtime, y backup/restore sigue pendiente de auditoría. Etapa 5 y Etapa 2 siguen abiertas.

@@ -1098,3 +1098,20 @@ El propietario aceptó formalmente C-05E — Integración del menú Bash — tra
 ## Publicación C-05E — 2026-11-04
 
 Tras la aceptación formal y autorización expresa del propietario, C-05E se publicó en `design/user-identity-association-v1`. Commit: `8378ca47a751678f4eeeab20a5e2d06effd47fff` (`feat(validation): integrate C-05E validation menu`). Push fast-forward desde `ed700c1e770063f6e67c6ebaeae4652172bb2f02`; `git ls-remote` confirmó el mismo SHA remoto. `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`. Árbol de trabajo limpio tras la publicación. No se modificaron `main`, `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime ni infraestructura. C-05F no autorizada ni iniciada; Etapa 5 y Etapa 2 siguen ABIERTAS.
+
+## Diseño y matriz C-05F preparados — 2026-11-04
+
+El propietario aprobó continuar con la preparación del diseño técnico y la matriz de auditoría C-05F, sin autorizar todavía la ejecución de la auditoría ni cambios de implementación. Se crearon `docs/DISENO_C05F_AUDITORIA_INTEGRAL_2026-11-04.md` y `docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md`. El alcance propuesto audita transversalmente C-05A–C-05E y su correspondencia con los requisitos de validación de Etapa 5; no equivale a auditoría/cierre integral de toda Etapa 5. La matriz incluye F01–F71 y G01–G15, todos pendientes de ejecución o decisión. Quedan para confirmación del propietario: alcance exacto, tratamiento de validación externa/activa actualmente deshabilitadas y separación de correcciones respecto de la auditoría. No se modificó código ni normativa; no se ejecutaron pruebas C-05F, commit ni push.
+
+## C-05F — auditoría transversal ejecutada localmente (2026-11-04)
+
+El propietario aprobó las condiciones de ejecución C-05F. Se ejecutó la auditoría transversal de C-05A–C-05E, sin corregir código ni implementar funcionalidades pendientes. Expedientes: docs/AUDITORIA_C05F_AUDITORIA_INTEGRAL_2026-11-04.md y docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md. Resultado: 76/76 pruebas Python PASS; 57/57 scripts shell PASS; recorrido A→E con Xray real y almacenes temporales PASS; cuatro validaciones concurrentes PASS. Se detectó H-01 (baja severidad): una ruta de almacén con un symlink roto en un componente padre puede interpretarse como almacén ausente. Se confirmaron D-01/D-02 (validación externa y activa deshabilitadas frente a normativa), D-03 pendiente (mecanismo runtime), D-04 fuera del alcance C-05F (backup/restore) y D-05 (filtros UI parciales). Sin correcciones, commit ni push. C-05F queda pendiente de aceptación formal; Etapa 5 y Etapa 2 permanecen abiertas.
+
+
+## 2026-11-04 — Aceptación formal C-05F
+
+El propietario aceptó formalmente C-05F, incluyendo el dictamen técnico PASS, H-01 (hallazgo menor) y D-01–D-05 (divergencias y asuntos pendientes) documentados en docs/AUDITORIA_C05F_AUDITORIA_INTEGRAL_2026-11-04.md y docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md. C-05F queda ACEPTADA FORMALMENTE. La aceptación no autoriza corregir H-01, implementar las divergencias, cerrar Etapa 5/Etapa 2 ni publicar. No se creó commit ni se hizo push.
+
+## 2026-11-04 — Corrección H-01 C-05F
+
+Tras la aceptación formal C-05F, el propietario autorizó corregir H-01, añadir pruebas y ejecutar la regresión correspondiente. Se sustituyó la detección basada en exists()/is_symlink() por inspección lstat() de cada componente de la ruta en scripts/xray_validation_history.py. Se añadieron H39–H42: symlink directo, ancestro symlink válido, ancestro roto y ruta ordinaria inexistente. Resultados: historial 42/42 PASS; Python 80/80 PASS; shell 57/57 PASS; py_compile, bash -n, ShellCheck severidad error, warning focal, install.sh --check y git diff --check PASS. Expediente: docs/CORRECCION_H01_RUTAS_SYMLINK_C05F_2026-11-04.md. H-01 queda CORREGIDO Y VERIFICADO. D-01–D-05 siguen pendientes/documentados; Etapa 5 y Etapa 2 abiertas.

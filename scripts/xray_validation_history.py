@@ -6,6 +6,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import stat
 import sys
 from pathlib import Path
 from typing import Any
@@ -15,6 +16,22 @@ import xray_validation_store as storemod
 
 class ValidationHistoryError(Exception):
     """Error controlado del servicio de historial."""
+
+
+def _reject_symlink_components(candidate: Path) -> None:
+    """Rechaza cualquier componente simbólico, incluso si el enlace está roto."""
+    current = Path(candidate.anchor)
+    for part in candidate.parts[1:]:
+        current = current / part
+        try:
+            mode = current.lstat().st_mode
+        except FileNotFoundError:
+            # Un ancestro inexistente impide que existan componentes posteriores.
+            break
+        except OSError as exc:
+            raise ValidationHistoryError(f"No se pudo inspeccionar la ruta del almacén: {exc}") from None
+        if stat.S_ISLNK(mode):
+            raise ValidationHistoryError("El almacén contiene una ruta simbólica no permitida.")
 
 
 def _timestamp(value: Any, field: str = "created_at") -> dt.datetime:
@@ -191,9 +208,7 @@ def main(argv: list[str] | None = None) -> int:
         if not os.path.isabs(root):
             raise ValidationHistoryError("La ruta del almacén debe ser absoluta.")
         candidate = Path(root)
-        for component in reversed((candidate, *candidate.parents)):
-            if component.exists() and component.is_symlink():
-                raise ValidationHistoryError("El almacén contiene una ruta simbólica no permitida.")
+        _reject_symlink_components(candidate)
         if args.command == "list":
             if args.config_id is not None and (not isinstance(args.config_id, str) or not storemod.CONFIG_RE.fullmatch(args.config_id)):
                 raise ValidationHistoryError("config_id inválido.")

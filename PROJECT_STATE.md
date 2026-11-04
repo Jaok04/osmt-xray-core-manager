@@ -1057,3 +1057,44 @@ El propietario aceptó formalmente C-05D y autorizó crear el commit y publicar 
 - **Próxima decisión:** C-05F requiere autorización expresa independiente. No iniciar por inferencia.
 - **Protecciones:** `Xray-Normativa/`, VPS de pruebas, secretos, almacenes live, runtime e infraestructura no fueron modificados.
 - **Etapas:** Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## C-05F — diseño y matriz preparados, ejecución pendiente (2026-11-04)
+
+- El propietario autorizó preparar el diseño técnico y la matriz de C-05F, no ejecutar aún la auditoría ni implementar correcciones.
+- Documentos locales: `docs/DISENO_C05F_AUDITORIA_INTEGRAL_2026-11-04.md` y `docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md`.
+- Alcance propuesto: auditoría transversal del subsistema C-05A–C-05E frente a los requisitos de validación aplicables de Etapa 5. No es auditoría integral ni cierre de toda Etapa 5.
+- La matriz contiene 71 criterios F01–F71 y 15 huecos G01–G15. Todos están pendientes de ejecución/decisión; no se afirma ningún resultado PASS.
+- Pendiente de confirmación: alcance de C-05F; registro como divergencia de las opciones de validación externa/activa actualmente deshabilitadas; y corrección de hallazgos mediante autorización separada.
+- No se modificó código, pruebas, runtime, infraestructura ni `Xray-Normativa/`. Los dos documentos y este registro están locales, sin commit/push.
+- C-05A–C-05E siguen aceptadas y publicadas. C-05F aún no ejecutada ni aceptada. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+## C-05F — auditoría transversal ejecutada, aceptación pendiente (2026-11-04)
+
+- El propietario aprobó las condiciones de ejecución: alcance C-05A–E; registrar validación externa/activa como divergencias sin implementarlas; separar auditoría de correcciones.
+- Auditoría ejecutada y documentada en docs/AUDITORIA_C05F_AUDITORIA_INTEGRAL_2026-11-04.md; matriz final en docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md.
+- Resultado técnico: PASS con un hallazgo menor H-01 y divergencias D-01–D-05. No se modificó código ni pruebas.
+- Regresión Python: 76/76 PASS. Regresión shell: 57/57 PASS, cero fallos y cero skips. Entry point/menú, CLI, recorrido A→E con Xray real y concurrencia: PASS.
+- H-01 (baja): CLI no detecta symlink roto en un componente padre de la ruta del almacén y responde como si el almacén estuviera ausente. Abierto; requiere autorización de corrección.
+- D-01/D-02: validación externa/activa deshabilitadas frente a normativa. D-03: mecanismo de prueba runtime sigue pendiente en la propia normativa. D-04: exclusión del historial en backup queda fuera de C-05F y pendiente para auditoría backup/restore de Etapa 5. D-05: filtros CLI completos, controles UI parciales.
+- No se implementaron correcciones ni funcionalidades nuevas. No se hizo commit ni push. Rama y HEAD publicados siguen en a4f2c6356652e04206918c410ddf3f6aa3181808.
+- main, Xray-Normativa/, clave maestra real, almacenes live, runtime, infraestructura y VPS de pruebas permanecieron intactos.
+- C-05F: ejecutada y documentada localmente; pendiente de aceptación formal. Etapa 5 y Etapa 2 permanecen ABIERTAS.
+
+
+## Estado vigente — C-05F aceptada formalmente (2026-11-04)
+
+- C-05F — auditoría integral del subsistema C-05A–C-05E: **ACEPTADA FORMALMENTE** por el propietario.
+- Dictamen aceptado: PASS técnico con hallazgo menor H-01 y divergencias/asuntos D-01–D-05 documentados.
+- Expediente: docs/AUDITORIA_C05F_AUDITORIA_INTEGRAL_2026-11-04.md; matriz: docs/MATRIZ_C05F_AUDITORIA_INTEGRAL_2026-11-04.md.
+- H-01 sigue abierto y sin corregir; requiere autorización independiente. D-01/D-02/D-03/D-04/D-05 no quedan resueltos por la aceptación.
+- No se autorizaron commit, push ni sincronización. Los cambios documentales siguen locales sobre HEAD a4f2c6356652e04206918c410ddf3f6aa3181808.
+- Etapa 5 y Etapa 2 siguen ABIERTAS. La aceptación C-05F no equivale al cierre de ninguna de ellas.
+
+## Estado vigente — H-01 corregido y verificado (2026-11-04)
+
+- C-05F fue aceptada formalmente por el propietario.
+- H-01 fue corregido bajo autorización posterior: CLI ahora usa lstat() para rechazar symlinks directos, ancestros válidos y rotos.
+- Pruebas nuevas H39–H42; suite de historial 42/42 PASS; regresión Python 80/80 PASS; shell 57/57 PASS.
+- py_compile, bash -n, ShellCheck -S error, warning focal, install.sh --check y git diff --check: PASS.
+- Evidencia: docs/CORRECCION_H01_RUTAS_SYMLINK_C05F_2026-11-04.md.
+- D-01–D-05 no se modificaron ni resolvieron. Etapa 5 y Etapa 2 siguen ABIERTAS.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
-import hashlib, json, pathlib, sys, tempfile, threading, unittest
+import hashlib, json, pathlib, subprocess, sys, tempfile, threading, unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import xray_validation_store as storemod
@@ -87,6 +87,39 @@ class HistoryTests(unittest.TestCase):
     def test_h32_unexpected_file(self):
         self.save(); p=self.root/"reports"/"unexpected.json"; p.write_text("{}\n"); p.chmod(0o600)
         with self.assertRaises(storemod.ValidationStoreError): self.svc.list_history()
+    def _run_cli(self, store_path):
+        return subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "xray_validation_history.py"),
+             "--store", str(store_path), "list"],
+            text=True, capture_output=True, check=False,
+        )
+    def test_h39_cli_rejects_direct_symlink(self):
+        target = pathlib.Path(self.tmp.name) / "target"
+        target.mkdir()
+        link = pathlib.Path(self.tmp.name) / "direct-link"
+        link.symlink_to(target, target_is_directory=True)
+        proc = self._run_cli(link)
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("ruta simbólica", proc.stderr)
+    def test_h40_cli_rejects_valid_symlink_ancestor(self):
+        target = pathlib.Path(self.tmp.name) / "real-parent"
+        target.mkdir()
+        link = pathlib.Path(self.tmp.name) / "linked-parent"
+        link.symlink_to(target, target_is_directory=True)
+        proc = self._run_cli(link / "validation")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("ruta simbólica", proc.stderr)
+    def test_h41_cli_rejects_dangling_symlink_ancestor(self):
+        link = pathlib.Path(self.tmp.name) / "dangling-parent"
+        link.symlink_to(pathlib.Path(self.tmp.name) / "missing-target", target_is_directory=True)
+        proc = self._run_cli(link / "validation")
+        self.assertEqual(proc.returncode, 1)
+        self.assertIn("ruta simbólica", proc.stderr)
+    def test_h42_cli_allows_missing_normal_store(self):
+        missing = pathlib.Path(self.tmp.name) / "ordinary-missing-store"
+        proc = self._run_cli(missing)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertEqual(json.loads(proc.stdout)["total"], 0)
     def test_h33_symlink_directory(self):
         self.store.prepare(); d=self.root/"reports"; d.rmdir(); other=pathlib.Path(self.tmp.name)/"other"; other.mkdir(mode=0o700); d.symlink_to(other,target_is_directory=True)
         with self.assertRaises(storemod.ValidationStoreError): self.svc.list_history()
