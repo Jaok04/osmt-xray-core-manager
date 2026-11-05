@@ -176,3 +176,10 @@ Cada autorización live debe identificar el servidor, operación exacta, alcance
 - R-05: diseño avanzado en pausa; no implementar por ahora.
 - R-06/live: no autorizada.
 - Etapas 2, 3 y 5: abiertas.
+
+
+## Addendum de decisión posterior — B2 ACME Certbot (2026-11-05)
+
+Este addendum registra una decisión complementaria posterior; no reescribe la versión histórica del plan ni la documentación normativa. El propietario aprobó Certbot como cliente ACME inicial con HTTP-01 standalone y DNS-01 manual TXT. La automatización DNS mediante API (Cloudflare u otros proveedores) queda aplazada. B2 fue implementada en fixtures, auditada y aceptada formalmente con las limitaciones de `docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md`.
+
+La aceptación de B2 no acredita emisión ACME real ni satisface por sí sola todos los requisitos de Etapa 4; tampoco autoriza instalar Certbot, ejecutar desafíos reales, cambiar DNS/puerto 80/firewall/servicios o modificar runtime. Etapa 4 permanece ABIERTA. El trabajo siguiente del MVP es B3, precedido por contraste documental y autorización específica de implementación.

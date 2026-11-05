@@ -1322,3 +1322,12 @@ El propietario aceptó formalmente B1-A y B1-B y autorizó commit/push exclusiva
 - La importación fixture valida SAN/par de claves, usa staging root-only y el Certificate Store existente. Prueba integrada con Certificate Resolver y lease temporal VLESS-WS-TLS.
 - Evidencia: 11/11 pruebas Python B2 focales PASS; regresión global Python 182/182 y Bash 61/61 PASS; py_compile, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS.
 - No se instaló Certbot/dig, no se ejecutó ACME real, no se cambió DNS/TCP80/firewall/servicios/runtime ni se modificaron certificados persistentes, secretos, normativa, main o VPS de pruebas. No publicar hasta autorización separada.
+
+
+## 2026-11-05 — aceptación formal B2 ACME Certbot
+
+El propietario aceptó formalmente B2 — ACME Certbot y certificados TLS — con las limitaciones y exclusiones descritas en `docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md`. La aceptación cubre únicamente el alcance fixture-only: backend HTTP-01 standalone y DNS-01 manual TXT, journal privado, importación segura al Certificate Store e integración de prueba con Resolver TLS. No acredita ACME real, instalación/compatibilidad efectiva de Certbot, DNS/TXT público, acceso WAN/TCP 80 ni lectura del lease por identidad systemd real.
+
+La publicación ya verificada permanece en `design/user-identity-association-v1`: commit funcional `2669c45` y commit documental `21a103a7a15e003ddc3e2031aaf591efefe064ce`. Se actualizan los documentos de estado/continuidad para reflejar aceptación y sincronización. No se modificaron `Xray-Normativa/` ni `main`; no hubo operaciones live, instalación de dependencias ni cambios en DNS, runtime, servicios, certificados persistentes, firewall, puertos o red. Etapa 4 permanece ABIERTA y R-06/live NO AUTORIZADA.
+
+Siguiente punto: contraste documental e inventario read-only para B3 — usuario y conexión VLESS-WS-TLS — antes de solicitar autorización de implementación.

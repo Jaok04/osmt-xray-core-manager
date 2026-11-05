@@ -1442,3 +1442,20 @@ El propietario aprobó Certbot (HTTP-01 standalone y DNS-01 manual TXT) y autori
 Pruebas B2: Python 182/182 y Bash 61/61 PASS; py_compile, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS. La prueba integrada usa certificado y conexión sintéticos para crear y limpiar un lease TLS. Evidencia en docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md.
 
 **Siguiente acción:** concluir regresión, controles estáticos y revisión de diff; completar evidencias de auditoría; solicitar aceptación formal. La publicación en GitHub requiere autorización separada. No tocar main, Xray-Normativa/, VPS de pruebas ni entorno live.
+
+
+## Punto de reanudación vigente — B2 aceptada; preparar B3 (2026-11-05)
+
+**B2 — ACME Certbot:** IMPLEMENTADA, VERIFICADA, AUDITADA, ACEPTADA FORMALMENTE, PUBLICADA y SINCRONIZADA, exclusivamente en el alcance fixture-only documentado. Aceptación formal del propietario: 2026-11-05. Ver `docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md`.
+
+- Commit funcional: `2669c45` — `feat(certificates): add Certbot ACME workflows`.
+- Commit documental: `21a103a7a15e003ddc3e2031aaf591efefe064ce` — `docs(certificates): record B2 ACME implementation and audit`.
+- Rama autorizada: `design/user-identity-association-v1`; HEAD local/GitHub verificado y checkout limpio al último control.
+- Sin ACME real, instalación de Certbot, DNS/TXT real, prueba WAN/TCP 80, identidad systemd real ni cambios live.
+- `Xray-Normativa/` permanece inmutable; `main` intacta.
+
+### Siguiente acción permitida
+
+Iniciar B3 — usuario y conexión VLESS-WS-TLS — con recuperación de estado Git/VPS, lectura de la normativa pertinente de Etapas 2 y 3 y del plan MVP, inventario read-only de los componentes ya implementados (Usuarios V2, compositor I-01, menú I-02/I-03 e I-04 exportador), y matriz requisito → implementación reutilizable → brecha → prueba. Presentar el contraste antes de modificar código y esperar autorización expresa del alcance concreto.
+
+No repetir I-01–I-04 ni B1/B2. No repetir R-01–R-04. Etapa 4 sigue ABIERTA; Etapas 2, 3 y 5 siguen ABIERTAS. R-06/live NO AUTORIZADA. No instalar dependencias ni tocar runtime, systemd, certificados reales, DNS, firewall, puertos, red, clave maestra, `main`, `Xray-Normativa/` ni VPS de pruebas.

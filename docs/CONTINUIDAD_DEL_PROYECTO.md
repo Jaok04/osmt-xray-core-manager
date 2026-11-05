@@ -1455,13 +1455,24 @@ El propietario autorizó la implementación B1-A/B1-B exclusivamente mediante fi
 ## Continuidad vigente — implementación B2 ACME Certbot (2026-11-05)
 
 1. El propietario aprobó Certbot como cliente ACME inicial: HTTP-01 standalone y DNS-01 manual mediante TXT. Las integraciones API DNS quedan aplazadas.
-2. El propietario autorizó implementar B2-A a B2-G exclusivamente con fixtures; no autorizó instalar dependencias, solicitar certificados reales, cambiar DNS, operar live ni publicar.
+2. El propietario autorizó implementar B2-A a B2-G exclusivamente con fixtures. Posteriormente aceptó formalmente B2 el 2026-11-05, con las limitaciones de la auditoría; la publicación en la rama autorizada fue verificada.
 3. Nuevo backend: scripts/certificate_acme.py. La emisión exige confirmación explícita --confirm-acme, root, Certbot presente y preflight. El comando plan no ejecuta Certbot.
 4. HTTP-01 requiere IP pública prevista, A/AAAA compatible y puerto 80 libre localmente; no detiene servicios. La accesibilidad externa solo la valida la CA al completar el desafío. DNS-01 publica TXT manualmente y comprueba el valor exacto con dig; no elimina registros.
 5. La importación Certbot verifica que los symlinks live resuelvan dentro de archive, copia a staging root-only y reutiliza certificate_store.py. La prueba fixture integra el certificado con certificate_resolver.prepare y cleanup.
 6. Nuevo menú: modules/certificates.sh, cargado por bin/xray-manager y enrutado desde modules/main_menu.sh. Incluye solicitud, listado e importación Certbot; no implementa aún toda la Etapa 4.
 7. Documentos B2: docs/DECISION_B2_ACME_CERTBOT.md, docs/IMPLEMENTACION_B2_ACME_CERTIFICADOS_2026-11-05.md y docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md.
 8. No se instalaron Certbot/dig, no hubo ACME real, DNS, TCP/80 live, firewall, systemd/runtime, certificados reales, clave maestra ni VPS de pruebas. Xray-Normativa/ y main permanecen intactas.
-9. Regresión global registrada: Python 182/182, Bash 61/61, py_compile, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS. Antes de cerrar, revisar el diff final y obtener aceptación formal y autorización separada de publicación.
+9. Regresión global registrada: Python 182/182, Bash 61/61, py_compile, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS. El propietario aceptó formalmente B2 el 2026-11-05 con las limitaciones de la auditoría. Commit funcional `2669c45`; commit documental `21a103a7a15e003ddc3e2031aaf591efefe064ce`; HEAD local/GitHub coincidente y checkout limpio.
 
 La Etapa 4 permanece ABIERTA; R-06/live sigue NO AUTORIZADA.
+
+
+## Continuidad vigente — B2 aceptada y publicada; siguiente bloque B3 (2026-11-05)
+
+- B2 — ACME Certbot: IMPLEMENTADA, VERIFICADA, AUDITADA, ACEPTADA FORMALMENTE, PUBLICADA y SINCRONIZADA en el alcance fixture-only descrito en `docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md`.
+- Aceptación formal del propietario recibida el 2026-11-05. No equivale a aceptación de la Etapa 4 completa ni a autorización live.
+- Commit funcional `2669c45` y commit documental `21a103a7a15e003ddc3e2031aaf591efefe064ce`, rama `design/user-identity-association-v1`.
+- B2 no instaló Certbot ni ejecutó ACME real; no probó CA, DNS/TXT público, WAN/TCP 80 ni lease con identidad systemd real.
+- Siguiente trabajo: B3 del MVP — usuario y conexión VLESS-WS-TLS — sujeto a contraste normativo específico, inventario read-only de funciones reutilizables y presentación de brechas/alcance antes de editar.
+- No repetir I-01–I-04 ni B1-A/B1-B. Reutilizar componentes existentes y no rehacer R-01–R-04.
+- Etapa 4 permanece ABIERTA; Etapas 2, 3 y 5 también ABIERTAS. R-06/live sigue NO AUTORIZADA. No modificar `main`, `Xray-Normativa/`, infraestructura real, secretos ni VPS de pruebas.

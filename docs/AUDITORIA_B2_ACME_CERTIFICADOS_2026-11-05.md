@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-05
 **Alcance:** auditoría focal de B2-A a B2-G en fixtures; sin ACME real.
-**Estado:** PENDIENTE DE ACEPTACIÓN FORMAL DEL PROPIETARIO.
+**Estado:** ACEPTADA FORMALMENTE por el propietario el 2026-11-05, con las limitaciones y exclusiones de este informe.
 
 ## 1. Contraste normativo Etapa 4
 
@@ -75,4 +75,4 @@ Certbot no está instalado; dig ya estaba disponible en /usr/bin/dig y no se ins
 
 ## 6. Dictamen
 
-El backend inicial de ambos métodos, el menú básico, la importación segura y la prueba de integración fixture con Resolver TLS están IMPLEMENTADOS y VERIFICADOS en el alcance fixture-only: Python 182/182, Bash 61/61, controles estáticos, install.sh --check y git diff --check PASS. La revisión del diff preparado para publicación fue completada sin errores; la aceptación formal del propietario sigue pendiente. B2 no cierra Etapa 4 y no autoriza ACME real.
+El backend inicial de ambos métodos, el menú básico, la importación segura y la prueba de integración fixture con Resolver TLS están IMPLEMENTADOS y VERIFICADOS en el alcance fixture-only: Python 182/182, Bash 61/61, controles estáticos, install.sh --check y git diff --check PASS. La revisión del diff preparado para publicación fue completada sin errores; el propietario aceptó formalmente B2 el 2026-11-05, limitado a los resultados y exclusiones de este informe. B2 no cierra Etapa 4 ni autoriza ACME real.

@@ -1342,6 +1342,10 @@ Siguiente acción: revisión del expediente B1 por el propietario; después, ace
 - La importación valida SAN, vigencia y correspondencia criptográfica; resuelve symlinks live solo dentro de archive, crea staging root-only y reutiliza el Certificate Store. Una prueba importa certificado sintético y obtiene/limpia un lease mediante Certificate Resolver con fixture VLESS-WS-TLS.
 - Pruebas B2: 11/11 focales PASS; regresión global Python 182/182 y Bash 61/61 PASS; py_compile, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS. Evidencia en docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md.
 - Certbot y dig no se instalaron; no se ejecutó certbot --version, ninguna solicitud ACME real ni comunicación con CA. No se probó DNS público, propagación real, acceso WAN/puerto 80 ni identidad systemd real.
-- Pendientes: confirmar regresión global, revisar diff y obtener aceptación formal. No publicar ni sincronizar GitHub sin autorización separada. No modificar Xray-Normativa/, main o VPS de pruebas. Etapa 4 sigue ABIERTA; R-06/live NO AUTORIZADA.
+- B2 fue aceptada formalmente por el propietario el 2026-11-05, con las limitaciones y exclusiones de `docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md`.
+- Publicación funcional: `2669c45` (`feat(certificates): add Certbot ACME workflows`). Publicación documental: `21a103a7a15e003ddc3e2031aaf591efefe064ce` (`docs(certificates): record B2 ACME implementation and audit`). HEAD local/GitHub verificado en el segundo commit; checkout limpio.
+- B2: IMPLEMENTADA, VERIFICADA, AUDITADA, ACEPTADA, PUBLICADA y SINCRONIZADA dentro del alcance fixture-only.
+- No se instaló Certbot; no hubo ACME real, comunicación con CA, DNS/TXT real, acceso WAN/TCP 80 ni prueba con identidad systemd real. No se modificaron runtime, certificados persistentes, DNS, firewall, puertos, red, dependencias, normativa, main ni VPS de pruebas.
+- Etapa 4 sigue ABIERTA. R-06/live NO AUTORIZADA.
 
-**Siguiente paso permitido:** terminar auditoría focal/regresión B2, corregir únicamente fallos encontrados dentro del alcance autorizado y presentar resultado al propietario.
+**Siguiente paso permitido:** realizar B3 — usuario y conexión VLESS-WS-TLS — comenzando por el contraste documental específico y la inspección read-only de los componentes existentes. No ejecutar operaciones live ni ampliar el alcance sin autorización específica.

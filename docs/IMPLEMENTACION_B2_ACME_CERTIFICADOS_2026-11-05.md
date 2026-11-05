@@ -1,7 +1,7 @@
 # Implementación B2 — ACME Certbot y certificados TLS
 
 **Fecha:** 2026-11-05
-**Estado:** IMPLEMENTACIÓN EN FIXTURES; emisión ACME real NO EJECUTADA; auditoría técnica completada; aceptación formal del propietario pendiente.
+**Estado:** IMPLEMENTADO EN FIXTURES, VERIFICADO, AUDITADO y ACEPTADO FORMALMENTE el 2026-11-05 con las limitaciones de la auditoría; emisión ACME real NO EJECUTADA.
 **Rama:** design/user-identity-association-v1
 
 ## 1. Alcance
@@ -107,3 +107,8 @@ La suborden issue requiere --confirm-acme, root, Certbot instalado y preflight. 
 ## 11. Estado
 
 B2-A a B2-G: IMPLEMENTADOS EN EL ALCANCE FIXTURE-ONLY AUTORIZADO; VERIFICADOS CON PRUEBAS AISLADAS Y REGRESIÓN GLOBAL Python 182/182, Bash 61/61. Controles estáticos y install.sh --check PASS. No declarar Etapa 4 terminada. No declarar Certbot compatible con el sistema objetivo hasta validar su versión/paquete en una tarea posterior autorizada.
+
+
+## 12. Aceptación formal del propietario — 2026-11-05
+
+El propietario aceptó formalmente B2 — ACME Certbot y certificados TLS — con las limitaciones, exclusiones y verificaciones descritas en `docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md`. Esta aceptación cubre exclusivamente el incremento fixture-only implementado y auditado. No acredita emisión real, compatibilidad instalada de Certbot, propagación DNS, accesibilidad WAN/TCP 80 ni lectura de leases por una identidad systemd real. No autoriza instalar dependencias, ejecutar ACME real, modificar DNS, servicios, runtime, certificados persistentes, firewall, puertos o red. Etapa 4 permanece ABIERTA y R-06/live NO AUTORIZADA.
