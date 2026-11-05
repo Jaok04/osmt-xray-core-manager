@@ -1249,3 +1249,27 @@ Demostrar el primer servicio real VLESS + WebSocket + TLS gestionado por Xray-Co
 Ejecutar H0: inventario/auditoría de brechas del código, menús, pruebas y documentación frente a las Etapas normativas 2, 4, 5 y 6. Solo lectura y documentación; no instalar, modificar código de producto ni tocar runtime, systemd, certificados, DNS, firewall, puertos o red.
 
 No repetir R-01–R-04. No usar la VPS de pruebas. No modificar `main` ni `Xray-Normativa/`. No ejecutar R-06/live ni prueba NetMod sin autorización específica.
+
+
+## Punto de control — auditoría H0 preparada (2026-11-04)
+
+**Informe:** `docs/AUDITORIA_H0_BRECHAS_PRIMER_SERVICIO_VLESS_WS_TLS_2026-11-04.md`
+**HEAD base auditado:** `af4b562fb3608392b0a16388390e1dfe9b849898`
+**Estado:** H0 PREPARADA; aceptación formal del propietario pendiente.
+
+### Dictamen
+
+El proyecto aún no puede desplegar un servicio real VLESS-WS-TLS desde el Manager. Existe código de instalación Xray, control systemd independiente, asistente/adaptador VLESS, almacén/resolutor TLS y R-01–R-04. Sin embargo, Etapa 4 DNS/ACME/UI, activación de perfil, integración runtime real, R-05, diagnóstico completo y backup genérico permanecen incompletos.
+
+### Entorno de desarrollo (metadata read-only)
+
+- Ubuntu 24.04.4 amd64; dependencias presentes; `install.sh --check` PASS.
+- Xray 26.10.31 y geodata presentes.
+- `xray.service`, `/etc/xray/config.json`, usuario y grupo `xray`: ausentes.
+- No se ejecutó systemctl ni se consultó el estado de servicio.
+
+### Siguiente acción permitida
+
+Revisar/aceptar la matriz H0 y decidir el alcance del siguiente diseño de implementación. No iniciar código ni acciones live por inferencia.
+
+No repetir R-01–R-04. R-05 no implementada. No leer la clave maestra ni acceder a almacenes live. No modificar `Xray-Normativa/`, `main`, runtime, systemd, certificados, DNS, firewall, puertos o red. No usar la VPS de pruebas.

@@ -1320,3 +1320,16 @@ La prioridad del proyecto cambió: el siguiente objetivo de validación es ejecu
 9. Mantener normativa inmutable, `main` protegida, no usar VPS de pruebas, no leer la clave maestra y publicar únicamente en `design/user-identity-association-v1`.
 
 Para reanudar, verificar HEAD, upstream, árbol limpio y sincronización GitHub/VPS. No asumir que el estado del último commit histórico sigue vigente.
+
+
+## Continuidad vigente — auditoría H0 del primer VLESS-WS-TLS (2026-11-04)
+
+1. El informe H0 está en `docs/AUDITORIA_H0_BRECHAS_PRIMER_SERVICIO_VLESS_WS_TLS_2026-11-04.md`. Leerlo antes de proponer implementación.
+2. Dictamen: aún no existe recorrido completo VLESS-WS-TLS administrado por el Manager. Reutilizar instalador Xray, control systemd independiente, asistente/adaptador VLESS, catálogo/resolutor TLS y R-01–R-04.
+3. Brechas clave: Etapa 4 (UI/domains/DNS/ACME), perfil cliente/Host/SNI VLESS, activación de perfil, runtime apply live, R-05, diagnóstico completo y backup genérico.
+4. En la VPS `Implementación-Xray`, comprobación read-only de H0: Ubuntu 24.04.4 amd64; Xray 26.10.31/geodata presentes; unidad `xray.service`, `/etc/xray/config.json`, usuario/grupo `xray` ausentes. No ejecutar systemctl ni asumir estado del servicio.
+5. Normativa comparada: 14/14 archivos con homólogo en el respaldo idénticos byte a byte. No modificar `Xray-Normativa/`.
+6. H0 está preparada y pendiente de aceptación formal. No comenzar implementación hasta revisar el informe y aprobar el alcance siguiente.
+7. R-01 no se repite: es preflight read-only dependiente de fixture de estado. R-02–R-04 no se repiten y continúan aisladas a fixtures. R-05 no implementada. R-06/live no autorizada.
+8. No leer `/etc/xray-manager/keys/master.key`, no acceder a almacenes live, no usar la VPS de pruebas y no modificar runtime, systemd, DNS, certificados, firewall, puertos o red sin autorización específica.
+9. Verificar rama, HEAD, árbol y sincronización antes de continuar; la línea base de esta auditoría fue `af4b562fb3608392b0a16388390e1dfe9b849898`.

@@ -167,7 +167,7 @@ Algunas tareas pueden prepararse en paralelo después de H0, pero ninguna aplica
 4. Rechazar la confirmación conserva el proceso actual y deja la revisión nueva publicada pero pendiente de aplicación.
 5. Publicar con servicio `inactive` no lo inicia; se podrá iniciar manualmente desde el administrador, con confirmación.
 6. Cada operación tendrá `generation_id` único para ligar evidencia y descartar resultados obsoletos.
-7. R-01–R-04 se reutilizan; no se repiten.
+7. R-01 se reutiliza como preflight read-only dependiente de fixture de estado; R-02–R-04 se reutilizan como fases aisladas a fixtures. No se repiten ni se consideran aplicación live.
 8. La normativa `Xray-Normativa/` es inmutable sin autorización expresa.
 9. `main` no se modifica.
 
@@ -192,3 +192,14 @@ No cerrar H0–H8 ni declarar el hito viable sin:
 - aceptación formal del propietario.
 
 **Estado al crear este plan:** H0 pendiente; H1–H8 no iniciadas como hitos de este plan. Las capacidades parciales preexistentes se deben inventariar en H0 y no se consideran inexistentes ni aceptadas por anticipado.
+
+
+## Addendum H0 — auditoría de brechas preparada (2026-11-04)
+
+La auditoría H0 se documentó en `docs/AUDITORIA_H0_BRECHAS_PRIMER_SERVICIO_VLESS_WS_TLS_2026-11-04.md`.
+
+**Dictamen:** NO LISTO para servicio real VLESS-WS-TLS end-to-end. Existe instalador Xray 26.10.31, control systemd independiente, asistente/adaptador VLESS, almacén/resolutor TLS y R-01–R-04. Faltan Etapa 4 funcional (UI/domino/DNS/ACME), activación de perfil, integración de publicación con servicio real, R-05, diagnóstico completo y backup genérico. El flujo VLESS no ofrece exportación de perfil cliente ni modela Host/SNI cliente.
+
+En la VPS de desarrollo: Xray 26.10.31 y geodata presentes; `xray.service`, `/etc/xray/config.json` y cuenta/grupo `xray` ausentes. `install.sh --check` PASS sin cambios. No se consultó systemd ni se inspeccionaron almacenes live. Normativa comparada: 14/14 archivos idénticos al respaldo.
+
+H0 está PREPARADA y pendiente de aceptación formal. No se inicia implementación ni intervención live por este addendum.

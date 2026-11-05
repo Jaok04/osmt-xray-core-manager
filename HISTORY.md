@@ -1218,3 +1218,14 @@ R-01–R-04 se reutilizan sin repetir implementación; aceptación formal indivi
 Esta actualización fue documental. No se modificó código de producto, normativa, main, runtime/systemd reales, claves, almacenes live, certificados, DNS, firewall, puertos, red, dependencias ni VPS de pruebas. No se reejecutaron pruebas. R-06/live y NetMod siguen sin autorización. Siguiente paso: H0, auditoría de brechas de solo lectura.
 
 La hoja de ruta y sus addenda quedaron publicados en `design/user-identity-association-v1` mediante el commit `663434966c75dd4dfc0c4183fca597b712fd18f4`; GitHub confirmó el mismo SHA. El checkout de `/opt/xray-manager` quedó limpio y alineado con la rama remota. No se modificó `Xray-Normativa/` ni `main`.
+
+
+## 2026-11-04 — Auditoría H0 de brechas VLESS-WS-TLS preparada
+
+Se completó la inspección documental y de código en solo lectura para el primer servicio real VLESS + WebSocket + TLS. Informe versionado: `docs/AUDITORIA_H0_BRECHAS_PRIMER_SERVICIO_VLESS_WS_TLS_2026-11-04.md`.
+
+Dictamen: el proyecto todavía no está listo para el recorrido real de extremo a extremo. Se identificó base reutilizable (instalador Xray 26.10.31 con verificación SHA-256, preparación/control systemd independiente, asistente/adaptador VLESS, catálogo/resolutor TLS central y R-01–R-04) y brechas (Etapa 4 DNS/ACME/UI, metadatos/exportación cliente VLESS, activación de perfil, aplicación runtime real, R-05, diagnóstico completo y backup genérico).
+
+Comprobaciones read-only en `Implementación-Xray`: Ubuntu 24.04.4 amd64; `install.sh --check` PASS sin cambios; Xray 26.10.31 y geodata presentes; `xray.service`, `/etc/xray/config.json` y cuenta/grupo `xray` ausentes. Normativa comparada contra el respaldo: 14/14 archivos idénticos. No se ejecutó systemctl, suites de pruebas, ni se accedió a almacenes live o a la clave maestra. No se modificaron código de producto ni infraestructura.
+
+H0 queda PREPARADA, pendiente de aceptación formal del propietario. No autoriza implementación ni intervención live. R-01–R-04 se reutilizan; R-05 no está implementada; R-06/live continúa no autorizada.

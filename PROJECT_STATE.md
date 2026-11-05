@@ -1222,3 +1222,17 @@ Este addendum prevalece sobre las fotografías anteriores para la prioridad y el
 - **Pruebas:** esta actualización es exclusivamente documental; no reejecuta regresiones ni pruebas runtime.
 
 **Siguiente acción:** H0 — auditoría de brechas, sin cambios live ni código de producto, para identificar exactamente qué capacidades ya existen y cuáles faltan antes de implementar.
+
+
+## Addendum vigente — auditoría H0 del primer servicio VLESS-WS-TLS (2026-11-04)
+
+Se inspeccionó en solo lectura el código, los menús, las pruebas/documentación existentes y las Etapas normativas 2, 4, 5 y 6. Informe: `docs/AUDITORIA_H0_BRECHAS_PRIMER_SERVICIO_VLESS_WS_TLS_2026-11-04.md`.
+
+- Dictamen: el proyecto todavía NO está listo para un servicio real VLESS-WS-TLS administrado de extremo a extremo.
+- Base reutilizable: instalador Xray 26.10.31 con SHA-256, módulo de preparación/control systemd, asistente/adaptador VLESS, almacén/resolutor TLS central y R-01–R-04.
+- Brechas críticas: Etapa 4 (UI, dominios, DNS y ACME) ausente; VLESS-WS-TLS limitado a borrador/validación; falta exportación de perfil cliente y campos Host/SNI del flujo VLESS; activación de perfil ausente; R-01 preflight read-only dependiente de fixture de estado; R-02–R-04 fixture-only; R-05 no implementada; diagnóstico/backup genéricos parciales.
+- Entorno verificado solo por metadata: Ubuntu 24.04.4 amd64; dependencias requeridas presentes; Xray 26.10.31 y geodata presentes; `xray.service`, `/etc/xray/config.json` y cuenta/grupo `xray` ausentes. No se ejecutó systemctl ni se consultó estado de servicio.
+- Normativa: 14/14 archivos con homólogo en respaldo idénticos byte a byte.
+- `install.sh --check`: PASS sin modificar el sistema. No se ejecutaron suites de pruebas.
+- No se leyó la clave maestra, no se accedió a almacenes live, no se modificó runtime, systemd, DNS, certificados, firewall, puertos, red, dependencias ni VPS de pruebas.
+- H0 queda PREPARADA, pendiente de aceptación formal. No autoriza código de producto ni cambios live. R-01–R-04 no deben repetirse; R-05 permanece no implementada.
