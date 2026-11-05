@@ -1306,3 +1306,13 @@ Este addendum prevalece sobre el orden de trabajo H1–H8 anterior. La aceptaci�
 - Publicación y verificación remota se registran en el addendum de HISTORY y en el punto de control cuando se obtenga el SHA definitivo.
 - No se probó NetMod real ni conectividad WAN. No se realizaron operaciones live ni cambios en runtime/systemd, certificados reales, DNS, firewall, puertos o red.
 - Etapas 2, 3 y 5 permanecen ABIERTAS; R-06/live NO AUTORIZADA.
+
+
+## Cierre de publicación — I-02/I-03/I-04 (2026-11-05)
+
+- Commit funcional publicado: `ac119d923ba0eae35579e944d59f5262c5d105a7` en `design/user-identity-association-v1`.
+- GitHub confirmó el mismo SHA; push fast-forward desde `792f382ca1b4f753ff763dc50a442aa66a0cd42f`.
+- HEAD local = HEAD remoto después de `git fetch`; checkout limpio.
+- `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`; `Xray-Normativa/` sin cambios; 13/13 documentos sustantivos comparados byte a byte con el respaldo.
+- I-02/I-03/I-04: IMPLEMENTADAS, VERIFICADAS, AUDITADAS, ACEPTADAS, PUBLICADAS y SINCRONIZADAS.
+- Sin NetMod real/WAN ni operaciones live. Etapas 2, 3 y 5 abiertas; R-06/live no autorizada.

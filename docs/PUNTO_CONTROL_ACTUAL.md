@@ -3,8 +3,8 @@
 > El punto de control operativo vigente es el último bloque de publicación I-02/I-03/I-04. Los apartados anteriores se conservan como historial y quedan superados cuando contradigan ese bloque.
 
 **Fecha del corte:** 2026-11-05
-**Siguiente tarea:** verificar el commit publicado, el SHA remoto y la igualdad de contenido entre GitHub y `/opt/xray-manager`; después continuar el MVP VLESS-WS-TLS desde el plan vigente, sin operaciones live por inferencia.
-**Estado vigente:** I-02, I-03 e I-04 aceptados formalmente; publicación en curso autorizada exclusivamente en `design/user-identity-association-v1`. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
+**Siguiente tarea:** continuar el MVP VLESS-WS-TLS desde el plan vigente, empezando por la siguiente acción aislada/documental autorizada; no ejecutar operaciones live por inferencia.
+**Estado vigente:** I-02, I-03 e I-04 aceptados, publicados y sincronizados en `design/user-identity-association-v1` al commit `ac119d923ba0eae35579e944d59f5262c5d105a7`. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
 
 
 > El punto de control operativo vigente es el último bloque R-04 al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
@@ -1397,3 +1397,14 @@ El propietario autorizó generar URI vless:// para NetMod con endpoint público 
 - I-02/I-03/I-04 no activan perfiles, no ejecutan R-01–R-04, no modifican Xray/systemd real y no acreditan conectividad NetMod/WAN. R-06/live sigue NO AUTORIZADA.
 - Tras la publicación, actualizar aquí el SHA definitivo, confirmar GitHub y comparar los archivos publicados contra `/opt/xray-manager`. No declarar sincronización antes de esas verificaciones.
 - Etapas 2, 3 y 5 permanecen ABIERTAS; la aceptación de estos incrementos no cierra etapas.
+
+
+## Cierre de publicación vigente — I-02/I-03/I-04 (2026-11-05)
+
+- Commit funcional publicado: `ac119d923ba0eae35579e944d59f5262c5d105a7` — `feat(vless): integrate profile composition and NetMod export`.
+- Push fast-forward desde `792f382ca1b4f753ff763dc50a442aa66a0cd42f` a `design/user-identity-association-v1`; GitHub confirmó exactamente `ac119d923ba0eae35579e944d59f5262c5d105a7`.
+- `git fetch` posterior confirmó `HEAD` local igual a `origin/design/user-identity-association-v1`; checkout limpio.
+- Se verificó que GitHub contiene los archivos de implementación, pruebas y auditorías I-02/I-03/I-04. El contenido de la VPS corresponde al mismo commit.
+- `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`.
+- `Xray-Normativa/` no tiene cambios; 13 documentos normativos sustantivos comparados byte a byte con el respaldo: PASS.
+- Resultado: I-02/I-03/I-04 PUBLICADOS y SINCRONIZADOS. No hubo cambios live, DNS, certificados reales, firewall, puertos, red ni dependencias.

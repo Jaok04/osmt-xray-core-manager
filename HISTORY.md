@@ -1285,3 +1285,10 @@ El propietario aceptó formalmente I-02 (integración del compositor en el menú
 Antes de publicar se reejecutó la regresión completa: Python 171/171 y Bash 59/59 PASS; `py_compile`, `bash -n`, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. Se compararon los 13 documentos normativos sustantivos con el respaldo y todos coincidieron byte a byte; `Xray-Normativa/` permaneció intacta. Base de publicación I-01: `792f382ca1b4f753ff763dc50a442aa66a0cd42f`.
 
 La aceptación de estos incrementos no cierra Etapas 2, 3 o 5 ni autoriza NetMod/WAN o despliegue live. R-06/live permanece NO AUTORIZADA. El SHA de publicación y la comprobación final VPS/GitHub se añadirán en el registro de cierre posterior al push.
+
+
+## 2026-11-05 — publicación y sincronización I-02/I-03/I-04
+
+Se publicó el commit funcional `ac119d923ba0eae35579e944d59f5262c5d105a7` (`feat(vless): integrate profile composition and NetMod export`) mediante fast-forward en `design/user-identity-association-v1`, desde `792f382ca1b4f753ff763dc50a442aa66a0cd42f`. GitHub confirmó el SHA remoto exacto. Un `git fetch` posterior verificó que HEAD local coincide con `origin/design/user-identity-association-v1` y el checkout quedó limpio. Los archivos de implementación, pruebas, decisiones, auditorías y continuidad I-02/I-03/I-04 están presentes en el árbol remoto.
+
+`main` permaneció en `656ecedc506a94a6461aee296b20871d51a38bf3`; `Xray-Normativa/` no cambió y sus 13 documentos sustantivos coinciden byte a byte con la copia de respaldo. Resultado: I-02/I-03/I-04 ACEPTADAS, PUBLICADAS y SINCRONIZADAS. Etapas 2, 3 y 5 siguen ABIERTAS; R-06/live NO AUTORIZADA. No se probó NetMod real ni conectividad WAN y no se realizaron cambios de infraestructura.

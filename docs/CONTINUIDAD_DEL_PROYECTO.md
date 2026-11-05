@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-05:** I-01, I-02, I-03 e I-04 están aceptadas formalmente con sus limitaciones. I-02/I-03/I-04 tienen publicación autorizada únicamente en `design/user-identity-association-v1`; la regresión previa a publicación pasó Python 171/171 y Bash 59/59, además de verificaciones estáticas. Confirmar SHA remoto y sincronización real VPS/GitHub antes de continuar. No se probó NetMod real ni conectividad WAN. R-01–R-04 publicadas/sincronizadas con aceptación formal específica pendiente; R-05 en pausa; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS.
+> **Punto de reanudación vigente — 2026-11-05:** I-01, I-02, I-03 e I-04 están aceptadas formalmente con sus limitaciones. I-02/I-03/I-04 se publicaron y sincronizaron en `design/user-identity-association-v1` al commit `ac119d923ba0eae35579e944d59f5262c5d105a7`; HEAD local/remoto coinciden y el checkout quedó limpio. Regresión previa a publicación: Python 171/171 y Bash 59/59 PASS; verificaciones estáticas PASS. No se probó NetMod real ni conectividad WAN. R-01–R-04 publicadas/sincronizadas con aceptación formal específica pendiente; R-05 en pausa; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -1409,3 +1409,14 @@ Pruebas focales I-04: 7/7 PASS; integración de menú/compositor PASS. Regresió
 6. I-02 agrega opción [9] del menú para componer nueva revisión inmutable. I-03 persiste Host WebSocket y SNI cliente por separado (esquema 2, esquema 1 compatible). I-04 exporta URI para `hellen.tvrc.me:443`; no valida DNS, certificado desplegado, listener, NetMod ni WAN.
 7. No activar perfiles ni ejecutar R-01–R-04 como parte de esta publicación. No tocar runtime/systemd real, certificados reales, DNS, firewall, puertos, red, dependencias, clave maestra ni VPS de pruebas. R-06/live no autorizada.
 8. Tras el push, verificar SHA remoto, archivos publicados y contenido del checkout. La aceptación de incrementos no cierra Etapas 2, 3 ni 5.
+
+
+## Cierre de publicación — I-02/I-03/I-04 (2026-11-05)
+
+- Commit funcional: `ac119d923ba0eae35579e944d59f5262c5d105a7` (`feat(vless): integrate profile composition and NetMod export`).
+- Publicado por fast-forward en `design/user-identity-association-v1`; SHA remoto confirmado idéntico.
+- `git fetch` confirmó HEAD local = `origin/design/user-identity-association-v1`; checkout limpio después de publicar.
+- Archivos de código, pruebas, auditorías, decisiones y continuidad I-02/I-03/I-04 presentes en el árbol remoto.
+- `main` intacta (`656ecedc506a94a6461aee296b20871d51a38bf3`). `Xray-Normativa/` intacta; 13/13 documentos sustantivos coinciden byte a byte con el respaldo.
+- I-02/I-03/I-04: IMPLEMENTADAS, VERIFICADAS, AUDITADAS, ACEPTADAS, PUBLICADAS y SINCRONIZADAS. No implica cierre de Etapas 2, 3 o 5.
+- Sin operaciones live, NetMod real, WAN, DNS, certificados reales, firewall, puertos, red ni cambios de dependencias. R-06/live sigue NO AUTORIZADA.
