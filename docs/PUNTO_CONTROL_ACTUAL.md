@@ -1,10 +1,10 @@
 # Punto de control actual — Xray Core Manager
 
-> El punto de control operativo vigente es el último bloque R-01 al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
+> El punto de control operativo vigente es el último bloque R-04 al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
 
 **Fecha del corte:** 2026-11-04
-**Tarea activa:** R-02 — staging integrado de la revisión exacta del perfil y leases TLS en directorio temporal; validación bajo identidad de servicio simulada. R-01 está implementada, integrada en CLI/menú, verificada, auditada y publicada; aceptación formal pendiente.
-**Estado vigente:** R-01 IMPLEMENTADA / INTEGRADA EN CLI-MENÚ / VERIFICADA EN FIXTURES / AUDITADA / PUBLICADA / SINCRONIZADA; aceptación formal pendiente. Focal R-01 28/28 PASS; Python 108/108 PASS; shell 58/58 PASS. R-02–R-05 no iniciadas; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 ABIERTAS.
+**Siguiente tarea tras revisión/aceptación formal:** R-05 — orquestación systemd simulada. R-02/R-03/R-04 implementadas y verificadas localmente; sin commit/push.
+**Estado vigente:** R-01 publicada/sincronizada; aceptación formal específica pendiente. R-02 IMPLEMENTADA/AUDITADA (11/11); R-03 IMPLEMENTADA/AUDITADA (22/22); R-04 IMPLEMENTADA/VERIFICADA (12/12); Python 153/153; shell 58/58 PASS. R-02/R-03/R-04 pendientes de aceptación formal/publicación; R-05 pendiente; R-06/live y NetMod NO AUTORIZADAS. Etapas 2, 3 y 5 ABIERTAS.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -1144,3 +1144,49 @@ U-01 está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Co
 - **Siguiente paso permitido:** R-02 — staging integrado de la revisión exacta del perfil y leases TLS en directorio temporal, validación bajo identidad de servicio simulada. Mantener sin publicación runtime.
 - **No autorizado:** R-06/live; cambios en Xray real, /etc/xray/config.json, systemd real, runtime, certificados desplegados, firewall, puertos, red, dependencias, VPS de pruebas, main o Xray-Normativa/.
 - **Etapas:** Etapas 2, 3 y 5 siguen ABIERTAS.
+
+## Punto de control vigente — R-02 implementada y auditada localmente (2026-11-04)
+
+- R-01: publicada/sincronizada; aceptación formal específica pendiente.
+- R-02: IMPLEMENTADA, VERIFICADA y AUDITADA LOCALMENTE; pendiente de aceptación formal/publicación.
+- Contrato aprobado: mapa explícito inbound tag → connection_id. El mapa debe cubrir todos los inbounds TLS exactamente una vez. El certificado se obtiene del almacén central; no se aceptan rutas PEM libres.
+- Implementación: scripts/xray_runtime_staging.py. Pruebas: tests/test_xray_runtime_staging.py.
+- Expedientes: docs/IMPLEMENTACION_R02_STAGING_PERFIL_TLS_2026-11-04.md; docs/AUDITORIA_R02_STAGING_PERFIL_TLS_2026-11-04.md; diseño actualizado en docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md.
+- Resultados: focal R-02 9/9 PASS; Python 117/117 PASS; shell 58/58 PASS; py_compile, bash -n global, install.sh --check, ShellCheck -S error en tests/*.sh y git diff --check PASS.
+- Xray real: Xray-core 26.10.31 aceptó configuración staged con lease sintético y pudo leer certificado/clave bajo UID/GID simulado 65534:65534. No se ejecutó systemd real ni se inició/reinició Xray.
+- Límite: el mapa es un archivo de operación separado, cuyo hash y contenido se fijan en el manifiesto staged; no es todavía un recurso editable/persistido en UI de perfiles. R-03 debe integrar su identidad y los leases en snapshot/journal.
+- Git: R-02 permanece local, sin commit/push. Solicitar aceptación formal y autorización de publicación.
+- Siguiente paso tras aceptación: R-03 — snapshot, journal, recuperación simulada y matriz de interrupciones.
+- Fuera de alcance: R-06/live, /etc/xray/config.json, systemd real, runtime, almacenes/clave/certificados reales, firewall, puertos, red, dependencias y VPS de pruebas.
+- Etapas: 2, 3 y 5 ABIERTAS.
+
+## Punto de control vigente — R-03 snapshot/journal local (2026-11-04)
+
+- R-01: publicada/sincronizada; aceptación formal específica pendiente.
+- R-02: implementada, probada con Xray-core 26.10.31 real y leases sintéticos, auditada localmente; pendiente de aceptación formal/publicación. fixture_root obligatorio y sin defaults a almacenes live.
+- R-03: IMPLEMENTADA, VERIFICADA Y AUDITADA LOCALMENTE; pendiente de aceptación formal/publicación.
+- Implementación R-03: scripts/xray_runtime_journal.py; pruebas tests/test_xray_runtime_journal.py.
+- Expedientes: docs/IMPLEMENTACION_R03_SNAPSHOT_JOURNAL_2026-11-04.md; docs/AUDITORIA_R03_SNAPSHOT_JOURNAL_2026-11-04.md.
+- Controles: marcadores fixture obligatorios en XRAY_SERVICE_ROOT, operation_store y lease_root; locks distintos dentro de operation_store/locks; journal root:root 0600; snapshot root:root 0600; no_previous_config explícito.
+- Pruebas: R-02 focal 11/11; R-03 focal 21/21; Python 140/140; shell 58/58; verificaciones estáticas PASS.
+- Integración R-02→R-03: el staging real con lease TLS sintético se entrega al journal, que valida rutas/markers y captura snapshot en XRAY_SERVICE_ROOT temporal.
+- No se escribió el config del fixture, no se publicó runtime y no se llamó systemd.
+- Git: R-02/R-03 siguen locales, sin commit/push. Aceptación formal y autorización de publicación pendientes.
+- Siguiente paso tras revisión: R-04 — publicación atómica aislada.
+- R-06/live y cambios de runtime/systemd real no autorizados. Etapas 2, 3 y 5 siguen ABIERTAS.
+
+
+## Punto de control vigente — R-04 publicación atómica aislada (2026-11-04)
+
+- R-01 publicada/sincronizada; aceptación formal específica pendiente.
+- R-02 implementada/auditada localmente: 11/11.
+- R-03 implementada/auditada localmente: journal 22/22.
+- R-04 IMPLEMENTADA/VERIFICADA LOCALMENTE: 12/12; pendiente de auditoría/aceptación formal y publicación.
+- R-04 escribe solo dentro de XRAY_SERVICE_ROOT fixture. Temporal exclusivo, fsync, validación Xray bajo UID/GID simulado, rename atómico, verificación de hash/permisos, rollback exacto y recuperación idempotente.
+- Expedientes: docs/IMPLEMENTACION_R04_PUBLICACION_ATOMICA_2026-11-04.md; docs/AUDITORIA_R04_PUBLICACION_ATOMICA_2026-11-04.md.
+- Regresión Python 153/153; shell 58/58; verificaciones estáticas PASS.
+- Integración R-02→R-03→R-04 comprobada en fixture.
+- No se publicó runtime real ni se llamó systemd. Sin cambios en servicio real, claves, certificados desplegados, red o firewall.
+- R-02/R-03/R-04 siguen locales sin commit/push. Requieren revisión/aceptación y autorización de publicación.
+- Siguiente paso tras aceptación: R-05 — orquestación systemd simulada.
+- R-06/live y NetMod NO AUTORIZADAS. Etapas 2, 3 y 5 ABIERTAS.

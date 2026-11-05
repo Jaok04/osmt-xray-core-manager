@@ -1171,3 +1171,30 @@ A petición expresa del propietario se verificó primero la rama autorizada y el
 Se detectaron resúmenes de continuidad desactualizados que todavía afirmaban que faltaba integrar la validación de perfiles en el menú. Se consolidó el estado actual en PROJECT_STATE.md, docs/PUNTO_CONTROL_ACTUAL.md y docs/CONTINUIDAD_DEL_PROYECTO.md: R-01 está implementada, integrada en CLI/menú, verificada en fixtures, auditada localmente, publicada y sincronizada; aceptación formal específica pendiente. Se aclaró que R-02 es el siguiente trabajo autorizado, limitado a staging temporal y validación bajo identidad simulada. R-06/live sigue no autorizada; Etapas 2, 3 y 5 permanecen abiertas.
 
 No se modificó código de producto, Xray-Normativa/, main, almacenes live, clave maestra real, runtime, systemd real, certificados desplegados, firewall, puertos, red, dependencias ni VPS de pruebas. La reconciliación documental quedó publicada mediante commit 94556849316852625fbcf98d8ea0796600097088 en la rama autorizada; GitHub confirmó el mismo SHA y el checkout de la VPS quedó limpio y alineado.
+
+
+## 2026-11-04 — Implementación y auditoría local R-02 staging integrado
+
+Tras la aprobación del propietario del mecanismo explícito inbound tag → connection_id, se implementó scripts/xray_runtime_staging.py y tests/test_xray_runtime_staging.py. R-02 parte de profile_id + revision y del informe R-01 exacto; valida el mapa privado de asociaciones, resuelve certificate_id desde la conexión central VLESS/VMess, prepara leases TLS con certificate_resolver, inyecta las rutas temporales y valida el archivo final bajo UID/GID no privilegiados simulados. El manifiesto registra hashes de perfil/mapa/configuración, validation_id, asociaciones, IDs de leases y huella del binario, sin PEM ni claves.
+
+Se añadieron docs/IMPLEMENTACION_R02_STAGING_PERFIL_TLS_2026-11-04.md y docs/AUDITORIA_R02_STAGING_PERFIL_TLS_2026-11-04.md; se actualizó docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md y los documentos de continuidad. La prueba focal R-02 fue 9/9 PASS; Python 117/117 PASS; shell 58/58 PASS; py_compile, bash -n global, install.sh --check, ShellCheck -S error sobre tests/*.sh y git diff --check PASS. Xray-core 26.10.31 real aceptó la configuración staged y leyó certificado/clave sintéticos como UID/GID 65534:65534.
+
+R-02 queda IMPLEMENTADA, VERIFICADA Y AUDITADA LOCALMENTE; pendiente de aceptación formal y publicación. R-03–R-05 pendientes; R-06/live NO AUTORIZADA. No se modificaron main, Xray-Normativa/, clave maestra real, almacenes live, /etc/xray/config.json, systemd real, runtime, certificados desplegados, firewall, puertos, red, dependencias ni VPS de pruebas. Etapas 2, 3 y 5 permanecen ABIERTAS.
+
+
+## 2026-11-04 — R-03 snapshot, journal y recuperación simulada
+
+Se implementó scripts/xray_runtime_journal.py y tests/test_xray_runtime_journal.py. R-03 valida el staging R-02, sus leases y la huella del binario; captura la configuración anterior desde un XRAY_SERVICE_ROOT fixture marcado, o registra no_previous_config sin crear placeholder. El journal root:root 0600 conserva profile_id, revision, validation_id, hashes, leases y estado de servicio fixture. Snapshot y journal usan temporales exclusivos, fsync, rename atómico y fsync de directorios.
+
+La recuperación cubre seis puntos de interrupción, operaciones huérfanas, snapshot completo con journal atrasado, corrupción preservada como recovery_required y reintentos idempotentes. operation_store y XRAY_SERVICE_ROOT requieren marcadores fixture; lease_root requiere el marcador R-02; lifecycle/application locks son distintos y permanecen dentro de operation_store. No se publicó runtime ni se llamó systemd.
+
+R-03 focal 21/21 PASS; R-02 focal 11/11 PASS; regresión Python 140/140 PASS; shell 58/58 PASS; py_compile, bash -n global, install.sh --check, ShellCheck -S error y git diff --check PASS. Expedientes: docs/IMPLEMENTACION_R03_SNAPSHOT_JOURNAL_2026-11-04.md y docs/AUDITORIA_R03_SNAPSHOT_JOURNAL_2026-11-04.md. R-02/R-03 pendientes de aceptación formal/publicación; R-04/R-05 pendientes; R-06/live NO AUTORIZADA.
+
+
+## 2026-11-04 — R-04 publicación atómica y rollback aislados
+
+Se implementó scripts/xray_runtime_publisher.py con publish/rollback/recover/inspect. La publicación valida el staging exacto y snapshot R-03, genera temporal exclusivo en el mismo filesystem, hace fsync, ejecuta xray run -test bajo UID/GID de servicio simulado, revalida TOCTOU, aplica rename atómico, fsync del directorio y verifica hash/permisos. El rollback restaura los bytes exactos del snapshot y valida; si no había config previa, no elimina automáticamente la primera publicación y requiere intervención.
+
+La recuperación detecta rename antes del commit del journal, limpia temporales seguros y resuelve interrupciones de rollback de forma idempotente. Se amplió el journal con publication/rollback. Todo ocurrió en fixtures temporales: no se llamó systemd ni se tocó runtime real.
+
+Pruebas: R-04 12/12; R-03 journal 22/22; R-02 staging 11/11; Python 153/153; shell 58/58; verificaciones estáticas PASS. Expedientes R-04 en docs/IMPLEMENTACION_R04_PUBLICACION_ATOMICA_2026-11-04.md y docs/AUDITORIA_R04_PUBLICACION_ATOMICA_2026-11-04.md. R-04 pendiente de aceptación formal/publicación; R-05 pendiente; R-06/live NO AUTORIZADA.

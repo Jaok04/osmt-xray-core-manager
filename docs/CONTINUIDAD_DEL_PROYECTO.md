@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-04:** U-01 aceptada formalmente; diseño runtime corregido y R-01 implementada, integrada en CLI/menú y verificada en fixtures. Validación de perfil/revisión exacta, informe SHA-256 y preflight read-only disponibles. R-01 focal 28/28 PASS; Python 108/108 PASS; shell 58/58 PASS. No se ejecutó sobre almacén/clave reales ni systemd real. R-02–R-05 no iniciadas; R-06/live no autorizada. Etapas 2, 3 y 5 permanecen ABIERTAS.
+> **Punto de reanudación vigente — 2026-11-04:** U-01 aceptada formalmente. R-01 implementada, integrada, auditada, publicada y sincronizada; aceptación formal específica pendiente. R-02 staging TLS implementada/auditada (11/11); R-03 snapshot/journal/recuperación idempotente implementada/auditada (22/22); R-04 publicación atómica/rollback implementada/verificada (12/12), todo en fixtures aislados. Regresión Python 153/153; shell 58/58; verificaciones estáticas PASS. R-02/R-03/R-04 pendientes de aceptación formal/publicación. R-05 pendiente; R-06/live y NetMod no autorizadas. Etapas 2, 3 y 5 siguen ABIERTAS.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -1241,3 +1241,47 @@ El estado vigente del proyecto está consolidado en PROJECT_STATE.md y docs/PUNT
 - **Etapas:** Etapas 2, 3 y 5 permanecen ABIERTAS.
 
 Para comenzar en otra conversación, leer AGENTS.md, PROJECT_STATE.md, docs/PUNTO_CONTROL_ACTUAL.md, este documento y HISTORY.md; verificar HEAD remoto, rama, árbol y SHA-256 normativos antes de continuar. No repetir R-01 ni inferir que R-02 ya comenzó.
+
+## Continuidad vigente — R-02 implementada, auditada y pendiente de aceptación (2026-11-04)
+
+El último incremento local es R-02. Antes de continuar, revisar docs/IMPLEMENTACION_R02_STAGING_PERFIL_TLS_2026-11-04.md, docs/AUDITORIA_R02_STAGING_PERFIL_TLS_2026-11-04.md y la sección 13 de docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md.
+
+- Repositorio: Jaok04/xray-core-manager; rama autorizada design/user-identity-association-v1; VPS de desarrollo /opt/xray-manager.
+- R-01 está publicada/sincronizada y su aceptación formal específica está pendiente.
+- R-02 está implementada/verificada/auditada localmente; todavía no tiene commit ni push.
+- Mecanismo: mapa explícito inbound tag → connection_id; certificate_id desde configuración central; lease mediante certificate_resolver; configuración staged con rutas TLS temporales.
+- Validación final: Xray-core 26.10.31 real, UID/GID simulado 65534:65534, certificado/clave sintéticos. No se ejecutó systemd real.
+- Pruebas: R-02 9/9; Python 117/117; shell 58/58; verificaciones estáticas PASS.
+- Limitación: el mapa es un archivo de entrada separado y su hash/contenido quedan ligados al manifiesto staged; UI/almacén persistente del mapa fuera del alcance R-02.
+- Siguiente paso: aceptación formal R-02 y autorización de publicación; después R-03 snapshot/journal.
+- No repetir R-01/R-02. No ejecutar R-06/live ni prueba NetMod. No tocar clave maestra real, almacenes live, runtime, systemd real, certificados desplegados, firewall, puertos, red, dependencias, VPS de pruebas, main o Xray-Normativa/.
+- Etapas 2, 3 y 5 siguen ABIERTAS.
+
+## Continuidad vigente — R-03 snapshot/journal (2026-11-04)
+
+Leer docs/IMPLEMENTACION_R02_STAGING_PERFIL_TLS_2026-11-04.md, docs/AUDITORIA_R02_STAGING_PERFIL_TLS_2026-11-04.md, docs/IMPLEMENTACION_R03_SNAPSHOT_JOURNAL_2026-11-04.md y docs/AUDITORIA_R03_SNAPSHOT_JOURNAL_2026-11-04.md antes de modificar estos incrementos.
+
+- R-01: publicada/sincronizada; aceptación formal específica pendiente.
+- R-02: implementada y auditada localmente; Xray 26.10.31 real aceptó la config staged con lease TLS sintético. CLI endurecido: fixture_root obligatorio y todas las rutas de datos dentro del fixture; no hay defaults a claves/almacenes live.
+- R-03: implementada y auditada localmente; snapshot/journal/recuperación idempotente, sin publicación ni acciones systemd.
+- Pruebas: R-02 11/11; R-03 21/21; Python 140/140; shell 58/58; verificaciones estáticas PASS.
+- Integración R-02→R-03: staging real, resolutor central, lease sintético y snapshot en XRAY_SERVICE_ROOT fixture comprobados en una misma prueba.
+- Marcadores obligatorios R-03: XRAY_SERVICE_ROOT, operation_store y lease_root; locks dentro de operation_store.
+- No se ha creado commit ni push para R-02/R-03. Solicitar aceptación formal y autorización de publicación.
+- Siguiente paso: R-04 publicación atómica aislada, después de revisión/aceptación.
+- No tocar clave maestra real, almacenes live, /etc/xray/config.json, systemd real, runtime, certificados desplegados, firewall, puertos, red, dependencias, VPS de pruebas, main o Xray-Normativa/. No ejecutar R-06/live ni NetMod.
+- Etapas 2, 3 y 5 siguen ABIERTAS.
+
+
+## Continuidad vigente — R-04 publicación atómica aislada (2026-11-04)
+
+Antes de continuar leer:
+- docs/IMPLEMENTACION_R02_STAGING_PERFIL_TLS_2026-11-04.md y docs/AUDITORIA_R02_STAGING_PERFIL_TLS_2026-11-04.md
+- docs/IMPLEMENTACION_R03_SNAPSHOT_JOURNAL_2026-11-04.md y docs/AUDITORIA_R03_SNAPSHOT_JOURNAL_2026-11-04.md
+- docs/IMPLEMENTACION_R04_PUBLICACION_ATOMICA_2026-11-04.md y docs/AUDITORIA_R04_PUBLICACION_ATOMICA_2026-11-04.md
+
+Estado: R-02 11/11; R-03 journal 22/22; R-04 12/12; Python 153/153; shell 58/58 PASS. Integración R-02→R-03→R-04 verificada en fixture. R-04 implementa publicación atómica en XRAY_SERVICE_ROOT fixture, validación Xray, journal, rollback y recuperación; no ejecuta systemd.
+
+R-02/R-03/R-04 siguen locales, sin commit/push, pendientes de revisión/aceptación formal y autorización de publicación. Siguiente paso después de aceptación: R-05 systemd simulado. No ejecutar R-06/live ni NetMod.
+
+Restricciones intactas: no tocar /etc/xray real, systemd real, clave maestra ni almacenes live, certificados desplegados, firewall, puertos, red, dependencias, VPS de pruebas, main o Xray-Normativa/. Etapas 2, 3 y 5 siguen ABIERTAS.
