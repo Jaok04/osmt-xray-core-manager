@@ -213,6 +213,12 @@ class RuntimePreflightTests(unittest.TestCase):
         self.assertEqual(result["status"], "PREFLIGHT_PASS")
         self.assertEqual(before, after)
 
+    def test_unknown_service_state_is_valid_evidence_for_r05_fail_closed(self):
+        self.write_service_fixture(active_state="unknown", sub_state="unknown")
+        result = self.run_preflight()
+        self.assertEqual(result["status"], "PREFLIGHT_PASS")
+        self.assertEqual(result["service_fixture"]["active_state"], "unknown")
+
     def test_untyped_service_state_fails_closed(self):
         self.write_service_fixture(active_state=[])
         with self.assertRaises(preflight.RuntimePreflightError):

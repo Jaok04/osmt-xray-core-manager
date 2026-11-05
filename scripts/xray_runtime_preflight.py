@@ -139,7 +139,7 @@ def _validate_service_fixture(path: Path, binary_path: str) -> dict[str, Any]:
         _fail("El fixture de estado no cumple el contrato R-01.")
     if (value["unit"] != "xray.service" or value["load_state"] != "loaded"
             or not isinstance(value["active_state"], str)
-            or value["active_state"] not in {"active", "inactive", "failed"}
+            or value["active_state"] not in {"active", "inactive", "failed", "unknown"}
             or not isinstance(value["sub_state"], str) or not value["sub_state"]
             or value["user"] != "xray" or value["group"] != "xray"
             or value["binary_path"] != binary_path):
@@ -150,6 +150,8 @@ def _validate_service_fixture(path: Path, binary_path: str) -> dict[str, Any]:
         _fail("Subestado inactivo incoherente en el fixture.")
     if value["active_state"] == "failed" and value["sub_state"] != "failed":
         _fail("Subestado failed incoherente en el fixture.")
+    if value["active_state"] == "unknown" and value["sub_state"] != "unknown":
+        _fail("Subestado unknown incoherente en el fixture.")
     return value
 
 

@@ -1360,3 +1360,24 @@ El propietario autorizó expresamente commit y push exclusivamente en `design/us
 B3 se publicó mediante fast-forward exclusivamente en `design/user-identity-association-v1`. Commit funcional: `aae4c15bf9b8f2c7c46c1e28a8a3881910ab71f4` (`feat(vless): complete contextual user export validation`). Commit documental de aceptación/auditoría: `9f4cc18d856ec0ccb31951f343a1fd3e870a0684` (`docs(vless): record B3 acceptance and audit`). La verificación posterior confirmó HEAD local = upstream = GitHub en `9f4cc18d856ec0ccb31951f343a1fd3e870a0684`, checkout limpio y push fast-forward desde `b74ee7279d474be888db4c1d5dfc3b59ba3c8c40`.
 
 La rama `main` permaneció en `656ecedc506a94a6461aee296b20871d51a38bf3`. Los 14 documentos normativos sustantivos de `Xray-Normativa/` coinciden byte a byte con el respaldo; la carpeta no fue modificada. No hubo operaciones live, NetMod real, WAN, ACME real, DNS, firewall, puertos, runtime, systemd, certificados persistentes, claves ni dependencias nuevas. Etapas 2, 3 y 4 continúan ABIERTAS; R-06/live NO AUTORIZADA.
+
+## 2026-11-05 — R-05 orquestación fixture-only implementada y auditada
+
+Se implementó el orquestador R-05 reutilizando R-01–R-04, con adaptador simulado de servicio, generation_id criptográficamente aleatorio y único, journal schema 2 con compatibilidad de lectura schema 1, verificación de estado/generación/hash, CAS, rollback y recuperación idempotente. Se incorporaron contrato, implementación y auditoría en los documentos R-05 correspondientes.
+
+Resultados: 40/40 pruebas focales R-05; 227/227 pruebas Python globales; 61/61 suites Bash; compileall, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS. Sin dependencias nuevas.
+
+R-05 no incorpora UI, registro persistente de perfil activo ni adaptador systemd real. No se ejecutaron operaciones live ni se modificaron runtime, certificados, claves, DNS, firewall, puertos, red, `main`, `Xray-Normativa/` o VPS de pruebas. R-06/live sigue NO AUTORIZADA. Aceptación formal y publicación pendientes.
+
+
+## 2026-11-05 — corrección y reauditoría de concurrencia R-05
+
+Tras la autorización expresa del propietario, se corrigió el hallazgo de concurrencia del adaptador fixture-only. `status`, `restart`, `restore` y `audit_events` ahora adquieren un lock exclusivo interproceso `fcntl.flock` sobre `adapter.lock`, protegiendo lectura, CAS, escritura de estado y append de auditoría como una transacción. El lock es root:root 0600, se abre con `O_NOFOLLOW` y se valida tipo, hardlinks, marcador e identidad de inode.
+
+Se añadieron pruebas multiproceso: dos restart simultáneos con una única generación previa (un ganador/una denegación CAS), cuatro consultas concurrentes sin pérdida de eventos, dos restore concurrentes (un ganador/una denegación CAS) y rechazo de lock symlink. Resultado actualizado: R-05 focal 43/43 PASS; Python global 230/230 PASS; Bash 61/61 PASS; compileall, bash -n, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. El adaptador no contiene invocaciones a systemd ni procesos externos. No se añadieron dependencias.
+
+La corrección y reauditoría se realizaron exclusivamente con fixtures y temporales. No se consultó ni modificó systemd/Xray real, runtime persistente, certificados, claves, DNS, firewall, puertos, red ni VPS de pruebas. `main` y `Xray-Normativa/` permanecen intactas. R-05 queda CORREGIDA, VERIFICADA y AUDITADA LOCALMENTE; aceptación formal pendiente. No se hizo commit ni push; publicación requiere autorización separada. R-06/live continúa NO AUTORIZADA.
+
+## 2026-11-05 — aceptación formal y autorización de publicación R-05
+
+El propietario aceptó formalmente R-05 en el alcance fixture-only corregido y re-auditado: exclusión mutua interproceso con `fcntl.flock` cubriendo las transacciones completas de estado, restart, restore y auditoría; pruebas multiproceso de concurrencia y rechazo de lock symlink. Evidencia: 43/43 pruebas focales R-05, 230/230 Python globales y 61/61 Bash globales PASS, además de controles estáticos y `install.sh --check`. El propietario autorizó commit/push exclusivamente en `design/user-identity-association-v1`. La aceptación no cubre UI, registro persistente de perfil activo, adaptador systemd real ni operaciones live. Etapas 2, 5 y 6 permanecen ABIERTAS; R-06/live NO AUTORIZADA. `main` y `Xray-Normativa/` quedan excluidas.

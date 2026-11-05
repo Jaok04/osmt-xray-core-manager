@@ -1361,3 +1361,32 @@ Siguiente acción: revisión del expediente B1 por el propietario; después, ace
 - Etapa 4 sigue ABIERTA. R-06/live NO AUTORIZADA.
 
 **Siguiente paso permitido:** realizar B3 — usuario y conexión VLESS-WS-TLS — comenzando por el contraste documental específico y la inspección read-only de los componentes existentes. No ejecutar operaciones live ni ampliar el alcance sin autorización específica.
+
+## Addendum 2026-11-05 — R-05 fixture-only implementada y auditada
+
+- El propietario autorizó R-05 exclusivamente con fixtures, mocks, almacenes temporales y extensión compatible del journal. No se autorizó systemd/Xray real ni R-06/live.
+- Nuevos: `scripts/xray_runtime_service_adapter.py`, `scripts/xray_runtime_orchestrator.py`, `tests/test_xray_runtime_orchestrator.py`, `docs/DECISION_R05_JOURNAL_GENERATION_2026-11-05.md`, `docs/IMPLEMENTACION_R05_ORQUESTACION_FIXTURE_2026-11-05.md`, `docs/AUDITORIA_R05_ORQUESTACION_FIXTURE_2026-11-05.md`.
+- Modificados: `scripts/xray_runtime_journal.py` (schema 1 compatible + schema 2 estricto y generation_id), `scripts/xray_runtime_preflight.py` (estado unknown documentable para fail-closed R-05), `scripts/xray_runtime_publisher.py` (fase schema 2 y delegación de recovery a R-05), `tests/test_xray_runtime_preflight.py`.
+- R-05 coordina R-01→R-04 con adaptador simulado, CAS, generación única, verificación por estado+generation_id+SHA-256, publicación pendiente para active sin confirmación e inactive sin start, fail-closed para failed/unknown, rollback y recovery idempotente.
+- Auditoría: 40/40 pruebas focales R-05 PASS; Python global 227/227 PASS; Bash 61/61 PASS; compileall, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS. No se añadieron dependencias.
+- R-05 no tiene UI ni adaptador systemd real. Falta integrar el registro persistente de perfil activo exigido por Etapa 5 §7. No se cierra Etapa 5/6.
+- No se tocaron systemd/Xray real, runtime, certificados persistentes, claves, DNS, firewall, puertos, red, `main`, `Xray-Normativa/` ni VPS de pruebas. R-06/live sigue NO AUTORIZADA.
+- Estado: IMPLEMENTADA, VERIFICADA Y AUDITADA; aceptación formal del propietario y publicación todavía pendientes.
+- Próximo paso: revisión del informe de auditoría R-05 por el propietario. No publicar hasta aceptación y autorización de publicación separada.
+
+
+## Addendum vigente — corrección y reauditoría de concurrencia R-05 (2026-11-05)
+
+El propietario autorizó corregir el hallazgo de concurrencia y repetir la auditoría exclusivamente con fixtures. Se incorporó `fcntl.flock` interproceso mediante `adapter.lock` root-only. El bloqueo cubre la transacción completa de `status`, `restart`, `restore` y `audit_events`, incluyendo CAS y escritura de bitácora. Se valida `O_NOFOLLOW`, tipo/propietario/permisos, hardlinks, marcador e identidad de inode.
+
+Se añadieron pruebas multiproceso: dos restart concurrentes con el mismo estado previo (un ganador y un rechazo), cuatro status concurrentes sin pérdida de eventos, dos restore concurrentes (una restauración y un rechazo) y rechazo de lock symlink.
+
+**Resultado actualizado:** 43/43 pruebas focales R-05; 230/230 Python global; 61/61 Bash; `compileall`, `bash -n`, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. Escaneo del adaptador sin invocaciones a servicios/procesos reales. Sin dependencias nuevas.
+
+R-05 queda CORREGIDA, VERIFICADA Y AUDITADA LOCALMENTE; aceptación formal pendiente. No se publicó ni se autorizó publicación. No se ejecutaron operaciones live ni se modificaron systemd/Xray real, runtime persistente, certificados, claves, DNS, firewall, puertos, red, `main`, `Xray-Normativa/` o VPS de pruebas. R-06/live continúa NO AUTORIZADA.
+
+**Siguiente acción:** revisión del propietario y aceptación formal de la auditoría corregida. La publicación requiere autorización separada.
+
+## Aceptación formal y autorización de publicación R-05 — 2026-11-05
+
+El propietario acepta formalmente R-05 en el alcance fixture-only auditado en `docs/AUDITORIA_R05_ORQUESTACION_FIXTURE_2026-11-05.md` y autoriza publicar los cambios exclusivamente en `design/user-identity-association-v1`. La aceptación no cierra Etapa 5/6 ni Etapa 2; no acepta UI, registro persistente de perfil activo, adaptador systemd real ni operaciones live. R-06/live continúa NO AUTORIZADA. `main` y `Xray-Normativa/` quedan fuera de la publicación.

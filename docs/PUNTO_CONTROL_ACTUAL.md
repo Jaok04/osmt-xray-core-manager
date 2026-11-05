@@ -1474,3 +1474,31 @@ Pruebas B2: Python 182/182 y Bash 61/61 PASS; py_compile, bash -n, ShellCheck -S
 Iniciar B3 — usuario y conexión VLESS-WS-TLS — con recuperación de estado Git/VPS, lectura de la normativa pertinente de Etapas 2 y 3 y del plan MVP, inventario read-only de los componentes ya implementados (Usuarios V2, compositor I-01, menú I-02/I-03 e I-04 exportador), y matriz requisito → implementación reutilizable → brecha → prueba. Presentar el contraste antes de modificar código y esperar autorización expresa del alcance concreto.
 
 No repetir I-01–I-04 ni B1/B2. No repetir R-01–R-04. Etapa 4 sigue ABIERTA; Etapas 2, 3 y 5 siguen ABIERTAS. R-06/live NO AUTORIZADA. No instalar dependencias ni tocar runtime, systemd, certificados reales, DNS, firewall, puertos, red, clave maestra, `main`, `Xray-Normativa/` ni VPS de pruebas.
+
+## Punto de control adicional — 2026-11-05 — R-05
+
+R-05 fixture-only está implementada y auditada. Código principal: `scripts/xray_runtime_service_adapter.py` y `scripts/xray_runtime_orchestrator.py`; journal schema 2 mantiene lectura schema 1. Evidencia y contrato:
+- `docs/DECISION_R05_JOURNAL_GENERATION_2026-11-05.md`
+- `docs/IMPLEMENTACION_R05_ORQUESTACION_FIXTURE_2026-11-05.md`
+- `docs/AUDITORIA_R05_ORQUESTACION_FIXTURE_2026-11-05.md`
+
+40/40 focales R-05, 227/227 Python global y 61/61 Bash PASS; controles estáticos PASS. R-05 no llama systemd real ni Xray real. Sin UI y sin registro persistente de perfil activo; por tanto Etapa 5 sigue abierta. Etapa 6 sigue abierta. R-06/live NO AUTORIZADA.
+
+**No continuar a publicación sin aceptación formal de auditoría y autorización separada para commit/push.** No tocar `main`, `Xray-Normativa/`, runtime real, certificados, claves, DNS, firewall, puertos, red, dependencias ni VPS de pruebas.
+
+
+## Addendum vigente — corrección y reauditoría de concurrencia R-05 (2026-11-05)
+
+El propietario autorizó corregir el hallazgo de concurrencia y repetir la auditoría exclusivamente con fixtures. Se incorporó `fcntl.flock` interproceso mediante `adapter.lock` root-only. El bloqueo cubre la transacción completa de `status`, `restart`, `restore` y `audit_events`, incluyendo CAS y escritura de bitácora. Se valida `O_NOFOLLOW`, tipo/propietario/permisos, hardlinks, marcador e identidad de inode.
+
+Se añadieron pruebas multiproceso: dos restart concurrentes con el mismo estado previo (un ganador y un rechazo), cuatro status concurrentes sin pérdida de eventos, dos restore concurrentes (una restauración y un rechazo) y rechazo de lock symlink.
+
+**Resultado actualizado:** 43/43 pruebas focales R-05; 230/230 Python global; 61/61 Bash; `compileall`, `bash -n`, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. Escaneo del adaptador sin invocaciones a servicios/procesos reales. Sin dependencias nuevas.
+
+R-05 queda CORREGIDA, VERIFICADA Y AUDITADA LOCALMENTE; aceptación formal pendiente. No se publicó ni se autorizó publicación. No se ejecutaron operaciones live ni se modificaron systemd/Xray real, runtime persistente, certificados, claves, DNS, firewall, puertos, red, `main`, `Xray-Normativa/` o VPS de pruebas. R-06/live continúa NO AUTORIZADA.
+
+**Siguiente acción:** revisión del propietario y aceptación formal de la auditoría corregida. La publicación requiere autorización separada.
+
+## Actualización de control — aceptación formal R-05 y publicación autorizada (2026-11-05)
+
+R-05 queda ACEPTADA FORMALMENTE por el propietario, limitada al alcance fixture-only y a las restricciones de `docs/AUDITORIA_R05_ORQUESTACION_FIXTURE_2026-11-05.md`. El propietario autoriza commit/push exclusivamente en `design/user-identity-association-v1`. No se autoriza adaptador systemd real, UI, integración del registro persistente de perfil activo ni R-06/live. Etapas 2, 5 y 6 permanecen ABIERTAS. `main` y `Xray-Normativa/` no se modifican.

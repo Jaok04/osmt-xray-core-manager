@@ -226,6 +226,8 @@ def publish_operation(
             "config_sha256": staged_hash,
             "published_at": journal.now(),
         }
+        if record["schema_version"] == 2:
+            record["orchestration"]["phase"] = "published"
         journal.write_journal(operation_dir, record)
         journal.fsync_dir(operation_dir)
         return {
@@ -403,6 +405,9 @@ def recover_publications(
             if operation_dir.is_symlink() or not operation_dir.is_dir():
                 fail("Entrada inesperada en operation_store.")
             record = journal.read_journal(operation_dir)
+            if record["schema_version"] == 2:
+                results.append({"operation_id": record["operation_id"], "state": record["state"], "action": "deferred_to_R05_recovery"})
+                continue
             if record["state"] in {"snapshot_saved", "config_published", "rollback_started"}:
                 target = _config_target(Path(record["service"]["service_root"]), record["service"]["gid"])
                 _clean_publish_temps(target.parent, record["service"]["gid"])
@@ -418,6 +423,8 @@ def recover_publications(
                             "status": "published", "target": "etc/xray/config.json",
                             "config_sha256": staged_hash, "published_at": journal.now(),
                         }
+                        if record["schema_version"] == 2:
+                            record["orchestration"]["phase"] = "published"
                         record["recovery"]["attempts"] += 1
                         record["recovery"]["last_action"] = "detected_rename_before_journal_commit"
                         record["recovery"]["last_error"] = None

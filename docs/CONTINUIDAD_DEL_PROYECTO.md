@@ -1486,3 +1486,30 @@ La Etapa 4 permanece ABIERTA; R-06/live sigue NO AUTORIZADA.
 - Siguiente trabajo: B3 del MVP — usuario y conexión VLESS-WS-TLS — sujeto a contraste normativo específico, inventario read-only de funciones reutilizables y presentación de brechas/alcance antes de editar.
 - No repetir I-01–I-04 ni B1-A/B1-B. Reutilizar componentes existentes y no rehacer R-01–R-04.
 - Etapa 4 permanece ABIERTA; Etapas 2, 3 y 5 también ABIERTAS. R-06/live sigue NO AUTORIZADA. No modificar `main`, `Xray-Normativa/`, infraestructura real, secretos ni VPS de pruebas.
+
+## Addendum de continuidad — 2026-11-05 — R-05 fixture-only
+
+R-05 fue implementada bajo autorización explícita limitada a fixtures, mocks y almacenes temporales. Reutiliza R-01–R-04 y añade adaptador simulado, orquestador, generation_id único y schema 2 compatible con journals schema 1.
+
+**Evidencia:** `docs/DECISION_R05_JOURNAL_GENERATION_2026-11-05.md`, `docs/IMPLEMENTACION_R05_ORQUESTACION_FIXTURE_2026-11-05.md`, `docs/AUDITORIA_R05_ORQUESTACION_FIXTURE_2026-11-05.md`. Pruebas focales R-05 40/40; Python global 227/227; Bash 61/61; compileall, bash -n, ShellCheck, install.sh --check y git diff --check PASS.
+
+**Limitaciones:** solo adaptador simulado; no UI; no integración del registro persistente de perfil activo de Etapa 5 §7; no systemd/Xray real. Etapa 5 y Etapa 6 continúan abiertas. R-06/live NO AUTORIZADA.
+
+**Gobernanza:** implementación auditada, pero no aceptada formalmente ni publicada. Esperar revisión/aceptación del propietario y autorización separada de commit/push. No modificar `main`, `Xray-Normativa/`, infraestructura real, secretos ni VPS de pruebas.
+
+
+## Addendum vigente — corrección y reauditoría de concurrencia R-05 (2026-11-05)
+
+El propietario autorizó corregir el hallazgo de concurrencia y repetir la auditoría exclusivamente con fixtures. Se incorporó `fcntl.flock` interproceso mediante `adapter.lock` root-only. El bloqueo cubre la transacción completa de `status`, `restart`, `restore` y `audit_events`, incluyendo CAS y escritura de bitácora. Se valida `O_NOFOLLOW`, tipo/propietario/permisos, hardlinks, marcador e identidad de inode.
+
+Se añadieron pruebas multiproceso: dos restart concurrentes con el mismo estado previo (un ganador y un rechazo), cuatro status concurrentes sin pérdida de eventos, dos restore concurrentes (una restauración y un rechazo) y rechazo de lock symlink.
+
+**Resultado actualizado:** 43/43 pruebas focales R-05; 230/230 Python global; 61/61 Bash; `compileall`, `bash -n`, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. Escaneo del adaptador sin invocaciones a servicios/procesos reales. Sin dependencias nuevas.
+
+R-05 queda CORREGIDA, VERIFICADA Y AUDITADA LOCALMENTE; aceptación formal pendiente. No se publicó ni se autorizó publicación. No se ejecutaron operaciones live ni se modificaron systemd/Xray real, runtime persistente, certificados, claves, DNS, firewall, puertos, red, `main`, `Xray-Normativa/` o VPS de pruebas. R-06/live continúa NO AUTORIZADA.
+
+**Siguiente acción:** revisión del propietario y aceptación formal de la auditoría corregida. La publicación requiere autorización separada.
+
+## Addendum vigente — aceptación formal y autorización de publicación R-05 (2026-11-05)
+
+El propietario acepta R-05 en el alcance fixture-only auditado y autoriza commit/push exclusivamente en `design/user-identity-association-v1`. La auditoría registra 43/43 pruebas focales R-05, 230/230 Python globales y 61/61 Bash globales PASS. La aceptación no habilita UI, registro persistente de perfil activo, adaptador systemd real ni operaciones live. R-06/live sigue NO AUTORIZADA; Etapas 2, 5 y 6 permanecen ABIERTAS. No modificar `main` ni `Xray-Normativa/`.

@@ -24,6 +24,7 @@ import xray_runtime_preflight
 MAX_FILE = 16 * 1024 * 1024
 MAX_JOURNAL = 1024 * 1024
 OP_RE = re.compile(r"runtime-op-[0-9a-f]{32}\Z")
+GENERATION_RE = re.compile(r"generation-[0-9a-f]{32}\Z")
 PROFILE_RE = re.compile(r"profile-[0-9a-f]{32}\Z")
 REVISION_RE = re.compile(r"r[0-9]{6}\Z")
 VALIDATION_RE = re.compile(r"pvalidation-[0-9a-f]{32}\Z")
@@ -396,20 +397,29 @@ def read_journal(operation_dir: Path) -> dict:
     check_dir(operation_dir, 0o700, 0, 0)
     raw = read_regular(operation_dir / "journal.json", MAX_JOURNAL, 0, 0, 0o600, "journal runtime")
     value = strict_json(raw, "Journal runtime")
-    required = {
+    base_fields = {
         "schema_version", "operation_id", "state", "created_at", "updated_at",
         "source", "staging", "service", "snapshot", "publication", "rollback", "recovery",
     }
-    if (not isinstance(value, dict) or set(value) != required
-            or type(value["schema_version"]) is not int or value["schema_version"] != 1
+    if not isinstance(value, dict) or type(value.get("schema_version")) is not int:
+        fail("Journal runtime corrupto o con identidad incorrecta.")
+    schema_version = value["schema_version"]
+    expected_fields = base_fields if schema_version == 1 else base_fields | {"orchestration"}
+    allowed_states = {
+        "prepared", "validated", "snapshot_saved", "config_published",
+        "rollback_started", "rollback_config_restored", "rollback_failed",
+        "rolled_back", "aborted", "recovery_required",
+        "service_restart_requested", "service_verified",
+        "published_pending_apply", "published_pending_start", "completed",
+    }
+    if (schema_version not in {1, 2} or set(value) != expected_fields
             or value["operation_id"] != operation_dir.name
             or not OP_RE.fullmatch(operation_dir.name)
-            or not isinstance(value["state"], str)
-            or value["state"] not in {
-                "prepared", "validated", "snapshot_saved", "config_published",
-                "rollback_started", "rollback_config_restored", "rollback_failed",
-                "rolled_back", "aborted", "recovery_required",
-            }):
+            or not isinstance(value["state"], str) or value["state"] not in allowed_states
+            or (schema_version == 1 and value["state"] in {
+                "service_restart_requested", "service_verified",
+                "published_pending_apply", "published_pending_start", "completed",
+            })):
         fail("Journal runtime corrupto o con identidad incorrecta.")
 
     source = value["source"]
@@ -445,7 +455,7 @@ def read_journal(operation_dir: Path) -> dict:
     if (not isinstance(service, dict) or set(service) != service_fields
             or service["unit"] != "xray.service" or service["load_state"] != "loaded"
             or not isinstance(service["active_state"], str)
-            or service["active_state"] not in {"active", "inactive", "failed"}
+            or service["active_state"] not in {"active", "inactive", "failed", "unknown"}
             or not isinstance(service["sub_state"], str) or not service["sub_state"]
             or service["user"] != "xray" or service["group"] != "xray"
             or not isinstance(service["binary_path"], str) or not Path(service["binary_path"]).is_absolute()
@@ -577,6 +587,102 @@ def read_journal(operation_dir: Path) -> dict:
             or (recovery["last_action"] is not None and not isinstance(recovery["last_action"], str))
             or (recovery["last_error"] is not None and not isinstance(recovery["last_error"], str))):
         fail("Metadatos de recuperación inválidos en journal runtime.")
+
+    if schema_version == 2:
+        orchestration = value["orchestration"]
+        fields = {"generation_id", "phase", "confirmation", "initial_service", "request", "verification", "rollback"}
+        phases = {"prepared", "published", "restart_requested", "service_verified", "pending_apply",
+                  "pending_start", "rollback_started", "rolled_back", "recovery_required", "completed"}
+        if (not isinstance(orchestration, dict) or set(orchestration) != fields
+                or not isinstance(orchestration["generation_id"], str)
+                or not GENERATION_RE.fullmatch(orchestration["generation_id"])
+                or not isinstance(orchestration["phase"], str) or orchestration["phase"] not in phases
+                or not isinstance(orchestration["confirmation"], str)
+                or orchestration["confirmation"] not in {"pending", "accepted", "rejected", "not_required"}):
+            fail("Metadatos de orquestación/generation_id inválidos.")
+        initial = orchestration["initial_service"]
+        if (not isinstance(initial, dict) or set(initial) != {
+                "active_state", "sub_state", "loaded_generation_id", "loaded_config_sha256"}
+                or initial["active_state"] != service["active_state"]
+                or initial["sub_state"] != service["sub_state"]
+                or (initial["loaded_generation_id"] is not None and
+                    (not isinstance(initial["loaded_generation_id"], str)
+                     or not GENERATION_RE.fullmatch(initial["loaded_generation_id"])))
+                or (initial["loaded_config_sha256"] is not None and
+                    (not isinstance(initial["loaded_config_sha256"], str)
+                     or not SHA_RE.fullmatch(initial["loaded_config_sha256"])) )):
+            fail("Snapshot inicial del adaptador R-05 inválido.")
+        request = orchestration["request"]
+        if (not isinstance(request, dict) or set(request) != {"generation_id", "action", "requested_at", "result"}
+                or request["generation_id"] != orchestration["generation_id"]
+                or not isinstance(request["action"], str) or request["action"] not in {"none", "restart", "restore"}
+                or not isinstance(request["result"], str)
+                or request["result"] not in {"not_requested", "requested", "accepted", "rejected", "timeout", "response_lost", "exception"}
+                or (request["requested_at"] is not None and not isinstance(request["requested_at"], str))):
+            fail("Petición al adaptador R-05 inválida.")
+        verification = orchestration["verification"]
+        if (not isinstance(verification, dict) or set(verification) != {
+                "status", "observed_state", "observed_generation_id", "observed_config_sha256", "verified_at"}
+                or not isinstance(verification["status"], str)
+                or verification["status"] not in {"pending", "pass", "fail"}
+                or (verification["observed_state"] is not None and
+                    (not isinstance(verification["observed_state"], str)
+                     or verification["observed_state"] not in {"active", "inactive", "failed", "unknown"}))
+                or (verification["observed_generation_id"] is not None and
+                    (not isinstance(verification["observed_generation_id"], str)
+                     or not GENERATION_RE.fullmatch(verification["observed_generation_id"])))
+                or (verification["observed_config_sha256"] is not None and
+                    (not isinstance(verification["observed_config_sha256"], str)
+                     or not SHA_RE.fullmatch(verification["observed_config_sha256"])) )
+                or (verification["verified_at"] is not None and not isinstance(verification["verified_at"], str))):
+            fail("Evidencia de verificación R-05 inválida.")
+        rollback_meta = orchestration["rollback"]
+        if (not isinstance(rollback_meta, dict) or set(rollback_meta) != {"config_status", "service_status", "last_error"}
+                or not isinstance(rollback_meta["config_status"], str)
+                or rollback_meta["config_status"] not in {"not_started", "restored", "failed", "not_required"}
+                or not isinstance(rollback_meta["service_status"], str)
+                or rollback_meta["service_status"] not in {"not_started", "restored", "unchanged", "failed", "not_required"}
+                or (rollback_meta["last_error"] is not None and not isinstance(rollback_meta["last_error"], str))):
+            fail("Metadatos de rollback R-05 inválidos.")
+        if value["state"] in {"published_pending_apply", "published_pending_start", "service_restart_requested",
+                               "service_verified", "completed"} and publication["status"] != "published":
+            fail("Un estado R-05 posterior a publicación no contiene publicación confirmada.")
+        if value["state"] == "rolled_back" and rollback["status"] != "rolled_back":
+            fail("El estado rolled_back no coincide con el contrato R-04.")
+        expected_phase = {
+            "config_published": "published",
+            "service_restart_requested": "restart_requested",
+            "service_verified": "service_verified",
+            "published_pending_apply": "pending_apply",
+            "published_pending_start": "pending_start",
+            "rollback_started": "rollback_started",
+            "rollback_config_restored": "rollback_started",
+            "rollback_failed": "rollback_started",
+            "completed": "completed",
+            "rolled_back": "rolled_back",
+        }
+        if value["state"] in expected_phase and orchestration["phase"] != expected_phase[value["state"]]:
+            fail("La fase R-05 no coincide con el estado durable del journal.")
+        if value["state"] in {"service_verified", "completed"} and verification["status"] != "pass":
+            fail("No se permite declarar servicio verificado/completado sin evidencia PASS.")
+        if value["state"] in {"service_restart_requested", "service_verified", "completed"} and (
+                request["action"] != "restart" or orchestration["confirmation"] != "accepted"
+                or initial["active_state"] != "active"):
+            fail("La petición restart no tiene confirmación/estado inicial active.")
+        if request["action"] == "none" and (
+                request["result"] != "not_requested" or request["requested_at"] is not None):
+            fail("Una operación sin acción de servicio contiene una petición inesperada.")
+        if request["action"] != "none" and (
+                request["result"] == "not_requested" or request["requested_at"] is None):
+            fail("La petición al adaptador carece de fecha/resultado.")
+        if value["state"] in {"config_published", "service_restart_requested", "service_verified",
+                              "published_pending_apply", "published_pending_start", "completed"} and initial["active_state"] not in {"active", "inactive"}:
+            fail("No se puede publicar desde un estado inicial failed/unknown.")
+        if value["state"] == "published_pending_apply" and (
+                orchestration["confirmation"] != "rejected" or initial["active_state"] != "active"):
+            fail("published_pending_apply requiere servicio active y confirmación rechazada.")
+        if value["state"] == "published_pending_start" and initial["active_state"] != "inactive":
+            fail("published_pending_start requiere estado inicial inactive.")
     return value
 
 
@@ -670,11 +776,23 @@ def ensure_no_active_operation(operations: Path) -> None:
         if operation_dir.is_symlink() or not operation_dir.is_dir():
             fail("operation_store contiene una entrada inesperada.")
         existing = read_journal(operation_dir)
-        if existing["state"] not in {"aborted", "rolled_back"}:
+        if existing["state"] not in {"aborted", "rolled_back", "completed"}:
             fail(
                 "Existe otra operación runtime no terminal "
                 f"({existing['operation_id']}, {existing['state']}); recupérela antes de crear otra."
             )
+
+
+def ensure_generation_unique(operations: Path, generation_id: str) -> None:
+    if not GENERATION_RE.fullmatch(generation_id):
+        fail("generation_id inválido.")
+    for operation_dir in sorted(operations.iterdir()):
+        if operation_dir.is_symlink() or not operation_dir.is_dir():
+            fail("operation_store contiene una entrada inesperada.")
+        existing = read_journal(operation_dir)
+        metadata = existing.get("orchestration")
+        if metadata and metadata["generation_id"] == generation_id:
+            fail("generation_id ya utilizado; no se permite reutilizarlo.")
 
 
 def prepare_operation(
@@ -688,6 +806,8 @@ def prepare_operation(
     lease_root: Path,
     service_uid: int,
     service_gid: int,
+    generation_id: str | None = None,
+    adapter_initial: dict | None = None,
     crash_at: str | None = None,
 ) -> dict:
     if os.geteuid() != 0:
@@ -710,11 +830,25 @@ def prepare_operation(
             fsync_dir(operation_store)
         check_dir(operations, 0o700, 0, 0)
         ensure_no_active_operation(operations)
+        if generation_id is not None:
+            ensure_generation_unique(operations, generation_id)
+            if adapter_initial is None or set(adapter_initial) != {"loaded_generation_id", "loaded_config_sha256"}:
+                fail("R-05 requiere evidencia inicial completa del adaptador.")
+            if (adapter_initial["loaded_generation_id"] is not None and
+                    (not isinstance(adapter_initial["loaded_generation_id"], str)
+                     or not GENERATION_RE.fullmatch(adapter_initial["loaded_generation_id"]))):
+                fail("generation_id previo del adaptador inválido.")
+            if (adapter_initial["loaded_config_sha256"] is not None and
+                    (not isinstance(adapter_initial["loaded_config_sha256"], str)
+                     or not SHA_RE.fullmatch(adapter_initial["loaded_config_sha256"]))):
+                fail("Hash previo del adaptador inválido.")
+        elif adapter_initial is not None:
+            fail("adapter_initial requiere generation_id.")
         manifest, staged_bytes, lease_data = read_staging(
             staging_dir, lease_root, service_uid, service_gid
         )
         service = service_fixture(service_state, manifest["xray_binary"]["path"])
-        if service["active_state"] not in {"active", "inactive", "failed"}:
+        if service["active_state"] not in {"active", "inactive", "failed", "unknown"}:
             fail("Estado previo de servicio no admitido.")
         old_config, old_meta = previous_config(service_root, service_gid)
 
@@ -725,7 +859,7 @@ def prepare_operation(
         os.chmod(operation_dir, 0o700)
         fsync_dir(operations)
         journal = {
-            "schema_version": 1,
+            "schema_version": 2 if generation_id is not None else 1,
             "operation_id": operation_id,
             "state": "prepared",
             "created_at": now(),
@@ -775,6 +909,30 @@ def prepare_operation(
             },
             "recovery": {"attempts": 0, "last_action": None, "last_error": None},
         }
+        if generation_id is not None:
+            journal["orchestration"] = {
+                "generation_id": generation_id,
+                "phase": "prepared",
+                "confirmation": "pending",
+                "initial_service": {
+                    "active_state": service["active_state"],
+                    "sub_state": service["sub_state"],
+                    "loaded_generation_id": adapter_initial["loaded_generation_id"],
+                    "loaded_config_sha256": adapter_initial["loaded_config_sha256"],
+                },
+                "request": {
+                    "generation_id": generation_id, "action": "none",
+                    "requested_at": None, "result": "not_requested",
+                },
+                "verification": {
+                    "status": "pending", "observed_state": None,
+                    "observed_generation_id": None, "observed_config_sha256": None,
+                    "verified_at": None,
+                },
+                "rollback": {
+                    "config_status": "not_started", "service_status": "not_started", "last_error": None,
+                },
+            }
         write_journal(operation_dir, journal)
         fsync_dir(operation_dir)
         if crash_at == "after_prepared":
@@ -908,7 +1066,8 @@ def recover_store(
                 continue
             if journal["state"] in {
                 "config_published", "rollback_started", "rollback_config_restored",
-                "rollback_failed", "rolled_back",
+                "rollback_failed", "rolled_back", "service_restart_requested",
+                "service_verified", "published_pending_apply", "published_pending_start", "completed",
             }:
                 recovered.append({
                     "operation_id": journal["operation_id"],
@@ -967,6 +1126,7 @@ def inspect_operation(operation_store: Path, operation_id: str) -> dict:
         "service": journal["service"],
         "snapshot": journal["snapshot"],
         "recovery": journal["recovery"],
+        **({"orchestration": journal["orchestration"]} if journal["schema_version"] == 2 else {}),
     }
 
 
