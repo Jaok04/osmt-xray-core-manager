@@ -1305,3 +1305,40 @@ Demostrar un recorrido vertical mínimo administrado desde Xray-Core Manager:
 ### Siguiente acción permitida
 
 B0: inspección focal de funciones existentes y normativa pertinente; entregar matriz requisito → función reutilizable → brecha → cambio mínimo → prueba. Después iniciar B1 únicamente con pruebas aisladas. No ejecutar operaciones live.
+
+
+## Punto de control vigente — I-01 compositor VLESS-WS-TLS (2026-11-04)
+
+**Rama:** `design/user-identity-association-v1`
+**HEAD base antes de I-01:** `bf73fd6a15aa169379c7cd71d1ea9cf5fb13f8b1`
+**VPS:** `Implementación-Xray:/opt/xray-manager`
+**Estado al 2026-11-05:** I-01 aceptado formalmente con limitaciones; commit/push autorizado, publicación y sincronización pendientes de verificación.
+
+### Decisión de persistencia aprobada
+
+El mapping TLS se almacena como archivo auxiliar privado fuera del JSON del perfil. Su ubicación `<mapping-root>/<profile_id>/<revision>.json` enlaza inequívocamente el mapping con una revisión concreta y conserva el contrato de entrada de R-02 sin ampliar el esquema de perfiles.
+
+### Resultado de I-01
+
+- Nuevo `scripts/vless_ws_tls_composer.py`; suite focal `tests/test_vless_ws_tls_composer.py`.
+- Modalidad cubierta: exclusivamente VLESS-WS-TLS.
+- Reutiliza VLESS Config Store, certificado central, exportador oficial Usuarios V2 y ProfileStore.
+- Crea inbound `vless`, `network=ws`, `security=tls`, `tlsSettings.certificates=[]`; conserva el resto del perfil.
+- Nueva revisión inmutable y no validada; mapping exacto para R-02 con permisos root:root 0700/0600.
+- Bloqueos compartidos de catálogos y comparación de revisión esperada para evitar carreras y TOCTOU.
+- Prueba focal: 10/10 PASS; incluye parser real de mapping R-02 y fallos de certificado, configuración, candidatos, UUID, puerto, mapping previo, revisión obsoleta y ruta symlink. Regresión: Python 163/163 y Bash 58/58 PASS; ShellCheck -S error, bash -n, py_compile, diff e install.sh --check PASS.
+
+| Estado | Resultado |
+|---|---|
+| IMPLEMENTADO | Sí |
+| VERIFICADO | 10/10 focal; Python 163/163; Bash 58/58 PASS |
+| AUDITADO | Sí — alcance focal I-01 |
+| PUBLICADO | Pendiente de verificación del commit remoto |
+| SINCRONIZADO | Pendiente de comparación VPS/GitHub |
+| ACEPTADO | Sí — aceptación formal del propietario el 2026-11-05 |
+
+### Siguiente paso
+
+Auditoría focal: `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md` (PASS). Aceptación formal recibida el 2026-11-05 con limitaciones; autorización de publicación recibida por separado. Verificar publicación y sincronización.
+
+R-01–R-04 se reutilizan, no se repiten. R-05 en pausa. R-06/live y NetMod NO AUTORIZADAS. Etapas 2, 3 y 5 ABIERTAS. Normativa y `main` intactas; sin cambios live ni en VPS de pruebas.

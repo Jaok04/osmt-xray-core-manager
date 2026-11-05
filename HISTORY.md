@@ -1240,3 +1240,17 @@ El propietario aceptó formalmente el resultado de la auditoría H0 y aprobó re
 Se reutilizarán los componentes existentes y R-01–R-04 sin repetirlos. R-05 avanzado, ampliaciones del journal, reconciliación compleja, múltiples proveedores DNS/ACME, renovación/rotación avanzada, protocolos adicionales y diagnóstico/backup general quedan aplazados hasta demostrar el MVP. Para el primer certificado se propone Let's Encrypt/Certbot HTTP-01 standalone, condicionado a DNS correcto, puerto 80 disponible y autorización de dependencias.
 
 Se mantienen las guardas esenciales de seguridad y las autorizaciones live separadas. H0 queda ACEPTADA FORMALMENTE; el plan MVP queda aprobado para trabajo aislado/documental. No se inició implementación ni se modificaron código, runtime, systemd, certificados reales, DNS, firewall, puertos, red, dependencias, normativa, main ni VPS de pruebas. El siguiente paso permitido es B0, inspección focal y matriz de reutilización.
+
+
+## 2026-11-04 — I-01 compositor VLESS-WS-TLS (implementación local)
+
+Se añadió `scripts/vless_ws_tls_composer.py` para componer una conexión VLESS-WS-TLS persistida junto con los clientes candidatos del exportador Usuarios V2 dentro de una nueva revisión inmutable de perfil. El inbound deja `tlsSettings.certificates=[]` para que R-02 resuelva/inserte leases TLS. Se preservan los demás inbounds/outbounds y se rechazan conflicto de tags/puertos, UUID repetidos, certificado central inválido, candidatos vacíos, mapping previo TLS incompleto y revisión obsoleta.
+
+Por decisión expresa del propietario, el mapping se guarda en un archivo auxiliar privado `<mapping-root>/<profile_id>/<revision>.json`, manteniendo el esquema exacto de R-02. Se usan locks compartidos de conexiones/usuarios durante la composición y el lock del almacén de perfiles para verificar la revisión esperada y crear la nueva revisión. No se activa perfil, no se ejecuta R-02, no se valida con Xray y no se modifica runtime/systemd.
+
+Pruebas focales: 10/10 PASS, incluida lectura del mapping por el parser real R-02. Regresión global: Python 163/163 y Bash 58/58 PASS; py_compile, bash -n, ShellCheck -S error, git diff --check e install.sh --check PASS. Auditoría focal PASS en `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md`. Cambios locales sin commit/push; publicación, sincronización y aceptación pendientes. Solo fixtures, claves/certificados sintéticos y temporales.
+
+
+## 2026-11-05 — aceptación formal y autorización de publicación I-01
+
+El propietario aceptó formalmente I-01 — Compositor VLESS-WS-TLS — con las limitaciones y exclusiones descritas en `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md`. La aceptación cubre únicamente el incremento focal auditado; no cierra ninguna etapa ni autoriza ejecución live. El propietario autorizó por separado commit y push exclusivamente a `design/user-identity-association-v1`. `main`, `Xray-Normativa/`, runtime, systemd, certificados reales, DNS, firewall, red y VPS de pruebas quedan fuera del alcance.

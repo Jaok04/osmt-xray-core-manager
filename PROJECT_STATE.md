@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-04 — U-01 aceptada formalmente. R-01 implementada, integrada, auditada y publicada/sincronizada; aceptación formal específica pendiente. R-02 implementada/auditada localmente (11/11); R-03 snapshot/journal implementada/auditada localmente (22/22); R-04 publicación atómica/rollback implementada/verificada localmente (12/12). Regresión Python 153/153; shell 58/58; verificaciones estáticas PASS. R-02/R-03/R-04 pendientes de aceptación formal y publicación. R-05 pendiente; R-06/live y NetMod no autorizadas. Etapas 2, 3 y 5 siguen ABIERTAS.
+**Corte de estado:** 2026-11-04 — I-01 compositor VLESS-WS-TLS implementado/verificado/auditado en alcance focal: 10/10 pruebas focales, Python 163/163 y Bash 58/58 PASS; ShellCheck, bash -n, py_compile, diff y install.sh --check PASS. I-01 aceptado formalmente con limitaciones documentadas el 2026-11-05; publicación/sincronización en curso. R-01–R-04 publicadas/sincronizadas; aceptación formal específica pendiente. R-05 en pausa; R-06/live y NetMod no autorizadas. Etapas 2, 3 y 5 siguen ABIERTAS.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -13,6 +13,20 @@
 > **Regla obligatoria permanente:** antes de implementar cualquier etapa o funcionalidad, contrastar el proyecto con la documentación preliminar aprobada en `Xray-Normativa/` del repositorio (respaldo original en `/root/Xray_Manager_Documentacion_Final_2026-10-31`). Las mejoras requieren informe previo y autorización expresa del propietario. Ver `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md` y `AGENTS.md`.
 
 > **Segunda regla obligatoria permanente:** ninguna etapa se declara TERMINADA/COMPLETADA sin auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos, matriz de trazabilidad, pruebas y aceptación formal expresa. Cerrar un módulo no cierra su etapa. Ver `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md` y `AGENTS.md`.
+
+
+
+## Estado vigente — I-01 compositor VLESS-WS-TLS (2026-11-04)
+
+- Rama autorizada: `design/user-identity-association-v1`; HEAD base verificado antes de I-01: `bf73fd6a15aa169379c7cd71d1ea9cf5fb13f8b1`.
+- I-01 implementado en `scripts/vless_ws_tls_composer.py`; pruebas focales en `tests/test_vless_ws_tls_composer.py`.
+- El propietario aprobó que el mapping TLS se guarde fuera del JSON del perfil, en un archivo privado vinculado por ruta a `profile_id` y `revision`, conservando exactamente el esquema R-02.
+- Composición VLESS-WS-TLS con Usuarios V2, certificado central activo, revisión inmutable, mapping TLS compatible con el parser R-02, protección de revisión obsoleta y preservación de inbounds existentes.
+- Pruebas focales: 10/10 PASS. Regresión completa: Python 163/163 y Bash 58/58 PASS; ShellCheck -S error, bash -n, py_compile, diff y install.sh --check PASS. Auditoría focal documentada.
+- I-01: IMPLEMENTADO; VERIFICADO; AUDITADO en alcance focal; ACEPTADO formalmente el 2026-11-05 con limitaciones; publicación/sincronización pendientes de verificación.
+- No se modificaron R-01–R-04 ni la normativa. No se ejecutó Xray/systemd real, no se activó perfil ni se tocó runtime. Solo fixtures, claves/certificados sintéticos y temporales.
+- Auditoría: `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md`. Publicación autorizada por separado el 2026-11-05, exclusivamente en la rama autorizada.
+- R-05 permanece en pausa; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 ABIERTAS.
 
 
 ## Estado actualizado — formato cifrado compartido v1 (2026-11-03)

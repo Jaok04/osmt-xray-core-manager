@@ -1349,3 +1349,21 @@ Para reanudar, verificar HEAD, upstream, árbol limpio y sincronización GitHub/
 10. No modificar `main` ni `Xray-Normativa/`. Publicar solo en `design/user-identity-association-v1`; mantener pruebas, auditoría y continuidad por bloque.
 
 **Siguiente punto:** B0 — inspeccionar funciones/archivos concretos que se reutilizarán y definir el cambio mínimo de B1. No ejecutar instalaciones ni cambios live.
+
+
+## Continuidad vigente — I-01 compositor VLESS-WS-TLS (2026-11-04)
+
+Este bloque sustituye como siguiente tarea los puntos de continuidad anteriores que proponían iniciar B0. La decisión actual es implementar el puente de composición entre Usuarios V2, VLESS-WS-TLS y perfiles versionados, sin ejecutar live.
+
+- Rama: `design/user-identity-association-v1`; VPS: `Implementación-Xray:/opt/xray-manager`.
+- HEAD base antes de los cambios locales: `bf73fd6a15aa169379c7cd71d1ea9cf5fb13f8b1`. Los archivos I-01 están actualmente sin commit.
+- El propietario aprobó un mapping TLS auxiliar privado separado del JSON de perfil, vinculado por path a `profile_id` y revisión, con el esquema exacto `{schema_version:1,bindings:[{inbound_tag,connection_id}]}` que consume R-02.
+- Nuevo `scripts/vless_ws_tls_composer.py`: solo modalidad `vless_ws_tls`; verifica conexión draft/no aplicada, configuración persistida, certificado central activo, exportador oficial Usuarios V2, UUID/tag/puerto, revisión esperada y mappings TLS previos.
+- Construye inbound VLESS `network=ws`, `security=tls`, `tlsSettings.certificates=[]`; preserva los demás inbounds/outbounds y crea revisión inmutable no validada. No activa perfil ni ejecuta R-02.
+- Mapping: `<mapping-root>/<profile_id>/<revision>.json`, directorios 0700 y archivo 0600, escritura atómica. Si el mapping falla después de crear la revisión, informa `REVISIÓN INCOMPLETA`; no continuar a R-02.
+- Prueba focal `tests/test_vless_ws_tls_composer.py`: 10/10 PASS, incluida lectura del mapping mediante el parser real R-02. Regresión completa: Python 163/163 y Bash 58/58 PASS; `py_compile`, `bash -n`, ShellCheck `-S error`, `git diff --check` e `install.sh --check` PASS.
+- Documentación: `docs/IMPLEMENTACION_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md` y `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md` (auditoría focal PASS).
+- Estado al corte: IMPLEMENTADO, VERIFICADO y AUDITADO en alcance focal; ACEPTADO formalmente el 2026-11-05 con limitaciones documentadas. Publicación autorizada por separado; confirmar commit/push y sincronización.
+- No repetir R-01–R-04. R-05 en pausa; R-06/live y NetMod NO AUTORIZADAS. No tocar clave maestra real, almacenes live, Xray/systemd real, certificados desplegados, DNS, firewall, puertos, red, dependencias, VPS de pruebas, `main` ni `Xray-Normativa/`.
+
+Para reanudar, leer `AGENTS.md`, `PROJECT_STATE.md`, `docs/PUNTO_CONTROL_ACTUAL.md`, este documento, `docs/IMPLEMENTACION_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md` y `HISTORY.md`; verificar rama, HEAD, árbol y remoto. I-01 está aceptado formalmente; verificar el commit remoto y la sincronización antes de continuar.
