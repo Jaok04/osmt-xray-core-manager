@@ -1231,3 +1231,12 @@ Comprobaciones read-only en `Implementación-Xray`: Ubuntu 24.04.4 amd64; `insta
 H0 queda PREPARADA, pendiente de aceptación formal del propietario. No autoriza implementación ni intervención live. R-01–R-04 se reutilizan; R-05 no está implementada; R-06/live continúa no autorizada.
 
 La auditoría H0 y los documentos de continuidad se publicaron en `design/user-identity-association-v1` mediante el commit `389a04a12ce00cfc0cc9175110f9b13dfeb5fd3a`. GitHub confirmó el mismo SHA; el checkout `/opt/xray-manager` quedó limpio y alineado. `Xray-Normativa/` y `main` permanecen intactas.
+
+
+## 2026-11-04 — Aceptación H0 y aprobación del MVP mínimo VLESS-WS-TLS
+
+El propietario aceptó formalmente el resultado de la auditoría H0 y aprobó reducir el alcance del primer servicio. Se creó `docs/PLAN_MVP_DESPLIEGUE_VLESS_WS_TLS_2026-11-04.md`, que prioriza un recorrido vertical B0–B5: inspección focal; instalación/preparación de Xray y `xray.service`; emisión/validación/registro de certificado; creación de usuario y conexión VLESS-WS-TLS; generación, validación, publicación e inicio/aplicación; prueba externa bidireccional.
+
+Se reutilizarán los componentes existentes y R-01–R-04 sin repetirlos. R-05 avanzado, ampliaciones del journal, reconciliación compleja, múltiples proveedores DNS/ACME, renovación/rotación avanzada, protocolos adicionales y diagnóstico/backup general quedan aplazados hasta demostrar el MVP. Para el primer certificado se propone Let's Encrypt/Certbot HTTP-01 standalone, condicionado a DNS correcto, puerto 80 disponible y autorización de dependencias.
+
+Se mantienen las guardas esenciales de seguridad y las autorizaciones live separadas. H0 queda ACEPTADA FORMALMENTE; el plan MVP queda aprobado para trabajo aislado/documental. No se inició implementación ni se modificaron código, runtime, systemd, certificados reales, DNS, firewall, puertos, red, dependencias, normativa, main ni VPS de pruebas. El siguiente paso permitido es B0, inspección focal y matriz de reutilización.

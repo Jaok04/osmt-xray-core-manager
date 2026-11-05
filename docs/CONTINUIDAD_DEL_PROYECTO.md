@@ -1333,3 +1333,19 @@ Para reanudar, verificar HEAD, upstream, árbol limpio y sincronización GitHub/
 7. R-01 no se repite: es preflight read-only dependiente de fixture de estado. R-02–R-04 no se repiten y continúan aisladas a fixtures. R-05 no implementada. R-06/live no autorizada.
 8. No leer `/etc/xray-manager/keys/master.key`, no acceder a almacenes live, no usar la VPS de pruebas y no modificar runtime, systemd, DNS, certificados, firewall, puertos o red sin autorización específica.
 9. Verificar rama, HEAD, árbol y sincronización antes de continuar; la línea base de esta auditoría fue `af4b562fb3608392b0a16388390e1dfe9b849898`.
+
+
+## Continuidad vigente — MVP mínimo de despliegue VLESS-WS-TLS (2026-11-04)
+
+1. La aceptación formal de H0 fue otorgada. Leer `docs/AUDITORIA_H0_BRECHAS_PRIMER_SERVICIO_VLESS_WS_TLS_2026-11-04.md`.
+2. El propietario redujo el alcance: el objetivo inmediato es demostrar que el Manager puede instalar/preparar Xray, gestionar un certificado, crear usuario/conexión VLESS-WS-TLS, generar/validar configuración y ejecutar/verificar el servicio.
+3. Seguir exclusivamente el plan vigente `docs/PLAN_MVP_DESPLIEGUE_VLESS_WS_TLS_2026-11-04.md`: B0 inspección focal; B1 Xray/servicio; B2 certificado; B3 usuario/conexión; B4 aplicación/inicio; B5 prueba externa.
+4. Reutilizar lo existente. No repetir R-01–R-04 ni convertir R-05 avanzado en prerrequisito. Mantener la arquitectura y seguridad mínimas necesarias, sin ampliar el alcance.
+5. Método ACME propuesto para el primer recorrido: Let's Encrypt + Certbot HTTP-01 standalone; validar DNS A/AAAA y accesibilidad del puerto 80 antes de emitir. No instalar Certbot ni otras dependencias sin autorización expresa.
+6. Mantener la distinción cliente/servidor: certificado inbound, Host WebSocket y SNI/serverName del cliente son parámetros relacionados pero no intercambiables.
+7. Reglas esenciales: validar con Xray antes de publicar; conservar copia recuperable; publicar atómicamente; permisos mínimos; servicio active requiere confirmación para restart; servicio inactive no se inicia por publicar; estado failed/unknown bloquea la acción automática.
+8. La implementación y pruebas aisladas están dentro del alcance aprobado. Live requiere autorización específica para el servidor, las operaciones, rutas, ventana y reversión. No modificar systemd/runtime, certificados reales, DNS, firewall, puertos o red por inferencia.
+9. No usar `Vps de Pruebas`; usar únicamente `Implementación-Xray` para inspección/desarrollo autorizado. No leer `/etc/xray-manager/keys/master.key`.
+10. No modificar `main` ni `Xray-Normativa/`. Publicar solo en `design/user-identity-association-v1`; mantener pruebas, auditoría y continuidad por bloque.
+
+**Siguiente punto:** B0 — inspeccionar funciones/archivos concretos que se reutilizarán y definir el cambio mínimo de B1. No ejecutar instalaciones ni cambios live.

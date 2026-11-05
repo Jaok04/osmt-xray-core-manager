@@ -203,3 +203,16 @@ La auditoría H0 se documentó en `docs/AUDITORIA_H0_BRECHAS_PRIMER_SERVICIO_VLE
 En la VPS de desarrollo: Xray 26.10.31 y geodata presentes; `xray.service`, `/etc/xray/config.json` y cuenta/grupo `xray` ausentes. `install.sh --check` PASS sin cambios. No se consultó systemd ni se inspeccionaron almacenes live. Normativa comparada: 14/14 archivos idénticos al respaldo.
 
 H0 está PREPARADA y pendiente de aceptación formal. No se inicia implementación ni intervención live por este addendum.
+
+
+## Addendum de prioridad — el MVP mínimo sustituye el orden H1–H8 (2026-11-04)
+
+Tras aceptar H0, el propietario aprobó reducir el alcance. Para la siguiente implementación prevalece el plan `docs/PLAN_MVP_DESPLIEGUE_VLESS_WS_TLS_2026-11-04.md` y sus bloques B0–B5. El roadmap H0–H8 se conserva como visión posterior, pero no obliga a implementar R-05 avanzado, reconciliación compleja, diagnóstico/backup general o todas las capacidades de Etapa 4 antes del primer servidor.
+
+La prioridad inmediata es demostrar que el Manager puede instalar/preparar Xray y `xray.service`, emitir/validar/registrar un certificado, crear un usuario y una conexión VLESS-WS-TLS, generar/validar/publicar configuración, iniciar/aplicar el servicio y verificar una conexión externa.
+
+Para el primer certificado se propone Let's Encrypt/Certbot HTTP-01 standalone, sujeto a DNS correcto, disponibilidad del puerto 80 y autorización para instalar dependencias. Se aplazan DNS-01/proveedores múltiples y renovación/rotación avanzada.
+
+Se mantienen las guardas esenciales: validación Xray, copia recuperable, publicación atómica, permisos mínimos, confirmación antes de reiniciar servicio activo, no iniciar por efecto lateral si estaba inactive y bloquear acciones automáticas si está failed/unknown. R-01–R-04 se reutilizan sin repetir; sus fixtures no se presentan como aplicación live.
+
+H0 queda ACEPTADA FORMALMENTE. El plan MVP está aprobado para desarrollo aislado/documental; no autoriza intervención live. Siguiente paso: B0, inspección focal y matriz de reutilización antes del primer cambio B1.

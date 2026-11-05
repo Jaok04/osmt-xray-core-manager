@@ -1236,3 +1236,21 @@ Se inspeccionó en solo lectura el código, los menús, las pruebas/documentaci�
 - `install.sh --check`: PASS sin modificar el sistema. No se ejecutaron suites de pruebas.
 - No se leyó la clave maestra, no se accedió a almacenes live, no se modificó runtime, systemd, DNS, certificados, firewall, puertos, red, dependencias ni VPS de pruebas.
 - H0 queda PREPARADA, pendiente de aceptación formal. No autoriza código de producto ni cambios live. R-01–R-04 no deben repetirse; R-05 permanece no implementada.
+
+
+## Estado vigente — prioridad MVP mínimo VLESS-WS-TLS (2026-11-04)
+
+Este addendum prevalece sobre el orden de trabajo H1–H8 anterior. La aceptación formal de H0 queda registrada; el propietario aprobó reducir el alcance a un MVP vertical que demuestre primero la capacidad real del Manager.
+
+- Plan técnico vigente: `docs/PLAN_MVP_DESPLIEGUE_VLESS_WS_TLS_2026-11-04.md`.
+- Objetivo: desde Xray-Core Manager instalar/preparar Xray y `xray.service`, emitir/validar/registrar un certificado, crear usuario y conexión VLESS-WS-TLS, generar/validar configuración, publicarla, iniciar/aplicar el servicio y verificar conexión externa.
+- Orden: B0 inspección focal → B1 instalación/servicio → B2 certificado → B3 usuario/conexión → B4 aplicación/inicio → B5 prueba end-to-end.
+- Reutilizar instalador, módulo de servicio, Usuarios V2, asistente/modelo/adaptador VLESS, almacén/resolutor TLS y persistencia existentes. No repetir R-01–R-04.
+- ACME propuesto para el primer MVP: Let's Encrypt/Certbot HTTP-01 standalone, condicionado a DNS correcto y disponibilidad/accesibilidad del puerto 80. La elección y la instalación de dependencias se revisarán antes de ejecutar; no se instalará nada sin autorización.
+- Se aplazan R-05 avanzado, ampliaciones de journal/generation, reconciliación avanzada, DNS-01/proveedores DNS múltiples, renovación/rotación avanzada, múltiples protocolos/instancias y diagnóstico/backup general.
+- Se conservan guardas esenciales: validación Xray antes de publicar, copia recuperable, reemplazo atómico, permisos mínimos, confirmación antes de reiniciar un servicio activo y fail-closed ante estado failed/desconocido. Un servicio inactive no se inicia por efecto lateral de publicar.
+- H0 está ACEPTADA FORMALMENTE. La aprobación del MVP autoriza el plan y el trabajo aislado/documental, no operaciones live.
+- No se ha iniciado implementación del MVP. No se modificaron código, runtime, systemd, certificados, DNS, firewall, puertos, red, dependencias, normativa, main ni VPS de pruebas en esta actualización.
+- R-01–R-04 conservan su estado técnico/publicado; su aceptación formal individual sigue pendiente. R-05 avanzado queda en pausa. R-06/live no autorizada. Etapas 2, 3 y 5 abiertas.
+
+**Siguiente acción permitida:** B0 — inspección focal del código y de la normativa pertinente, producir una matriz breve de reutilización/brechas y proponer el primer cambio mínimo de B1. No ejecutar acciones live.

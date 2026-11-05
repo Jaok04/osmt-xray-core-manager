@@ -1273,3 +1273,35 @@ El proyecto aún no puede desplegar un servicio real VLESS-WS-TLS desde el Manag
 Revisar/aceptar la matriz H0 y decidir el alcance del siguiente diseño de implementación. No iniciar código ni acciones live por inferencia.
 
 No repetir R-01–R-04. R-05 no implementada. No leer la clave maestra ni acceder a almacenes live. No modificar `Xray-Normativa/`, `main`, runtime, systemd, certificados, DNS, firewall, puertos o red. No usar la VPS de pruebas.
+
+
+## Punto de control vigente — MVP mínimo VLESS-WS-TLS (2026-11-04)
+
+**Aceptación H0:** ACEPTADA FORMALMENTE por el propietario.
+**Plan vigente:** `docs/PLAN_MVP_DESPLIEGUE_VLESS_WS_TLS_2026-11-04.md`.
+**Rama autorizada:** `design/user-identity-association-v1`.
+**HEAD previo a esta actualización documental:** `3f47ffdcc00d0c3b2837213effe76fb0a5a29cef`.
+
+### Objetivo inmediato
+
+Demostrar un recorrido vertical mínimo administrado desde Xray-Core Manager:
+1. instalar/preparar Xray y `xray.service`;
+2. emitir, validar y registrar certificado TLS;
+3. crear usuario y conexión VLESS + WS + TLS;
+4. generar/validar y publicar configuración;
+5. iniciar/aplicar Xray desde el administrador;
+6. verificar conexión externa bidireccional.
+
+### Alcance y límites
+
+- Ejecutar B0–B5 del plan MVP en orden.
+- Reutilizar módulos existentes; no repetir R-01–R-04.
+- R-05 avanzado y ampliaciones de journal/reconciliación quedan en pausa.
+- Certbot HTTP-01 standalone es una propuesta para el primer MVP, sujeta a verificación de DNS/puerto 80 y autorización de dependencias.
+- Mantener copia recuperable, validación previa, publicación atómica, permisos mínimos y confirmaciones/guardas de servicio.
+- No hay autorización live. Toda instalación, modificación de cuenta/unidad, emisión de certificado real, publicación runtime, inicio/reinicio, cambio DNS/firewall/puertos/red o prueba externa requiere autorización específica.
+- No usar VPS de pruebas, no leer la clave maestra, no modificar `main` ni `Xray-Normativa/`.
+
+### Siguiente acción permitida
+
+B0: inspección focal de funciones existentes y normativa pertinente; entregar matriz requisito → función reutilizable → brecha → cambio mínimo → prueba. Después iniciar B1 únicamente con pruebas aisladas. No ejecutar operaciones live.
