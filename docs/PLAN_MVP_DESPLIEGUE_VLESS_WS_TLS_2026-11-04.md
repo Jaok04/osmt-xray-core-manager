@@ -79,6 +79,18 @@ Desde el administrador:
 
 **Aceptación B3:** el Manager crea el usuario y la conexión, produce una configuración válida y entrega datos de cliente coherentes con el dominio, puerto, UUID, transporte, path, Host y SNI que correspondan.
 
+### Addendum B3 — resultado de implementación (2026-11-05)
+
+B3 se implementó en el alcance aislado autorizado:
+- Desde una conexión VLESS-WS-TLS en borrador se puede asociar una identidad existente o crear una identidad global y asociarla.
+- La exportación exige que la revisión exacta tenga validación Xray satisfactoria.
+- El certificado TLS central activo debe cubrir el SNI configurado o el dominio del endpoint cuando no se configura SNI. Los SAN wildcard se comparan a un nivel. Endpoints IP sin SNI DNS verificable se rechazan.
+- La integración de fixture compone el perfil, lo valida con Xray 26.10.31 y exporta URI VLESS para hellen.tvrc.me:443.
+
+Evidencia: docs/IMPLEMENTACION_B3_VLESS_WS_TLS_2026-11-05.md y docs/AUDITORIA_B3_VLESS_WS_TLS_2026-11-05.md. Python 186/186 y Bash 61/61 PASS; controles estáticos e install.sh --check PASS.
+
+B3 está IMPLEMENTADA, VERIFICADA y AUDITADA focalmente; aceptación formal y publicación pendientes. No se probó NetMod real, WAN, ACME real ni runtime. No hubo operaciones live, dependencias nuevas ni cambios en infraestructura. Xray-Normativa/ y main permanecen intactas. R-06/live sigue NO AUTORIZADA.
+
 ### B4 — Aplicar configuración y ejecutar Xray
 
 Implementar únicamente el puente mínimo y seguro entre la configuración validada y el servicio administrado:

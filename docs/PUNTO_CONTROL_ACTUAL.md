@@ -1,6 +1,6 @@
 # Punto de control actual — Xray Core Manager
 
-> El punto de control operativo vigente es el último bloque B1-A/B1-B al final del documento. Los apartados anteriores se conservan como historial y quedan superados cuando contradigan ese bloque.
+> El punto de control operativo vigente es el bloque B3 añadido a continuación. Los apartados anteriores se conservan como historial y quedan superados cuando contradigan este bloque.
 
 **Fecha del corte:** 2026-11-05
 **Siguiente tarea:** realizar el contraste documental preliminar del siguiente bloque del plan MVP y definir su alcance antes de cualquier edición. No ejecutar operaciones live por inferencia.
@@ -14,6 +14,21 @@
 **Estado vigente:** I-01–I-04 y B1-A/B1-B aceptados, publicados y sincronizados en design/user-identity-association-v1. Commit funcional B1 c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. HEAD local/remoto verificado tras push; árbol limpio tras actualización documental. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
+
+## Punto de control vigente — B3 (2026-11-05)
+
+**Siguiente tarea:** completar commits funcional y documental de B3, publicar en design/user-identity-association-v1 y verificar sincronización VPS/GitHub.
+
+**Estado:** B3 IMPLEMENTADA, VERIFICADA, AUDITADA y ACEPTADA FORMALMENTE el 2026-11-05 con las limitaciones de la auditoría; publicación autorizada, verificación final pendiente.
+
+- Menú contextual en conexión VLESS-WS-TLS draft para asociar identidad existente o crear identidad global y asociarla.
+- Exportador exige Xray PASS en manifiesto de revisión exacta.
+- SAN DNS del certificado activo debe cubrir SNI configurado o endpoint DNS cuando SNI no está configurado; endpoint IP sin SNI DNS verificable se rechaza.
+- Integración compone, valida con Xray 26.10.31 y exporta URI fixture.
+- Python 186/186; Bash 61/61; compileall, bash -n, ShellCheck -S error, git diff --check e install.sh --check PASS.
+- Sin NetMod real, WAN, ACME real, runtime, systemd, DNS, firewall, puertos, red, dependencias nuevas, clave maestra real ni VPS de pruebas.
+- main y Xray-Normativa/ intactas. R-06/live NO AUTORIZADA.
+- Documentación B3: decisión, implementación y auditoría en los tres archivos docs/*B3*2026-11-05.md indicados en PROJECT_STATE.md.
 
 ## 1. Entorno verificado
 

@@ -2,8 +2,8 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-05 — I-01–I-04 y B1-A/B1-B aceptados, publicados y sincronizados en design/user-identity-association-v1. Commit funcional B1: c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. HEAD local/remoto verificado tras push; árbol limpio. Bash 60/60 y Python 171/171 PASS; controles estáticos globales e install.sh --check PASS. Sin operaciones live.
-**Estado global:** Etapa 1 aceptada; Etapas 2, 3 y 5 abiertas. R-06/live NO AUTORIZADA.
+**Corte de estado:** 2026-11-05 — B3 implementada, verificada, auditada y aceptada formalmente; publicación autorizada y en curso. Git base previo B3: b74ee7279d474be888db4c1d5dfc3b59ba3c8c40. Regresión: Python 186/186 y Bash 61/61 PASS; controles estáticos globales e install.sh --check PASS. Sin operaciones live.
+**Estado global:** Etapa 1 aceptada; Etapas 2, 3, 4, 5 y 6 abiertas/parciales. R-06/live NO AUTORIZADA.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
 **VPS de desarrollo:** /opt/xray-manager
@@ -15,6 +15,18 @@
 > **Segunda regla obligatoria permanente:** ninguna etapa se declara TERMINADA/COMPLETADA sin auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos, matriz de trazabilidad, pruebas y aceptación formal expresa. Cerrar un módulo no cierra su etapa. Ver `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md` y `AGENTS.md`.
 
 
+
+## Estado vigente — B3 VLESS-WS-TLS (2026-11-05)
+
+- B3 autorizada por el propietario solo con fixtures/pruebas aisladas.
+- Añadida acción contextual en la conexión VLESS-WS-TLS draft: asociar identidad existente o crear identidad global y asociarla, reutilizando Usuarios V2 y UUID único global.
+- Exportador NetMod exige validación Xray satisfactoria en el manifiesto de la revisión exacta.
+- Exportador valida SAN del certificado central activo contra SNI configurado o dominio del endpoint cuando SNI está ausente; wildcard limitado a un nivel. Endpoint IP sin SNI DNS verificable falla cerrado.
+- Integración compone perfil, ejecuta validador real con Xray 26.10.31 y exporta URI fixture hellen.tvrc.me:443.
+- Python 186/186; Bash 61/61; py_compile/compileall, bash -n, ShellCheck -S error, git diff --check e install.sh --check PASS.
+- B3: IMPLEMENTADA, VERIFICADA, AUDITADA y ACEPTADA FORMALMENTE el 2026-11-05 con las limitaciones de la auditoría; publicación autorizada exclusivamente en design/user-identity-association-v1. La verificación de publicación/sincronización se registra tras el push.
+- No se ejecutó ACME real, NetMod real, WAN, runtime, systemd ni cambios de certificados persistentes, claves, DNS, firewall, puertos, red o dependencias. main y Xray-Normativa/ intactas. R-06/live NO AUTORIZADA.
+- Evidencia: docs/DECISION_B3_VLESS_WS_TLS.md, docs/IMPLEMENTACION_B3_VLESS_WS_TLS_2026-11-05.md y docs/AUDITORIA_B3_VLESS_WS_TLS_2026-11-05.md.
 
 ## Estado vigente — I-04 exportación VLESS-WS-TLS (2026-11-05)
 

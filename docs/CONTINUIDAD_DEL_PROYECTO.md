@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-05:** I-01–I-04 y B1-A/B1-B aceptados, publicados y sincronizados en design/user-identity-association-v1. Commit funcional B1: c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. Push fast-forward confirmado; HEAD local/remoto coinciden y el árbol quedó limpio tras la actualización documental. Bash 60/60 y Python 171/171 PASS; controles estáticos globales e install.sh --check PASS. No se ejecutó ninguna operación live. main y Xray-Normativa/ permanecen intactas; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS.
+> **Punto de reanudación vigente — 2026-11-05:** B3 está implementada, verificada, auditada y aceptada formalmente por el propietario con las limitaciones de su auditoría; commit/push autorizados exclusivamente en design/user-identity-association-v1. Regresión Python 186/186 y Bash 61/61 PASS; controles estáticos e install.sh --check PASS. Sin operaciones live. main y Xray-Normativa/ intactas; R-06/live NO AUTORIZADA.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -15,6 +15,16 @@
 
 > **Línea base VMess — 2026-11-03 (actualizada por evidencia posterior):** F-01–F-05 resueltos/verificados; VM-28 verificado; VM-32 verificado con límite transaccional documentado; VM-33 no aplica al alcance aprobado; VM-38/39/40 verificados; suite 40/40 PASS; Xray 14/14 y 16 negativos PASS; VM-46 live PASS; VM-47 cliente-servidor VMess-TLS loopback PASS. Posteriormente se verificó lectura del lease por proceso Xray real y handshake TLS 1.3; véase el informe live específico. Cliente externo/WAN no probado y no requerido por el diseño. VM-48/aceptación formal de VMess siguen pendientes; Etapa 2 permanece ABIERTA. Leer los informes de auditoría y validación referenciados en los apartados históricos y el informe live nuevo. No iniciar Trojan.
 
+
+## Punto de reanudación B3 — 2026-11-05
+
+B3 implementada/verificada/auditada focalmente y ACEPTADA FORMALMENTE por el propietario el 2026-11-05, con las limitaciones documentadas en la auditoría. El propietario autorizó commit/push exclusivamente en design/user-identity-association-v1. El flujo contextual de conexión VLESS-WS-TLS permite asociar identidad existente o crear identidad nueva y asociarla. Exportación exige validación Xray PASS de la revisión exacta y comprueba SAN DNS contra SNI o endpoint. Endpoint IP sin SNI DNS verificable falla cerrado.
+
+Pruebas: Python 186/186, Bash 61/61, integración compositor → validador Xray 26.10.31 → exportador PASS; controles estáticos e install.sh --check PASS. No se ejecutó NetMod real, WAN, ACME real, runtime, systemd, DNS, firewall, puertos o red. No se instalaron dependencias ni se leyó la clave maestra real.
+
+Archivos: docs/DECISION_B3_VLESS_WS_TLS.md, docs/IMPLEMENTACION_B3_VLESS_WS_TLS_2026-11-05.md, docs/AUDITORIA_B3_VLESS_WS_TLS_2026-11-05.md.
+
+**Siguiente paso:** completar commit funcional y documental, publicar mediante fast-forward en design/user-identity-association-v1 y verificar SHA remoto, árbol limpio, coincidencia VPS/GitHub, main intacta y 14/14 documentos normativos idénticos al respaldo. No modificar main, Xray-Normativa/ ni infraestructura live.
 
 ## 1. Objetivo
 

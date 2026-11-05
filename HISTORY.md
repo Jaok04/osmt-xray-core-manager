@@ -1,3 +1,16 @@
+## 2026-11-05 — Implementación y auditoría focal B3 VLESS-WS-TLS
+
+El propietario autorizó B3 exclusivamente con fixtures y pruebas aisladas. Se añadió una acción contextual en el menú de conexión VLESS-WS-TLS en borrador para asociar una identidad global existente o crear una identidad y asociarla directamente, reutilizando Usuarios V2 y sus controles de UUID único/capacidad. No se duplicó el modelo de usuarios.
+
+El exportador NetMod ahora exige que la revisión exacta tenga xray_static=pass y status=valid. También valida que el certificado central activo cubra el SNI configurado o el dominio del endpoint cuando no se configura SNI, admitiendo SAN DNS exactos y wildcard de un nivel. Los endpoints IP sin SNI DNS verificable fallan cerrados.
+
+La integración de prueba compone el perfil, ejecuta el validador real con Xray 26.10.31 y exporta URI fixture para hellen.tvrc.me:443. Regresión: Python 186/186 y Bash 61/61 PASS; exportador focal 11/11; compileall, bash -n global, ShellCheck -S error, git diff --check e install.sh --check PASS.
+
+No se probó NetMod real, WAN, ACME real ni runtime. No hubo dependencias nuevas, systemd, cambios de certificados persistentes, claves, DNS, firewall, puertos o red. No se leyó la clave maestra real ni se usó VPS de pruebas. main y Xray-Normativa/ permanecen intactas.
+
+B3 queda IMPLEMENTADA, VERIFICADA y AUDITADA focalmente; aceptación formal y publicación pendientes. Los cambios permanecen solo en el checkout de /opt/xray-manager, rama design/user-identity-association-v1, sobre la base publicada b74ee7279d474be888db4c1d5dfc3b59ba3c8c40. No se hizo commit ni push.
+
+
 ## 2026-11-03 — Incorporación de Xray-Normativa al repositorio
 
 Por instrucción expresa del propietario, se incorporó la documentación maestra normativa a `Xray-Normativa/` en la rama `design/user-identity-association-v1`. Se copiaron los 14 archivos originales conservando nombres, estructura y contenido; se añadió `README.md` como regla de custodia, sin alterar los documentos normativos. La carpeta queda protegida: ningún archivo podrá modificarse, corregirse, reformatearse, renombrarse, moverse, eliminarse o sustituirse sin consentimiento previo, explícito y específico del propietario. La autorización para desarrollar código no implica autorización para modificar la normativa.
@@ -1331,3 +1344,11 @@ El propietario aceptó formalmente B2 — ACME Certbot y certificados TLS — co
 La publicación ya verificada permanece en `design/user-identity-association-v1`: commit funcional `2669c45` y commit documental `21a103a7a15e003ddc3e2031aaf591efefe064ce`. Se actualizan los documentos de estado/continuidad para reflejar aceptación y sincronización. No se modificaron `Xray-Normativa/` ni `main`; no hubo operaciones live, instalación de dependencias ni cambios en DNS, runtime, servicios, certificados persistentes, firewall, puertos o red. Etapa 4 permanece ABIERTA y R-06/live NO AUTORIZADA.
 
 Siguiente punto: contraste documental e inventario read-only para B3 — usuario y conexión VLESS-WS-TLS — antes de solicitar autorización de implementación.
+
+
+
+## 2026-11-05 — aceptación formal y autorización de publicación B3
+
+El propietario aceptó formalmente B3 — creación contextual de usuario y conexión VLESS-WS-TLS — con las limitaciones y exclusiones descritas en `docs/AUDITORIA_B3_VLESS_WS_TLS_2026-11-05.md`. La aceptación cubre únicamente el flujo contextual Usuarios V2, la exigencia de validación Xray PASS en la revisión exacta, la correspondencia SAN/SNI/endpoint y la integración fixture composición → validación Xray 26.10.31 → exportación. No acredita NetMod real, conectividad WAN, ACME real, publicación/activación de perfil ni aplicación runtime.
+
+El propietario autorizó expresamente commit y push exclusivamente en `design/user-identity-association-v1`. No se autoriza modificar `main`, `Xray-Normativa/`, infraestructura live, DNS, firewall, puertos, certificados persistentes, claves ni dependencias. R-06/live permanece NO AUTORIZADA y las Etapas 2, 3 y 4 continúan ABIERTAS.
