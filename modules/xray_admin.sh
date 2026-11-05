@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-# Gestión controlada de Xray-core. Solo instala el binario y geodata;
-# no crea/edita unidades systemd, no modifica configuraciones y no inicia servicios.
+# Administración de Xray-core: instalación/integridad y preparación explícita del servicio.
+# Las acciones de instalación no crean unidades ni inician servicios.
 
 XRAY_ADMIN_RELEASE_API="https://api.github.com/repos/XTLS/Xray-core/releases/tags"
 XRAY_ADMIN_RELEASE_BASE="https://github.com/XTLS/Xray-core/releases/download"
 : "${XRAY_ADMIN_BIN:=${XRAY_BIN_PATH:-/usr/local/bin/xray}}"
 : "${XRAY_ADMIN_DATA:=${XRAY_DATA_DIR:-/usr/local/share/xray}}"
+: "${XRAY_ADMIN_MANIFEST:=/var/lib/xray-manager/state/xray-install.json}"
 XRAY_ADMIN_CACHE="${XRAY_MANAGER_CACHE_DIR:-/var/cache/xray-manager}/releases"
 XRAY_ADMIN_BACKUPS="${XRAY_MANAGER_BACKUP_DIR:-/var/backups/xray-manager}/xray-core"
 XRAY_ADMIN_LOCK="${XRAY_ADMIN_LOCK:-/run/lock/xray-manager-xray-admin.lock}"
@@ -91,6 +92,30 @@ xray_admin_unlock() {
 		manager_lock_release "$XRAY_ADMIN_LIFECYCLE_FD"
 		unset XRAY_ADMIN_LIFECYCLE_FD
 	fi
+}
+
+xray_admin_integrity_check() {
+	local action="$1"
+	local helper="${APP_ROOT:-$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)}/scripts/xray_install_integrity.py"
+	[[ -f "$helper" && ! -L "$helper" ]] || {
+		printf 'No está disponible el verificador de integridad de Xray-core.\n' >&2
+		return 1
+	}
+	python3 "$helper" "$action" \
+		--manifest "$XRAY_ADMIN_MANIFEST" \
+		--binary "$XRAY_ADMIN_BIN" \
+		--geoip "$XRAY_ADMIN_DATA/geoip.dat" \
+		--geosite "$XRAY_ADMIN_DATA/geosite.dat" \
+		--architecture "$(uname -m)" "${@:2}"
+}
+
+xray_admin_verify_installation() {
+	xray_admin_integrity_check verify
+}
+
+xray_admin_record_installation() {
+	local version="$1" package_sha256="$2"
+	xray_admin_integrity_check record --version "$version" --package-sha256 "$package_sha256"
 }
 
 xray_admin_latest_release() {
@@ -221,9 +246,8 @@ PY
 xray_admin_backup_existing() {
 	local backup_dir="$1" found=0 file
 	install -d -m 700 "$backup_dir" || return 1
-	if [[ -L "$XRAY_ADMIN_BIN" || -L "$XRAY_ADMIN_DATA" || -L "$(dirname "$XRAY_ADMIN_BIN")" || -L "$XRAY_ADMIN_DATA/geoip.dat" || -L "$XRAY_ADMIN_DATA/geosite.dat" ]]; then
-		printf 'Se detectó un enlace simbólico en el binario/geodata existente; se cancela por seguridad.
-' >&2
+	if [[ -L "$XRAY_ADMIN_BIN" || -L "$XRAY_ADMIN_DATA" || -L "$(dirname "$XRAY_ADMIN_BIN")" || -L "$XRAY_ADMIN_DATA/geoip.dat" || -L "$XRAY_ADMIN_DATA/geosite.dat" || -L "$XRAY_ADMIN_MANIFEST" || -L "$(dirname "$XRAY_ADMIN_MANIFEST")" ]]; then
+		printf 'Se detectó un enlace simbólico en los artefactos/manifiesto de Xray-core; se cancela por seguridad.\n' >&2
 		return 1
 	fi
 	if [[ -e "$XRAY_ADMIN_BIN" ]]; then
@@ -236,6 +260,11 @@ xray_admin_backup_existing() {
 			found=1
 		fi
 	done
+	if [[ -e "$XRAY_ADMIN_MANIFEST" ]]; then
+		[[ -f "$XRAY_ADMIN_MANIFEST" ]] || return 1
+		cp -a -- "$XRAY_ADMIN_MANIFEST" "$backup_dir/xray-install.json" || return 1
+		found=1
+	fi
 	if ((found)); then
 		printf 'Respaldo de binario/geodata: %s
 ' "$backup_dir"
@@ -275,6 +304,11 @@ xray_admin_install_version() {
 		return 1
 	fi
 
+	if [[ "$mode" == install && ! -e "$XRAY_ADMIN_BIN" && ( -e "$XRAY_ADMIN_DATA/geoip.dat" || -e "$XRAY_ADMIN_DATA/geosite.dat" || -e "$XRAY_ADMIN_MANIFEST" ) ]]; then
+		printf 'Hay artefactos parciales o un manifiesto sin binario; no se sobrescribirán. Usa reparación tras revisar el estado.\n' >&2
+		xray_admin_unlock
+		return 1
+	fi
 	if [[ -e "$XRAY_ADMIN_BIN" || -L "$XRAY_ADMIN_BIN" ]]; then
 		if [[ -L "$XRAY_ADMIN_BIN" ]]; then
 			printf 'El destino del binario Xray es un enlace simbólico; se cancela.
@@ -292,14 +326,25 @@ xray_admin_install_version() {
 		update)
 			local installed
 			installed="$("$XRAY_ADMIN_BIN" version 2>/dev/null | head -n 1 || true)"
+			if ! xray_admin_verify_installation; then
+				printf 'La instalación existente no está verificada; no se actualizará. Ejecuta Reparar instalación tras revisar el diagnóstico.\n' >&2
+				xray_admin_unlock
+				return 1
+			fi
 			if [[ "$installed" == *"Xray $version "* ]]; then
-				printf 'La versión %s ya está instalada.
-' "$version"
+				printf 'La versión %s ya está instalada y su integridad fue verificada.\n' "$version"
 				xray_admin_unlock
 				return 0
 			fi
 			;;
-		reinstall | repair) ;;
+		reinstall)
+			if ! xray_admin_verify_installation; then
+				printf 'La instalación existente no está verificada; no se reinstalará. Usa Reparar instalación para recuperación explícita.\n' >&2
+				xray_admin_unlock
+				return 1
+			fi
+			;;
+		repair) ;;
 		esac
 	elif [[ "$mode" == update || "$mode" == reinstall ]]; then
 		printf 'No hay una instalación que actualizar o reinstalar.
@@ -357,6 +402,15 @@ xray_admin_install_version() {
 					rollback_failed=1
 				fi
 			done
+			if [[ -e "$backup_dir/xray-install.json" ]]; then
+				if ! install -d -m 700 "$(dirname "$XRAY_ADMIN_MANIFEST")" ||
+					! cp -a -- "$backup_dir/xray-install.json" "$XRAY_ADMIN_MANIFEST.rollback" ||
+					! mv -f -- "$XRAY_ADMIN_MANIFEST.rollback" "$XRAY_ADMIN_MANIFEST"; then
+					rollback_failed=1
+				fi
+			elif ! rm -f -- "$XRAY_ADMIN_MANIFEST"; then
+				rollback_failed=1
+			fi
 			if ((rollback_failed)); then
 				printf 'ERROR: la restauración automática no pudo completarse. Usa el respaldo: %s
 ' "$backup_dir" >&2
@@ -402,9 +456,12 @@ xray_admin_install_version() {
 	chmod 755 "$XRAY_ADMIN_BIN" || return 1
 	chmod 644 "$XRAY_ADMIN_DATA/geoip.dat" "$XRAY_ADMIN_DATA/geosite.dat" || return 1
 	"$XRAY_ADMIN_BIN" version | grep -F "Xray $version " >/dev/null || return 1
+	local package_sha256
+	package_sha256="$(cat "$workdir/package.sha256")" || return 1
+	xray_admin_record_installation "$version" "$package_sha256" || return 1
 	committed=1
 	printf '
-Xray-core %s quedó instalado y verificado.
+Xray-core %s quedó instalado y su integridad fue registrada.
 ' "$version"
 	printf 'No se creó ni reinició ningún servicio systemd.
 '
@@ -414,6 +471,59 @@ Xray-core %s quedó instalado y verificado.
 	rm -rf -- "$workdir"
 	xray_admin_unlock
 }
+
+xray_admin_prepare_service_menu_action() {
+	local lifecycle_fd lifecycle_lock result=0 own_lock=0
+	ui_clear
+	ui_title "PREPARAR SERVICIO XRAY-CORE"
+	if ! xray_admin_verify_installation; then
+		printf '\nLa instalación de Xray-core no está verificada (falta el manifiesto o hay una discrepancia). No se preparará el servicio.\n'
+		printf 'Usa Reparar instalación para recuperar una instalación administrada o inspecciona el estado manualmente.\n'
+		ui_pause
+		return 1
+	fi
+	if ! declare -F xray_service_prepare >/dev/null 2>&1; then
+		printf 'El módulo de preparación del servicio no está cargado.\n' >&2
+		ui_pause
+		return 1
+	fi
+	printf '\nSe verificaron el binario y los dos archivos geodata.\n'
+	printf 'La preparación puede crear/verificar usuario y grupo, directorios y unidad xray.service, y recargar la configuración de systemd.\n'
+	printf 'No iniciará ni habilitará el servicio.\n'
+	if ! ui_confirm "¿Confirmas preparar la identidad y la unidad del servicio Xray-core?"; then
+		printf 'Preparación cancelada.\n'
+		ui_pause
+		return 0
+	fi
+
+	if [[ "${XRAY_MANAGER_LIFECYCLE_LOCK_HELD:-0}" != 1 ]]; then
+		lifecycle_lock="${XRAY_MANAGER_LIFECYCLE_LOCK:-/run/lock/xray-manager-lifecycle.lock}"
+		if ! manager_lock_acquire "$lifecycle_lock" lifecycle_fd; then
+			printf 'Hay otra operación de ciclo de vida del Manager en curso; no se preparó el servicio.\n' >&2
+			ui_pause
+			return 1
+		fi
+		own_lock=1
+		XRAY_MANAGER_LIFECYCLE_LOCK_HELD=1
+	fi
+
+	# Revalidar bajo el bloqueo: evita TOCTOU entre la previsualización y la preparación.
+	if ! xray_admin_verify_installation; then
+		printf 'La integridad cambió o dejó de verificarse antes de preparar el servicio. No se modificó.\n' >&2
+		result=1
+	elif ! xray_service_prepare; then
+		printf 'No se pudo preparar el servicio. Revisa el diagnóstico anterior.\n' >&2
+		result=1
+	fi
+
+	if ((own_lock)); then
+		unset XRAY_MANAGER_LIFECYCLE_LOCK_HELD
+		manager_lock_release "$lifecycle_fd"
+	fi
+	ui_pause
+	return "$result"
+}
+
 
 xray_admin_install_menu_action() {
 	local mode="$1" version choice

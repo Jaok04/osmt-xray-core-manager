@@ -198,11 +198,35 @@ xray_service_preflight() {
     fi
 }
 
+xray_service_require_inactive() {
+    if [[ "$XRAY_SERVICE_ROOT" == "/" ]] && command -v systemctl >/dev/null 2>&1 &&
+        systemctl is-active --quiet "$XRAY_SERVICE_UNIT_NAME"; then
+        xray_service_fail "el servicio está activo; no se modificará su preparación"
+        return 1
+    fi
+}
+
 xray_service_prepare() {
+    local lifecycle_fd result
+    if [[ "${XRAY_MANAGER_LIFECYCLE_LOCK_HELD:-0}" == 1 ]]; then
+        xray_service_prepare_locked
+        return $?
+    fi
+    if ! manager_lock_acquire "${XRAY_MANAGER_LIFECYCLE_LOCK:-/run/lock/xray-manager-lifecycle.lock}" lifecycle_fd; then
+        xray_service_fail "hay otra operación de ciclo de vida del Manager en curso; no se preparó el servicio"
+        return 1
+    fi
+    if xray_service_prepare_locked; then result=0; else result=$?; fi
+    manager_lock_release "$lifecycle_fd"
+    return "$result"
+}
+
+xray_service_prepare_locked() {
     local binary config_dir config_file data_dir state_dir unit_dir unit_file
     local tmp_unit existing_content path unit_created=0 service_group="$XRAY_SERVICE_GROUP"
 
     xray_service_preflight || return 1
+    xray_service_require_inactive || return 1
     binary="${XRAY_ADMIN_BIN:-${XRAY_BIN_PATH:-/usr/local/bin/xray}}"
     config_dir="${XRAY_CONFIG_DIR:-/etc/xray}"
     config_file="${XRAY_CONFIG_FILE:-$config_dir/config.json}"

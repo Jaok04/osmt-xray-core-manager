@@ -26,6 +26,7 @@ CALLS="$tmp/calls"
 
 xray_admin_install_menu_action() { printf 'install-action:%s\n' "$1" >>"$CALLS"; }
 xray_admin_latest_release() { printf '26.10.31\n'; }
+xray_admin_prepare_service_menu_action() { printf 'prepare-service\n' >>"$CALLS"; }
 xray_admin_compatible_versions() { printf '26.10.31\n'; }
 system_xray_version() { printf 'Xray 26.10.31 (test)\n'; }
 uninstall_menu_action() {
@@ -34,17 +35,19 @@ uninstall_menu_action() {
     printf 'uninstall-action:%s\n' "$target" >>"$CALLS"
 }
 
-printf '1\n2\n3\n\n4\n\n5\n6\n0\n' | menu_xray_admin >"$tmp/xray-menu.out"
+printf '1\n2\n3\n\n4\n\n5\n6\n7\n0\n' | menu_xray_admin >"$tmp/xray-menu.out"
 grep -Fxq 'install-action:install' "$CALLS"
 grep -Fxq 'install-action:update' "$CALLS"
 grep -Fxq 'install-action:reinstall' "$CALLS"
 grep -Fxq 'install-action:repair' "$CALLS"
+grep -Fxq 'prepare-service' "$CALLS"
 if grep -q '^uninstall-action:' "$CALLS"; then
     printf 'ERROR: se encontró una opción de desinstalación duplicada.\\n' >&2
     exit 1
 fi
 grep -q '\[5\] Reinstalar Xray-core' "$tmp/xray-menu.out"
 grep -q '\[6\] Reparar instalación' "$tmp/xray-menu.out"
+grep -q '\[7\] Preparar servicio (verifica integridad)' "$tmp/xray-menu.out"
 if grep -q 'Desinstalar Xray-core' "$tmp/xray-menu.out"; then
     printf 'ERROR: el menú Xray contiene una opción de desinstalación duplicada.\\n' >&2
     exit 1

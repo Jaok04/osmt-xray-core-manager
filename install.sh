@@ -326,6 +326,7 @@ ok "Directorios, permisos y archivos iniciales del Manager verificados"
 # Fase B: instalar el core verificado y preparar su unidad, sin habilitarla ni iniciarla.
 XRAY_ADMIN_BIN="/usr/local/bin/xray"
 XRAY_ADMIN_DATA="/usr/local/share/xray"
+XRAY_ADMIN_MANIFEST="$(path /var/lib/xray-manager/state/xray-install.json)"
 XRAY_MANAGER_CACHE_DIR="$(path /var/cache/xray-manager)"
 XRAY_MANAGER_BACKUP_DIR="$(path /var/backups/xray-manager)"
 XRAY_CONFIG_DIR="/etc/xray"

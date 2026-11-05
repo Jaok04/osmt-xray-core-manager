@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-05:** I-01, I-02, I-03 e I-04 están aceptadas formalmente con sus limitaciones. I-02/I-03/I-04 se publicaron y sincronizaron en `design/user-identity-association-v1` al commit `ac119d923ba0eae35579e944d59f5262c5d105a7`; HEAD local/remoto coinciden y el checkout quedó limpio. Regresión previa a publicación: Python 171/171 y Bash 59/59 PASS; verificaciones estáticas PASS. No se probó NetMod real ni conectividad WAN. R-01–R-04 publicadas/sincronizadas con aceptación formal específica pendiente; R-05 en pausa; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS.
+> **Punto de reanudación vigente — 2026-11-05:** I-01–I-04 aceptados, publicados y sincronizados; HEAD base local/remoto fb5010c7f6bd19aed279eb42d1ae29e4a8050530. B1-A/B1-B implementados, verificados y auditados focalmente en la VPS, solo con fixtures; aceptación formal del resultado y publicación pendientes. Bash 60/60 y Python 171/171 PASS; controles estáticos globales e install.sh --check PASS. No se ejecutó ninguna operación live. main y Xray-Normativa/ permanecen intactas; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -1420,3 +1420,33 @@ Pruebas focales I-04: 7/7 PASS; integración de menú/compositor PASS. Regresió
 - `main` intacta (`656ecedc506a94a6461aee296b20871d51a38bf3`). `Xray-Normativa/` intacta; 13/13 documentos sustantivos coinciden byte a byte con el respaldo.
 - I-02/I-03/I-04: IMPLEMENTADAS, VERIFICADAS, AUDITADAS, ACEPTADAS, PUBLICADAS y SINCRONIZADAS. No implica cierre de Etapas 2, 3 o 5.
 - Sin operaciones live, NetMod real, WAN, DNS, certificados reales, firewall, puertos, red ni cambios de dependencias. R-06/live sigue NO AUTORIZADA.
+
+
+## Continuidad vigente — B1-A / B1-B (2026-11-05)
+
+El propietario autorizó la implementación B1-A/B1-B exclusivamente mediante fixtures, sin operaciones live. El resultado técnico está implementado y auditado focalmente; todavía no tiene aceptación formal del resultado ni autorización de publicación.
+
+### B1-A — preparación del servicio
+- Opción [7] añadida al submenú Administración de Xray-core: Preparar servicio (verifica integridad).
+- La acción exige manifiesto válido, presenta el alcance y pide confirmación; adquiere el bloqueo de ciclo de vida, revalida integridad bajo el lock y reutiliza xray_service_prepare.
+- No inicia ni habilita el servicio. La preparación usa el bloqueo de ciclo de vida compartido y el guard xray_service_require_inactive impide preparar si el servicio está activo.
+- Pruebas: tests/xray_admin_prepare_service.sh, tests/stage1_menu.sh, tests/xray_service.sh.
+
+### B1-B — integridad de instalación
+- scripts/xray_install_integrity.py registra/verifica versión, arquitectura, rutas, SHA-256 del binario, geodata y paquete de origen.
+- Manifiesto: /var/lib/xray-manager/state/xray-install.json, root:root 0600; directorio root:root 0700; escritura atómica/fsync.
+- Instalación heredada sin manifiesto queda como no verificada. update/reinstall no reemplazan estados no verificados; repair es la recuperación explícita. Respaldo/rollback incluye el manifiesto.
+- Pruebas: tests/xray_admin.sh y tests/install.sh.
+
+### Evidencia
+- Bash: 60/60 scripts PASS.
+- Python: python3 -m unittest discover -s tests -p 'test_*.py' — 171/171 PASS.
+- py_compile, bash -n global, ShellCheck -S error global, install.sh --check y git diff --check: PASS.
+- No se ejecutó la nueva acción contra el sistema real. No se invocó el binario real systemctl; el estado activo se simuló con un stub en fixture. No se modificó unidad, usuario/grupo, runtime, certificados reales, DNS, firewall, puertos, red o dependencias.
+- Documentación B1: docs/DECISION_B1_SERVICE_PREPARATION_AND_INSTALL_INTEGRITY.md, docs/IMPLEMENTACION_B1_A_B1_B_2026-11-05.md y docs/AUDITORIA_B1_A_B1_B_2026-11-05.md.
+
+### Git y siguiente acción
+- Rama autorizada: design/user-identity-association-v1; HEAD local/remoto base fb5010c7f6bd19aed279eb42d1ae29e4a8050530.
+- Cambios B1 solo en el árbol local de la VPS; no publicados ni sincronizados.
+- Solicitar aceptación formal del resultado y autorización independiente para commit/push. No modificar main ni Xray-Normativa/.
+- No ejecutar B1 live ni iniciar B2 sin autorización específica. R-06/live sigue NO AUTORIZADA; Etapas 2, 3 y 5 abiertas.

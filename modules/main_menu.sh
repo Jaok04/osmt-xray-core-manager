@@ -172,6 +172,7 @@ menu_xray_admin() {
         printf '  [4] Consultar última versión disponible\n'
         printf '  [5] Reinstalar Xray-core\n'
         printf '  [6] Reparar instalación\n'
+        printf '  [7] Preparar servicio (verifica integridad)\n'
         printf '  [0] Volver\n\n'
         ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
@@ -186,6 +187,7 @@ menu_xray_admin() {
             4) menu_xray_latest_release || true ;;
             5) xray_admin_install_menu_action reinstall || true ;;
             6) xray_admin_install_menu_action repair || true ;;
+            7) xray_admin_prepare_service_menu_action || true ;;
             0) return 0 ;;
             *)
                 printf '\nOpción no válida.\n'

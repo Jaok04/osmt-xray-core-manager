@@ -1292,3 +1292,18 @@ La aceptación de estos incrementos no cierra Etapas 2, 3 o 5 ni autoriza NetMod
 Se publicó el commit funcional `ac119d923ba0eae35579e944d59f5262c5d105a7` (`feat(vless): integrate profile composition and NetMod export`) mediante fast-forward en `design/user-identity-association-v1`, desde `792f382ca1b4f753ff763dc50a442aa66a0cd42f`. GitHub confirmó el SHA remoto exacto. Un `git fetch` posterior verificó que HEAD local coincide con `origin/design/user-identity-association-v1` y el checkout quedó limpio. Los archivos de implementación, pruebas, decisiones, auditorías y continuidad I-02/I-03/I-04 están presentes en el árbol remoto.
 
 `main` permaneció en `656ecedc506a94a6461aee296b20871d51a38bf3`; `Xray-Normativa/` no cambió y sus 13 documentos sustantivos coinciden byte a byte con la copia de respaldo. Resultado: I-02/I-03/I-04 ACEPTADAS, PUBLICADAS y SINCRONIZADAS. Etapas 2, 3 y 5 siguen ABIERTAS; R-06/live NO AUTORIZADA. No se probó NetMod real ni conectividad WAN y no se realizaron cambios de infraestructura.
+
+
+## 2026-11-05 — implementación y auditoría focal B1-A / B1-B
+
+El propietario autorizó implementar B1-A (preparación de servicio desde el administrador) y B1-B (integridad de instalación Xray) exclusivamente con fixtures y sin operaciones live.
+
+Se añadió scripts/xray_install_integrity.py y un manifiesto de instalación que registra versión, arquitectura, rutas y SHA-256 del binario, geodata y paquete de origen. El manifiesto se escribe de forma atómica con fsync, con propietario/permisos estrictos. La administración Xray verifica el manifiesto antes de no-op update, update o reinstall; las instalaciones heredadas sin manifiesto y los artefactos alterados quedan no verificados. repair es la ruta explícita de recuperación, con respaldo y rollback del manifiesto.
+
+Se añadió [7] Preparar servicio (verifica integridad) al submenú Administración de Xray-core como decisión complementaria documentada, ya que el plan MVP B1 requiere preparar desde el administrador pero las opciones normativas 1–6 no incluían esa acción. Las opciones existentes y los documentos de Xray-Normativa/ no se modificaron. La acción verifica integridad, presenta el alcance, pide confirmación y reutiliza xray_service_prepare; no inicia ni habilita Xray. Se añadió guard temprano que aborta si el servicio está activo y se serializó la preparación mediante el bloqueo de ciclo de vida compartido y se repitió la verificación de integridad bajo ese bloqueo para evitar TOCTOU.
+
+Pruebas: Bash 60/60 scripts PASS; Python unittest 171/171 PASS; py_compile global, bash -n global, ShellCheck -S error global, install.sh --check y git diff --check PASS. pytest no está instalado; no se instaló ninguna dependencia. Auditoría: docs/AUDITORIA_B1_A_B1_B_2026-11-05.md.
+
+No se ejecutó preparación/instalación live, systemctl, ni se creó usuario/grupo/unidad real. No se modificaron runtime, certificados reales, DNS, firewall, puertos, red o dependencias. No se utilizó VPS de pruebas ni se leyó master.key.
+
+Estado: B1-A/B1-B IMPLEMENTADOS, VERIFICADOS y AUDITADOS focalmente; aceptación formal del resultado PENDIENTE; no publicados ni sincronizados. HEAD base local/remoto fb5010c7f6bd19aed279eb42d1ae29e4a8050530; los cambios B1 permanecen en el árbol de trabajo de la VPS. main y Xray-Normativa/ intactas. Etapas 2, 3 y 5 abiertas; R-06/live NO AUTORIZADA.

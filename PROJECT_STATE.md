@@ -2,8 +2,8 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-05 — I-01 publicado/sincronizado (commit 792f382ca1b4f753ff763dc50a442aa66a0cd42f). I-02/I-03 implementados y verificados localmente; I-04 exportación URI VLESS-WS-TLS para NetMod implementada, auditada y probada en fixtures con endpoint hellen.tvrc.me:443. Regresión actual: Python 171/171 y Bash 59/59 PASS; py_compile, bash -n global, ShellCheck focal, diff e install.sh --check PASS. I-02/I-03/I-04 pendientes de aceptación formal, commit/push y sincronización. La exportación no prueba NetMod real, DNS, listener ni conectividad WAN. R-01–R-04 publicadas/sincronizadas; aceptación formal específica pendiente. R-05 en pausa; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS.
-**Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
+**Corte de estado:** 2026-11-05 — I-01–I-04 aceptados, publicados y sincronizados; HEAD base local/remoto fb5010c7f6bd19aed279eb42d1ae29e4a8050530. B1-A/B1-B implementados, verificados y auditados focalmente en la VPS; aceptación formal del resultado y publicación pendientes. Bash 60/60 y Python 171/171 PASS; controles estáticos globales e install.sh --check PASS. Sin operaciones live.
+**Estado global:** Etapa 1 aceptada; Etapas 2, 3 y 5 abiertas. R-06/live NO AUTORIZADA.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
 **VPS de desarrollo:** /opt/xray-manager
@@ -1316,3 +1316,19 @@ Este addendum prevalece sobre el orden de trabajo H1–H8 anterior. La aceptaci�
 - `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`; `Xray-Normativa/` sin cambios; 13/13 documentos sustantivos comparados byte a byte con el respaldo.
 - I-02/I-03/I-04: IMPLEMENTADAS, VERIFICADAS, AUDITADAS, ACEPTADAS, PUBLICADAS y SINCRONIZADAS.
 - Sin NetMod real/WAN ni operaciones live. Etapas 2, 3 y 5 abiertas; R-06/live no autorizada.
+
+
+## Estado vigente — B1-A / B1-B (2026-11-05)
+
+- El propietario autorizó implementar B1-A y B1-B exclusivamente con fixtures y sin operaciones live.
+- B1-A añade [7] Preparar servicio (verifica integridad) al submenú Administración de Xray-core. La acción verifica el manifiesto, muestra el alcance y exige confirmación; adquiere el bloqueo de ciclo de vida, revalida integridad bajo el lock y reutiliza xray_service_prepare; no inicia ni habilita el servicio y bloquea el cambio si Xray está activo.
+- B1-B incorpora scripts/xray_install_integrity.py y el manifiesto /var/lib/xray-manager/state/xray-install.json: versión, arquitectura, rutas, SHA-256 del binario, geodata y paquete de origen; permisos root:root 0600, directorio 0700, escritura atómica y fsync.
+- update y reinstall fallan cerrados si falta el manifiesto o no coinciden hashes/rutas/versión. repair es la recuperación explícita; respaldo y rollback incluyen el manifiesto. Instalaciones heredadas sin manifiesto quedan NO VERIFICADAS.
+- Documentos: docs/DECISION_B1_SERVICE_PREPARATION_AND_INSTALL_INTEGRITY.md, docs/IMPLEMENTACION_B1_A_B1_B_2026-11-05.md, docs/AUDITORIA_B1_A_B1_B_2026-11-05.md.
+- Pruebas: Bash 60/60 scripts PASS; Python unittest 171/171 PASS; py_compile global, bash -n global, ShellCheck -S error global, install.sh --check y git diff --check PASS.
+- No se ejecutó preparación/instalación live ni el binario real systemctl; el estado activo se simuló con un stub. No se modificaron unidad/cuenta reales, runtime, certificados, DNS, firewall, puertos, red o dependencias.
+- Rama y HEAD base local/remoto: design/user-identity-association-v1 / fb5010c7f6bd19aed279eb42d1ae29e4a8050530. Cambios B1 solo locales; no publicados ni sincronizados. Aceptación formal del resultado y autorización de publicación pendientes.
+- main permanece en 656ecedc506a94a6461aee296b20871d51a38bf3. Los 14 documentos normativos sustantivos se mantienen idénticos al respaldo; Xray-Normativa/ no se modificó.
+- Etapas 2, 3 y 5 siguen ABIERTAS; R-06/live NO AUTORIZADA.
+
+Siguiente acción: revisión del expediente B1 por el propietario; después, aceptación formal y autorización independiente de commit/push únicamente en la rama autorizada. No ejecutar B1 live ni avanzar a B2 sin autorización correspondiente.

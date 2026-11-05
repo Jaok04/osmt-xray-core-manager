@@ -1,17 +1,17 @@
 # Punto de control actual — Xray Core Manager
 
-> El punto de control operativo vigente es el último bloque de publicación I-02/I-03/I-04. Los apartados anteriores se conservan como historial y quedan superados cuando contradigan ese bloque.
+> El punto de control operativo vigente es el último bloque B1-A/B1-B al final del documento. Los apartados anteriores se conservan como historial y quedan superados cuando contradigan ese bloque.
 
 **Fecha del corte:** 2026-11-05
-**Siguiente tarea:** continuar el MVP VLESS-WS-TLS desde el plan vigente, empezando por la siguiente acción aislada/documental autorizada; no ejecutar operaciones live por inferencia.
-**Estado vigente:** I-02, I-03 e I-04 aceptados, publicados y sincronizados en `design/user-identity-association-v1` al commit `ac119d923ba0eae35579e944d59f5262c5d105a7`. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
+**Siguiente tarea:** revisar y aceptar formalmente el resultado B1-A/B1-B; después solicitar autorización específica de publicación. No ejecutar operaciones live por inferencia.
+**Estado vigente:** I-01–I-04 aceptados, publicados y sincronizados; B1-A/B1-B implementados, verificados y auditados focalmente en la VPS, con aceptación formal del resultado y publicación pendientes. HEAD base local/remoto fb5010c7f6bd19aed279eb42d1ae29e4a8050530. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
 
 
 > El punto de control operativo vigente es el último bloque R-04 al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
 
 **Fecha del corte:** 2026-11-04
 **Siguiente tarea tras revisión/aceptación formal:** R-05 — orquestación systemd simulada. R-02/R-03/R-04 implementadas y verificadas localmente; sin commit/push.
-**Estado vigente:** R-01 publicada/sincronizada; aceptación formal específica pendiente. R-02 IMPLEMENTADA/AUDITADA (11/11); R-03 IMPLEMENTADA/AUDITADA (22/22); R-04 IMPLEMENTADA/VERIFICADA (12/12); Python 153/153; shell 58/58 PASS. R-02/R-03/R-04 pendientes de aceptación formal/publicación; R-05 pendiente; R-06/live y NetMod NO AUTORIZADAS. Etapas 2, 3 y 5 ABIERTAS.
+**Estado vigente:** I-01–I-04 aceptados, publicados y sincronizados; B1-A/B1-B implementados, verificados y auditados focalmente en la VPS, con aceptación formal del resultado y publicación pendientes. HEAD base local/remoto fb5010c7f6bd19aed279eb42d1ae29e4a8050530. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -1408,3 +1408,28 @@ El propietario autorizó generar URI vless:// para NetMod con endpoint público 
 - `main` permanece en `656ecedc506a94a6461aee296b20871d51a38bf3`.
 - `Xray-Normativa/` no tiene cambios; 13 documentos normativos sustantivos comparados byte a byte con el respaldo: PASS.
 - Resultado: I-02/I-03/I-04 PUBLICADOS y SINCRONIZADOS. No hubo cambios live, DNS, certificados reales, firewall, puertos, red ni dependencias.
+
+
+## Punto de control vigente — B1-A / B1-B (2026-11-05)
+
+Autorización recibida: implementar B1-A y B1-B exclusivamente con fixtures, sin operaciones live.
+
+B1-A implementado: opción [7] Preparar servicio (verifica integridad) en Administración de Xray-core. Requiere manifiesto válido y confirmación explícita; adquiere el bloqueo de ciclo de vida, revalida integridad bajo el lock y reutiliza xray_service_prepare; no inicia ni habilita Xray; usa el bloqueo de ciclo de vida y aborta antes de cambios si el servicio está activo.
+
+B1-B implementado: manifiesto v1 xray-install.json con versión, arquitectura, rutas y SHA-256 de binario, geodata y paquete oficial. Escritura atómica/fsync, root:root 0600 y directorio 0700. update/reinstall fallan cerrados ante manifiesto ausente o discrepancias; repair es recuperación explícita; rollback conserva/restaura manifiesto.
+
+Evidencia actual:
+- Bash 60/60 scripts PASS.
+- Python unittest 171/171 PASS.
+- py_compile global, bash -n global, ShellCheck -S error global, install.sh --check y git diff --check: PASS.
+- Auditoría: docs/AUDITORIA_B1_A_B1_B_2026-11-05.md.
+- Implementación: docs/IMPLEMENTACION_B1_A_B1_B_2026-11-05.md.
+- Decisión complementaria: docs/DECISION_B1_SERVICE_PREPARATION_AND_INSTALL_INTEGRITY.md.
+
+Límites: todas las pruebas se realizaron en fixtures. No se ejecutó preparación live, instalación/reparación live ni el binario real systemctl; la comprobación de servicio activo se simuló con un stub. No se creó identidad/unidad real ni se cambiaron runtime, certificados, DNS, firewall, puertos, red o dependencias.
+
+Git: rama design/user-identity-association-v1; HEAD local/remoto base fb5010c7f6bd19aed279eb42d1ae29e4a8050530. Cambios B1 están solo en el árbol de trabajo de la VPS. No hay commit/push ni sincronización de B1. main intacta; Xray-Normativa/ intacta.
+
+Estado separado: B1-A/B1-B IMPLEMENTADOS, VERIFICADOS y AUDITADOS focalmente; aceptación formal del resultado PENDIENTE; PUBLICADOS NO; SINCRONIZADOS NO. Etapas 2, 3 y 5 ABIERTAS; R-06/live NO AUTORIZADA.
+
+Siguiente acción: el propietario revisa la auditoría y decide si acepta formalmente B1 y autoriza commit/push únicamente a design/user-identity-association-v1. No ejecutar B1 live ni avanzar a B2 sin autorización específica.

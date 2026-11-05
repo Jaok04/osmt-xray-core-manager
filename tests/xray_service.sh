@@ -4,6 +4,7 @@ ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf -- "$TMP"' EXIT
 PREFIX="$TMP/root"
+export XRAY_MANAGER_LIFECYCLE_LOCK="$TMP/lifecycle.lock"
 mkdir -p "$PREFIX/usr/local/bin" "$PREFIX/usr/local/share/xray"
 cat >"$PREFIX/usr/local/bin/xray" <<'BIN'
 #!/usr/bin/env bash
@@ -28,6 +29,28 @@ export XRAY_CONFIG_DIR=/etc/xray
 export XRAY_CONFIG_FILE=/etc/xray/config.json
 # shellcheck disable=SC1091
 source "$ROOT/modules/xray_service.sh"
+
+# El guard de preparación bloquea un servicio activo antes de cualquier cambio.
+XRAY_SERVICE_ROOT="/"
+systemctl() {
+    [[ "$1" == is-active && "$2" == --quiet && "$3" == "$XRAY_SERVICE_UNIT_NAME" ]]
+}
+if xray_service_require_inactive > /dev/null 2>&1; then
+    printf 'ERROR: se permitió preparar un servicio activo.\\n' >&2
+    exit 1
+fi
+unset -f systemctl
+XRAY_SERVICE_ROOT="$PREFIX"
+
+exec {busy_fd}>"$XRAY_MANAGER_LIFECYCLE_LOCK"
+flock -x "$busy_fd"
+if xray_service_prepare >"$TMP/lifecycle-busy.out" 2>&1; then
+    printf 'ERROR: preparación ignoró el bloqueo de ciclo de vida.\\n' >&2
+    exit 1
+fi
+grep -q 'otra operación de ciclo de vida' "$TMP/lifecycle-busy.out"
+flock -u "$busy_fd"
+exec {busy_fd}>&-
 
 xray_service_prepare >"$TMP/prepare.out"
 UNIT="$PREFIX/etc/systemd/system/xray.service"
