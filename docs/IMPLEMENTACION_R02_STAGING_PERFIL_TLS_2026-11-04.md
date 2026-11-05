@@ -117,3 +117,8 @@ Regresión tras incorporar R-02:
 - R-06/live y la prueba real VLESS-WS-TLS con Cloudflare DNS-01/NetMod continúan NO AUTORIZADAS.
 
 R-02 no cierra Etapa 5, Etapa 2 ni Etapa 3.
+
+
+## Reconciliación posterior de estado — 2026-11-04
+
+R-02 está IMPLEMENTADA, VERIFICADA y AUDITADA; además está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`, dentro del commit `05aceabf11414040abbb32fff1428984370ff521`. La aceptación formal del propietario sigue PENDIENTE. Las frases anteriores que la sitúan sin publicar describen el corte histórico previo a ese commit. No se altera la evidencia original ni se afirma una nueva ejecución de pruebas.

@@ -1184,3 +1184,23 @@ U-01 y su auditoría fueron aceptadas formalmente por el propietario. Se autoriz
 - Siguiente paso: revisión/aceptación de R-02–R-04; luego R-05 systemd simulado.
 - R-06/live, NetMod, runtime real, systemd real, certificados reales, firewall, puertos, red, dependencias, VPS de pruebas, main y Xray-Normativa/ siguen fuera de alcance.
 - Etapas 2, 3 y 5 siguen ABIERTAS.
+
+
+## Estado vigente — reconciliación R-01–R-04 y diseño R-05 (2026-11-04)
+
+Este addendum prevalece como fotografía de estado sobre los registros históricos anteriores, que se conservan íntegros.
+
+- Rama autorizada: `design/user-identity-association-v1`.
+- Commit publicado y verificado al corte: `05aceabf11414040abbb32fff1428984370ff521`.
+- R-01: IMPLEMENTADA, INTEGRADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA. ACEPTACIÓN FORMAL PENDIENTE.
+- R-02: IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA. ACEPTACIÓN FORMAL PENDIENTE.
+- R-03: IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA. ACEPTACIÓN FORMAL PENDIENTE.
+- R-04: IMPLEMENTADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA. ACEPTACIÓN FORMAL PENDIENTE.
+- Pruebas focales registradas: R-01 28/28; R-02 11/11; R-03 22/22; R-04 12/12. Regresión global documentada tras R-04: Python 153/153 y Bash 58/58 PASS. No se reejecutaron en esta actualización documental.
+- R-02→R-03→R-04 se verificó integrada en fixtures temporales.
+- R-05: NO INICIADA. Diseño propuesto en `docs/DISENO_R05_ORQUESTACION_SYSTEMD_SIMULADA_2026-11-04.md`; requiere revisión y aprobación antes de implementar.
+- R-06/live: NO AUTORIZADA. Etapas 2, 3 y 5 ABIERTAS.
+- Los estados anteriores que describen R-02–R-04 como no publicados son fotografías históricas previas al commit indicado; no describen el estado vigente.
+- No se modificaron normativa, main, runtime/systemd reales, claves, almacenes live, certificados desplegados, firewall, puertos, red, dependencias ni VPS de pruebas.
+
+**Siguiente paso permitido:** revisar el diseño R-05 con el propietario. No iniciar implementación hasta aprobación expresa.

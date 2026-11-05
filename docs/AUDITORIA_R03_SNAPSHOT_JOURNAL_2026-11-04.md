@@ -62,3 +62,8 @@ No se accedió a la clave maestra real ni a almacenes live. No se modificaron /e
 ## 7. Estado
 
 R-03: IMPLEMENTADA / VERIFICADA EN FIXTURES / AUDITADA LOCALMENTE. Pendiente de aceptación formal y publicación en la rama autorizada. R-04 y R-05 pendientes.
+
+
+## Reconciliación posterior de publicación — 2026-11-04
+
+R-03 está AUDITADA, PUBLICADA y SINCRONIZADA en la rama autorizada, commit de corte `05aceabf11414040abbb32fff1428984370ff521`. La aceptación formal del propietario sigue PENDIENTE. La frase anterior «pendiente de aceptación formal y publicación» corresponde al estado previo al commit y queda superada únicamente respecto de la publicación. El dictamen y sus limitaciones permanecen vigentes.

@@ -199,3 +199,8 @@ El rollback repone bytes exactos del snapshot mediante rename atómico y valida 
 El journal ahora persiste publication/rollback con validación estricta de estado y metadatos. Pruebas: R-04 12/12; R-03 journal 22/22; R-02 staging 11/11; Python 153/153; shell 58/58 PASS. Integración R-02→R-03→R-04 verificada en fixture. Expedientes: `docs/IMPLEMENTACION_R04_PUBLICACION_ATOMICA_2026-11-04.md` y `docs/AUDITORIA_R04_PUBLICACION_ATOMICA_2026-11-04.md`.
 
 R-04 queda pendiente de aceptación formal/publicación. R-05 (systemd simulado) pendiente. R-06/live, runtime real y prueba NetMod no autorizadas.
+
+
+## Addendum de continuidad — estado R-01–R-04 y diseño R-05 (2026-11-04)
+
+R-01–R-04 están implementadas, verificadas/auditadas, publicadas y sincronizadas; la aceptación formal individual sigue pendiente. R-05 aún no está iniciada. Su propuesta detallada se encuentra en `docs/DISENO_R05_ORQUESTACION_SYSTEMD_SIMULADA_2026-11-04.md`. La propuesta no amplía la autorización existente ni autoriza ejecución de systemd real. R-06/live permanece NO AUTORIZADA.

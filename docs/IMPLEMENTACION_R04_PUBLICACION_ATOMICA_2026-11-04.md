@@ -68,3 +68,8 @@ Casos R-04: publicación y rollback; idempotencia; ausencia de configuración pr
 - No se tocaron firewall, puertos, red, dependencias, VPS de pruebas, `main` ni `Xray-Normativa/`.
 - R-04 queda pendiente de auditoría/aceptación formal y autorización de publicación.
 - R-05 (orquestación systemd simulada) sigue pendiente. R-06/live y prueba NetMod no están autorizadas.
+
+
+## Reconciliación posterior de estado — 2026-11-04
+
+R-04 está IMPLEMENTADA, VERIFICADA y AUDITADA; además está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`, commit de corte `05aceabf11414040abbb32fff1428984370ff521`. La aceptación formal del propietario sigue PENDIENTE. Las frases anteriores que la sitúan sin publicar describen un corte histórico anterior al commit. No se altera la evidencia original ni se afirma una nueva ejecución de pruebas.

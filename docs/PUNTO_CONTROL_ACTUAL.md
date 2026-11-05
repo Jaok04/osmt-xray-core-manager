@@ -1190,3 +1190,23 @@ U-01 está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Co
 - R-02/R-03/R-04 siguen locales sin commit/push. Requieren revisión/aceptación y autorización de publicación.
 - Siguiente paso tras aceptación: R-05 — orquestación systemd simulada.
 - R-06/live y NetMod NO AUTORIZADAS. Etapas 2, 3 y 5 ABIERTAS.
+
+
+## Punto de control vigente — 2026-11-04
+
+**HEAD publicado:** `05aceabf11414040abbb32fff1428984370ff521` en `design/user-identity-association-v1`. VPS `/opt/xray-manager` y GitHub se verificaron alineados al inicio de esta recuperación; árbol limpio.
+
+| Incremento | Implementado | Verificado/auditado | Publicado/sincronizado | Aceptación formal |
+|---|---|---|---|---|
+| R-01 | Sí | Sí | Sí | Pendiente |
+| R-02 | Sí | Sí | Sí | Pendiente |
+| R-03 | Sí | Sí | Sí | Pendiente |
+| R-04 | Sí | Sí | Sí | Pendiente |
+| R-05 | No | No | No | No iniciado |
+| R-06/live | No | No | No | No autorizado |
+
+Resultados documentados: R-01 28/28 focal; R-02 11/11; R-03 22/22; R-04 12/12; Python 153/153; Bash 58/58; verificaciones estáticas PASS. No se reejecutaron en esta sesión.
+
+**Siguiente paso:** revisión del diseño `docs/DISENO_R05_ORQUESTACION_SYSTEMD_SIMULADA_2026-11-04.md`. R-05 no debe implementarse hasta aprobación expresa. Los estados previos que indiquen R-02–R-04 sin publicar son históricos y quedan superados por este punto de control.
+
+Límites: normativa inmutable; `main` protegida; R-06/live no autorizada; sin cambios reales de Xray/systemd, certificados, claves, almacenes, firewall, puertos, red o dependencias; no utilizar VPS de pruebas. Etapas 2, 3 y 5 ABIERTAS.

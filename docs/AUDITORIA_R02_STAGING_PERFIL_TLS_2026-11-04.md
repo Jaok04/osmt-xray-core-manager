@@ -78,3 +78,8 @@ No se modificaron main, Xray-Normativa/, /etc/xray/config.json, systemd real, ru
 R-02: IMPLEMENTADA / VERIFICADA EN FIXTURES Y CON XRAY REAL SOBRE LEASE SINTÉTICO / AUDITADA LOCALMENTE. Pendiente de aceptación formal y publicación en la rama autorizada.
 
 R-03 está implementada/auditada localmente; R-04 y R-05 pendientes. R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 permanecen ABIERTAS.
+
+
+## Reconciliación posterior de publicación — 2026-11-04
+
+R-02 está AUDITADA, PUBLICADA y SINCRONIZADA en la rama autorizada, commit de corte `05aceabf11414040abbb32fff1428984370ff521`. La aceptación formal del propietario sigue PENDIENTE. La frase anterior «pendiente de aceptación formal y publicación» corresponde al estado previo a la publicación y queda superada únicamente en su componente de publicación. El dictamen técnico y sus límites permanecen sin cambios.

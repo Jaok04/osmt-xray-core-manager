@@ -1285,3 +1285,21 @@ Estado: R-02 11/11; R-03 journal 22/22; R-04 12/12; Python 153/153; shell 58/58 
 R-02/R-03/R-04 siguen locales, sin commit/push, pendientes de revisión/aceptación formal y autorización de publicación. Siguiente paso después de aceptación: R-05 systemd simulado. No ejecutar R-06/live ni NetMod.
 
 Restricciones intactas: no tocar /etc/xray real, systemd real, clave maestra ni almacenes live, certificados desplegados, firewall, puertos, red, dependencias, VPS de pruebas, main o Xray-Normativa/. Etapas 2, 3 y 5 siguen ABIERTAS.
+
+
+## Continuidad vigente — R-01–R-04 publicadas; R-05 en diseño (2026-11-04)
+
+Este bloque es el punto de reanudación vigente y supera los bloques históricos que describen R-02–R-04 como no publicados. Los registros anteriores se conservan por trazabilidad.
+
+- Repositorio: `Jaok04/xray-core-manager`; rama autorizada: `design/user-identity-association-v1`.
+- VPS de desarrollo: `Implementación-Xray`; directorio `/opt/xray-manager`.
+- HEAD verificado al corte: `05aceabf11414040abbb32fff1428984370ff521`.
+- R-01–R-04: implementadas, verificadas/auditadas, publicadas y sincronizadas; aceptación formal individual pendiente para cada incremento.
+- Pruebas focales documentadas: R-01 28/28, R-02 11/11, R-03 22/22, R-04 12/12. Regresión global documentada: Python 153/153 y Bash 58/58 PASS. No se reejecutaron en esta actualización.
+- R-05: NO INICIADA. Diseño propuesto en `docs/DISENO_R05_ORQUESTACION_SYSTEMD_SIMULADA_2026-11-04.md`; requiere aprobación expresa antes de implementar.
+- R-06/live: NO AUTORIZADA.
+- Decisiones aprobadas: identidad `profile_id + revision`; asociación explícita `inbound_tag → connection_id`; staging temporal; snapshot/journal; publicación atómica; estrategia inicial `systemctl restart xray.service` sin asumir hot reload; rollback de configuración y recuperación del estado previo; si estaba inactivo, no arrancarlo durante la restauración.
+- Los 13 archivos normativos sustantivos de `Xray-Normativa/` coinciden por SHA-256 con la copia maestra; `README.md` es auxiliar. La normativa es inmutable sin autorización específica.
+- Etapas 2, 3 y 5 permanecen ABIERTAS. Publicar no equivale a aceptación formal ni a cierre de etapa.
+
+Siguiente acción: revisar y aprobar o devolver el diseño R-05. No repetir R-01–R-04. No ejecutar systemd/Xray real, leer la clave maestra, tocar almacenes live, certificados desplegados, firewall, puertos, red, dependencias ni VPS de pruebas.

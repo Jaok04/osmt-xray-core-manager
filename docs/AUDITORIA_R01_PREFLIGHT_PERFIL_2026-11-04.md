@@ -64,3 +64,8 @@ R-01: IMPLEMENTADA / INTEGRADA EN CLI-MENÚ / VERIFICADA EN FIXTURES / AUDITADA 
 R-02–R-05: NO INICIADAS.
 R-06/live: NO AUTORIZADA.
 Etapa 5: ABIERTA.
+
+
+## Reconciliación posterior de publicación — 2026-11-04
+
+R-01 está AUDITADA, PUBLICADA y SINCRONIZADA en la rama autorizada; la aceptación formal individual del propietario sigue PENDIENTE. El dictamen y sus límites permanecen vigentes. No se reejecutó la suite durante esta reconciliación documental.

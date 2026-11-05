@@ -114,3 +114,8 @@ R-02 focal actualizado: 11/11 PASS. Su integración real usa Xray-core 26.10.31 
 - R-06/live y prueba NetMod siguen NO AUTORIZADAS.
 
 R-03 no cierra Etapa 5, Etapa 2 ni Etapa 3.
+
+
+## Reconciliación posterior de estado — 2026-11-04
+
+R-03 está IMPLEMENTADA, VERIFICADA y AUDITADA; además está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`, commit de corte `05aceabf11414040abbb32fff1428984370ff521`. La aceptación formal del propietario sigue PENDIENTE. Las frases anteriores que la sitúan sin publicar describen un corte histórico anterior al commit. No se altera la evidencia original ni se afirma una nueva ejecución de pruebas.

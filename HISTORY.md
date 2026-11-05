@@ -1198,3 +1198,10 @@ Se implementó scripts/xray_runtime_publisher.py con publish/rollback/recover/in
 La recuperación detecta rename antes del commit del journal, limpia temporales seguros y resuelve interrupciones de rollback de forma idempotente. Se amplió el journal con publication/rollback. Todo ocurrió en fixtures temporales: no se llamó systemd ni se tocó runtime real.
 
 Pruebas: R-04 12/12; R-03 journal 22/22; R-02 staging 11/11; Python 153/153; shell 58/58; verificaciones estáticas PASS. Expedientes R-04 en docs/IMPLEMENTACION_R04_PUBLICACION_ATOMICA_2026-11-04.md y docs/AUDITORIA_R04_PUBLICACION_ATOMICA_2026-11-04.md. R-04 pendiente de aceptación formal/publicación; R-05 pendiente; R-06/live NO AUTORIZADA.
+
+
+## 2026-11-04 — Reconciliación de publicación R-01–R-04 y preparación de diseño R-05
+
+Se contrastaron estado GitHub/VPS y documentos técnicos. El checkout `/opt/xray-manager` estaba en `design/user-identity-association-v1`, HEAD `05aceabf11414040abbb32fff1428984370ff521`, alineado con origin y sin cambios. El commit contiene R-02, R-03 y R-04, sus implementaciones, pruebas, auditorías y documentación. Se reconcilió la fotografía vigente: R-01–R-04 están implementadas, verificadas/auditadas, publicadas y sincronizadas; la aceptación formal individual de los cuatro incrementos sigue pendiente. Los bloques anteriores que indican no publicación se preservan como registros históricos.
+
+Se verificó por SHA-256 la coincidencia de los 13 archivos normativos sustantivos de `Xray-Normativa/` con `/root/Xray_Manager_Documentacion_Final_2026-10-31`; no se modificó normativa. Se preparó `docs/DISENO_R05_ORQUESTACION_SYSTEMD_SIMULADA_2026-11-04.md` como propuesta, no autorización de implementación. R-05 sigue NO INICIADA y R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS. No se modificaron código de producto, runtime/systemd reales, claves, almacenes live, certificados desplegados, firewall, puertos, red, dependencias, main ni VPS de pruebas.

@@ -46,3 +46,8 @@ R-04 no prueba que el servicio real esté ejecutando la nueva configuración. Es
 ## 5. Dictamen
 
 R-04 queda implementada y supera la matriz focal y regresión descritas. No se declara Etapa 5 ni subfase runtime cerrada. Requiere revisión y aceptación formal del propietario antes de commit/push. R-05 pendiente; R-06/live NO AUTORIZADA.
+
+
+## Reconciliación posterior de publicación — 2026-11-04
+
+R-04 está AUDITADA, PUBLICADA y SINCRONIZADA en la rama autorizada, commit de corte `05aceabf11414040abbb32fff1428984370ff521`. La aceptación formal del propietario sigue PENDIENTE. El estado de aceptación del expediente permanece pendiente; su publicación posterior queda confirmada por el commit de corte. El dictamen y sus límites permanecen vigentes.

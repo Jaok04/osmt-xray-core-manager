@@ -96,3 +96,8 @@ Los perfiles, claves, informes, binarios y fixtures son sintéticos y se crean e
 ## 6. Estado
 
 R-01 queda IMPLEMENTADA, INTEGRADA EN CLI/MENÚ, VERIFICADA EN FIXTURES y AUDITADA LOCALMENTE. No se ejecutó sobre el almacén/clave reales ni se probó runtime. La aceptación formal del propietario sigue pendiente. Etapa 5 permanece ABIERTA.
+
+
+## Reconciliación posterior de publicación — 2026-11-04
+
+R-01 está IMPLEMENTADA, INTEGRADA, VERIFICADA, AUDITADA, PUBLICADA y SINCRONIZADA en la rama autorizada. Su aceptación formal individual por el propietario sigue PENDIENTE. Las limitaciones y resultados de pruebas de este expediente son históricos y permanecen vigentes; no se afirma una nueva ejecución en esta actualización.
