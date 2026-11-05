@@ -1145,7 +1145,7 @@ U-01 está PUBLICADA y SINCRONIZADA en `design/user-identity-association-v1`. Co
 - **R-01:** IMPLEMENTADA, INTEGRADA EN CLI/MENÚ, VERIFICADA EN FIXTURES, AUDITADA LOCALMENTE, PUBLICADA y SINCRONIZADA. Aceptación formal de R-01 pendiente.
 - **Implementación:** scripts/xray_profile_validation_store.py, scripts/xray_profile_validation.py, scripts/xray_runtime_preflight.py; opción 8 en modules/profiles.sh; transacciones de manifiesto/metadata en scripts/xray_profiles.py; ruta en config/paths.sh.
 - **Diseño y expedientes:** docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md; docs/IMPLEMENTACION_R01_PREFLIGHT_PERFIL_2026-11-04.md; docs/AUDITORIA_R01_PREFLIGHT_PERFIL_2026-11-04.md.
-- **Pruebas:** focal R-01 28/28 PASS (preflight 18/18 + validación 10/10); Python 108/108 PASS; shell 58/58 PASS. py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS.
+- **Pruebas:** focal R-01 28/28 PASS (preflight 18/18 + validación 11/11); Python 108/108 PASS; shell 58/58 PASS. py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS.
 - **Publicación de código:** c605b3efc904d75a142e9e8c539210eb65070acd. Registro de publicación/continuidad previo: 856662b0981ad4457f4e4bba72c41735e998f958; reconciliación documental: 94556849316852625fbcf98d8ea0796600097088. Comprobar siempre el HEAD remoto real.
 - **Límites verificados:** pruebas solo con perfiles/keys/binarios sintéticos y temporales; no se ejecutó contra almacén/clave reales ni systemd real. La validación nativa todavía corre con identidad del llamador; validación de leases y permisos efectivos de xray corresponde a R-02.
 - **Siguiente paso permitido:** R-02 — staging integrado de la revisión exacta del perfil y leases TLS en directorio temporal, validación bajo identidad de servicio simulada. Mantener sin publicación runtime.
@@ -1333,12 +1333,12 @@ El mapping TLS se almacena como archivo auxiliar privado fuera del JSON del perf
 - Crea inbound `vless`, `network=ws`, `security=tls`, `tlsSettings.certificates=[]`; conserva el resto del perfil.
 - Nueva revisión inmutable y no validada; mapping exacto para R-02 con permisos root:root 0700/0600.
 - Bloqueos compartidos de catálogos y comparación de revisión esperada para evitar carreras y TOCTOU.
-- Prueba focal: 10/10 PASS; incluye parser real de mapping R-02 y fallos de certificado, configuración, candidatos, UUID, puerto, mapping previo, revisión obsoleta y ruta symlink. Regresión: Python 163/163 y Bash 58/58 PASS; ShellCheck -S error, bash -n, py_compile, diff e install.sh --check PASS.
+- Prueba focal: 11/11 PASS; incluye parser real de mapping R-02 y fallos de certificado, configuración, candidatos, UUID, puerto, mapping previo, revisión obsoleta y ruta symlink. Regresión: Python 163/163 y Bash 58/58 PASS; ShellCheck -S error, bash -n, py_compile, diff e install.sh --check PASS.
 
 | Estado | Resultado |
 |---|---|
 | IMPLEMENTADO | Sí |
-| VERIFICADO | 10/10 focal; Python 163/163; Bash 58/58 PASS |
+| VERIFICADO | 11/11 focal; Python 163/163; Bash 58/58 PASS |
 | AUDITADO | Sí — alcance focal I-01 |
 | PUBLICADO | Pendiente de verificación del commit remoto |
 | SINCRONIZADO | Pendiente de comparación VPS/GitHub |
@@ -1433,3 +1433,12 @@ Git: rama design/user-identity-association-v1; commit funcional B1 c8cd20c2a576f
 Estado separado: B1-A/B1-B IMPLEMENTADOS, VERIFICADOS, AUDITADOS, ACEPTADOS, PUBLICADOS y SINCRONIZADOS. Etapas 2, 3 y 5 ABIERTAS; R-06/live NO AUTORIZADA.
 
 Siguiente acción: continuar con el siguiente bloque del plan MVP después del contraste documental y autorización de alcance específica. No ejecutar B1 live ni avanzar a B2 sin autorización específica.
+
+
+## Punto de reanudación vigente — B2 ACME Certbot (2026-11-05)
+
+El propietario aprobó Certbot (HTTP-01 standalone y DNS-01 manual TXT) y autorizó B2-A a B2-G solo con fixtures. Código incorporado localmente: scripts/certificate_acme.py, modules/certificates.sh, integración de menú y pruebas focales. No se ejecutó ACME real, no se instaló Certbot/dig, no se modificó DNS/puerto 80/servicios/runtime ni se publicaron cambios.
+
+Pruebas B2: Python 182/182 y Bash 61/61 PASS; py_compile, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS. La prueba integrada usa certificado y conexión sintéticos para crear y limpiar un lease TLS. Evidencia en docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md.
+
+**Siguiente acción:** concluir regresión, controles estáticos y revisión de diff; completar evidencias de auditoría; solicitar aceptación formal. La publicación en GitHub requiere autorización separada. No tocar main, Xray-Normativa/, VPS de pruebas ni entorno live.

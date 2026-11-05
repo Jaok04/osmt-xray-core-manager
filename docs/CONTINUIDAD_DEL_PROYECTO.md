@@ -1234,7 +1234,7 @@ El estado vigente del proyecto está consolidado en PROJECT_STATE.md y docs/PUNT
 - **R-01:** implementada, integrada en CLI/menú, verificada en fixtures, auditada localmente, publicada y sincronizada; aceptación formal específica pendiente.
 - **Componentes:** scripts/xray_profile_validation_store.py (almacén independiente de informes); scripts/xray_profile_validation.py (motor estático/nativo y persistencia transaccional); scripts/xray_runtime_preflight.py (preflight read-only); modules/profiles.sh opción 8; scripts/xray_profiles.py (transacciones manifiesto/metadata); config/paths.sh (ruta del almacén).
 - **Expedientes:** docs/DISENO_APLICACION_RUNTIME_XRAY_2026-11-04.md; docs/IMPLEMENTACION_R01_PREFLIGHT_PERFIL_2026-11-04.md; docs/AUDITORIA_R01_PREFLIGHT_PERFIL_2026-11-04.md.
-- **Pruebas:** focal R-01 28/28 PASS (preflight 18/18 + integración 10/10); regresión Python 108/108 PASS; shell 58/58 PASS; py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS.
+- **Pruebas:** focal R-01 28/28 PASS (preflight 18/18 + integración 11/11); regresión Python 108/108 PASS; shell 58/58 PASS; py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS.
 - **Limitaciones:** no se usó el almacén de perfiles ni la clave maestra reales; el estado systemd es fixture; no se probó la identidad efectiva xray ni lectura de leases TLS. Eso corresponde a R-02.
 - **Siguiente paso autorizado:** R-02 — staging de la revisión exacta del perfil y leases TLS en directorio temporal, validación bajo identidad de servicio simulada. No publicar runtime.
 - **Fuera de alcance:** R-06/live, /etc/xray/config.json, systemd real, runtime, certificados desplegados, firewall, puertos, red, dependencias, VPS de pruebas, main y Xray-Normativa/.
@@ -1361,7 +1361,7 @@ Este bloque sustituye como siguiente tarea los puntos de continuidad anteriores 
 - Nuevo `scripts/vless_ws_tls_composer.py`: solo modalidad `vless_ws_tls`; verifica conexión draft/no aplicada, configuración persistida, certificado central activo, exportador oficial Usuarios V2, UUID/tag/puerto, revisión esperada y mappings TLS previos.
 - Construye inbound VLESS `network=ws`, `security=tls`, `tlsSettings.certificates=[]`; preserva los demás inbounds/outbounds y crea revisión inmutable no validada. No activa perfil ni ejecuta R-02.
 - Mapping: `<mapping-root>/<profile_id>/<revision>.json`, directorios 0700 y archivo 0600, escritura atómica. Si el mapping falla después de crear la revisión, informa `REVISIÓN INCOMPLETA`; no continuar a R-02.
-- Prueba focal `tests/test_vless_ws_tls_composer.py`: 10/10 PASS, incluida lectura del mapping mediante el parser real R-02. Regresión completa: Python 163/163 y Bash 58/58 PASS; `py_compile`, `bash -n`, ShellCheck `-S error`, `git diff --check` e `install.sh --check` PASS.
+- Prueba focal `tests/test_vless_ws_tls_composer.py`: 11/11 PASS, incluida lectura del mapping mediante el parser real R-02. Regresión completa: Python 163/163 y Bash 58/58 PASS; `py_compile`, `bash -n`, ShellCheck `-S error`, `git diff --check` e `install.sh --check` PASS.
 - Documentación: `docs/IMPLEMENTACION_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md` y `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md` (auditoría focal PASS).
 - Estado al corte: IMPLEMENTADO, VERIFICADO y AUDITADO en alcance focal; ACEPTADO formalmente el 2026-11-05 con limitaciones documentadas. Publicación autorizada por separado; confirmar commit/push y sincronización.
 - No repetir R-01–R-04. R-05 en pausa; R-06/live y NetMod NO AUTORIZADAS. No tocar clave maestra real, almacenes live, Xray/systemd real, certificados desplegados, DNS, firewall, puertos, red, dependencias, VPS de pruebas, `main` ni `Xray-Normativa/`.
@@ -1450,3 +1450,18 @@ El propietario autorizó la implementación B1-A/B1-B exclusivamente mediante fi
 - Cambios B1 publicados y sincronizados mediante commit funcional c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. Push fast-forward confirmado; HEAD local/remoto coinciden.
 - No modificar main ni Xray-Normativa/.
 - No ejecutar B1 live ni iniciar B2 sin autorización específica. R-06/live sigue NO AUTORIZADA; Etapas 2, 3 y 5 abiertas.
+
+
+## Continuidad vigente — implementación B2 ACME Certbot (2026-11-05)
+
+1. El propietario aprobó Certbot como cliente ACME inicial: HTTP-01 standalone y DNS-01 manual mediante TXT. Las integraciones API DNS quedan aplazadas.
+2. El propietario autorizó implementar B2-A a B2-G exclusivamente con fixtures; no autorizó instalar dependencias, solicitar certificados reales, cambiar DNS, operar live ni publicar.
+3. Nuevo backend: scripts/certificate_acme.py. La emisión exige confirmación explícita --confirm-acme, root, Certbot presente y preflight. El comando plan no ejecuta Certbot.
+4. HTTP-01 requiere IP pública prevista, A/AAAA compatible y puerto 80 libre localmente; no detiene servicios. La accesibilidad externa solo la valida la CA al completar el desafío. DNS-01 publica TXT manualmente y comprueba el valor exacto con dig; no elimina registros.
+5. La importación Certbot verifica que los symlinks live resuelvan dentro de archive, copia a staging root-only y reutiliza certificate_store.py. La prueba fixture integra el certificado con certificate_resolver.prepare y cleanup.
+6. Nuevo menú: modules/certificates.sh, cargado por bin/xray-manager y enrutado desde modules/main_menu.sh. Incluye solicitud, listado e importación Certbot; no implementa aún toda la Etapa 4.
+7. Documentos B2: docs/DECISION_B2_ACME_CERTBOT.md, docs/IMPLEMENTACION_B2_ACME_CERTIFICADOS_2026-11-05.md y docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md.
+8. No se instalaron Certbot/dig, no hubo ACME real, DNS, TCP/80 live, firewall, systemd/runtime, certificados reales, clave maestra ni VPS de pruebas. Xray-Normativa/ y main permanecen intactas.
+9. Regresión global registrada: Python 182/182, Bash 61/61, py_compile, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS. Antes de cerrar, revisar el diff final y obtener aceptación formal y autorización separada de publicación.
+
+La Etapa 4 permanece ABIERTA; R-06/live sigue NO AUTORIZADA.

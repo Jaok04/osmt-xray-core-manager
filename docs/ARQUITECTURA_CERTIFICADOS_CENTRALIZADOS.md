@@ -1,6 +1,6 @@
 # Arquitectura de certificados TLS centralizados
 
-**Versión:** 1.2 — contrato con integración VMess/VLESS parcial
+**Versión:** 1.3 — integración VMess/VLESS parcial y ACME Certbot B2
 **Fecha:** 2026-11-03
 **Estado:** DISEÑO APROBADO; almacén/resolutor IMPLEMENTADOS PARCIALMENTE; integración VMess/VLESS PARCIAL y no aceptada
 **Rama:** `design/user-identity-association-v1`
@@ -306,3 +306,14 @@ Informe: docs/IMPLEMENTACION_RESOLUTOR_CERTIFICADOS_TLS.md.
 - No se tocó runtime, servicio, firewall, puertos, VPS Vps de Pruebas, secretos históricos, REALITY ni Xray-Normativa.
 
 Estado: resolutor IMPLEMENTADO PARCIALMENTE y VERIFICADO con fixtures; no aceptado para producción.
+
+
+## 18. Integración ACME B2 — Certbot (2026-11-05)
+
+El propietario aprobó Certbot como cliente ACME inicial: HTTP-01 standalone y DNS-01 manual mediante TXT. La decisión complementaria y sus límites están en docs/DECISION_B2_ACME_CERTBOT.md.
+
+El adaptador scripts/certificate_acme.py prepara solicitudes, valida dominios, construye comandos sin shell, registra estados y permite importar un lineage Certbot al Certificate Store. HTTP-01 exige IP pública prevista, DNS A/AAAA compatible y disponibilidad local de TCP/80; no detiene servicios. DNS-01 utiliza hooks temporales que muestran el TXT, esperan la publicación manual y comprueban visibilidad con dig; el hook de limpieza no modifica DNS.
+
+La importación admite los enlaces live de Certbot solo cuando sus destinos reales están dentro de config-dir/archive. Copia los archivos a staging root-only y delega la validación/cifrado al Certificate Store. La integración se probó con certificados y conexiones sintéticos; no se ejecutó Certbot ni el Resolver TLS contra systemd real.
+
+No se instalaron Certbot/dig ni dependencias. No se solicitaron certificados reales, no se modificó DNS, TCP/80, firewall, servicios, runtime, claves ni almacenes persistentes reales. La automatización DNS API, renovación, rotación, gestión completa de dominios y diagnóstico siguen pendientes. La Etapa 4 permanece ABIERTA.

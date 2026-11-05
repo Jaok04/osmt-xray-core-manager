@@ -47,7 +47,7 @@
 - I-01 implementado en `scripts/vless_ws_tls_composer.py`; pruebas focales en `tests/test_vless_ws_tls_composer.py`.
 - El propietario aprobó que el mapping TLS se guarde fuera del JSON del perfil, en un archivo privado vinculado por ruta a `profile_id` y `revision`, conservando exactamente el esquema R-02.
 - Composición VLESS-WS-TLS con Usuarios V2, certificado central activo, revisión inmutable, mapping TLS compatible con el parser R-02, protección de revisión obsoleta y preservación de inbounds existentes.
-- Pruebas focales: 10/10 PASS. Regresión completa: Python 163/163 y Bash 58/58 PASS; ShellCheck -S error, bash -n, py_compile, diff y install.sh --check PASS. Auditoría focal documentada.
+- Pruebas focales: 11/11 PASS. Regresión completa: Python 163/163 y Bash 58/58 PASS; ShellCheck -S error, bash -n, py_compile, diff y install.sh --check PASS. Auditoría focal documentada.
 - I-01: IMPLEMENTADO; VERIFICADO; AUDITADO en alcance focal; ACEPTADO formalmente el 2026-11-05 con limitaciones; publicación/sincronización pendientes de verificación.
 - No se modificaron R-01–R-04 ni la normativa. No se ejecutó Xray/systemd real, no se activó perfil ni se tocó runtime. Solo fixtures, claves/certificados sintéticos y temporales.
 - Auditoría: `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md`. Publicación autorizada por separado el 2026-11-05, exclusivamente en la rama autorizada.
@@ -1171,7 +1171,7 @@ U-01 y su auditoría fueron aceptadas formalmente por el propietario. Se autoriz
 - R-01: IMPLEMENTADA, INTEGRADA EN CLI/MENÚ, VERIFICADA EN FIXTURES, AUDITADA LOCALMENTE, PUBLICADA Y SINCRONIZADA. Aceptación formal de R-01 pendiente.
 - Funcionalidad: selección explícita de revisión; validación estática/nativa; informe persistente ligado a profile_id + revision y SHA-256; actualización transaccional de manifiesto/metadata; preflight read-only.
 - Archivos principales: scripts/xray_profile_validation_store.py, scripts/xray_profile_validation.py, scripts/xray_runtime_preflight.py, modules/profiles.sh (opción 8), scripts/xray_profiles.py y config/paths.sh.
-- Evidencia R-01: pruebas focales 28/28 PASS (preflight 18/18 + validación 10/10); regresión Python 108/108 PASS; regresión shell 58/58 PASS. py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS.
+- Evidencia R-01: pruebas focales 28/28 PASS (preflight 18/18 + validación 11/11); regresión Python 108/108 PASS; regresión shell 58/58 PASS. py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS.
 - Publicación de código R-01: c605b3efc904d75a142e9e8c539210eb65070acd. Actualización documental inicial: 856662b0981ad4457f4e4bba72c41735e998f958; reconciliación de continuidad publicada: 94556849316852625fbcf98d8ea0796600097088. Consultar HEAD remoto vigente en GitHub; no asumir que un SHA histórico sigue siendo HEAD.
 - Estado Git verificado al inicio de esta actualización: VPS /opt/xray-manager y origin/design/user-identity-association-v1 coincidían en 856662b0981ad4457f4e4bba72c41735e998f958; árbol limpio. main: 656ecedc506a94a6461aee296b20871d51a38bf3.
 - Limitaciones: R-01 no se ejecutó contra el almacén de perfiles ni la clave maestra reales; el estado de servicio usa fixture, no systemd real; validación bajo identidad efectiva xray y leases TLS queda para R-02.
@@ -1332,3 +1332,16 @@ Este addendum prevalece sobre el orden de trabajo H1–H8 anterior. La aceptaci�
 - Etapas 2, 3 y 5 siguen ABIERTAS; R-06/live NO AUTORIZADA.
 
 Siguiente acción: revisión del expediente B1 por el propietario; después, aceptación formal y autorización independiente de commit/push únicamente en la rama autorizada. No ejecutar B1 live ni avanzar a B2 sin autorización correspondiente.
+
+
+## Estado vigente — B2 ACME Certbot (2026-11-05)
+
+- El propietario aprobó Certbot como cliente ACME inicial: HTTP-01 standalone y DNS-01 manual TXT; API DNS se aplaza. Autorizó B2-A a B2-G exclusivamente en fixtures, sin instalación, ACME real, cambios DNS, operaciones live ni publicación.
+- Se implementó scripts/certificate_acme.py: validación de dominios, wildcard solo DNS-01, construcción de comandos Certbot, preflight HTTP, hooks DNS, journal privado de solicitudes e importación de lineages Certbot al Certificate Store.
+- Se incorporó modules/certificates.sh y se conectó la opción principal [3]. La UI permite solicitar ACME tras confirmación explícita, listar el almacén e importar un lineage emitido.
+- La importación valida SAN, vigencia y correspondencia criptográfica; resuelve symlinks live solo dentro de archive, crea staging root-only y reutiliza el Certificate Store. Una prueba importa certificado sintético y obtiene/limpia un lease mediante Certificate Resolver con fixture VLESS-WS-TLS.
+- Pruebas B2: 11/11 focales PASS; regresión global Python 182/182 y Bash 61/61 PASS; py_compile, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS. Evidencia en docs/AUDITORIA_B2_ACME_CERTIFICADOS_2026-11-05.md.
+- Certbot y dig no se instalaron; no se ejecutó certbot --version, ninguna solicitud ACME real ni comunicación con CA. No se probó DNS público, propagación real, acceso WAN/puerto 80 ni identidad systemd real.
+- Pendientes: confirmar regresión global, revisar diff y obtener aceptación formal. No publicar ni sincronizar GitHub sin autorización separada. No modificar Xray-Normativa/, main o VPS de pruebas. Etapa 4 sigue ABIERTA; R-06/live NO AUTORIZADA.
+
+**Siguiente paso permitido:** terminar auditoría focal/regresión B2, corregir únicamente fallos encontrados dentro del alcance autorizado y presentar resultado al propietario.

@@ -1154,7 +1154,7 @@ Se completó el flujo que faltaba en R-01. Nuevo scripts/xray_profile_validation
 
 Se integró la opción 8 “Validar revisión del perfil” en modules/profiles.sh. El menú obliga a elegir una revisión exacta y deja claro que validar no aplica runtime. El preflight distingue correctamente entre metadata de la revisión actual y el estado autónomo de una revisión histórica.
 
-Pruebas focales: preflight 18/18 PASS; integración validación de perfiles 10/10 PASS; total R-01 28/28 PASS. Regresión Python 108/108 PASS; regresión shell 58/58 PASS; py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS. Todos los perfiles, claves y binarios usados por las pruebas son sintéticos y temporales.
+Pruebas focales: preflight 18/18 PASS; integración validación de perfiles 11/11 PASS; total R-01 28/28 PASS. Regresión Python 108/108 PASS; regresión shell 58/58 PASS; py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS. Todos los perfiles, claves y binarios usados por las pruebas son sintéticos y temporales.
 
 R-01 está IMPLEMENTADA, INTEGRADA EN CLI/MENÚ, VERIFICADA EN FIXTURES y AUDITADA LOCALMENTE; aceptación formal pendiente. No se ejecutó contra el almacén/clave reales ni systemd real. La validación nativa todavía corre con la identidad del llamador; R-02 debe validar staging/leases bajo identidad de servicio simulada. R-02–R-05 no iniciadas; R-06/live no autorizada. Etapas 2, 3 y 5 siguen abiertas.
 
@@ -1248,7 +1248,7 @@ Se añadió `scripts/vless_ws_tls_composer.py` para componer una conexión VLESS
 
 Por decisión expresa del propietario, el mapping se guarda en un archivo auxiliar privado `<mapping-root>/<profile_id>/<revision>.json`, manteniendo el esquema exacto de R-02. Se usan locks compartidos de conexiones/usuarios durante la composición y el lock del almacén de perfiles para verificar la revisión esperada y crear la nueva revisión. No se activa perfil, no se ejecuta R-02, no se valida con Xray y no se modifica runtime/systemd.
 
-Pruebas focales: 10/10 PASS, incluida lectura del mapping por el parser real R-02. Regresión global: Python 163/163 y Bash 58/58 PASS; py_compile, bash -n, ShellCheck -S error, git diff --check e install.sh --check PASS. Auditoría focal PASS en `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md`. Cambios locales sin commit/push; publicación, sincronización y aceptación pendientes. Solo fixtures, claves/certificados sintéticos y temporales.
+Pruebas focales: 11/11 PASS, incluida lectura del mapping por el parser real R-02. Regresión global: Python 163/163 y Bash 58/58 PASS; py_compile, bash -n, ShellCheck -S error, git diff --check e install.sh --check PASS. Auditoría focal PASS en `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md`. Cambios locales sin commit/push; publicación, sincronización y aceptación pendientes. Solo fixtures, claves/certificados sintéticos y temporales.
 
 
 ## 2026-11-05 — aceptación formal y autorización de publicación I-01
@@ -1312,3 +1312,13 @@ Estado: B1-A/B1-B IMPLEMENTADOS, VERIFICADOS y AUDITADOS focalmente; aceptación
 ## 2026-11-05 — aceptación y publicación B1-A / B1-B
 
 El propietario aceptó formalmente B1-A y B1-B y autorizó commit/push exclusivamente en design/user-identity-association-v1. Commit funcional c8cd20c2a576fb1926fdcf11945cd75cf1c4211c (feat(xray): verify installation and prepare service); GitHub confirmó push fast-forward. La verificación posterior comprobó HEAD local/remoto coincidentes, árbol limpio, main intacta y 14/14 documentos normativos sustantivos idénticos al respaldo. Sin operaciones live; R-06/live continúa NO AUTORIZADA.
+
+
+## 2026-11-05 — Implementación B2 ACME Certbot en fixtures
+
+- El propietario aprobó Certbot inicial con HTTP-01 standalone y DNS-01 manual TXT; proveedores DNS API se aplazan. Autorizó B2-A a B2-G solo con fixtures, sin dependencias nuevas, ACME real, DNS, live ni publicación.
+- Se añadió scripts/certificate_acme.py con validación de dominios, comandos Certbot, preflight HTTP, hooks TXT, journal de solicitudes e importación segura de lineages.
+- Se añadió modules/certificates.sh y se conectó el menú principal [3].
+- La importación fixture valida SAN/par de claves, usa staging root-only y el Certificate Store existente. Prueba integrada con Certificate Resolver y lease temporal VLESS-WS-TLS.
+- Evidencia: 11/11 pruebas Python B2 focales PASS; regresión global Python 182/182 y Bash 61/61 PASS; py_compile, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS.
+- No se instaló Certbot/dig, no se ejecutó ACME real, no se cambió DNS/TCP80/firewall/servicios/runtime ni se modificaron certificados persistentes, secretos, normativa, main o VPS de pruebas. No publicar hasta autorización separada.
