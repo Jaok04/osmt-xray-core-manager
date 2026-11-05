@@ -1,7 +1,7 @@
 # Implementación B1-A / B1-B — preparación de servicio e integridad Xray
 
 **Fecha:** 2026-11-05
-**Estado:** IMPLEMENTADO en la VPS de desarrollo; VERIFICADO con fixtures; ACEPTACIÓN FORMAL DEL RESULTADO PENDIENTE; no publicado ni sincronizado con GitHub.
+**Estado:** IMPLEMENTADO, VERIFICADO, AUDITADO, ACEPTADO, PUBLICADO y SINCRONIZADO en la rama autorizada.
 **Base Git:** `fb5010c7f6bd19aed279eb42d1ae29e4a8050530`.
 
 ## 1. B1-B — integridad de la instalación
@@ -59,3 +59,7 @@ La VPS de desarrollo contiene un Xray 26.10.31 preexistente sin manifiesto admin
 ### Serialización y protección de servicio activo
 
 La función pública xray_service_prepare serializa la operación mediante el bloqueo de ciclo de vida compartido y delega en xray_service_prepare_locked. Respeta XRAY_MANAGER_LIFECYCLE_LOCK_HELD=1 para el flujo del instalador. El guard xray_service_require_inactive se ejecuta al inicio de la preparación y aborta si el servicio está activo. La comprobación existente posterior se conserva como protección adicional ante una transición concurrente.
+
+## Addendum de publicación — 2026-11-05
+
+El propietario aceptó formalmente B1-A/B1-B y autorizó su publicación. Commit funcional: c8cd20c2a576fb1926fdcf11945cd75cf1c4211c (feat(xray): verify installation and prepare service). Push fast-forward confirmado a design/user-identity-association-v1; HEAD local y remoto coinciden tras la verificación. La publicación no autoriza operaciones live.

@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-05 — I-01–I-04 aceptados, publicados y sincronizados; HEAD base local/remoto fb5010c7f6bd19aed279eb42d1ae29e4a8050530. B1-A/B1-B implementados, verificados y auditados focalmente en la VPS; aceptación formal del resultado y publicación pendientes. Bash 60/60 y Python 171/171 PASS; controles estáticos globales e install.sh --check PASS. Sin operaciones live.
+**Corte de estado:** 2026-11-05 — I-01–I-04 y B1-A/B1-B aceptados, publicados y sincronizados en design/user-identity-association-v1. Commit funcional B1: c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. HEAD local/remoto verificado tras push; árbol limpio. Bash 60/60 y Python 171/171 PASS; controles estáticos globales e install.sh --check PASS. Sin operaciones live.
 **Estado global:** Etapa 1 aceptada; Etapas 2, 3 y 5 abiertas. R-06/live NO AUTORIZADA.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -1327,8 +1327,8 @@ Este addendum prevalece sobre el orden de trabajo H1–H8 anterior. La aceptaci�
 - Documentos: docs/DECISION_B1_SERVICE_PREPARATION_AND_INSTALL_INTEGRITY.md, docs/IMPLEMENTACION_B1_A_B1_B_2026-11-05.md, docs/AUDITORIA_B1_A_B1_B_2026-11-05.md.
 - Pruebas: Bash 60/60 scripts PASS; Python unittest 171/171 PASS; py_compile global, bash -n global, ShellCheck -S error global, install.sh --check y git diff --check PASS.
 - No se ejecutó preparación/instalación live ni el binario real systemctl; el estado activo se simuló con un stub. No se modificaron unidad/cuenta reales, runtime, certificados, DNS, firewall, puertos, red o dependencias.
-- Rama y HEAD base local/remoto: design/user-identity-association-v1 / fb5010c7f6bd19aed279eb42d1ae29e4a8050530. Cambios B1 solo locales; no publicados ni sincronizados. Aceptación formal del resultado y autorización de publicación pendientes.
-- main permanece en 656ecedc506a94a6461aee296b20871d51a38bf3. Los 14 documentos normativos sustantivos se mantienen idénticos al respaldo; Xray-Normativa/ no se modificó.
+- Rama: design/user-identity-association-v1. B1-A/B1-B aceptados formalmente y publicados mediante commit c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. Push fast-forward confirmado; HEAD local y remoto coinciden. main permanece en 656ecedc506a94a6461aee296b20871d51a38bf3.
+- Los 14 documentos normativos sustantivos se mantienen idénticos al respaldo; Xray-Normativa/ no se modificó.
 - Etapas 2, 3 y 5 siguen ABIERTAS; R-06/live NO AUTORIZADA.
 
 Siguiente acción: revisión del expediente B1 por el propietario; después, aceptación formal y autorización independiente de commit/push únicamente en la rama autorizada. No ejecutar B1 live ni avanzar a B2 sin autorización correspondiente.

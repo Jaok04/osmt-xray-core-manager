@@ -3,7 +3,7 @@
 **Alcance:** B1-A preparación de servicio desde el administrador y B1-B manifiesto de integridad.
 **Entorno:** VPS de desarrollo `Implementación-Xray`, checkout `/opt/xray-manager`, rama `design/user-identity-association-v1`.
 **Base Git:** `fb5010c7f6bd19aed279eb42d1ae29e4a8050530`.
-**Resultado:** pruebas aisladas PASS; sin validación live.
+**Resultado:** pruebas aisladas PASS; B1 aceptado formalmente y publicado; sin validación live.
 
 ## 1. Matriz de aceptación
 
@@ -50,11 +50,16 @@
 
 ## 4. Estado Git y publicación
 
-- HEAD local y remoto de la rama autorizada siguen en `fb5010c7f6bd19aed279eb42d1ae29e4a8050530`.
-- Los cambios B1 están únicamente en el árbol de trabajo de la VPS; no hay commit/push de B1.
-- La sincronización con GitHub queda pendiente de autorización específica del propietario.
-- La aceptación formal del resultado B1 queda pendiente.
+- Commit funcional B1: c8cd20c2a576fb1926fdcf11945cd75cf1c4211c (feat(xray): verify installation and prepare service).
+- Push fast-forward confirmado a design/user-identity-association-v1.
+- Verificación posterior: HEAD local = HEAD remoto; árbol limpio.
+- main permanece en 656ecedc506a94a6461aee296b20871d51a38bf3.
+- Los 14 documentos normativos sustantivos continúan idénticos al respaldo.
 - Etapas 2, 3 y 5 siguen ABIERTAS; R-06/live continúa NO AUTORIZADA.
 
 
 Prueba adicional de B1-A: tests/xray_service.sh ocupa el bloqueo de ciclo de vida en un descriptor independiente, comprueba que la preparación concurrente falla sin modificar el fixture, libera el lock y vuelve a ejecutar la preparación correctamente. PASS.
+
+## Addendum de aceptación y publicación — 2026-11-05
+
+El propietario aceptó formalmente B1-A/B1-B y autorizó commit/push exclusivamente en design/user-identity-association-v1. Commit funcional c8cd20c2a576fb1926fdcf11945cd75cf1c4211c; GitHub confirmó push fast-forward. Verificación posterior confirmó HEAD local/remoto coincidentes, árbol limpio, main intacta y 14/14 documentos normativos idénticos al respaldo. La publicación no cambia las limitaciones live descritas en esta auditoría.

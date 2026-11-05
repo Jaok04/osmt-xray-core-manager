@@ -3,15 +3,15 @@
 > El punto de control operativo vigente es el último bloque B1-A/B1-B al final del documento. Los apartados anteriores se conservan como historial y quedan superados cuando contradigan ese bloque.
 
 **Fecha del corte:** 2026-11-05
-**Siguiente tarea:** revisar y aceptar formalmente el resultado B1-A/B1-B; después solicitar autorización específica de publicación. No ejecutar operaciones live por inferencia.
-**Estado vigente:** I-01–I-04 aceptados, publicados y sincronizados; B1-A/B1-B implementados, verificados y auditados focalmente en la VPS, con aceptación formal del resultado y publicación pendientes. HEAD base local/remoto fb5010c7f6bd19aed279eb42d1ae29e4a8050530. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
+**Siguiente tarea:** realizar el contraste documental preliminar del siguiente bloque del plan MVP y definir su alcance antes de cualquier edición. No ejecutar operaciones live por inferencia.
+**Estado vigente:** I-01–I-04 y B1-A/B1-B aceptados, publicados y sincronizados en design/user-identity-association-v1. Commit funcional B1 c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. HEAD local/remoto verificado tras push; árbol limpio tras actualización documental. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
 
 
-> El punto de control operativo vigente es el último bloque R-04 al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
+> Registro histórico del punto de control R-04 (2026-11-04). El punto vigente es el bloque B1-A/B1-B al final de este documento.
 
 **Fecha del corte:** 2026-11-04
 **Siguiente tarea tras revisión/aceptación formal:** R-05 — orquestación systemd simulada. R-02/R-03/R-04 implementadas y verificadas localmente; sin commit/push.
-**Estado vigente:** I-01–I-04 aceptados, publicados y sincronizados; B1-A/B1-B implementados, verificados y auditados focalmente en la VPS, con aceptación formal del resultado y publicación pendientes. HEAD base local/remoto fb5010c7f6bd19aed279eb42d1ae29e4a8050530. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
+**Estado vigente:** I-01–I-04 y B1-A/B1-B aceptados, publicados y sincronizados en design/user-identity-association-v1. Commit funcional B1 c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. HEAD local/remoto verificado tras push; árbol limpio tras actualización documental. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
 
 **Regla de cierre de etapas:** Etapa 2 permanece ABIERTA aunque VMess esté técnicamente listo. No se podrá declarar completada hasta auditar y documentar todos los puntos, subpuntos, protocolos, modalidades, flujos, módulos y componentes internos definidos por la línea base aprobada, ejecutar la regresión integral y obtener aceptación formal del propietario. Aplicar `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md`.
 
@@ -1412,7 +1412,7 @@ El propietario autorizó generar URI vless:// para NetMod con endpoint público 
 
 ## Punto de control vigente — B1-A / B1-B (2026-11-05)
 
-Autorización recibida: implementar B1-A y B1-B exclusivamente con fixtures, sin operaciones live.
+Autorización recibida: implementar B1-A y B1-B exclusivamente con fixtures, sin operaciones live. El propietario aceptó formalmente ambos bloques y autorizó commit/push en la rama design/user-identity-association-v1.
 
 B1-A implementado: opción [7] Preparar servicio (verifica integridad) en Administración de Xray-core. Requiere manifiesto válido y confirmación explícita; adquiere el bloqueo de ciclo de vida, revalida integridad bajo el lock y reutiliza xray_service_prepare; no inicia ni habilita Xray; usa el bloqueo de ciclo de vida y aborta antes de cambios si el servicio está activo.
 
@@ -1428,8 +1428,8 @@ Evidencia actual:
 
 Límites: todas las pruebas se realizaron en fixtures. No se ejecutó preparación live, instalación/reparación live ni el binario real systemctl; la comprobación de servicio activo se simuló con un stub. No se creó identidad/unidad real ni se cambiaron runtime, certificados, DNS, firewall, puertos, red o dependencias.
 
-Git: rama design/user-identity-association-v1; HEAD local/remoto base fb5010c7f6bd19aed279eb42d1ae29e4a8050530. Cambios B1 están solo en el árbol de trabajo de la VPS. No hay commit/push ni sincronización de B1. main intacta; Xray-Normativa/ intacta.
+Git: rama design/user-identity-association-v1; commit funcional B1 c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. Push fast-forward confirmado; HEAD local/remoto coinciden. main intacta; Xray-Normativa/ intacta.
 
-Estado separado: B1-A/B1-B IMPLEMENTADOS, VERIFICADOS y AUDITADOS focalmente; aceptación formal del resultado PENDIENTE; PUBLICADOS NO; SINCRONIZADOS NO. Etapas 2, 3 y 5 ABIERTAS; R-06/live NO AUTORIZADA.
+Estado separado: B1-A/B1-B IMPLEMENTADOS, VERIFICADOS, AUDITADOS, ACEPTADOS, PUBLICADOS y SINCRONIZADOS. Etapas 2, 3 y 5 ABIERTAS; R-06/live NO AUTORIZADA.
 
-Siguiente acción: el propietario revisa la auditoría y decide si acepta formalmente B1 y autoriza commit/push únicamente a design/user-identity-association-v1. No ejecutar B1 live ni avanzar a B2 sin autorización específica.
+Siguiente acción: continuar con el siguiente bloque del plan MVP después del contraste documental y autorización de alcance específica. No ejecutar B1 live ni avanzar a B2 sin autorización específica.

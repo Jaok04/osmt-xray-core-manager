@@ -3,7 +3,7 @@
 **Proyecto:** Xray Core Manager
 **Fecha:** 2026-11-05
 **Rama:** `design/user-identity-association-v1`
-**Estado:** alcance de implementación autorizado por el propietario; publicación y operaciones live no autorizadas en este incremento.
+**Estado:** decisión complementaria implementada y aceptada; publicación confirmada en design/user-identity-association-v1 mediante commit c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. Operaciones live siguen no autorizadas.
 
 ## 1. Referencias y contraste normativo
 

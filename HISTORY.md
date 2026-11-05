@@ -1307,3 +1307,8 @@ Pruebas: Bash 60/60 scripts PASS; Python unittest 171/171 PASS; py_compile globa
 No se ejecutó preparación/instalación live, systemctl, ni se creó usuario/grupo/unidad real. No se modificaron runtime, certificados reales, DNS, firewall, puertos, red o dependencias. No se utilizó VPS de pruebas ni se leyó master.key.
 
 Estado: B1-A/B1-B IMPLEMENTADOS, VERIFICADOS y AUDITADOS focalmente; aceptación formal del resultado PENDIENTE; no publicados ni sincronizados. HEAD base local/remoto fb5010c7f6bd19aed279eb42d1ae29e4a8050530; los cambios B1 permanecen en el árbol de trabajo de la VPS. main y Xray-Normativa/ intactas. Etapas 2, 3 y 5 abiertas; R-06/live NO AUTORIZADA.
+
+
+## 2026-11-05 — aceptación y publicación B1-A / B1-B
+
+El propietario aceptó formalmente B1-A y B1-B y autorizó commit/push exclusivamente en design/user-identity-association-v1. Commit funcional c8cd20c2a576fb1926fdcf11945cd75cf1c4211c (feat(xray): verify installation and prepare service); GitHub confirmó push fast-forward. La verificación posterior comprobó HEAD local/remoto coincidentes, árbol limpio, main intacta y 14/14 documentos normativos sustantivos idénticos al respaldo. Sin operaciones live; R-06/live continúa NO AUTORIZADA.

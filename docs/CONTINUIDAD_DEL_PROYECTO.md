@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-05:** I-01–I-04 aceptados, publicados y sincronizados; HEAD base local/remoto fb5010c7f6bd19aed279eb42d1ae29e4a8050530. B1-A/B1-B implementados, verificados y auditados focalmente en la VPS, solo con fixtures; aceptación formal del resultado y publicación pendientes. Bash 60/60 y Python 171/171 PASS; controles estáticos globales e install.sh --check PASS. No se ejecutó ninguna operación live. main y Xray-Normativa/ permanecen intactas; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS.
+> **Punto de reanudación vigente — 2026-11-05:** I-01–I-04 y B1-A/B1-B aceptados, publicados y sincronizados en design/user-identity-association-v1. Commit funcional B1: c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. Push fast-forward confirmado; HEAD local/remoto coinciden y el árbol quedó limpio tras la actualización documental. Bash 60/60 y Python 171/171 PASS; controles estáticos globales e install.sh --check PASS. No se ejecutó ninguna operación live. main y Xray-Normativa/ permanecen intactas; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -1424,7 +1424,7 @@ Pruebas focales I-04: 7/7 PASS; integración de menú/compositor PASS. Regresió
 
 ## Continuidad vigente — B1-A / B1-B (2026-11-05)
 
-El propietario autorizó la implementación B1-A/B1-B exclusivamente mediante fixtures, sin operaciones live. El resultado técnico está implementado y auditado focalmente; todavía no tiene aceptación formal del resultado ni autorización de publicación.
+El propietario autorizó la implementación B1-A/B1-B exclusivamente mediante fixtures, sin operaciones live. El resultado fue aceptado formalmente y publicado mediante commit c8cd20c2a576fb1926fdcf11945cd75cf1c4211c en design/user-identity-association-v1. El push fast-forward fue confirmado y la verificación posterior comprobó HEAD local/remoto coincidentes y árbol limpio.
 
 ### B1-A — preparación del servicio
 - Opción [7] añadida al submenú Administración de Xray-core: Preparar servicio (verifica integridad).
@@ -1447,6 +1447,6 @@ El propietario autorizó la implementación B1-A/B1-B exclusivamente mediante fi
 
 ### Git y siguiente acción
 - Rama autorizada: design/user-identity-association-v1; HEAD local/remoto base fb5010c7f6bd19aed279eb42d1ae29e4a8050530.
-- Cambios B1 solo en el árbol local de la VPS; no publicados ni sincronizados.
-- Solicitar aceptación formal del resultado y autorización independiente para commit/push. No modificar main ni Xray-Normativa/.
+- Cambios B1 publicados y sincronizados mediante commit funcional c8cd20c2a576fb1926fdcf11945cd75cf1c4211c. Push fast-forward confirmado; HEAD local/remoto coinciden.
+- No modificar main ni Xray-Normativa/.
 - No ejecutar B1 live ni iniciar B2 sin autorización específica. R-06/live sigue NO AUTORIZADA; Etapas 2, 3 y 5 abiertas.
