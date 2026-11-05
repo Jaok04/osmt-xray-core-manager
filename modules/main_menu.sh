@@ -25,7 +25,7 @@ menu_main() {
         case "$option" in
             1) connections_menu || true ;;
             2) users_menu_dispatch || true ;;
-            3) menu_placeholder "Certificados SSL/TLS y dominios" || true ;;
+            3) certificates_menu || true ;;
             4) menu_config_profiles_backups || true ;;
             5) menu_xray_service || true ;;
             6) menu_placeholder "Diagnóstico y registros" || true ;;

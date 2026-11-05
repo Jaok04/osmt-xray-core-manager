@@ -58,6 +58,8 @@ source "$APP_ROOT/modules/xray_admin.sh"
 # shellcheck disable=SC1091
 source "$APP_ROOT/modules/xray_service.sh"
 # shellcheck disable=SC1091
+source "$APP_ROOT/modules/certificates.sh"
+# shellcheck disable=SC1091
 source "$APP_ROOT/modules/system_admin.sh"
 # shellcheck disable=SC1091
 source "$APP_ROOT/modules/admin_settings.sh"

@@ -18,6 +18,7 @@ source "$ROOT/modules/users_v2_menu.sh"
 source "$ROOT/modules/vless_backup.sh"
 source "$ROOT/modules/profiles.sh"
 source "$ROOT/modules/xray_service.sh"
+source "$ROOT/modules/certificates.sh"
 source "$ROOT/modules/main_menu.sh"
 
 tmp="$(mktemp -d)"
@@ -135,6 +136,10 @@ menu_placeholder() {
     echo placeholder >>"$TOP_LEVEL_CALLS"
     return 1
 }
+certificates_menu() {
+    echo certificates >>"$TOP_LEVEL_CALLS"
+    return 1
+}
 menu_config_profiles_backups() {
     echo placeholder >>"$TOP_LEVEL_CALLS"
     return 1
@@ -154,6 +159,7 @@ menu_information() {
 ui_confirm() { return 0; }
 printf '1\n2\n3\n4\n5\n6\n7\n8\n9\n0\n' | menu_main >"$tmp/all-main-returns.out"
 [[ "$(wc -l <"$TOP_LEVEL_CALLS")" -eq 9 ]]
+grep -Fxq certificates "$TOP_LEVEL_CALLS"
 [[ "$(wc -l <"$HEADER_CALLS")" -eq 10 ]]
 
 # Restaurar implementaciones reales después de los stubs del bloque de enrutamiento.
