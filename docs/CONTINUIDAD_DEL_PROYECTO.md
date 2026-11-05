@@ -1303,3 +1303,20 @@ Este bloque es el punto de reanudación vigente y supera los bloques históricos
 - Etapas 2, 3 y 5 permanecen ABIERTAS. Publicar no equivale a aceptación formal ni a cierre de etapa.
 
 Siguiente acción: revisar y aprobar o devolver el diseño R-05. No repetir R-01–R-04. No ejecutar systemd/Xray real, leer la clave maestra, tocar almacenes live, certificados desplegados, firewall, puertos, red, dependencias ni VPS de pruebas.
+
+
+## Continuidad vigente — objetivo primer servicio real VLESS + WS + TLS (2026-11-04)
+
+La prioridad del proyecto cambió: el siguiente objetivo de validación es ejecutar un servicio real VLESS + WebSocket + TLS desde Xray-Core Manager. No comenzar protocolos adicionales ni repetir R-01–R-04.
+
+1. Leer `docs/PLAN_HITO_PRIMER_SERVICIO_REAL_VLESS_WS_TLS_2026-11-04.md` para el plan H0–H8.
+2. Leer `docs/PUNTO_CONTROL_ACTUAL.md` y `PROJECT_STATE.md` para el estado vigente.
+3. R-01–R-04 ya están publicadas/sincronizadas en la rama autorizada; sus aceptaciones formales individuales siguen pendientes. Las pruebas son evidencia histórica, no resultados reejecutados en esta actualización.
+4. R-05 dispone de diseño de orquestación simulada. El simulador será un banco de pruebas, no el resultado final: la arquitectura deberá admitir un adaptador real acotado a `xray.service`, sujeto a autorización live independiente.
+5. Decisiones aprobadas: reinicio de servicio activo requiere confirmación; si se rechaza, queda `published_pending_apply`; publicar con servicio inactivo no lo inicia y queda `published_pending_start`; el inicio manual desde el administrador requiere confirmación; cada operación tiene `generation_id` único.
+6. Decisiones pendientes de diseño: estado previo `failed` si no puede demostrarse equivalencia después de rollback; extensión versionada del journal existente frente a registro separado. No inventar aprobación.
+7. Siguiente tarea: H0, auditoría de brechas, solo lectura. Clasificar módulos existentes/parciales/ausentes para instalación, systemd, DNS/ACME, TLS centralizado, VLESS-WS-TLS, perfiles, publicación y diagnóstico. No implementar hasta entregar la matriz y recibir aprobación.
+8. R-06/live continúa NO AUTORIZADA. Este cambio de prioridad no permite instalar Xray, modificar systemd/runtime, certificados reales, DNS, firewall, puertos, red ni ejecutar NetMod.
+9. Mantener normativa inmutable, `main` protegida, no usar VPS de pruebas, no leer la clave maestra y publicar únicamente en `design/user-identity-association-v1`.
+
+Para reanudar, verificar HEAD, upstream, árbol limpio y sincronización GitHub/VPS. No asumir que el estado del último commit histórico sigue vigente.

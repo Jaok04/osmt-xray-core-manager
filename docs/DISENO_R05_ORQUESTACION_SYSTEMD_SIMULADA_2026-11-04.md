@@ -149,3 +149,35 @@ No inferir respuestas; resolverlas antes de implementar.
 ## 11. Estado y autorización
 
 R-01–R-04 están implementadas, verificadas/auditadas, publicadas y sincronizadas; aceptación formal individual pendiente. R-05 está en diseño, NO INICIADA y sin pruebas. R-06/live NO AUTORIZADA. Este documento no autoriza código, systemd real ni cambios de infraestructura; requiere aprobación expresa.
+
+
+## Addendum del propietario — prioridad de servicio real y decisiones aprobadas (2026-11-04)
+
+Este addendum actualiza la dirección del diseño. La sección 10 anterior conserva el registro de las preguntas originales, pero las decisiones expresamente aprobadas abajo la superan en esos puntos.
+
+### Objetivo revisado
+
+El simulador de R-05 es un banco de pruebas para la orquestación y la recuperación; no es el objetivo final ni demuestra systemd real. El proyecto prioriza el primer servicio real VLESS + WebSocket + TLS. La hoja de ruta H0–H8 se encuentra en `docs/PLAN_HITO_PRIMER_SERVICIO_REAL_VLESS_WS_TLS_2026-11-04.md`.
+
+La arquitectura de orquestación debe separar el núcleo transaccional del adaptador de servicio:
+- adaptador simulado para pruebas deterministas y de fallos;
+- adaptador real, acotado a `xray.service`, para la fase live, sujeto a autorización explícita independiente;
+- ningún comando arbitrario, shell interpolado ni unidad elegida libremente.
+
+### Decisiones aprobadas
+
+1. **Servicio previamente active:** antes de reiniciar para aplicar una revisión nueva, el administrador debe solicitar confirmación explícita.
+2. **Confirmación rechazada:** no reiniciar. Registrar `published_pending_apply`; el proceso que ya está activo conserva la configuración cargada en memoria y la revisión nueva no se marca como aplicada.
+3. **Servicio previamente inactive:** publicar la configuración sin iniciar ni reiniciar. Registrar `published_pending_start`. La activación posterior se realiza desde la operación manual de inicio del administrador, con confirmación, preflight y verificación.
+4. **Generación:** cada operación tendrá un `generation_id` único y no reutilizable, ligado a journal, petición al adaptador y evidencia de verificación. Una respuesta de una generación anterior no satisface la verificación actual.
+5. **Prioridad del proyecto:** primer servicio real VLESS + WS + TLS, administrado desde el propio Xray-Core Manager.
+
+### Decisiones aún no aprobadas
+
+- Estado previo `failed`: no arrancar automáticamente. Si no puede demostrarse restauración equivalente, usar `recovery_required`; la semántica final debe quedar especificada antes de implementar.
+- Journal: recomendación de extender el journal R-03/R-04 con esquema/versionado compatible hacia atrás, pero requiere decisión/aprobación técnica específica antes de cambiar su formato.
+- Detalles de confirmación, timeout, reconciliación de respuestas ambiguas y evidencias del adaptador real deben detallarse en el diseño de implementación.
+
+### Límites
+
+Este addendum no autoriza R-06/live, instalación/actualización de Xray, escritura runtime, systemd real, emisión/instalación de certificados, DNS, firewall, puertos, red ni prueba NetMod. La implementación de un adaptador real y su primera ejecución requieren autorización específica del propietario. No hay pruebas R-05 PASS; R-05 sigue sin implementar.

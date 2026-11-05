@@ -1204,3 +1204,21 @@ Este addendum prevalece como fotografía de estado sobre los registros históric
 - No se modificaron normativa, main, runtime/systemd reales, claves, almacenes live, certificados desplegados, firewall, puertos, red, dependencias ni VPS de pruebas.
 
 **Siguiente paso permitido:** revisar el diseño R-05 con el propietario. No iniciar implementación hasta aprobación expresa.
+
+
+## Estado vigente — prioridad primer servicio real VLESS-WS-TLS (2026-11-04)
+
+Este addendum prevalece sobre las fotografías anteriores para la prioridad y el siguiente punto de trabajo. Los registros históricos se conservan íntegros.
+
+- **Objetivo prioritario:** demostrar la viabilidad de Xray-Core Manager ejecutando y administrando un servicio real VLESS + WebSocket + TLS, con operaciones del servidor realizadas desde el administrador.
+- **Hoja de ruta:** `docs/PLAN_HITO_PRIMER_SERVICIO_REAL_VLESS_WS_TLS_2026-11-04.md`. Define H0 auditoría de brechas, H1 instalación/ciclo de vida, H2 DNS/TLS, H3 VLESS-WS-TLS, H4 perfil/configuración, H5 orquestación/confirmaciones, H6 adaptador systemd real y primera aplicación, H7 diagnóstico/backup/recuperación y H8 prueba externa.
+- **R-01–R-04:** implementadas, verificadas/auditadas, publicadas y sincronizadas al commit `4433cd324756eb32f2d9b6b5d48ed8dba7681e34`; aceptación formal individual sigue pendiente. No repetirlas.
+- **R-05:** el diseño previo de systemd simulado debe evolucionar como banco de pruebas de la orquestación, no como objetivo final. La primera aplicación real requiere adaptador real y autorización específica.
+- **Decisiones nuevas aprobadas:** reinicio de servicio `active` requiere confirmación; rechazar deja la revisión publicada pendiente de aplicación y conserva el proceso actual; publicar con servicio `inactive` no lo inicia y permite inicio manual posterior desde el administrador con confirmación; usar `generation_id` único para cada operación y su evidencia.
+- **Decisiones técnicas aún abiertas:** tratamiento final de estado previo `failed` cuando no pueda probarse equivalencia tras rollback; extensión versionada del journal R-03/R-04 o registro separado. La recomendación de diseño es fail-closed y extender el journal de forma compatible, respectivamente; no tratarlas como aprobaciones.
+- **Aceptación formal:** no se declara aceptado ningún incremento nuevo ni cerrado ningún hito por este cambio documental.
+- **Autorización live:** R-06/live continúa NO AUTORIZADA. La nueva prioridad no autoriza instalar Xray, modificar systemd/runtime, DNS, certificados, firewall, puertos, red ni ejecutar NetMod.
+- **Normativa:** los documentos de `Xray-Normativa/` permanecen inmutables; `main` no se modifica; no utilizar la VPS de pruebas.
+- **Pruebas:** esta actualización es exclusivamente documental; no reejecuta regresiones ni pruebas runtime.
+
+**Siguiente acción:** H0 — auditoría de brechas, sin cambios live ni código de producto, para identificar exactamente qué capacidades ya existen y cuáles faltan antes de implementar.

@@ -204,3 +204,9 @@ R-04 queda pendiente de aceptación formal/publicación. R-05 (systemd simulado)
 ## Addendum de continuidad — estado R-01–R-04 y diseño R-05 (2026-11-04)
 
 R-01–R-04 están implementadas, verificadas/auditadas, publicadas y sincronizadas; la aceptación formal individual sigue pendiente. R-05 aún no está iniciada. Su propuesta detallada se encuentra en `docs/DISENO_R05_ORQUESTACION_SYSTEMD_SIMULADA_2026-11-04.md`. La propuesta no amplía la autorización existente ni autoriza ejecución de systemd real. R-06/live permanece NO AUTORIZADA.
+
+## Addendum — objetivo de validación real (2026-11-04)
+
+La prioridad del proyecto es ahora el primer servicio real VLESS + WebSocket + TLS. R-01–R-04 se reutilizan; R-05 simulado se mantiene como banco de pruebas y no se considera prueba de systemd real. El plan de trabajo H0–H8, los límites de autorización y los criterios de éxito están en `docs/PLAN_HITO_PRIMER_SERVICIO_REAL_VLESS_WS_TLS_2026-11-04.md`.
+
+Reglas aprobadas: reinicio de servicio active requiere confirmación explícita; rechazar deja la revisión publicada pendiente de aplicación y conserva el proceso actual; publicar con servicio inactive no lo inicia, y el inicio manual posterior requiere confirmación; cada operación utiliza generation_id único. El adaptador real y cualquier cambio live requieren autorización independiente. No se modificó la normativa ni el runtime.

@@ -1210,3 +1210,42 @@ Resultados documentados: R-01 28/28 focal; R-02 11/11; R-03 22/22; R-04 12/12; P
 **Siguiente paso:** revisión del diseño `docs/DISENO_R05_ORQUESTACION_SYSTEMD_SIMULADA_2026-11-04.md`. R-05 no debe implementarse hasta aprobación expresa. Los estados previos que indiquen R-02–R-04 sin publicar son históricos y quedan superados por este punto de control.
 
 Límites: normativa inmutable; `main` protegida; R-06/live no autorizada; sin cambios reales de Xray/systemd, certificados, claves, almacenes, firewall, puertos, red o dependencias; no utilizar VPS de pruebas. Etapas 2, 3 y 5 ABIERTAS.
+
+
+## Punto de control vigente — prioridad primer servicio real VLESS + WS + TLS (2026-11-04)
+
+**Rama:** `design/user-identity-association-v1`
+**HEAD base verificado antes de esta actualización:** `4433cd324756eb32f2d9b6b5d48ed8dba7681e34`
+**VPS:** `Implementación-Xray:/opt/xray-manager`
+**Estado base:** árbol limpio, rama/upstream correctos, HEAD local y remoto coincidentes.
+
+### Prioridad
+
+Demostrar el primer servicio real VLESS + WebSocket + TLS gestionado por Xray-Core Manager. La hoja de ruta completa está en `docs/PLAN_HITO_PRIMER_SERVICIO_REAL_VLESS_WS_TLS_2026-11-04.md`.
+
+### Estado
+
+| Componente | Estado al corte |
+|---|---|
+| R-01 | Implementada, verificada/auditada, publicada/sincronizada; aceptación formal pendiente |
+| R-02 | Implementada, verificada/auditada, publicada/sincronizada; aceptación formal pendiente |
+| R-03 | Implementada, verificada/auditada, publicada/sincronizada; aceptación formal pendiente |
+| R-04 | Implementada, verificada/auditada, publicada/sincronizada; aceptación formal pendiente |
+| R-05 | Diseño de orquestación simulada; no implementada; debe evolucionar hacia adaptador real |
+| H0 auditoría de brechas | Siguiente trabajo; no iniciada |
+| H1–H8 | No iniciadas como hitos de la nueva hoja de ruta |
+| R-06/live | No autorizada |
+
+### Decisiones del propietario
+
+- VLESS + WS + TLS será el primer servicio de validación.
+- El reinicio de un servicio `active` exige confirmación explícita.
+- Si se rechaza, no se reinicia; la revisión queda publicada pendiente de aplicación y el proceso actual conserva su configuración cargada.
+- Si el servicio estaba `inactive`, publicar no lo inicia. El inicio manual desde el administrador requiere confirmación y verificación.
+- Cada operación usa un `generation_id` único, asociado a journal y evidencia.
+
+### Siguiente acción permitida
+
+Ejecutar H0: inventario/auditoría de brechas del código, menús, pruebas y documentación frente a las Etapas normativas 2, 4, 5 y 6. Solo lectura y documentación; no instalar, modificar código de producto ni tocar runtime, systemd, certificados, DNS, firewall, puertos o red.
+
+No repetir R-01–R-04. No usar la VPS de pruebas. No modificar `main` ni `Xray-Normativa/`. No ejecutar R-06/live ni prueba NetMod sin autorización específica.
