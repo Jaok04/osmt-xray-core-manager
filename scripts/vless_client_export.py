@@ -21,6 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 import xray_profiles
 import vless_config_store
+import certificate_store
 
 DOMAIN_RE = re.compile(
     r"(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)"
@@ -49,6 +50,57 @@ def validate_address(value: str) -> str:
         if not DOMAIN_RE.fullmatch(value) or value.endswith(".."):
             fail("El endpoint debe ser un dominio DNS ASCII o una dirección IP.")
         return value.rstrip(".").lower()
+
+
+
+def certificate_covers_server_name(certificate: dict, server_name: str) -> bool:
+    """Return whether a DNS SAN exactly or one-label-wildcard matches server_name."""
+    if not isinstance(server_name, str) or not DOMAIN_RE.fullmatch(server_name):
+        return False
+    candidate = server_name.rstrip(".").lower()
+    sans = certificate.get("sans")
+    if not isinstance(sans, list):
+        return False
+    for san in sans:
+        if not isinstance(san, str):
+            continue
+        san = san.rstrip(".").lower()
+        if san == candidate:
+            return True
+        if san.startswith("*."):
+            suffix = san[2:]
+            if candidate.endswith("." + suffix) and candidate.count(".") == suffix.count(".") + 1:
+                return True
+    return False
+
+
+def validate_certificate_sni(
+    config: dict, certificate_catalog_path: str, inbound_tag: str, endpoint_address: str
+) -> None:
+    client_options = config.get("client_options", {})
+    if not isinstance(client_options, dict):
+        fail(f"Opciones de cliente inválidas para {inbound_tag}.")
+    server_name = client_options.get("tls_server_name") or endpoint_address
+    try:
+        ipaddress.ip_address(server_name)
+    except ValueError:
+        pass
+    else:
+        fail("La validación de SAN para endpoint IP no está disponible; configura un SNI DNS cubierto por el certificado.")
+    if not isinstance(server_name, str) or not DOMAIN_RE.fullmatch(server_name):
+        fail(f"SNI inválido para {inbound_tag}.")
+    certificate_id = config.get("security_options", {}).get("certificate_id")
+    if not isinstance(certificate_id, str):
+        fail(f"La conexión {inbound_tag} no referencia un certificado TLS central.")
+    try:
+        catalog = certificate_store.load_catalog(pathlib.Path(certificate_catalog_path).absolute())
+    except Exception as exc:
+        raise ExportError("No se pudo validar el catálogo central de certificados.") from exc
+    matches = [item for item in catalog["certificates"] if item.get("certificate_id") == certificate_id]
+    if len(matches) != 1 or matches[0].get("status") != "active":
+        fail(f"El certificado TLS de {inbound_tag} no está activo en el catálogo.")
+    if not certificate_covers_server_name(matches[0], server_name):
+        fail(f"El SNI {server_name} no está cubierto por los SAN del certificado {certificate_id} asociado a {inbound_tag}.")
 
 
 def read_private_mapping(path: pathlib.Path) -> dict:
@@ -250,8 +302,9 @@ def export_profile(args: argparse.Namespace) -> dict:
         require_private_dir(revision_dir, "revisión solicitada")
         metadata = store.load_metadata(args.profile_id)
         raw, manifest = store.read_revision_config(args.profile_id, args.revision)
-        if manifest["validation"]["status"] == "invalid":
-            fail("No se exportan clientes desde una revisión marcada como inválida.")
+        if (manifest["validation"]["status"] != "valid" or
+                manifest["validation"]["xray_static"] != "pass"):
+            fail("No se exportan clientes: la revisión exacta no tiene validación Xray satisfactoria.")
         try:
             profile_config = json.loads(raw.decode("utf-8"))
         except (UnicodeError, json.JSONDecodeError) as exc:
@@ -303,6 +356,7 @@ def export_profile(args: argparse.Namespace) -> dict:
             if not isinstance(clients, list) or not clients:
                 fail(f"El inbound {tag} no contiene clientes exportables.")
             source = read_connection_config(args, connection_id)
+            validate_certificate_sni(source, args.certificate_catalog, tag, address)
             if (source.get("mode_id") != "vless_ws_tls" or source.get("transport") != "websocket" or
                     source.get("security") != "tls" or source.get("listen_port") != args.port or
                     source.get("transport_options", {}).get("path") != ws["path"] or

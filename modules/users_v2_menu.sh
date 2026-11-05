@@ -178,7 +178,7 @@ users_v2_menu_create_identity() {
 # Crea una asociación sobre una identidad y una conexión ya registradas.
 # Las credenciales se leen sin eco y nunca se imprimen en pantalla.
 users_v2_menu_create_association() {
-	local fd identity_id connection_id protocol_id protocol name capacity
+	local fd identity_id connection_id protocol_id protocol name capacity preset_connection_id="${1:-}" preset_identity_id="${2:-}"
 	local alias credential_type credential_value credential_choice= state duration_kind duration_value duration_unit
 	local traffic simultaneous association_id
 	ui_clear
@@ -193,13 +193,17 @@ users_v2_menu_create_association() {
 		printf '\nNo hay identidades. Crea primero una identidad global.\n'
 		return 1
 	fi
-	printf '\nIDENTIDADES DISPONIBLES\n'
-	jq -r '.identities[] | "  " + .id + "  (creada: " + .created_at + ")"' "$USERS_V2_DATA_FILE"
-	printf '\nID exacto de identidad: '
-	IFS= read -r identity_id || {
-		users_v2_unlock "$fd"
-		return 0
-	}
+	if [[ -n "$preset_identity_id" ]]; then
+		identity_id="$(jq -r --arg id "$preset_identity_id" '.identities[] | select(.id == $id) | .id' "$USERS_V2_DATA_FILE")"
+	else
+		printf '\nIDENTIDADES DISPONIBLES\n'
+		jq -r '.identities[] | "  " + .id + "  (creada: " + .created_at + ")"' "$USERS_V2_DATA_FILE"
+		printf '\nID exacto de identidad: '
+		IFS= read -r identity_id || {
+			users_v2_unlock "$fd"
+			return 0
+		}
+	fi
 	if ! jq -e --arg id "$identity_id" 'any(.identities[]; .id == $id)' "$USERS_V2_DATA_FILE" >/dev/null; then
 		users_v2_unlock "$fd"
 		printf '\nLa identidad indicada no existe.\n'
@@ -216,14 +220,18 @@ users_v2_menu_create_association() {
 		printf '\nNo hay conexiones registradas. Crea primero una conexión en borrador.\n'
 		return 1
 	fi
-	printf '\nCONEXIONES DISPONIBLES\n'
-	jq -r '.[] | "  ID: " + .id + "\n  Nombre: " + .name + "\n  Modalidad: " + .protocol_id + "\n  Capacidad: " + (.max_users|tostring) + "\n"' "$USERS_V2_CONNECTIONS_FILE"
-	printf 'ID exacto de conexión: '
-	IFS= read -r connection_id || {
-		users_v2_unlock "$fd"
-		return 0
-	}
-	connection_id="$(jq -r --arg id "$connection_id" '.[] | select(.id == $id) | .id' "$USERS_V2_CONNECTIONS_FILE")"
+	if [[ -n "$preset_connection_id" ]]; then
+		connection_id="$(jq -r --arg id "$preset_connection_id" '.[] | select(.id == $id) | .id' "$USERS_V2_CONNECTIONS_FILE")"
+	else
+		printf '\nCONEXIONES DISPONIBLES\n'
+		jq -r '.[] | "  ID: " + .id + "\n  Nombre: " + .name + "\n  Modalidad: " + .protocol_id + "\n  Capacidad: " + (.max_users|tostring) + "\n"' "$USERS_V2_CONNECTIONS_FILE"
+		printf 'ID exacto de conexión: '
+		IFS= read -r connection_id || {
+			users_v2_unlock "$fd"
+			return 0
+		}
+		connection_id="$(jq -r --arg id "$connection_id" '.[] | select(.id == $id) | .id' "$USERS_V2_CONNECTIONS_FILE")"
+	fi
 	if [[ -z "$connection_id" ]]; then
 		users_v2_unlock "$fd"
 		printf '\nLa conexión indicada no existe.\n'
@@ -344,6 +352,43 @@ users_v2_menu_create_association() {
 		return 1
 	fi
 	printf '\nAsociación creada correctamente.\nID de asociación: %s\nProvisioning: draft\nRuntime: sin cambios (not_applied).\n' "$association_id"
+}
+
+# Flujo contextual: asociar una identidad existente o crear una nueva para esta conexión.
+users_v2_menu_connection_user_flow() {
+	local connection_id="$1" option identity_id
+	[[ -n "$connection_id" ]] || return 2
+	if ! jq -e --arg id "$connection_id" 'any(.[]; .id == $id and .protocol_id == "vless_ws_tls" and .state == "draft" and .runtime_applied == false)' "$USERS_V2_CONNECTIONS_FILE" >/dev/null 2>&1; then
+		printf '\nLa conexión no es un borrador VLESS-WS-TLS elegible.\n'
+		return 1
+	fi
+	ui_clear
+	ui_title "USUARIOS DE LA CONEXIÓN VLESS-WS-TLS"
+	printf '\nConexión seleccionada: %s\n' "$connection_id"
+	printf '\n  [1] Asociar una identidad global existente\n'
+	printf '  [2] Crear identidad global y asociarla\n'
+	printf '  [0] Volver\n\n'
+	ui_read_option "Selecciona una operación: " option || return 0
+	case "$option" in
+		1) users_v2_menu_create_association "$connection_id" ;;
+		2)
+			if ! ui_confirm "¿Crear una identidad global nueva y asociarla a esta conexión?"; then
+				printf '\nOperación cancelada.\n'
+				return 0
+			fi
+			identity_id="$(users_identity_create)" || {
+				printf '\nNo fue posible crear la identidad.\n'
+				return 1
+			}
+			printf '\nIdentidad creada: %s\n' "$identity_id"
+			if ! users_v2_menu_create_association "$connection_id" "$identity_id"; then
+				printf '\nLa identidad permanece registrada, pero todavía no tiene una asociación con esta conexión.\n'
+				return 1
+			fi
+			;;
+		0) return 0 ;;
+		*) printf '\nOpción no válida.\n'; return 1 ;;
+	esac
 }
 
 # Consulta el detalle administrativo de una asociación sin revelar credenciales.

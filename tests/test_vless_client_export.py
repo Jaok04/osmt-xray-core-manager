@@ -50,6 +50,7 @@ class VlessClientExportTests(unittest.TestCase):
             "openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes",
             "-keyout", str(self.cert_key), "-out", str(self.cert_pem),
             "-days", "2", "-subj", "/CN=fixture.invalid",
+            "-addext", "subjectAltName=DNS:sni.example.invalid,DNS:sni.menu.invalid,DNS:hellen.tvrc.me",
         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.cert_pem.chmod(0o600)
         self.cert_key.chmod(0o600)
@@ -113,6 +114,19 @@ class VlessClientExportTests(unittest.TestCase):
             "schema_version": 1,
             "bindings": [{"inbound_tag": "vless-conn-export", "connection_id": "conn-export"}],
         })
+        self.mark_validated(self.revision)
+
+    def mark_validated(self, revision):
+        revision_dir = self.profiles.profile_dir(self.profile_id) / "revisions" / revision
+        manifest_path = revision_dir / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["validation"] = {"json_syntax": "pass", "xray_static": "pass", "status": "valid"}
+        self.write_json(manifest_path, manifest)
+        metadata_path = self.profiles.profile_dir(self.profile_id) / "metadata.json"
+        metadata = json.loads(metadata_path.read_text())
+        metadata["validation_status"] = "valid"
+        metadata["last_validated_revision"] = revision
+        self.write_json(metadata_path, metadata)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -164,6 +178,7 @@ class VlessClientExportTests(unittest.TestCase):
             config_data=(json.dumps(profile, sort_keys=True, separators=(",", ":")) + "\n").encode(),
         )
         self.revision = updated["current_revision"]
+        self.mark_validated(self.revision)
         self.mapping_profile.mkdir(mode=0o700, exist_ok=True)
         self.write_json(self.mapping_profile / f"{self.revision}.json", {
             "schema_version": 1,
@@ -173,6 +188,35 @@ class VlessClientExportTests(unittest.TestCase):
         query = parse_qs(urlsplit(result["uris"][0]).query)
         self.assertNotIn("sni", query)
         self.assertNotIn("host", query)
+
+    def test_rejects_unvalidated_revision(self):
+        revision_dir = self.profiles.profile_dir(self.profile_id) / "revisions" / self.revision
+        manifest_path = revision_dir / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        manifest["validation"] = {"json_syntax": "pass", "xray_static": "not_run", "status": "pending"}
+        self.write_json(manifest_path, manifest)
+        with self.assertRaisesRegex(exporter.ExportError, "validación Xray satisfactoria"):
+            exporter.export_profile(self.args())
+
+    def test_rejects_endpoint_not_covered_when_sni_is_omitted(self):
+        stored = json.loads((self.connections / "configurations/conn-export.r000001.json").read_text())
+        stored["client_options"] = {}
+        self.write_json(self.connections / "configurations/conn-export.r000001.json", stored)
+        with self.assertRaisesRegex(exporter.ExportError, "no está cubierto por los SAN"):
+            exporter.export_profile(self.args(address="uncovered.example.invalid"))
+
+    def test_rejects_sni_not_covered_by_certificate_san(self):
+        stored = json.loads((self.connections / "configurations/conn-export.r000001.json").read_text())
+        stored["client_options"]["tls_server_name"] = "wrong.example.invalid"
+        self.write_json(self.connections / "configurations/conn-export.r000001.json", stored)
+        with self.assertRaisesRegex(exporter.ExportError, "no está cubierto por los SAN"):
+            exporter.export_profile(self.args())
+
+    def test_wildcard_san_matches_only_one_label(self):
+        self.assertTrue(exporter.certificate_covers_server_name(
+            {"sans": ["*.example.invalid"]}, "node.example.invalid"))
+        self.assertFalse(exporter.certificate_covers_server_name(
+            {"sans": ["*.example.invalid"]}, "deep.node.example.invalid"))
 
     def test_rejects_public_port_mismatch(self):
         with self.assertRaises(exporter.ExportError):
@@ -205,6 +249,7 @@ class VlessClientExportTests(unittest.TestCase):
             config_data=(json.dumps(profile, sort_keys=True, separators=(",", ":")) + "\n").encode(),
         )
         self.revision = updated["current_revision"]
+        self.mark_validated(self.revision)
         self.mapping_profile.mkdir(mode=0o700, exist_ok=True)
         self.write_json(self.mapping_profile / f"{self.revision}.json", {
             "schema_version": 1,

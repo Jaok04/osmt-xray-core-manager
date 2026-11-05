@@ -14,7 +14,8 @@ cat >"$XRAY_MANAGER_CONNECTIONS_FILE" <<'JSON'
 [
   {"id":"conn-vless","name":"VLESS de prueba","protocol_id":"vless_ws","max_users":3},
   {"id":"conn-wg","name":"WireGuard de prueba","protocol_id":"wireguard","max_users":3},
-  {"id":"conn-cap","name":"VLESS capacidad uno","protocol_id":"vless_tcp_tls","max_users":1}
+  {"id":"conn-cap","name":"VLESS capacidad uno","protocol_id":"vless_tcp_tls","max_users":1},
+  {"id":"conn-vless-ws-tls","name":"VLESS WS TLS contextual","protocol_id":"vless_ws_tls","max_users":2,"state":"draft","runtime_applied":false}
 ]
 JSON
 source "$ROOT/lib/ui.sh"
@@ -500,5 +501,12 @@ users_identity_delete "$RACE_ID"
 
 printf '0\n' | users_v2_menu >"$OUT"
 grep -q 'Eliminar identidad y todas sus asociaciones' "$OUT"
+
+# El flujo contextual crea una identidad nueva y la asocia sin volver a pedir la conexión.
+printf '2\ns\nCliente contextual\n\nactive\nunlimited\n0\n0\ns\n' |
+    users_v2_menu_connection_user_flow conn-vless-ws-tls >"$OUT"
+grep -q 'Identidad creada:' "$OUT"
+grep -q 'Asociación creada correctamente' "$OUT"
+jq -e 'any(.associations[]; .connection_id=="conn-vless-ws-tls" and .protocol=="vless" and .state=="active" and .provisioning_status=="draft")' "$XRAY_MANAGER_USERS_FILE" >/dev/null
 
 echo 'OK: selector legacy/v2, consultas protegidas, creación, edición, suspensión/reactivación, renovación, duración, eliminación individual y global, confirmaciones, carreras de snapshot, validaciones y runtime sin cambios.'

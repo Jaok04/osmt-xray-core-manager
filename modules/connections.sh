@@ -283,6 +283,9 @@ connections_existing_menu() {
 		if [[ "$state" == draft ]]; then
 			printf '  [2] Editar borrador\n  [3] Eliminar borrador\n'
 			if [[ "$has_configuration" == true ]]; then printf '  [4] Recuperar y validar configuración guardada\n'; fi
+			if [[ "$protocol_id" == vless_ws_tls ]] && declare -F users_v2_menu_connection_user_flow >/dev/null 2>&1; then
+				printf '  [5] Gestionar usuarios de esta conexión VLESS\n'
+		fi
 		fi
 		printf '  [0] Volver\n\n'
 		ui_read_option "Selecciona una opción: " option || return 0
@@ -303,6 +306,14 @@ connections_existing_menu() {
 						*) printf '\nNo hay recuperador implementado para esta familia.\n'; ui_pause ;;
 					esac
 				else printf '\nNo hay una configuración recuperable.\n'; ui_pause; fi
+				;;
+			5)
+				if [[ "$state" == draft && "$protocol_id" == vless_ws_tls ]] && declare -F users_v2_menu_connection_user_flow >/dev/null 2>&1; then
+					users_v2_menu_connection_user_flow "$id" || true
+				else
+					printf '\nLa asociación contextual solo está disponible para conexiones VLESS-WS-TLS en borrador.\n'
+					ui_pause
+				fi
 				;;
 			0) return 0 ;;
 			*) printf '\nOpción no válida.\n'; ui_pause ;;

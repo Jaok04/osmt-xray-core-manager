@@ -9,7 +9,7 @@ mkdir -m 700 "$TMP/run" "$TMP/connections" "$TMP/connections/configurations" "$T
     "$TMP/profiles" "$TMP/bindings"
 openssl rand -out "$TMP/master.key" 32
 chmod 600 "$TMP/master.key"
-openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/cert.key" -out "$TMP/cert.pem" -days 2 -subj '/CN=menu-fixture.invalid' >/dev/null 2>&1
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/cert.key" -out "$TMP/cert.pem" -days 2 -subj '/CN=menu-fixture.invalid' -addext 'subjectAltName=DNS:sni.menu.invalid,DNS:hellen.tvrc.me' >/dev/null 2>&1
 chmod 600 "$TMP/cert.key" "$TMP/cert.pem"
 python3 "$ROOT/scripts/certificate_store.py" --base "$TMP/certificates" --catalog "$TMP/certificates/catalog.json" \
     --managed-dir "$TMP/certificates/managed" --secrets-dir "$TMP/certificates/secrets" \
@@ -75,6 +75,12 @@ assert result["status"] == "COMPOSED" and result["runtime_changed"] is False and
 PYJSON
 current="$(python3 "$ROOT/scripts/xray_profiles.py" --store "$TMP/profiles" --master-key "$TMP/master.key" list | jq -r '.[0].current_revision')"
 [[ "$current" == r000002 ]]
+profile_id="$(python3 "$ROOT/scripts/xray_profiles.py" --store "$TMP/profiles" --master-key "$TMP/master.key" list | jq -r '.[0].profile_id')"
+python3 "$ROOT/scripts/xray_profile_validation.py" \
+    --profile-store "$TMP/profiles" --master-key "$TMP/master.key" \
+    --validation-store "$TMP/validation" --profile-id "$profile_id" \
+    --revision "$current" --xray-binary "$(command -v xray)" >"$TMP/validation.out"
+jq -e '(.result == "PASS" or .result == "PASS_WITH_WARNINGS") and .validation_status == "valid"' "$TMP/validation.out" >/dev/null
 PYTHONPATH="$ROOT/scripts" python3 - "$TMP/profiles" "$TMP/master.key" "$current" <<'PY'
 import json,sys
 from pathlib import Path
