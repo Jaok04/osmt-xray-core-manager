@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-05 — B3 implementada, verificada, auditada y aceptada formalmente; publicación autorizada y en curso. Git base previo B3: b74ee7279d474be888db4c1d5dfc3b59ba3c8c40. Regresión: Python 186/186 y Bash 61/61 PASS; controles estáticos globales e install.sh --check PASS. Sin operaciones live.
+**Corte de estado:** 2026-11-05 — B3 implementada, verificada, auditada, aceptada formalmente, publicada y sincronizada; HEAD `9f4cc18d856ec0ccb31951f343a1fd3e870a0684`. Git base previo B3: b74ee7279d474be888db4c1d5dfc3b59ba3c8c40. Regresión: Python 186/186 y Bash 61/61 PASS; controles estáticos globales e install.sh --check PASS. Sin operaciones live.
 **Estado global:** Etapa 1 aceptada; Etapas 2, 3, 4, 5 y 6 abiertas/parciales. R-06/live NO AUTORIZADA.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -24,7 +24,7 @@
 - Exportador valida SAN del certificado central activo contra SNI configurado o dominio del endpoint cuando SNI está ausente; wildcard limitado a un nivel. Endpoint IP sin SNI DNS verificable falla cerrado.
 - Integración compone perfil, ejecuta validador real con Xray 26.10.31 y exporta URI fixture hellen.tvrc.me:443.
 - Python 186/186; Bash 61/61; py_compile/compileall, bash -n, ShellCheck -S error, git diff --check e install.sh --check PASS.
-- B3: IMPLEMENTADA, VERIFICADA, AUDITADA y ACEPTADA FORMALMENTE el 2026-11-05 con las limitaciones de la auditoría; publicación autorizada exclusivamente en design/user-identity-association-v1. La verificación de publicación/sincronización se registra tras el push.
+- B3: IMPLEMENTADA, VERIFICADA, AUDITADA, ACEPTADA FORMALMENTE, PUBLICADA y SINCRONIZADA el 2026-11-05 con las limitaciones de la auditoría. Commits funcional/documental: `aae4c15bf9b8f2c7c46c1e28a8a3881910ab71f4` / `9f4cc18d856ec0ccb31951f343a1fd3e870a0684`; HEAD local/upstream/remoto coincide y el árbol está limpio.
 - No se ejecutó ACME real, NetMod real, WAN, runtime, systemd ni cambios de certificados persistentes, claves, DNS, firewall, puertos, red o dependencias. main y Xray-Normativa/ intactas. R-06/live NO AUTORIZADA.
 - Evidencia: docs/DECISION_B3_VLESS_WS_TLS.md, docs/IMPLEMENTACION_B3_VLESS_WS_TLS_2026-11-05.md y docs/AUDITORIA_B3_VLESS_WS_TLS_2026-11-05.md.
 

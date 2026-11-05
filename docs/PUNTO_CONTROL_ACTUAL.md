@@ -17,9 +17,9 @@
 
 ## Punto de control vigente — B3 (2026-11-05)
 
-**Siguiente tarea:** completar commits funcional y documental de B3, publicar en design/user-identity-association-v1 y verificar sincronización VPS/GitHub.
+**Siguiente tarea:** realizar contraste documental read-only del siguiente bloque del MVP; presentar alcance y discrepancias antes de solicitar autorización para cualquier implementación.
 
-**Estado:** B3 IMPLEMENTADA, VERIFICADA, AUDITADA y ACEPTADA FORMALMENTE el 2026-11-05 con las limitaciones de la auditoría; publicación autorizada, verificación final pendiente.
+**Estado:** B3 IMPLEMENTADA, VERIFICADA, AUDITADA, ACEPTADA FORMALMENTE, PUBLICADA y SINCRONIZADA el 2026-11-05. HEAD local/upstream/remoto: `9f4cc18d856ec0ccb31951f343a1fd3e870a0684`; checkout limpio.
 
 - Menú contextual en conexión VLESS-WS-TLS draft para asociar identidad existente o crear identidad global y asociarla.
 - Exportador exige Xray PASS en manifiesto de revisión exacta.

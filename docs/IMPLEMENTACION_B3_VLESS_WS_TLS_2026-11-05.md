@@ -70,7 +70,7 @@ Los tests usan certificados, claves, usuarios, conexiones, perfiles, mappings y 
 | VERIFICADO | Sí, pruebas globales y focales PASS |
 | AUDITADO | Sí, auditoría focal B3 |
 | ACEPTADO | Sí, formalmente el 2026-11-05 con las limitaciones de la auditoría B3 |
-| PUBLICADO | Autorizado por el propietario; resultado SHA se registra tras el push |
-| SINCRONIZADO | Pendiente de verificación final GitHub/VPS |
+| PUBLICADO | Sí; commits funcional `aae4c15bf9b8f2c7c46c1e28a8a3881910ab71f4` y documental `9f4cc18d856ec0ccb31951f343a1fd3e870a0684` en design/user-identity-association-v1 |
+| SINCRONIZADO | Sí; HEAD local = upstream = remoto `9f4cc18d856ec0ccb31951f343a1fd3e870a0684`; checkout limpio |
 
 Etapas 2, 3 y 4 permanecen ABIERTAS. B3 no acredita aplicación runtime ni cierra ninguna etapa.

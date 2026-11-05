@@ -1,7 +1,7 @@
 # Auditoría B3 — creación de usuario y conexión VLESS-WS-TLS
 
 **Fecha:** 2026-11-05
-**Dictamen:** PASS en el alcance aislado autorizado; ACEPTADA FORMALMENTE por el propietario el 2026-11-05 y autorizada para publicación en la rama de desarrollo.
+**Dictamen:** PASS en el alcance aislado autorizado; ACEPTADA FORMALMENTE, PUBLICADA y SINCRONIZADA el 2026-11-05.
 
 ## 1. Matriz de trazabilidad
 
@@ -48,4 +48,4 @@ Todas las operaciones se realizaron en fixtures temporales. No hubo dependencias
 
 ## 6. Dictamen
 
-B3 queda IMPLEMENTADA, VERIFICADA, AUDITADA y ACEPTADA FORMALMENTE por el propietario el 2026-11-05, con las limitaciones de esta auditoría. El propietario autorizó commit/push exclusivamente en `design/user-identity-association-v1`; publicación y sincronización se registran tras verificar el push. La aceptación no cierra Etapas 2, 3 o 4 ni autoriza pruebas NetMod/WAN o despliegue live.
+B3 queda IMPLEMENTADA, VERIFICADA, AUDITADA, ACEPTADA FORMALMENTE, PUBLICADA y SINCRONIZADA el 2026-11-05, con las limitaciones de esta auditoría. Commit funcional `aae4c15bf9b8f2c7c46c1e28a8a3881910ab71f4`; commit documental de aceptación `9f4cc18d856ec0ccb31951f343a1fd3e870a0684`. HEAD local, upstream y remoto verificados en el segundo SHA; checkout limpio. La aceptación no cierra Etapas 2, 3 o 4 ni autoriza pruebas NetMod/WAN o despliegue live.

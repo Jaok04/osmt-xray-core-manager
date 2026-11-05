@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-05:** B3 está implementada, verificada, auditada y aceptada formalmente por el propietario con las limitaciones de su auditoría; commit/push autorizados exclusivamente en design/user-identity-association-v1. Regresión Python 186/186 y Bash 61/61 PASS; controles estáticos e install.sh --check PASS. Sin operaciones live. main y Xray-Normativa/ intactas; R-06/live NO AUTORIZADA.
+> **Punto de reanudación vigente — 2026-11-05:** B3 está implementada, verificada, auditada, aceptada formalmente, publicada y sincronizada en design/user-identity-association-v1. HEAD: `9f4cc18d856ec0ccb31951f343a1fd3e870a0684`. Regresión histórica B3: Python 186/186 y Bash 61/61 PASS; controles estáticos e install.sh --check PASS. Sin operaciones live. main y Xray-Normativa/ intactas; R-06/live NO AUTORIZADA.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -24,7 +24,7 @@ Pruebas: Python 186/186, Bash 61/61, integración compositor → validador Xray 
 
 Archivos: docs/DECISION_B3_VLESS_WS_TLS.md, docs/IMPLEMENTACION_B3_VLESS_WS_TLS_2026-11-05.md, docs/AUDITORIA_B3_VLESS_WS_TLS_2026-11-05.md.
 
-**Siguiente paso:** completar commit funcional y documental, publicar mediante fast-forward en design/user-identity-association-v1 y verificar SHA remoto, árbol limpio, coincidencia VPS/GitHub, main intacta y 14/14 documentos normativos idénticos al respaldo. No modificar main, Xray-Normativa/ ni infraestructura live.
+**Siguiente paso:** continuar con el contraste preliminar read-only del siguiente bloque del MVP. No implementar sin presentar discrepancias y recibir autorización expresa. No modificar main, Xray-Normativa/ ni infraestructura live.
 
 ## 1. Objetivo
 

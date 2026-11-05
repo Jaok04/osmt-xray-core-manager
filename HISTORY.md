@@ -1352,3 +1352,11 @@ Siguiente punto: contraste documental e inventario read-only para B3 — usuario
 El propietario aceptó formalmente B3 — creación contextual de usuario y conexión VLESS-WS-TLS — con las limitaciones y exclusiones descritas en `docs/AUDITORIA_B3_VLESS_WS_TLS_2026-11-05.md`. La aceptación cubre únicamente el flujo contextual Usuarios V2, la exigencia de validación Xray PASS en la revisión exacta, la correspondencia SAN/SNI/endpoint y la integración fixture composición → validación Xray 26.10.31 → exportación. No acredita NetMod real, conectividad WAN, ACME real, publicación/activación de perfil ni aplicación runtime.
 
 El propietario autorizó expresamente commit y push exclusivamente en `design/user-identity-association-v1`. No se autoriza modificar `main`, `Xray-Normativa/`, infraestructura live, DNS, firewall, puertos, certificados persistentes, claves ni dependencias. R-06/live permanece NO AUTORIZADA y las Etapas 2, 3 y 4 continúan ABIERTAS.
+
+
+
+## 2026-11-05 — publicación y sincronización B3
+
+B3 se publicó mediante fast-forward exclusivamente en `design/user-identity-association-v1`. Commit funcional: `aae4c15bf9b8f2c7c46c1e28a8a3881910ab71f4` (`feat(vless): complete contextual user export validation`). Commit documental de aceptación/auditoría: `9f4cc18d856ec0ccb31951f343a1fd3e870a0684` (`docs(vless): record B3 acceptance and audit`). La verificación posterior confirmó HEAD local = upstream = GitHub en `9f4cc18d856ec0ccb31951f343a1fd3e870a0684`, checkout limpio y push fast-forward desde `b74ee7279d474be888db4c1d5dfc3b59ba3c8c40`.
+
+La rama `main` permaneció en `656ecedc506a94a6461aee296b20871d51a38bf3`. Los 14 documentos normativos sustantivos de `Xray-Normativa/` coinciden byte a byte con el respaldo; la carpeta no fue modificada. No hubo operaciones live, NetMod real, WAN, ACME real, DNS, firewall, puertos, runtime, systemd, certificados persistentes, claves ni dependencias nuevas. Etapas 2, 3 y 4 continúan ABIERTAS; R-06/live NO AUTORIZADA.
