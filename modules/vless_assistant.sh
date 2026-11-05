@@ -34,7 +34,7 @@ connections_vless_assistant_read_secret() {
 connections_vless_assistant() (
 	[[ "$#" -eq 2 ]] || return 2
 	local connection_id="$1" mode_id="$2" listen_address listen_port options_file model_file config_file tmp
-	local path='' service_name='' certificate_id='' tls_cert='' tls_key='' reality_target='' reality_private='' reality_names='' reality_ids='' xhttp_mode='' lease_id='' resolve_result=''
+	local path='' ws_host='' client_server_name='' service_name='' certificate_id='' tls_cert='' tls_key='' reality_target='' reality_private='' reality_names='' reality_ids='' xhttp_mode='' lease_id='' resolve_result=''
 	local save_choice='' prepared_file='' secret_file='' secret_meta='' secret_type=''
 	local runtime_root="${XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR:-/run/xray-manager-certificates}"
 	local -a store_args=()
@@ -84,13 +84,15 @@ connections_vless_assistant() (
 			connections_vless_assistant_read 'Modo XHTTP (auto, packet-up, stream-up, stream-one): ' xhttp_mode || return 1
 		elif [[ "$mode_id" == vless_ws_tls ]]; then
 			connections_vless_assistant_read 'Ruta WebSocket: ' path || return 1
+			connections_vless_assistant_read 'Host HTTP de WebSocket (opcional, vacío = omitir): ' ws_host || return 1
+			connections_vless_assistant_read 'SNI/serverName del cliente (opcional, vacío = omitir): ' client_server_name || return 1
 		elif [[ "$mode_id" == vless_grpc_tls ]]; then
 			connections_vless_assistant_read 'Nombre del servicio gRPC: ' service_name || return 1
 		fi
 		connections_vless_assistant_read 'ID del certificado TLS central (cert-...): ' certificate_id || return 1
 		case "$mode_id" in
 		vless_xhttp_tls) jq -n --arg path "$path" --arg mode "$xhttp_mode" --arg certificate_id "$certificate_id" '{path:$path,mode:$mode,certificate_id:$certificate_id}' >"$options_file" ;;
-		vless_ws_tls) jq -n --arg path "$path" --arg certificate_id "$certificate_id" '{path:$path,certificate_id:$certificate_id}' >"$options_file" ;;
+		vless_ws_tls) jq -n --arg path "$path" --arg host "$ws_host" --arg client_server_name "$client_server_name" --arg certificate_id "$certificate_id" '{path:$path,certificate_id:$certificate_id} + (if $host != "" then {host:$host} else {} end) + (if $client_server_name != "" then {client_server_name:$client_server_name} else {} end)' >"$options_file" ;;
 		vless_grpc_tls) jq -n --arg service_name "$service_name" --arg certificate_id "$certificate_id" '{service_name:$service_name,certificate_id:$certificate_id}' >"$options_file" ;;
 		*) jq -n --arg certificate_id "$certificate_id" '{certificate_id:$certificate_id}' >"$options_file" ;;
 		esac
@@ -143,7 +145,7 @@ connections_vless_assistant() (
 		lease_id="$(jq -er '.lease_id' "$resolve_result")" || return 1
 		tls_cert="$(jq -er '.certificate_file' "$resolve_result")" || return 1
 		tls_key="$(jq -er '.key_file' "$resolve_result")" || return 1
-		jq --arg certificate_file "$tls_cert" --arg key_file "$tls_key" 'del(.certificate_id) + {certificate_file:$certificate_file,key_file:$key_file}' "$options_file" >"$tmp/resolved-options.json" || return 1
+		jq --arg certificate_file "$tls_cert" --arg key_file "$tls_key" 'del(.certificate_id,.client_server_name) + {certificate_file:$certificate_file,key_file:$key_file}' "$options_file" >"$tmp/resolved-options.json" || return 1
 		if ! vless_xray_26_10_31_build "$model_file" "$tmp/resolved-options.json" "$lease_id" >"$config_file"; then
 			printf '\nNo se pudo construir la configuración Xray con el lease TLS. El borrador persiste; no se aplicó runtime.\n'
 			return 1

@@ -147,7 +147,8 @@ def load_vless_ws_tls_config(connection: dict, connections_base: pathlib.Path,
     revision = connection.get("configuration_revision")
     reference = connection.get("configuration_ref")
     if (isinstance(revision, bool) or not isinstance(revision, int) or revision < 1
-            or connection.get("configuration_schema_version") != 1
+            or isinstance(connection.get("configuration_schema_version"), bool)
+            or connection.get("configuration_schema_version") not in (1, 2)
             or reference != f"configurations/{cid}.r{revision:06d}.json"):
         fail("La conexión no tiene una referencia VLESS persistida íntegra.")
     vless_config_store.check_dir(connections_base)
@@ -384,7 +385,9 @@ def compose(args: argparse.Namespace) -> dict:
                 "streamSettings": {
                     "network": "ws",
                     "security": "tls",
-                    "wsSettings": {"path": connection_config["transport_options"]["path"]},
+                    "wsSettings": ({"path": connection_config["transport_options"]["path"]} |
+                                   ({"host": connection_config["transport_options"]["host"]}
+                                    if connection_config["transport_options"].get("host") else {})),
                     "tlsSettings": {"certificates": []},
                 },
             }

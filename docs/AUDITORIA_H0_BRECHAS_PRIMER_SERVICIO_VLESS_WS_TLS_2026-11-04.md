@@ -208,3 +208,15 @@ La aceptación de este informe permitirá acordar el siguiente diseño/alcance d
 | Runtime, secretos y almacenes live | No modificados ni inspeccionados |
 
 **Fin de la auditoría H0.**
+
+
+## Seguimiento H0-17 — actualización I-02 / I-03 (2026-11-05)
+
+El Host WebSocket se incorporó como transport_options.host y se emite mediante wsSettings.host, validado con Xray 26.10.31. El SNI del cliente se persiste por separado como client_options.tls_server_name y no se mezcla con el certificado TLS del inbound. La integración de menú y persistencia se documentan en docs/IMPLEMENTACION_I02_I03_VLESS_WS_TLS_2026-11-05.md. La exportación de URI vless:// sigue pendiente de endpoint público explícito; por tanto, H0-17 queda PARCIALMENTE RESUELTO, no cerrado.
+
+
+## Seguimiento H0-17 — cierre de brecha de exportación mediante I-04 (2026-11-05)
+
+La brecha de exportación cliente identificada en H0-17 quedó implementada en alcance focal mediante I-04, autorizada por el propietario con endpoint hellen.tvrc.me:443. El nuevo exportador genera URI vless:// por UUID desde una revisión exacta, usa mapping privado y configuración fuente validada, y conserva Host WebSocket/SNI como parámetros separados. Evidencia: docs/IMPLEMENTACION_I04_VLESS_CLIENT_EXPORT_2026-11-05.md y docs/AUDITORIA_I04_VLESS_CLIENT_EXPORT_2026-11-05.md.
+
+H0-17 queda RESUELTO EN ALCANCE DE EXPORTACIÓN SINTÉTICA/LOCAL. No significa que el servicio live esté listo: DNS, certificado desplegado, listener público, importación en NetMod y conectividad WAN no se han probado ni autorizado.

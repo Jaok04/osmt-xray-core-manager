@@ -1254,3 +1254,34 @@ Pruebas focales: 10/10 PASS, incluida lectura del mapping por el parser real R-0
 ## 2026-11-05 — aceptación formal y autorización de publicación I-01
 
 El propietario aceptó formalmente I-01 — Compositor VLESS-WS-TLS — con las limitaciones y exclusiones descritas en `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md`. La aceptación cubre únicamente el incremento focal auditado; no cierra ninguna etapa ni autoriza ejecución live. El propietario autorizó por separado commit y push exclusivamente a `design/user-identity-association-v1`. `main`, `Xray-Normativa/`, runtime, systemd, certificados reales, DNS, firewall, red y VPS de pruebas quedan fuera del alcance.
+
+
+## 2026-11-05 — I-02 / I-03 VLESS-WS-TLS (implementación local)
+
+Se integró el compositor I-01 al menú de perfiles mediante la opción [9]. La acción selecciona perfil/revisión actual y conexión VLESS-WS-TLS en estado draft con runtime_applied=false, obtiene la configuración con VLESS Config Store, muestra previsualización de path/Host/SNI/certificado, solicita confirmación y crea una revisión nueva e inmutable pendiente de validación. No activa el perfil ni ejecuta R-01–R-04.
+
+Se añadió Host WebSocket opcional (transport_options.host) y SNI cliente opcional (client_options.tls_server_name) mediante esquema VLESS 2, conservando esquema 1. El adaptador y compositor usan wsSettings.host; Xray 26.10.31 validó la configuración. La variante wsSettings.headers.Host fue descartada tras detectar advertencia de obsolescencia. SNI se mantiene separado como metadata del cliente, no se inyecta en inbound ni sustituye el certificado TLS servidor.
+
+Certificate Resolver y backup/restore se actualizaron para reconocer esquema 2 y preservar Host/SNI. Pruebas focales: compositor 11/11, menú, asistente TLS, backup/restore e integración Xray PASS. Regresión completa final: Python 164/164 y Bash 59/59 PASS; py_compile, bash -n global, ShellCheck -S error en todos los Bash modificados, git diff --check e install.sh --check PASS. ShellCheck global completo había pasado en la ejecución previa.
+
+La exportación URI de cliente no se implementó: requiere endpoint público explícito por conexión. Cambios locales sin commit/push; aceptación formal de I-02/I-03 y autorización separada de publicación pendientes. Sin operaciones live, sin cambios en Xray/systemd real, certificados reales, DNS, firewall, puertos, red, main o Xray-Normativa.
+
+
+## 2026-11-05 — I-04 exportación de clientes VLESS-WS-TLS para NetMod
+
+El propietario autorizó expresamente exportar clientes VLESS-WS-TLS para NetMod con endpoint inicial hellen.tvrc.me:443, coincidente con el puerto del inbound. Tras contrastar Etapa 2, Etapa 4 y Etapa 5, se documentó la decisión complementaria I-04 sin modificar Xray-Normativa/.
+
+Se añadió scripts/vless_client_export.py y la opción [10] al menú de perfiles. El exportador opera sobre perfil/revisión exactos, adquiere lock compartido de solo lectura sin ejecutar recuperación/limpieza del almacén, verifica el mapping privado exacto y valida la configuración fuente mediante VLESS Config Store. Genera un URI por UUID, recupera Host y SNI como campos independientes y los omite cuando no están configurados. La exportación TXT opcional es atómica, 0600 y no sobrescribe destinos.
+
+Pruebas: I-04 focal 7/7 PASS; integración menú/compositor PASS; regresión Python 171/171 y Bash 59/59 PASS; py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS. No se probó NetMod real ni conectividad WAN. No se activó perfil, no se ejecutó R-01–R-04, no se tocó runtime/systemd, certificados reales, DNS, firewall, puertos, red, dependencias, main, normativa ni VPS de pruebas.
+
+I-02/I-03/I-04 quedan IMPLEMENTADOS, VERIFICADOS y AUDITADOS en alcance focal; aceptación formal pendiente; cambios locales sin commit/push ni sincronización GitHub. La publicación requiere autorización separada. Etapas 2, 3 y 5 permanecen abiertas; R-06/live no autorizada.
+
+
+## 2026-11-05 — aceptación formal y autorización de publicación I-02/I-03/I-04
+
+El propietario aceptó formalmente I-02 (integración del compositor en el menú de perfiles), I-03 (Host WebSocket y SNI cliente independientes) e I-04 (exportación VLESS-WS-TLS para NetMod), con las limitaciones documentadas en sus auditorías. Autorizó expresamente commit, push y sincronización exclusivamente en `design/user-identity-association-v1`.
+
+Antes de publicar se reejecutó la regresión completa: Python 171/171 y Bash 59/59 PASS; `py_compile`, `bash -n`, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. Se compararon los 13 documentos normativos sustantivos con el respaldo y todos coincidieron byte a byte; `Xray-Normativa/` permaneció intacta. Base de publicación I-01: `792f382ca1b4f753ff763dc50a442aa66a0cd42f`.
+
+La aceptación de estos incrementos no cierra Etapas 2, 3 o 5 ni autoriza NetMod/WAN o despliegue live. R-06/live permanece NO AUTORIZADA. El SHA de publicación y la comprobación final VPS/GitHub se añadirán en el registro de cierre posterior al push.

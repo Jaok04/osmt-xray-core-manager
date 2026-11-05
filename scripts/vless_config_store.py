@@ -83,12 +83,20 @@ def validate_central_certificate(certificate_id: object, catalog_path: Path) -> 
 def validate_config(config: object, connection: dict, expected_secret_ref: str | None = None, *, allow_legacy_tls: bool = False) -> dict:
     if not isinstance(config, dict): raise StoreError("configuración debe ser objeto JSON")
     required = {"schema_version", "connection_id", "protocol", "mode_id", "transport", "security", "listen_address", "listen_port", "transport_options", "security_options"}
-    if set(config) != required: raise StoreError("campos ausentes o no permitidos en configuración")
+    schema = config.get("schema_version")
+    expected = required if schema == 1 else required | {"client_options"} if schema == 2 else set()
+    if set(config) != expected: raise StoreError("campos ausentes o no permitidos en configuración")
+    if isinstance(schema, bool) or schema not in (1, 2): raise StoreError("versión de esquema desconocida")
+    if schema == 2 and config.get("mode_id") != "vless_ws_tls": raise StoreError("esquema 2 solo está permitido para VLESS-WS-TLS")
     cid = safe_id(config["connection_id"])
-    if config["schema_version"] != 1 or isinstance(config["schema_version"], bool): raise StoreError("versión de esquema desconocida")
     mode = config["mode_id"]
     if cid != connection["id"] or config["protocol"] != "vless" or connection.get("protocol_id") != mode:
         raise StoreError("identidad o modalidad no coincide con catálogo")
+    catalog_schema = connection.get("configuration_schema_version")
+    if catalog_schema in (None, 0) and schema == 1:
+        pass
+    elif isinstance(catalog_schema, bool) or type(catalog_schema) is not int or catalog_schema != schema:
+        raise StoreError("versión de esquema de catálogo/configuración no coincide")
     if mode not in MODES or (config["transport"], config["security"]) != MODES[mode]:
         raise StoreError("combinación de transporte/seguridad no admitida")
     addr, port = config["listen_address"], config["listen_port"]
@@ -101,10 +109,23 @@ def validate_config(config: object, connection: dict, expected_secret_ref: str |
         raise StoreError("opciones deben ser objetos JSON")
     sec = config["security_options"]
     if not isinstance(sec, dict): raise StoreError("opciones de seguridad deben ser objeto JSON")
+    if schema == 2:
+        client = config["client_options"]
+        if not isinstance(client, dict) or set(client) - {"tls_server_name"}:
+            raise StoreError("opciones del cliente no válidas")
+        if "tls_server_name" in client and (not isinstance(client["tls_server_name"], str) or not re.fullmatch(r"(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(?:\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*", client["tls_server_name"])):
+            raise StoreError("SNI/serverName del cliente inválido")
     t = config["transport_options"]
-    if mode in ("vless_ws", "vless_ws_tls"):
+    if schema == 1 and mode == "vless_ws_tls" and ("host" in t or config.get("client_options") is not None):
+        raise StoreError("Host/SNI de VLESS-WS-TLS requiere esquema 2")
+    if mode == "vless_ws":
         if set(t) != {"path"} or not isinstance(t["path"], str) or not t["path"].startswith("/"):
             raise StoreError("opciones WebSocket inválidas")
+    elif mode == "vless_ws_tls":
+        if set(t) not in ({"path"}, {"path", "host"}) or not isinstance(t.get("path"), str) or not t["path"].startswith("/"):
+            raise StoreError("opciones WebSocket+TLS inválidas")
+        if "host" in t and (not isinstance(t["host"], str) or not re.fullmatch(r"(?=.{1,253}$)(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)(?:\.(?:[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?))*", t["host"])):
+            raise StoreError("Host WebSocket inválido")
     elif mode.startswith("vless_xhttp"):
         if set(t) != {"path", "mode"} or not isinstance(t["path"], str) or not t["path"].startswith("/") or t["mode"] not in ("auto", "packet-up", "stream-up", "stream-one"):
             raise StoreError("opciones XHTTP inválidas")
@@ -195,7 +216,7 @@ def run(args: argparse.Namespace) -> dict:
                 config["security_options"]["secret_ref"] = secret_ref
             elif args.secret_input or args.secret_type:
                 raise StoreError("modalidad sin TLS/REALITY no debe recibir secretos")
-            validate_config(config, entry, secret_ref)
+            validate_config(config, {**entry, "configuration_schema_version": config["schema_version"]}, secret_ref)
             if secret_plain is not None:
                 # La clave maestra solo se crea al persistir un secreto válido.
                 master = crypto.ensure_master_key(args.master_key)
@@ -209,7 +230,7 @@ def run(args: argparse.Namespace) -> dict:
             if read_regular(destination, MAX_CONFIG) != payload:
                 destination.unlink(missing_ok=True)
                 raise StoreError("falló la verificación posterior a escritura")
-            entry["configuration_schema_version"] = 1
+            entry["configuration_schema_version"] = config["schema_version"]
             entry["configuration_revision"] = revision
             entry["configuration_ref"] = f"configurations/{filename}"
             entry["secret_ref"] = secret_ref

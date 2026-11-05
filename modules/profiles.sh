@@ -227,6 +227,163 @@ profiles_versions_menu() {
     profiles_cli restore --profile-id "$profile_id" --revision "$revision" | jq .
     ui_pause
 }
+profiles_compose_vless_ws_tls_menu() {
+    local profile_id profile_json revision connections_json answer connection_id mapping_root mapping_file result connection_config_json
+    local connections_file="${XRAY_MANAGER_CONNECTIONS_FILE:-/var/lib/xray-manager/connections/connections.json}"
+    local connections_base="${XRAY_MANAGER_CONNECTIONS_DIR:-/var/lib/xray-manager/connections}"
+    local users_file="${XRAY_MANAGER_USERS_FILE:-/var/lib/xray-manager/users/users.json}"
+    local users_lock="${XRAY_MANAGER_INTEGRITY_LOCK:-/run/xray-manager/integrity.lock}"
+    local certificate_catalog="${XRAY_MANAGER_CERTIFICATES_CATALOG_FILE:-/var/lib/xray-manager/certificates/catalog.json}"
+    local -a ids=() names=() ports=() args=()
+    mapping_root="${XRAY_MANAGER_PROFILE_BINDINGS_DIR:-/var/lib/xray-manager/profile-bindings}"
+
+    ui_clear
+    ui_title "COMPONER VLESS-WS-TLS EN PERFIL"
+    profile_id="$(profiles_select_id)" || { ui_pause; return 1; }
+    profile_json="$(profiles_cli show --profile-id "$profile_id")" || { printf '
+No se pudo consultar el perfil.
+'; ui_pause; return 1; }
+    revision="$(jq -er '.metadata.current_revision | select(type == "string" and length > 0)' <<<"$profile_json")" || {
+        printf '
+El perfil no tiene una revisión actual con configuración.
+'; ui_pause; return 1;
+    }
+    jq -e '.metadata.config_present == true' <<<"$profile_json" >/dev/null || {
+        printf '\nEl perfil no contiene una configuración para componer.\n'; ui_pause; return 1;
+    }
+    [[ -r "$connections_file" ]] || { printf '
+No se puede leer el catálogo de conexiones.
+'; ui_pause; return 1; }
+    connections_json="$(jq -c '[.[] | select(.protocol_id == "vless_ws_tls" and .state == "draft" and .runtime_applied == false)]' "$connections_file")" || return 1
+    mapfile -t ids < <(jq -r '.[].id' <<<"$connections_json")
+    mapfile -t names < <(jq -r '.[].name // .id' <<<"$connections_json")
+    mapfile -t ports < <(jq -r '.[].port | tostring' <<<"$connections_json")
+    (("${#ids[@]}" > 0)) || { printf '
+No hay conexiones VLESS-WS-TLS elegibles en draft.
+'; ui_pause; return 0; }
+    printf '
+Perfil: %s
+Revisión origen: %s
+Conexiones elegibles:
+' "$profile_id" "$revision"
+    local i
+    for i in "${!ids[@]}"; do printf '  [%d] %s | %s | puerto %s
+' "$((i + 1))" "${names[i]}" "${ids[i]}" "${ports[i]}"; done
+    ui_read_option "Selecciona la conexión (0 = cancelar): " answer || return 0
+    [[ "$answer" =~ ^[0-9]+$ ]] || { printf 'Selección no válida.
+'; ui_pause; return 1; }
+    answer=$((10#$answer))
+    ((answer >= 1 && answer <= ${#ids[@]})) || return 0
+    connection_id="${ids[answer-1]}"
+    mapping_file="$mapping_root/$profile_id/$revision.json"
+    connection_config_json="$(python3 "$APP_ROOT/scripts/vless_config_store.py" read --connection-id "$connection_id" --base "$connections_base" --catalog "$connections_file" --lock "$users_lock" --secrets-dir "${XRAY_MANAGER_CONNECTION_SECRETS_DIR:-$connections_base/secrets}" --master-key "$XRAY_MANAGER_MASTER_KEY_FILE" --certificate-catalog "$certificate_catalog")" || {
+        printf '\nNo se pudo leer y validar la configuración persistida de la conexión.\n'; ui_pause; return 1;
+    }
+
+    printf '
+Previsualización:
+'
+    printf '  Perfil: %s
+  Revisión origen: %s
+  Conexión: %s (%s)
+  Puerto: %s
+'         "$profile_id" "$revision" "${names[answer-1]}" "$connection_id" "${ports[answer-1]}"
+    printf '  WebSocket path: %s\n' "$(jq -r '.configuration.transport_options.path' <<<"$connection_config_json")"
+    printf '  Host HTTP WebSocket: %s\n' "$(jq -r '.configuration.transport_options.host // "(no configurado)"' <<<"$connection_config_json")"
+    printf '  SNI/serverName del cliente: %s\n' "$(jq -r '.configuration.client_options.tls_server_name // "(no configurado)"' <<<"$connection_config_json")"
+    printf '  Certificado TLS del servidor: %s\n' "$(jq -r '.configuration.security_options.certificate_id' <<<"$connection_config_json")"
+    printf '  Se creará una revisión nueva, inmutable y pendiente de validación.
+'
+    printf '  No se activará el perfil ni se modificará Xray/systemd.
+'
+    ui_confirm "¿Componer la conexión en una revisión nueva?" || { printf 'Operación cancelada.
+'; ui_pause; return 0; }
+
+    args=(
+        --profile-store "$XRAY_MANAGER_PROFILES_DIR" --master-key "$XRAY_MANAGER_MASTER_KEY_FILE"
+        --profile-id "$profile_id" --expected-revision "$revision" --connection-id "$connection_id"
+        --connections-catalog "$connections_file" --connections-base "$connections_base"
+        --connection-lock "$users_lock" --users-file "$users_file" --users-lock "$users_lock"
+        --certificate-catalog "$certificate_catalog" --mapping-root "$mapping_root"
+    )
+    if [[ -e "$mapping_file" || -L "$mapping_file" ]]; then args+=(--existing-bindings "$mapping_file"); fi
+    result="$(python3 "$APP_ROOT/scripts/vless_ws_tls_composer.py" "${args[@]}")" || {
+        printf '
+El compositor rechazó la operación. No continuar a R-02.
+'; ui_pause; return 1;
+    }
+    printf '
+Composición completada:
+'
+    jq '{status,profile_id,source_revision,revision,inbound_tag,connection_id,clients,mapping_file,validation_status,runtime_changed,service_started}' <<<"$result"
+    printf '
+La nueva revisión requiere validación; no está activa ni aplicada.
+'
+    ui_pause
+}
+
+profiles_export_vless_clients_menu() {
+    local profile_id versions answer revision address port output result mapping_root
+    local index
+    local -a revisions=() states=() current=() args=()
+    local connections_file="${XRAY_MANAGER_CONNECTIONS_FILE:-/var/lib/xray-manager/connections/connections.json}"
+    local connections_base="${XRAY_MANAGER_CONNECTIONS_DIR:-/var/lib/xray-manager/connections}"
+    local connections_lock="${XRAY_MANAGER_INTEGRITY_LOCK:-/run/xray-manager/integrity.lock}"
+    local connections_secrets="${XRAY_MANAGER_CONNECTION_SECRETS_DIR:-$connections_base/secrets}"
+    local certificate_catalog="${XRAY_MANAGER_CERTIFICATES_CATALOG_FILE:-/var/lib/xray-manager/certificates/catalog.json}"
+    mapping_root="${XRAY_MANAGER_PROFILE_BINDINGS_DIR:-/var/lib/xray-manager/profile-bindings}"
+    address="${XRAY_MANAGER_VLESS_PUBLIC_ADDRESS:-hellen.tvrc.me}"
+    port="${XRAY_MANAGER_VLESS_PUBLIC_PORT:-443}"
+
+    ui_clear
+    ui_title "EXPORTAR CLIENTES VLESS-WS-TLS"
+    profile_id="$(profiles_select_id)" || { ui_pause; return 1; }
+    versions="$(profiles_cli versions --profile-id "$profile_id")" || {
+        printf '\nNo se pudo consultar el historial de revisiones.\n'; ui_pause; return 1;
+    }
+    mapfile -t revisions < <(jq -r '.[].revision' <<<"$versions")
+    mapfile -t states < <(jq -r '.[].validation' <<<"$versions")
+    mapfile -t current < <(jq -r '.[].current' <<<"$versions")
+    (( ${#revisions[@]} > 0 )) || { printf '\nEl perfil no contiene revisiones.\n'; ui_pause; return 0; }
+    printf '\nSelecciona la revisión exacta que contiene el inbound VLESS-WS-TLS:\n'
+    for index in "${!revisions[@]}"; do
+        printf '  [%d] %s | validación: %s%s\n' \
+            "$((index + 1))" "${revisions[index]}" "${states[index]}" \
+            "$([[ ${current[index]} == true ]] && printf ' | actual' || true)"
+    done
+    ui_read_option "Revisión a exportar (0 = cancelar): " answer || return 0
+    [[ "$answer" =~ ^[0-9]+$ ]] || { printf 'Selección no válida.\n'; ui_pause; return 1; }
+    answer=$((10#$answer))
+    ((answer >= 1 && answer <= ${#revisions[@]})) || return 0
+    revision="${revisions[answer-1]}"
+    printf '\nEndpoint público: %s:%s\nPerfil: %s\nRevisión exacta: %s\n' "$address" "$port" "$profile_id" "$revision"
+    printf 'Se generará un URI por cada UUID del inbound VLESS-WS-TLS.\n'
+    printf 'Host WebSocket y SNI se leerán de la configuración guardada; no se inferirán del endpoint.\n'
+    printf 'Los URI contienen credenciales de acceso. No se activará el perfil ni se tocará Xray/systemd, DNS o firewall.\n'
+    ui_read_option "Ruta de archivo TXT privado (vacío = mostrar URI en pantalla): " output || return 0
+    ui_confirm "¿Exportar los clientes de esta revisión?" || return 0
+    args=(
+        --profile-store "$XRAY_MANAGER_PROFILES_DIR" --master-key "$XRAY_MANAGER_MASTER_KEY_FILE"
+        --profile-id "$profile_id" --revision "$revision" --mapping-root "$mapping_root"
+        --connections-base "$connections_base" --connections-catalog "$connections_file"
+        --connection-lock "$connections_lock" --connection-secrets "$connections_secrets"
+        --certificate-catalog "$certificate_catalog" --address "$address" --port "$port"
+    )
+    [[ -z "$output" ]] || args+=(--output "$output")
+    result="$(python3 "$APP_ROOT/scripts/vless_client_export.py" "${args[@]}")" || {
+        printf '\nExportación rechazada. No se generó un perfil parcial.\n'; ui_pause; return 1;
+    }
+    printf '\nExportación completada:\n'
+    jq '{status,endpoint,profile_id,revision,validation_status,clients,output_file,output_mode,uri_sha256,runtime_changed,service_started,dns_changed,firewall_changed}' <<<"$result"
+    if [[ -z "$output" ]]; then
+        printf '\nURI para importar en NetMod (cada URI corresponde a un usuario):\n\n'
+        jq -r '.uris[]' <<<"$result"
+    else
+        printf '\nArchivo privado creado. Transfiérelo de forma segura; contiene UUID de acceso.\n'
+    fi
+    ui_pause
+}
+
 profiles_validate_revision_menu() {
     local profile_id versions answer revision result index
     local -a revisions=() states=() current=()
@@ -289,7 +446,8 @@ menu_profiles() {
         ui_title "GESTIONAR PERFILES"
         printf '\n  [1] Crear perfil\n  [2] Consultar perfiles\n  [3] Modificar perfil\n  [4] Duplicar perfil\n  [5] Renombrar perfil\n'
         printf '  [6] Eliminar perfil (pendiente de protección de dependencias)\n  [7] Historial y restaurar versión\n'
-        printf '  [8] Validar revisión del perfil (estática + Xray; no aplica runtime)\n  [0] Volver\n\n'
+        printf '  [8] Validar revisión del perfil (estática + Xray; no aplica runtime)\n'
+        printf '  [9] Componer conexión VLESS-WS-TLS en una revisión nueva\n  [10] Exportar clientes VLESS-WS-TLS para NetMod\n  [0] Volver\n\n'
         ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
             1) profiles_create_menu || true ;;
@@ -303,6 +461,8 @@ menu_profiles() {
                 ;;
             7) profiles_versions_menu || true ;;
             8) profiles_validate_revision_menu || true ;;
+            9) profiles_compose_vless_ws_tls_menu || true ;;
+            10) profiles_export_vless_clients_menu || true ;;
             0) return 0 ;;
             *)
                 printf 'Opción no válida.\n'

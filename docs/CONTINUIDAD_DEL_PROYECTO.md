@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> **Punto de reanudación vigente — 2026-11-04:** U-01 aceptada formalmente. R-01 implementada, integrada, auditada, publicada y sincronizada; aceptación formal específica pendiente. R-02 staging TLS implementada/auditada (11/11); R-03 snapshot/journal/recuperación idempotente implementada/auditada (22/22); R-04 publicación atómica/rollback implementada/verificada (12/12), todo en fixtures aislados. Regresión Python 153/153; shell 58/58; verificaciones estáticas PASS. R-02/R-03/R-04 pendientes de aceptación formal/publicación. R-05 pendiente; R-06/live y NetMod no autorizadas. Etapas 2, 3 y 5 siguen ABIERTAS.
+> **Punto de reanudación vigente — 2026-11-05:** I-01, I-02, I-03 e I-04 están aceptadas formalmente con sus limitaciones. I-02/I-03/I-04 tienen publicación autorizada únicamente en `design/user-identity-association-v1`; la regresión previa a publicación pasó Python 171/171 y Bash 59/59, además de verificaciones estáticas. Confirmar SHA remoto y sincronización real VPS/GitHub antes de continuar. No se probó NetMod real ni conectividad WAN. R-01–R-04 publicadas/sincronizadas con aceptación formal específica pendiente; R-05 en pausa; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS.
 
 > **Evidencia VMess TLS incorporada:** una prueba live posterior verificó que Xray-core 26.10.31, ejecutado como UID 999/GID 988, leyó el certificado y la clave sintéticos de un lease y completó un handshake TLS 1.3 en la segunda ejecución. La primera ejecución no se contabiliza como exitosa. Esto demuestra lectura por un proceso Xray real en el entorno de prueba, no despliegue de `xray.service`, activación del runtime administrado, conectividad WAN ni aceptación integral de VMess TLS. Informe: `docs/VALIDACION_LIVE_VMESS_TLS_LEASE_2026-11-03.md`.
 
@@ -1367,3 +1367,45 @@ Este bloque sustituye como siguiente tarea los puntos de continuidad anteriores 
 - No repetir R-01–R-04. R-05 en pausa; R-06/live y NetMod NO AUTORIZADAS. No tocar clave maestra real, almacenes live, Xray/systemd real, certificados desplegados, DNS, firewall, puertos, red, dependencias, VPS de pruebas, `main` ni `Xray-Normativa/`.
 
 Para reanudar, leer `AGENTS.md`, `PROJECT_STATE.md`, `docs/PUNTO_CONTROL_ACTUAL.md`, este documento, `docs/IMPLEMENTACION_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md` y `HISTORY.md`; verificar rama, HEAD, árbol y remoto. I-01 está aceptado formalmente; verificar el commit remoto y la sincronización antes de continuar.
+
+
+## Continuidad vigente — I-02 / I-03 VLESS-WS-TLS (2026-11-05)
+
+Este bloque sustituye el siguiente paso anterior que proponía integrar I-01 y resolver Host/SNI. I-02/I-03 ya están implementados localmente en el alcance descrito; no repetir su trabajo.
+
+- Rama autorizada: design/user-identity-association-v1.
+- HEAD remoto/local de partida: commit I-01 792f382ca1b4f753ff763dc50a442aa66a0cd42f. Los cambios I-02/I-03 permanecen locales, sin commit/push.
+- I-02: opción [9] del menú de perfiles; selección de perfil con configuración/revisión actual y conexión VLESS-WS-TLS draft y runtime_applied=false; previsualización incluye path, Host, SNI y certificado; confirmación; crea revisión nueva e inmutable pendiente de validación. No activa perfil ni ejecuta R-01–R-04.
+- I-03: transport_options.host y client_options.tls_server_name, esquema 2; esquema 1 compatible. Xray inbound recibe wsSettings.host; SNI permanece solo como metadata del cliente.
+- Xray 26.10.31 valida WS-TLS con y sin Host. No usar wsSettings.headers.Host porque Xray lo marca obsoleto; el campo actual es wsSettings.host.
+- Config Store, Certificate Resolver y backup/restore admiten esquema 2; backup/restore conserva Host/SNI y el ID de certificado central.
+- Pruebas: compositor focal 11/11; menú, asistente TLS, backup/restore y Xray integration PASS. Regresión completa final: Python 164/164, Bash 59/59; py_compile, bash -n global, ShellCheck focal en todos los Bash modificados, git diff --check e install.sh --check PASS. ShellCheck global completo había pasado en la ejecución previa.
+- Exportación URI VLESS para NetMod no está implementada. Antes se debe definir endpoint público por conexión (dominio/IP y política). No asumir internet.tvrc.me u otro dominio histórico.
+- Aún falta aceptación formal de I-02/I-03 y autorización separada de commit/push. No publicar ni sincronizar hasta recibirlas.
+- No se ha hecho ninguna operación live. No tocar Xray/systemd real, certificados reales, DNS, firewall, puertos, red, dependencias, VPS de pruebas, main o Xray-Normativa/.
+- Documentos: docs/DECISION_I02_I03_VLESS_WS_TLS.md, docs/IMPLEMENTACION_I02_I03_VLESS_WS_TLS_2026-11-05.md, docs/AUDITORIA_I02_I03_VLESS_WS_TLS_2026-11-05.md.
+
+Siguiente paso: presentar el informe al propietario para revisión y aceptación formal; mantener cambios locales hasta autorización separada de publicación. Para exportación cliente, definir antes el endpoint público de conexión.
+
+
+## Punto de reanudación vigente — I-04 VLESS-WS-TLS exportación cliente (2026-11-05)
+
+El propietario autorizó expresamente exportación para NetMod usando hellen.tvrc.me:443, con puerto público igual al puerto del inbound. Se añadió scripts/vless_client_export.py y la opción [10] del menú de perfiles. La exportación toma un perfil y revisión exactos, contrasta mapping privado con inbounds TLS centralizados y recupera la configuración fuente con VLESS Config Store. Emite un URI por UUID; host y sni se incluyen solo si están configurados, sin inferirlos del endpoint. El TXT opcional es 0600, atómico y sin sobrescritura.
+
+Pruebas focales I-04: 7/7 PASS; integración de menú/compositor PASS. Regresión: Python 171/171 y Bash 59/59 PASS; py_compile, bash -n, ShellCheck focal, install.sh --check y git diff --check PASS. La exportación no activa ni valida perfiles, no llama R-01–R-04 y no toca runtime/systemd, DNS, firewall, puertos ni certificados desplegados. No se probó NetMod real ni conectividad externa.
+
+**Estado:** I-02/I-03/I-04 IMPLEMENTADOS, VERIFICADOS y AUDITADOS en alcance focal; aceptación formal pendiente; no publicados ni sincronizados. Conservar todos los cambios locales. No hacer commit/push sin autorización expresa. main y Xray-Normativa/ permanecen protegidas.
+
+**Siguiente paso:** revisión del propietario y aceptación formal de I-02/I-03/I-04; después, solicitar autorización separada de publicación en design/user-identity-association-v1. No iniciar operaciones live.
+
+
+## Continuidad vigente — publicación I-02/I-03/I-04 (2026-11-05)
+
+1. El propietario aceptó formalmente I-02, I-03 e I-04 con las limitaciones de `docs/AUDITORIA_I02_I03_VLESS_WS_TLS_2026-11-05.md` y `docs/AUDITORIA_I04_VLESS_CLIENT_EXPORT_2026-11-05.md`.
+2. El propietario autorizó expresamente commit/push/sincronización exclusivamente a `design/user-identity-association-v1`. `main` y `Xray-Normativa/` permanecen protegidas.
+3. Base de publicación: I-01 `792f382ca1b4f753ff763dc50a442aa66a0cd42f`; cambios I-02/I-03/I-04 estaban locales y sin divergencia remota.
+4. Regresión previa a publicar: Python 171/171 y Bash 59/59 PASS; `py_compile`, `bash -n`, ShellCheck `-S error`, `install.sh --check`, `git diff --check` PASS.
+5. Comparación de normativa sustantiva: 13/13 archivos byte a byte coincidentes con el respaldo. No modificar `Xray-Normativa/`.
+6. I-02 agrega opción [9] del menú para componer nueva revisión inmutable. I-03 persiste Host WebSocket y SNI cliente por separado (esquema 2, esquema 1 compatible). I-04 exporta URI para `hellen.tvrc.me:443`; no valida DNS, certificado desplegado, listener, NetMod ni WAN.
+7. No activar perfiles ni ejecutar R-01–R-04 como parte de esta publicación. No tocar runtime/systemd real, certificados reales, DNS, firewall, puertos, red, dependencias, clave maestra ni VPS de pruebas. R-06/live no autorizada.
+8. Tras el push, verificar SHA remoto, archivos publicados y contenido del checkout. La aceptación de incrementos no cierra Etapas 2, 3 ni 5.

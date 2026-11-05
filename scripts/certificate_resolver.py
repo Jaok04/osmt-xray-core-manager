@@ -143,7 +143,7 @@ def _connection_config(
     if (
         not match or isinstance(revision, bool) or type(revision) is not int
         or revision != int(match.group(1))
-        or isinstance(schema, bool) or type(schema) is not int or schema != 1
+        or isinstance(schema, bool) or type(schema) is not int or schema not in ((1, 2) if protocol == "vless" else (1,))
     ):
         raise ResolverError("referencia o revisión de configuración no válida")
     config_dir = base / "configurations"
@@ -161,13 +161,15 @@ def _connection_config(
     }
     if protocol == "vmess":
         expected_fields.add("users")
+    elif isinstance(config, dict) and config.get("schema_version") == 2:
+        expected_fields.add("client_options")
     modes = vmess_config_store.MODES if protocol == "vmess" else vless_config_store.MODES
     mode_contract = modes.get(protocol_id)
     if (
         not isinstance(config, dict) or set(config) != expected_fields
         or isinstance(config.get("schema_version"), bool)
         or type(config.get("schema_version")) is not int
-        or config["schema_version"] != 1
+        or config["schema_version"] not in ((1, 2) if protocol == "vless" else (1,))
         or config.get("connection_id") != connection_id
         or config.get("protocol") != protocol
         or config.get("mode_id") != protocol_id
@@ -186,6 +188,13 @@ def _connection_config(
         or not isinstance(entry.get("runtime_applied"), bool)
     ):
         raise ResolverError("la configuración no es una conexión TLS central válida")
+    if protocol == "vless":
+        try:
+            vless_config_store.validate_config(
+                config, entry, entry.get("secret_ref"), allow_legacy_tls=True
+            )
+        except vless_config_store.StoreError as exc:
+            raise ResolverError("opciones VLESS persistidas no válidas") from exc
     return config, protocol
 
 

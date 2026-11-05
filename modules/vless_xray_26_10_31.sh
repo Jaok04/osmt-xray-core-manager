@@ -99,7 +99,7 @@ vless_xray_26_10_31_build() {
 		if [[ "$mode" == vless_tcp_tls ]]; then
 			jq -e 'keys == ["certificate_file","key_file"] and (.certificate_file | type == "string" and length > 0) and (.key_file | type == "string" and length > 0)' "$options_file" >/dev/null || { printf 'TCP+TLS requiere certificate_file y key_file.\n' >&2; return 2; }
 		else
-			jq -e 'keys == ["certificate_file","key_file","path"] and (.certificate_file | type == "string" and length > 0) and (.key_file | type == "string" and length > 0) and (.path | type == "string" and startswith("/") and length > 1)' "$options_file" >/dev/null || { printf 'WebSocket+TLS requiere path, certificate_file y key_file.\n' >&2; return 2; }
+			jq -e '((keys == ["certificate_file","key_file","path"]) or (keys == ["certificate_file","host","key_file","path"])) and (.certificate_file | type == "string" and length > 0) and (.key_file | type == "string" and length > 0) and (.path | type == "string" and startswith("/") and length > 1) and (if has("host") then (.host | type == "string" and length <= 253 and test("^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?([.][A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$")) else true end)' "$options_file" >/dev/null || { printf 'WebSocket+TLS requiere path, certificado/clave y Host opcional válido.\n' >&2; return 2; }
 		fi
 		local cert key
 		cert="$(jq -r '.certificate_file' "$options_file")"
@@ -160,7 +160,7 @@ vless_xray_26_10_31_build() {
           settings:{clients:$m.users,decryption:"none"},
           streamSettings:(
             {method:$m.transport,security:$m.security} +
-            (if $m.transport == "websocket" then {wsSettings:{path:$o.path}} else {} end) +
+            (if $m.transport == "websocket" then {wsSettings:({path:$o.path} + (if ($o.host // "") != "" then {host:$o.host} else {} end))} else {} end) +
             (if $m.transport == "xhttp" then {xhttpSettings:{path:$o.path,mode:$o.mode}} else {} end) +
             (if $m.transport == "grpc" then {grpcSettings:{serviceName:$o.service_name}} else {} end) +
             (if $m.security == "tls" then {tlsSettings:{certificates:[{certificateFile:$o.certificate_file,keyFile:$o.key_file}]}} else {} end) +

@@ -33,12 +33,16 @@ def main():
     mode=model.get('mode_id'); cid=model.get('connection_id')
     if mode not in MODES or (model.get('transport'),model.get('security')) != MODES[mode]: raise ValueError('modelo VLESS inválido')
     transport={}; security={}; secret=None; secret_type=None
-    if mode in ('vless_ws','vless_ws_tls'): transport={'path':options['path']}
+    if mode == 'vless_ws': transport={'path':options['path']}
+    elif mode == 'vless_ws_tls':
+        transport={'path':options['path']}
+        if options.get('host'): transport['host']=options['host']
     elif mode.startswith('vless_xhttp'): transport={'path':options['path'],'mode':options['mode']}
     elif mode.startswith('vless_grpc'): transport={'service_name':options['service_name']}
     if model['security']=='tls':
-        transport_keys = {'path', 'mode'} if mode == 'vless_xhttp_tls' else ({'path'} if mode == 'vless_ws_tls' else ({'service_name'} if mode == 'vless_grpc_tls' else set()))
-        if (set(options) != transport_keys | {'certificate_id'}
+        transport_keys = {'path', 'mode'} if mode == 'vless_xhttp_tls' else ({'path', 'host', 'client_server_name'} if mode == 'vless_ws_tls' else ({'service_name'} if mode == 'vless_grpc_tls' else set()))
+        optional_client_keys = {'host', 'client_server_name'} if mode == 'vless_ws_tls' else set()
+        if (set(options) - optional_client_keys != (transport_keys - optional_client_keys) | {'certificate_id'}
                 or not isinstance(options.get('certificate_id'), str)
                 or not re.fullmatch(r'cert-[A-Za-z0-9][A-Za-z0-9_.-]{0,120}', options['certificate_id'])):
             raise ValueError('TLS requiere un certificate_id central válido y sólo las opciones de transporte de su modalidad')
@@ -46,10 +50,16 @@ def main():
     elif model['security']=='reality':
         security={'target':options['target'],'server_names':options['server_names'],'short_ids':options['short_ids']}
         secret_type='reality_private_key'; secret=options['private_key'].encode()
-    config={'schema_version':1,'connection_id':cid,'protocol':'vless','mode_id':mode,
+    client_options={}
+    if mode == 'vless_ws_tls':
+        if options.get('client_server_name'):
+            client_options['tls_server_name']=options['client_server_name']
+    schema_version=2 if mode == 'vless_ws_tls' and (transport.get('host') or client_options) else 1
+    config={'schema_version':schema_version,'connection_id':cid,'protocol':'vless','mode_id':mode,
             'transport':model['transport'],'security':model['security'],
             'listen_address':model['listen_address'],'listen_port':model['listen_port'],
             'transport_options':transport,'security_options':security}
+    if schema_version == 2: config['client_options']=client_options
     private_write(Path(a.output),(json.dumps(config,ensure_ascii=False,sort_keys=True,separators=(',',':'))+'\n').encode())
     if secret is not None:
         if not secret: raise ValueError('secreto vacío')

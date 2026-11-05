@@ -348,6 +348,7 @@ def validate_payload(archive: bytes, manifest: dict, key: bytes):
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import vless_crypto as crypto
+    import vless_config_store
     if not isinstance(key,bytes) or len(key)!=32: raise BackupError('clave maestra inválida')
     extracted=_read_archive_members(archive,manifest,retain=True)
     cat_bytes=extracted.get('connections/connections.json')
@@ -369,10 +370,19 @@ def validate_payload(archive: bytes, manifest: dict, key: bytes):
         raw=extracted.get(name)
         if raw is None: raise BackupError('configuración referenciada ausente')
         cfg=json.loads(raw)
-        if not isinstance(cfg,dict) or cfg.get('connection_id')!=e['id'] or cfg.get('protocol')!='vless' or cfg.get('schema_version')!=1:
+        if not isinstance(cfg,dict) or cfg.get('connection_id')!=e['id'] or cfg.get('protocol')!='vless' or cfg.get('schema_version') not in (1,2):
             raise BackupError('configuración neutral no válida')
+        catalog_schema=e.get('configuration_schema_version')
+        if (isinstance(catalog_schema, bool) or
+                catalog_schema not in (None, 0, cfg.get('schema_version')) or
+                (cfg.get('schema_version') == 2 and catalog_schema != 2)):
+            raise BackupError('versión de esquema de catálogo/configuración no coincide')
         sec=cfg.get('security_options',{})
         if not isinstance(sec,dict): raise BackupError('opciones de seguridad no válidas')
+        try:
+            vless_config_store.validate_config(cfg, e, e.get('secret_ref'), allow_legacy_tls=True)
+        except vless_config_store.StoreError as exc:
+            raise BackupError('configuración neutral VLESS no válida') from exc
         secret_ref=e.get('secret_ref')
         if secret_ref is not None:
             sm=re.fullmatch(r'secrets/([A-Za-z0-9_.-]+)\.r([0-9]{6})\.bin',secret_ref if isinstance(secret_ref,str) else '')

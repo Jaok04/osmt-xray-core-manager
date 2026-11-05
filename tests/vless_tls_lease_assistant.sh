@@ -31,13 +31,14 @@ key="$(jq -r '.inbounds[0].streamSettings.tlsSettings.certificates[0].keyFile' "
 [[ "$key" == "$XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR"/*/private-key.pem ]]
 runuser -u www-data -- test -r "$cert"
 runuser -u www-data -- test -r "$key"
+cp "$config" "$XRAY_CAPTURE_CONFIG"
 printf '%s\n' "$cert|$key" >>"$XRAY_TEST_CALLS"
 [[ "${XRAY_FAIL:-0}" != 1 ]]
 printf 'Configuration OK.\n'
 XRAY
 chmod 700 "$TMP/xray"
 cat >"$BASE/connections.json" <<'JSON'
-[{"id":"vless-tls-ok","name":"VLESS TLS OK","protocol_id":"vless_tcp_tls","port":62301,"max_users":1,"state":"draft","runtime_applied":false},{"id":"vless-tls-fail","name":"VLESS TLS fail","protocol_id":"vless_tcp_tls","port":62302,"max_users":1,"state":"draft","runtime_applied":false}]
+[{"id":"vless-tls-ok","name":"VLESS TLS OK","protocol_id":"vless_tcp_tls","port":62301,"max_users":1,"state":"draft","runtime_applied":false},{"id":"vless-tls-fail","name":"VLESS TLS fail","protocol_id":"vless_tcp_tls","port":62302,"max_users":1,"state":"draft","runtime_applied":false},{"id":"vless-ws-tls-host","name":"VLESS WS TLS Host","protocol_id":"vless_ws_tls","port":62303,"max_users":1,"state":"draft","runtime_applied":false}]
 JSON
 chmod 600 "$BASE/connections.json"
 python3 "$ROOT/scripts/certificate_store.py" --base "$CERTS" --catalog "$CERTS/catalog.json" --managed-dir "$CERTS/managed" --secrets-dir "$CERTS/secrets" --master-key "$KEYS/master.key" --lock "$CERTS/catalog.lock" import --storage-type managed --certificate-file "$TMP/tls.pem" --private-key-file "$TMP/tls.key" --certificate-id cert-assistant >/dev/null
@@ -61,15 +62,21 @@ export XRAY_MANAGER_USERS_FILE="$TMP/users/users.json"
 export CONNECTION_LOCK="$XRAY_MANAGER_INTEGRITY_LOCK"
 export XRAY_VALIDATION_BINARY="$TMP/xray"
 export XRAY_TEST_CALLS="$TMP/xray.calls"
+export XRAY_CAPTURE_CONFIG="$TMP/xray-captured.json"
 source "$ROOT/modules/users_v2.sh"
 source "$ROOT/modules/vless_model.sh"
 source "$ROOT/modules/vless_xray_26_10_31.sh"
 source "$ROOT/modules/vless_assistant.sh"
 ui_pause() { :; }
 mkdir -m 700 -p "$XRAY_MANAGER_USERS_DIR"
-for id in vless-tls-ok vless-tls-fail; do
+for id in vless-tls-ok vless-tls-fail vless-ws-tls-host; do
 	identity="$(users_identity_create)"
-	users_association_create "$identity" "$id" "Cliente $id" uuid "$([[ "$id" == vless-tls-ok ]] && printf '11111111-1111-4111-8111-111111111111' || printf '22222222-2222-4222-8222-222222222222')" active unlimited 0 none 0 0 auto >/dev/null
+	case "$id" in
+		vless-tls-ok) credential=11111111-1111-4111-8111-111111111111 ;;
+		vless-tls-fail) credential=22222222-2222-4222-8222-222222222222 ;;
+		*) credential=66666666-6666-4666-8666-666666666666 ;;
+	esac
+	users_association_create "$identity" "$id" "Cliente $id" uuid "$credential" active unlimited 0 none 0 0 auto >/dev/null
 done
 printf '127.0.0.1\ncert-assistant\ns\n' | connections_vless_assistant vless-tls-ok vless_tcp_tls
 jq -e 'any(.[]; .id == "vless-tls-ok" and .configuration_revision == 1 and .secret_ref == null)' "$CONNECTION_DATA_FILE" >/dev/null
@@ -85,6 +92,10 @@ jq -e 'any(.[]; .id == "vless-tls-fail" and .configuration_revision == 1 and .se
 [[ ! -e "$SECRETS/vless-tls-fail.r000001.bin" ]]
 [[ -z "$(find "$RUNTIME" -mindepth 1 -maxdepth 1 -print -quit)" ]]
 [[ "$(wc -l <"$XRAY_TEST_CALLS")" -eq 2 ]]
+# Host WebSocket y SNI del cliente: se persisten separados y solo Host llega al inbound Xray.
+printf '127.0.0.1\n/ws-host\nws.example.invalid\nsni.example.invalid\ncert-assistant\ns\n' | connections_vless_assistant vless-ws-tls-host vless_ws_tls
+jq -e '.transport_options == {path:"/ws-host",host:"ws.example.invalid"} and .client_options == {tls_server_name:"sni.example.invalid"} and .schema_version == 2' "$BASE/configurations/vless-ws-tls-host.r000001.json" >/dev/null
+jq -e '.inbounds[0].streamSettings.wsSettings == {path:"/ws-host",host:"ws.example.invalid"} and (.inbounds[0].streamSettings.tlsSettings | has("serverName") | not)' "$XRAY_CAPTURE_CONFIG" >/dev/null
 # Recuperación: recorrer todas las modalidades VLESS TLS con sus opciones de transporte.
 python3 - "$CONNECTION_DATA_FILE" <<'PYROWS'
 import json,sys
@@ -97,7 +108,7 @@ PYROWS
 for id in restore-vless_ws_tls restore-vless_grpc_tls restore-vless_xhttp_tls; do
 	identity="$(users_identity_create)"
 	case "$id" in
-	restore-vless_ws_tls) credential=33333333-3333-4333-8333-333333333333 ;;
+	restore-vless_ws_tls) credential=77777777-7777-4777-8777-777777777777 ;;
 	restore-vless_grpc_tls) credential=44444444-4444-4444-8444-444444444444 ;;
 	*) credential=55555555-5555-4555-8555-555555555555 ;;
 	esac
@@ -118,5 +129,5 @@ for mode in vless_tcp_tls vless_ws_tls vless_grpc_tls vless_xhttp_tls; do
 	connections_vless_assistant_restore "$id" "$mode"
 	[[ -z "$(find "$RUNTIME" -mindepth 1 -maxdepth 1 -print -quit)" ]]
 done
-[[ "$(wc -l <"$XRAY_TEST_CALLS")" -eq 6 ]]
+[[ "$(wc -l <"$XRAY_TEST_CALLS")" -eq 7 ]]
 echo 'PASS: VLESS TLS central prepara y limpia leases en creación y recuperación de RAW/TCP, WS, gRPC y XHTTP; permisos simulados www-data.'

@@ -1,5 +1,12 @@
 # Punto de control actual — Xray Core Manager
 
+> El punto de control operativo vigente es el último bloque de publicación I-02/I-03/I-04. Los apartados anteriores se conservan como historial y quedan superados cuando contradigan ese bloque.
+
+**Fecha del corte:** 2026-11-05
+**Siguiente tarea:** verificar el commit publicado, el SHA remoto y la igualdad de contenido entre GitHub y `/opt/xray-manager`; después continuar el MVP VLESS-WS-TLS desde el plan vigente, sin operaciones live por inferencia.
+**Estado vigente:** I-02, I-03 e I-04 aceptados formalmente; publicación en curso autorizada exclusivamente en `design/user-identity-association-v1`. Etapas 2, 3 y 5 ABIERTAS. R-06/live NO AUTORIZADA.
+
+
 > El punto de control operativo vigente es el último bloque R-04 al final de este documento. Los estados anteriores se conservan sólo como trazabilidad histórica y no prevalecen sobre ese bloque.
 
 **Fecha del corte:** 2026-11-04
@@ -1342,3 +1349,51 @@ El mapping TLS se almacena como archivo auxiliar privado fuera del JSON del perf
 Auditoría focal: `docs/AUDITORIA_I01_COMPOSITOR_VLESS_WS_TLS_2026-11-04.md` (PASS). Aceptación formal recibida el 2026-11-05 con limitaciones; autorización de publicación recibida por separado. Verificar publicación y sincronización.
 
 R-01–R-04 se reutilizan, no se repiten. R-05 en pausa. R-06/live y NetMod NO AUTORIZADAS. Etapas 2, 3 y 5 ABIERTAS. Normativa y `main` intactas; sin cambios live ni en VPS de pruebas.
+
+
+## Punto de control vigente — I-02 / I-03 VLESS-WS-TLS (2026-11-05)
+
+Base publicada: 792f382ca1b4f753ff763dc50a442aa66a0cd42f
+Rama: design/user-identity-association-v1
+Estado: I-02/I-03 implementados localmente, verificados y auditados focalmente; aceptación formal y publicación pendientes.
+
+- Menú perfiles [9] integra I-01, lee config de conexión por Config Store, previsualiza path/Host/SNI/certificado, confirma y crea nueva revisión inmutable pendiente.
+- Filtro estricto: conexión vless_ws_tls, state=draft, runtime_applied=false.
+- Host opcional: transport_options.host → Xray wsSettings.host. Validado por Xray 26.10.31; se evitó wsSettings.headers.Host por obsolescencia.
+- SNI opcional: client_options.tls_server_name; persistido como dato cliente, no se inyecta en inbound ni reemplaza TLS/certificado del servidor.
+- Esquema VLESS 2 para Host/SNI; esquema 1 compatible. Resolver y backup/restore actualizados.
+- Compositor focal 11/11; menú, asistente TLS, backup/restore, Xray integration y ShellCheck focal PASS. Regresión global final: Python 164/164, Bash 59/59; py_compile, bash -n global, ShellCheck focal en todos los Bash modificados, diff e instalador PASS.
+- Exportación URI de cliente aún pendiente de endpoint público explícito.
+- I-02/I-03 NO están aceptados formalmente ni publicados/sincronizados. No realizar commit/push sin autorización separada.
+- No se ejecutó live, no se modificó runtime, systemd, certificados reales, DNS, firewall, puertos o red. main y Xray-Normativa intactas.
+
+### Próximas acciones
+
+1. Revisión del propietario y aceptación formal del alcance I-02/I-03.
+2. Recibir autorización independiente para commit/push a la rama autorizada.
+3. Definir endpoint público antes de implementar exportación URI de cliente.
+4. No integrar todavía activación ni R-01–R-04 en este menú.
+
+## Punto de control vigente — I-04 exportación VLESS-WS-TLS (2026-11-05)
+
+El propietario autorizó generar URI vless:// para NetMod con endpoint público hellen.tvrc.me:443; el puerto público coincide con el puerto del inbound. Implementación: scripts/vless_client_export.py; menú de perfiles [10]. Se selecciona perfil y revisión exactos. El exportador valida el mapping privado exacto, recupera configuración fuente con VLESS Config Store y produce un URI por UUID. Host WebSocket y SNI cliente permanecen independientes; solo se exportan si están configurados. El archivo TXT opcional se crea 0600, atómico y sin sobrescritura.
+
+**Evidencia:** I-04 focal 7/7 PASS; integración de menú/compositor PASS; Python 171/171; Bash 59/59; py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS. No se probó NetMod real, DNS, listener ni conectividad WAN.
+
+**Límites:** no activa/valida perfiles, no ejecuta R-01–R-04, no inicia/reinicia Xray/systemd, no modifica certificados reales, DNS, firewall, puertos, red ni dependencias. No se modificaron main ni Xray-Normativa/.
+
+**Estado:** I-02/I-03/I-04 IMPLEMENTADOS, VERIFICADOS y AUDITADOS localmente; aceptación formal pendiente; no publicados ni sincronizados. Cambios locales I-02/I-03 preservados. No hacer commit/push sin autorización expresa.
+
+**Documentos:** docs/DECISION_I04_VLESS_CLIENT_EXPORT.md, docs/IMPLEMENTACION_I04_VLESS_CLIENT_EXPORT_2026-11-05.md, docs/AUDITORIA_I04_VLESS_CLIENT_EXPORT_2026-11-05.md.
+
+
+## Punto de control vigente — aceptación y publicación I-02/I-03/I-04 (2026-11-05)
+
+- El propietario aceptó formalmente I-02 (integración del compositor en menú de perfiles), I-03 (Host WebSocket y SNI cliente separados) e I-04 (exportación VLESS-WS-TLS para NetMod), cada una con las limitaciones de su auditoría.
+- El propietario autorizó commit, push y sincronización únicamente en `design/user-identity-association-v1`.
+- Base remota/local antes de publicar: `792f382ca1b4f753ff763dc50a442aa66a0cd42f`. No se detectó divergencia; cambios I-02/I-03/I-04 locales preservados.
+- Regresión reejecutada antes de publicar: Python 171/171; Bash 59/59; `py_compile`, `bash -n`, ShellCheck `-S error`, `install.sh --check`, `git diff --check`: PASS.
+- Comparación normativa: 13 archivos normativos sustantivos idénticos byte a byte al respaldo `/root/Xray_Manager_Documentacion_Final_2026-10-31`. `README.md` es auxiliar de la carpeta normativa y no forma parte de los 13 documentos sustantivos; `Xray-Normativa/` no se modificó.
+- I-02/I-03/I-04 no activan perfiles, no ejecutan R-01–R-04, no modifican Xray/systemd real y no acreditan conectividad NetMod/WAN. R-06/live sigue NO AUTORIZADA.
+- Tras la publicación, actualizar aquí el SHA definitivo, confirmar GitHub y comparar los archivos publicados contra `/opt/xray-manager`. No declarar sincronización antes de esas verificaciones.
+- Etapas 2, 3 y 5 permanecen ABIERTAS; la aceptación de estos incrementos no cierra etapas.

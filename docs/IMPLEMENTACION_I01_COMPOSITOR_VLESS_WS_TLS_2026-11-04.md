@@ -106,3 +106,8 @@ Resultado final: **10/10 pruebas focales PASS**. Regresión completa: **163/163 
 I-01 está implementado, verificado y auditado en el alcance focal descrito. El propietario otorgó aceptación formal el 2026-11-05 con las limitaciones documentadas. La autorización de commit/push se recibió por separado el 2026-11-05. La publicación y sincronización se registrarán tras su verificación. R-01–R-04 no se repiten; R-05 continúa en pausa; R-06/live sigue NO AUTORIZADA.
 
 No modificar `main` ni `Xray-Normativa/`. No tocar Xray/systemd real, DNS, certificados desplegados, firewall, puertos, red, claves o almacenes live, dependencias ni VPS de pruebas.
+
+
+## Actualización posterior — I-02 / I-03 (2026-11-05)
+
+Las limitaciones relativas a la ausencia de menú de composición y parámetros Host/SNI se abordaron posteriormente en docs/IMPLEMENTACION_I02_I03_VLESS_WS_TLS_2026-11-05.md. El menú ahora invoca I-01 tras confirmación; el Host usa wsSettings.host; el SNI se persiste separado en client_options.tls_server_name. La exportación URI de cliente continúa pendiente de endpoint público explícito. Este registro histórico de I-01 no se reescribe.

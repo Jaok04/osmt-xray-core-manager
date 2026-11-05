@@ -76,6 +76,13 @@ validate_mode vless_ws "$TMP/ws.json"
 validate_mode vless_tcp_tls "$TMP/tls.json"
 jq ' . + {path:"/test-ws-tls"} ' "$TMP/tls.json" >"$TMP/ws-tls.json"
 validate_mode vless_ws_tls "$TMP/ws-tls.json"
+jq '. + {host:"ws.example.invalid"}' "$TMP/ws-tls.json" >"$TMP/ws-tls-host.json"
+validate_mode vless_ws_tls "$TMP/ws-tls-host.json"
+printf '{"certificate_id":"cert-fixture","path":"/invalid-host","host":"bad host"}\n' >"$TMP/ws-tls-invalid-host.json"
+if vless_xray_26_10_31_build "$TMP/vless_ws_tls.model.json" "$TMP/ws-tls-invalid-host.json" "$TMP/unused-lease" >/dev/null 2>&1; then
+    echo 'ERROR: se aceptó un Host WebSocket inválido.' >&2
+    exit 1
+fi
 validate_mode vless_reality "$TMP/reality.json"
 validate_mode vless_grpc_tls "$TMP/grpc-tls.json"
 validate_mode vless_grpc_reality "$TMP/grpc-reality.json"

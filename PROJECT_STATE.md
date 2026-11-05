@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado:** 2026-11-04 — I-01 compositor VLESS-WS-TLS implementado/verificado/auditado en alcance focal: 10/10 pruebas focales, Python 163/163 y Bash 58/58 PASS; ShellCheck, bash -n, py_compile, diff y install.sh --check PASS. I-01 aceptado formalmente con limitaciones documentadas el 2026-11-05; publicación/sincronización en curso. R-01–R-04 publicadas/sincronizadas; aceptación formal específica pendiente. R-05 en pausa; R-06/live y NetMod no autorizadas. Etapas 2, 3 y 5 siguen ABIERTAS.
+**Corte de estado:** 2026-11-05 — I-01 publicado/sincronizado (commit 792f382ca1b4f753ff763dc50a442aa66a0cd42f). I-02/I-03 implementados y verificados localmente; I-04 exportación URI VLESS-WS-TLS para NetMod implementada, auditada y probada en fixtures con endpoint hellen.tvrc.me:443. Regresión actual: Python 171/171 y Bash 59/59 PASS; py_compile, bash -n global, ShellCheck focal, diff e install.sh --check PASS. I-02/I-03/I-04 pendientes de aceptación formal, commit/push y sincronización. La exportación no prueba NetMod real, DNS, listener ni conectividad WAN. R-01–R-04 publicadas/sincronizadas; aceptación formal específica pendiente. R-05 en pausa; R-06/live NO AUTORIZADA. Etapas 2, 3 y 5 siguen ABIERTAS.
 **Estado global:** Etapa 1 aceptada por el propietario; Etapa 2 en desarrollo y abierta.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -15,6 +15,31 @@
 > **Segunda regla obligatoria permanente:** ninguna etapa se declara TERMINADA/COMPLETADA sin auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos, matriz de trazabilidad, pruebas y aceptación formal expresa. Cerrar un módulo no cierra su etapa. Ver `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md` y `AGENTS.md`.
 
 
+
+## Estado vigente — I-04 exportación VLESS-WS-TLS (2026-11-05)
+
+- Autorización expresa del propietario: exportar clientes VLESS-WS-TLS para NetMod con endpoint inicial hellen.tvrc.me:443; puerto público igual al puerto del inbound.
+- Nuevo scripts/vless_client_export.py y opción [10] del menú de perfiles. Genera un URI vless:// por cliente UUID desde perfil/revisión exactos, mapping privado y configuración fuente validada.
+- Host WebSocket y SNI cliente se recuperan independientemente; no se infieren del endpoint ni se confunden con el certificado TLS del servidor.
+- Exportación estricta/fail-closed: mapping exacto, puerto coincidente, UUID válidos/no duplicados, config fuente coherente; salida opcional TXT 0600, atómica y sin sobrescritura.
+- El lector de perfiles usa lock compartido sin ejecutar recuperación/limpieza del almacén. No se modifica configuración persistida.
+- Pruebas I-04: 7/7 PASS; integración menú/compositor PASS; regresión Python 171/171, Bash 59/59; py_compile, bash -n global, ShellCheck focal, install.sh --check y git diff --check PASS.
+- No se probó NetMod real ni conectividad WAN. No se verificó DNS, listener público, firewall, certificados desplegados ni runtime.
+- I-02/I-03/I-04: IMPLEMENTADOS, VERIFICADOS y AUDITADOS en alcance focal; ACEPTACIÓN FORMAL PENDIENTE; NO PUBLICADOS; NO SINCRONIZADOS. Los cambios locales I-02/I-03 se preservan junto con I-04.
+- No se modificó Xray-Normativa/, main, runtime/systemd, certificados reales, DNS, firewall, puertos, red, dependencias ni VPS de pruebas. R-06/live continúa NO AUTORIZADA.
+- Documentos I-04: docs/DECISION_I04_VLESS_CLIENT_EXPORT.md, docs/IMPLEMENTACION_I04_VLESS_CLIENT_EXPORT_2026-11-05.md, docs/AUDITORIA_I04_VLESS_CLIENT_EXPORT_2026-11-05.md.
+
+## Estado vigente — I-02 / I-03 VLESS-WS-TLS (2026-11-05)
+
+- Rama autorizada: design/user-identity-association-v1; base publicada I-01: 792f382ca1b4f753ff763dc50a442aa66a0cd42f.
+- I-02 añade [9] al menú de perfiles: selecciona perfil/revisión actual y conexión VLESS-WS-TLS draft/runtime_applied=false; previsualiza path, Host, SNI y certificado mediante VLESS Config Store; pide confirmación; crea revisión nueva pendiente, sin activar perfil ni invocar R-01–R-04.
+- I-03 persiste transport_options.host y client_options.tls_server_name con esquema 2; esquema 1 sigue válido. El adaptador/compositor emite streamSettings.wsSettings.host; SNI permanece como metadata cliente y no se inyecta en inbound ni sustituye certificado servidor.
+- Xray 26.10.31 validó VLESS-WS-TLS con y sin Host. Se descartó wsSettings.headers.Host por advertencia de obsolescencia; se usa wsSettings.host.
+- Certificate Resolver y backup/restore aceptan esquema 2. Backup/restore conserva Host/SNI y referencia certificate_id sin duplicar claves privadas.
+- Regresión completa final: Python 164/164, Bash 59/59, py_compile, bash -n global, ShellCheck -S error en todos los Bash modificados, git diff --check e install.sh --check PASS. ShellCheck global completo también había pasado en la ejecución previa.
+- Exportación de URI/perfil VLESS para NetMod pendiente: requiere endpoint público explícito para la conexión. No se genera URI incompleto ni se asume dominio.
+- I-02/I-03: IMPLEMENTADOS en alcance descrito; VERIFICADOS; AUDITADOS focalmente; ACEPTACIÓN FORMAL PENDIENTE; NO PUBLICADOS; NO SINCRONIZADOS.
+- No se leyó clave maestra real ni se tocaron runtime Xray/systemd, certificados desplegados, firewall, puertos, DNS, red, dependencias, VPS de pruebas, main o Xray-Normativa/.
 
 ## Estado vigente — I-01 compositor VLESS-WS-TLS (2026-11-04)
 
@@ -1268,3 +1293,16 @@ Este addendum prevalece sobre el orden de trabajo H1–H8 anterior. La aceptaci�
 - R-01–R-04 conservan su estado técnico/publicado; su aceptación formal individual sigue pendiente. R-05 avanzado queda en pausa. R-06/live no autorizada. Etapas 2, 3 y 5 abiertas.
 
 **Siguiente acción permitida:** B0 — inspección focal del código y de la normativa pertinente, producir una matriz breve de reutilización/brechas y proponer el primer cambio mínimo de B1. No ejecutar acciones live.
+
+
+## Estado vigente — aceptación y publicación I-02/I-03/I-04 (2026-11-05)
+
+- I-02 — integración de compositor en menú de perfiles: IMPLEMENTADA, VERIFICADA, AUDITADA y ACEPTADA FORMALMENTE con limitaciones documentadas.
+- I-03 — Host WebSocket y SNI cliente separados: IMPLEMENTADA, VERIFICADA, AUDITADA y ACEPTADA FORMALMENTE con limitaciones documentadas.
+- I-04 — exportación de clientes VLESS-WS-TLS para NetMod: IMPLEMENTADA, VERIFICADA, AUDITADA y ACEPTADA FORMALMENTE con limitaciones documentadas.
+- Autorización expresa recibida para commit/push/sincronización solo en `design/user-identity-association-v1`.
+- Regresión ejecutada antes de publicar: Python 171/171; Bash 59/59; py_compile, bash -n, ShellCheck `-S error`, `install.sh --check`, `git diff --check`: PASS.
+- Los 13 documentos normativos sustantivos comparados coinciden byte a byte con el respaldo. `Xray-Normativa/` no se modifica.
+- Publicación y verificación remota se registran en el addendum de HISTORY y en el punto de control cuando se obtenga el SHA definitivo.
+- No se probó NetMod real ni conectividad WAN. No se realizaron operaciones live ni cambios en runtime/systemd, certificados reales, DNS, firewall, puertos o red.
+- Etapas 2, 3 y 5 permanecen ABIERTAS; R-06/live NO AUTORIZADA.

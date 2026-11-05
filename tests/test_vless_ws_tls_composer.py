@@ -189,6 +189,34 @@ class VlessWsTlsComposerTests(unittest.TestCase):
         old_data, _ = self.profiles.read_revision_config(self.profile_id, self.revision)
         self.assertEqual(json.loads(old_data)["inbounds"], [])
 
+    def test_composes_websocket_host_and_keeps_client_sni_separate(self):
+        config = {
+            "schema_version": 2, "connection_id": "conn-ws-tls",
+            "protocol": "vless", "mode_id": "vless_ws_tls",
+            "transport": "websocket", "security": "tls",
+            "listen_address": "127.0.0.1", "listen_port": 443,
+            "transport_options": {"path": "/ws", "host": "ws.example.invalid"},
+            "security_options": {"certificate_id": "cert-i01-fixture"},
+            "client_options": {"tls_server_name": "sni.example.invalid"},
+        }
+        self.write_json(self.vless_input, config)
+        vless_config_store.run(Namespace(
+            action="store", base=str(self.connections_base), catalog=str(self.connections_catalog),
+            lock=str(self.connection_lock), secrets_dir=str(self.secrets), master_key=str(self.key),
+            certificate_catalog=str(self.cert_catalog), connection_id="conn-ws-tls",
+            input=str(self.vless_input), secret_input=None, secret_type=None, secret_output=None,
+        ))
+        self.revision = "r000001"
+        result = composer.compose(self.args())
+        data, _ = self.profiles.read_revision_config(self.profile_id, result["revision"])
+        inbound = json.loads(data)["inbounds"][0]
+        self.assertEqual(inbound["streamSettings"]["wsSettings"], {
+            "path": "/ws", "host": "ws.example.invalid"
+        })
+        self.assertNotIn("tls_server_name", inbound["streamSettings"]["tlsSettings"])
+        stored = json.loads((self.connections_base / "configurations/conn-ws-tls.r000002.json").read_text())
+        self.assertEqual(stored["client_options"], {"tls_server_name": "sni.example.invalid"})
+
     def test_preserves_existing_inbounds_and_tls_bindings(self):
         original = {
             "log": {"loglevel": "warning"},
