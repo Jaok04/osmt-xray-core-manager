@@ -1216,3 +1216,5 @@ Se registraron decisiones del propietario: reiniciar un servicio activo exige co
 R-01–R-04 se reutilizan sin repetir implementación; aceptación formal individual pendiente. El diseño R-05 simulado se conserva como banco de pruebas y deberá evolucionar para habilitar un adaptador real, sin considerar que el simulador prueba systemd real. Se identificaron como decisiones aún abiertas el tratamiento del estado previo failed y la extensión versionada del journal.
 
 Esta actualización fue documental. No se modificó código de producto, normativa, main, runtime/systemd reales, claves, almacenes live, certificados, DNS, firewall, puertos, red, dependencias ni VPS de pruebas. No se reejecutaron pruebas. R-06/live y NetMod siguen sin autorización. Siguiente paso: H0, auditoría de brechas de solo lectura.
+
+La hoja de ruta y sus addenda quedaron publicados en `design/user-identity-association-v1` mediante el commit `663434966c75dd4dfc0c4183fca597b712fd18f4`; GitHub confirmó el mismo SHA. El checkout de `/opt/xray-manager` quedó limpio y alineado con la rama remota. No se modificó `Xray-Normativa/` ni `main`.
