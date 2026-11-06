@@ -439,6 +439,106 @@ profiles_validate_revision_menu() {
     ui_pause
 }
 
+profiles_apply_fixture_menu() {
+    local profile_id versions answer revision result confirm_restart=0 index
+    local -a revisions=() validations=() args=()
+    local -a required_env=(
+        XRAY_RUNTIME_FIXTURE_ROOT XRAY_RUNTIME_PROFILE_STORE XRAY_RUNTIME_MASTER_KEY
+        XRAY_RUNTIME_VALIDATION_STORE XRAY_RUNTIME_XRAY_BINARY XRAY_RUNTIME_SERVICE_STATE
+        XRAY_RUNTIME_BINDINGS_FILE XRAY_RUNTIME_STAGING_ROOT XRAY_RUNTIME_LEASE_ROOT
+        XRAY_RUNTIME_CONNECTIONS_CATALOG XRAY_RUNTIME_CONNECTIONS_BASE XRAY_RUNTIME_VMESS_BASE
+        XRAY_RUNTIME_CONNECTION_LOCK XRAY_RUNTIME_CERTIFICATE_BASE XRAY_RUNTIME_CERTIFICATE_CATALOG
+        XRAY_RUNTIME_CERTIFICATE_MANAGED_DIR XRAY_RUNTIME_CERTIFICATE_SECRETS_DIR
+        XRAY_RUNTIME_CERTIFICATE_LOCK XRAY_RUNTIME_CERTIFICATE_MASTER_KEY XRAY_RUNTIME_SERVICE_ROOT
+        XRAY_RUNTIME_OPERATION_STORE XRAY_RUNTIME_LIFECYCLE_LOCK XRAY_RUNTIME_APPLICATION_LOCK
+        XRAY_RUNTIME_ADAPTER_ROOT XRAY_RUNTIME_ACTIVE_PROFILE_STORE
+        XRAY_RUNTIME_SERVICE_UID XRAY_RUNTIME_SERVICE_GID
+    )
+    local key value
+
+    ui_clear
+    ui_title "CAMBIAR PERFIL ACTIVO — ENTORNO FIXTURE"
+    if [[ "${XRAY_RUNTIME_MENU_FIXTURE_MODE:-0}" != 1 ]]; then
+        printf '\nEsta operación está deshabilitada en el entorno normal.\n'
+        printf 'H6-D solo permite ejecutar el flujo R-05 dentro de un fixture aislado.\n'
+        printf 'No se ha habilitado aplicación real, systemd ni Xray.\n'
+        ui_pause
+        return 0
+    fi
+    for key in "${required_env[@]}"; do
+        value="${!key:-}"
+        if [[ -z "$value" ]]; then
+            printf '\nFalta la variable fixture requerida: %s\n' "$key"
+            ui_pause
+            return 1
+        fi
+    done
+    if [[ "${XRAY_MANAGER_PROFILES_DIR:-}" != "$XRAY_RUNTIME_PROFILE_STORE" ||
+          "${XRAY_MANAGER_MASTER_KEY_FILE:-}" != "$XRAY_RUNTIME_MASTER_KEY" ]]; then
+        printf '\nEl almacén/clave seleccionados por el menú no coinciden con el fixture runtime.\n'
+        printf 'Configura ambos apuntando al mismo almacén fixture antes de continuar.\n'
+        ui_pause
+        return 1
+    fi
+    profile_id="$(profiles_select_id)" || { ui_pause; return 1; }
+    versions="$(profiles_cli versions --profile-id "$profile_id")" || {
+        printf '\nNo se pudo consultar el historial del perfil.\n'; ui_pause; return 1;
+    }
+    mapfile -t revisions < <(jq -r '.[].revision' <<<"$versions")
+    mapfile -t validations < <(jq -r '.[].validation' <<<"$versions")
+    ((${#revisions[@]})) || { printf '\nEl perfil no tiene revisiones.\n'; ui_pause; return 0; }
+    printf '\nSelecciona la revisión exacta que se enviará al flujo R-05 fixture:\n'
+    for index in "${!revisions[@]}"; do
+        printf '  [%d] %s | validación: %s\n' "$((index + 1))" "${revisions[index]}" "${validations[index]}"
+    done
+    ui_read_option "Revisión (0 = cancelar): " answer || return 0
+    [[ "$answer" =~ ^[0-9]+$ ]] || { printf 'Selección no válida.\n'; ui_pause; return 1; }
+    answer=$((10#$answer))
+    ((answer >= 1 && answer <= ${#revisions[@]})) || return 0
+    revision="${revisions[answer-1]}"
+    [[ "${validations[answer-1]}" == valid ]] || {
+        printf '\nLa revisión seleccionada no está validada. No se ejecutará R-05.\n'; ui_pause; return 1;
+    }
+    printf '\nPerfil: %s\nRevisión: %s\n' "$profile_id" "$revision"
+    printf 'Alcance: exclusivamente fixture aislado; el adaptador predeterminado es R-05 simulado.\n'
+    printf 'No se invocará systemctl real ni se modificará /etc/xray.\n'
+    if ui_confirm "¿Autorizar restart SIMULADO si el fixture está active?"; then confirm_restart=1; fi
+    ui_confirm "¿Ejecutar la aplicación de esta revisión en el fixture?" || {
+        printf 'Operación cancelada; no se modificó el fixture.\n'; ui_pause; return 0;
+    }
+    args=(
+        --fixture-root "$XRAY_RUNTIME_FIXTURE_ROOT"
+        --profile-store "$XRAY_RUNTIME_PROFILE_STORE" --master-key "$XRAY_RUNTIME_MASTER_KEY"
+        --validation-store "$XRAY_RUNTIME_VALIDATION_STORE" --xray-binary "$XRAY_RUNTIME_XRAY_BINARY"
+        --service-state "$XRAY_RUNTIME_SERVICE_STATE" --bindings-file "$XRAY_RUNTIME_BINDINGS_FILE"
+        --staging-root "$XRAY_RUNTIME_STAGING_ROOT" --lease-root "$XRAY_RUNTIME_LEASE_ROOT"
+        --connections-catalog "$XRAY_RUNTIME_CONNECTIONS_CATALOG" --connections-base "$XRAY_RUNTIME_CONNECTIONS_BASE"
+        --vmess-base "$XRAY_RUNTIME_VMESS_BASE" --connection-lock "$XRAY_RUNTIME_CONNECTION_LOCK"
+        --certificate-base "$XRAY_RUNTIME_CERTIFICATE_BASE" --certificate-catalog "$XRAY_RUNTIME_CERTIFICATE_CATALOG"
+        --managed-dir "$XRAY_RUNTIME_CERTIFICATE_MANAGED_DIR"
+        --certificate-secrets-dir "$XRAY_RUNTIME_CERTIFICATE_SECRETS_DIR"
+        --certificate-lock "$XRAY_RUNTIME_CERTIFICATE_LOCK"
+        --certificate-master-key "$XRAY_RUNTIME_CERTIFICATE_MASTER_KEY"
+        --service-root "$XRAY_RUNTIME_SERVICE_ROOT" --operation-store "$XRAY_RUNTIME_OPERATION_STORE"
+        --lifecycle-lock "$XRAY_RUNTIME_LIFECYCLE_LOCK" --application-lock "$XRAY_RUNTIME_APPLICATION_LOCK"
+        --adapter-root "$XRAY_RUNTIME_ADAPTER_ROOT" --profile-id "$profile_id" --revision "$revision"
+        --service-uid "$XRAY_RUNTIME_SERVICE_UID" --service-gid "$XRAY_RUNTIME_SERVICE_GID"
+    )
+    args+=(--active-profile-store "$XRAY_RUNTIME_ACTIVE_PROFILE_STORE")
+    ((confirm_restart == 0)) || args+=(--confirm-restart)
+    result="$(python3 "$APP_ROOT/scripts/xray_runtime_menu_bridge.py" "${args[@]}")" || {
+        printf '\nR-05 no confirmó la operación fixture. No se declarará el perfil aplicado.\n'
+        ui_pause
+        return 1
+    }
+    printf '\nResultado R-05 fixture:\n'
+    jq '{status, operation_id, generation_id, profile_id, revision, runtime_published,
+         service_action_performed, service_started, execution_scope, real_systemd_invoked,
+         real_xray_modified}' <<<"$result"
+    printf '\nEste resultado pertenece al fixture y no acredita aplicación en el servidor real.\n'
+    ui_pause
+}
+
 menu_profiles() {
     local option
     while true; do
@@ -447,6 +547,7 @@ menu_profiles() {
         printf '\n  [1] Crear perfil\n  [2] Consultar perfiles\n  [3] Modificar perfil\n  [4] Duplicar perfil\n  [5] Renombrar perfil\n'
         printf '  [6] Eliminar perfil (pendiente de protección de dependencias)\n  [7] Historial y restaurar versión\n'
         printf '  [8] Validar revisión del perfil (estática + Xray; no aplica runtime)\n'
+        printf '  [11] Cambiar perfil activo (solo fixture; live no autorizado)\n'
         printf '  [9] Componer conexión VLESS-WS-TLS en una revisión nueva\n  [10] Exportar clientes VLESS-WS-TLS para NetMod\n  [0] Volver\n\n'
         ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
@@ -463,6 +564,7 @@ menu_profiles() {
             8) profiles_validate_revision_menu || true ;;
             9) profiles_compose_vless_ws_tls_menu || true ;;
             10) profiles_export_vless_clients_menu || true ;;
+            11) profiles_apply_fixture_menu || true ;;
             0) return 0 ;;
             *)
                 printf 'Opción no válida.\n'
@@ -477,7 +579,7 @@ menu_config_profiles_backups() {
         ui_clear
         ui_title "CONFIGURACIONES, PERFILES Y RESPALDOS"
         printf '\n  CONFIGURACIONES\n  [1] Gestionar configuraciones de Xray\n  [2] Validar archivos de configuración\n'
-        printf '  PERFILES\n  [3] Gestionar perfiles\n  [4] Cambiar perfil activo (pendiente de integración runtime)\n'
+        printf '  PERFILES\n  [3] Gestionar perfiles\n  [4] Cambiar perfil activo (integración fixture; live no autorizado)\n'
         printf '  RESPALDOS\n  [5] Crear respaldo (pendiente)\n  [6] Gestionar respaldos (pendiente)\n  [7] Restaurar respaldo (pendiente)\n  [0] Volver\n\n'
         ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
@@ -485,7 +587,8 @@ menu_config_profiles_backups() {
             3) menu_profiles || true ;;
             0) return 0 ;;
             2) menu_xray_validation || true ;;
-            4 | 5 | 6 | 7)
+            4) profiles_apply_fixture_menu || true ;;
+            5 | 6 | 7)
                 printf '\nEste apartado todavía no está implementado. No se modificó ninguna configuración ni servicio.\n'
                 ui_pause
                 ;;

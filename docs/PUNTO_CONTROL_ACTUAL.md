@@ -1542,3 +1542,6 @@ El propietario autorizó H6-C exclusivamente con mocks y fixtures. Se modificó 
 Evidencia: docs/IMPLEMENTACION_H6C_INTEGRACION_R05_ATESTACION_2026-11-06.md y docs/AUDITORIA_H6C_INTEGRACION_R05_ATESTACION_2026-11-06.md. H6-C 7/7 focales, H6-B 12/12 focales y Python global 276/276 PASS. compileall, bash -n, ShellCheck -S error, install.sh --check, tres pruebas Bash de servicio y git diff --check PASS.
 
 Limitaciones: las observaciones son sintéticas; H6-A no se invocó; no existe backend mutador systemd ni selección live en CLI. La marca de doble de prueba es una salvaguarda de diseño, no una frontera contra código Python arbitrario. Sin systemctl/Xray real, WAN, certificados/DNS/firewall/red o dependencias. No commit/push. main y Xray-Normativa/ intactas. H6-C queda IMPLEMENTADA, VERIFICADA Y AUDITADA, PASS CON LIMITACIONES. Siguiente bloque requiere diseñar el adaptador de servicio real por separado y solicitar autorización live específica.
+## H6-D — estado actualizado (2026-11-06)
+
+Menú de perfiles conectado a R-05 fixture-only mediante puente confinado a raíz marcada. En modo normal queda bloqueado. No live, no systemd real, no Xray real. Focal 4/4 + menú Bash PASS; Python global 280/280 PASS. Auditoría H6-D PASS CON LIMITACIONES.

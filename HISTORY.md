@@ -1419,3 +1419,10 @@ El propietario autorizó H6-C exclusivamente con mocks y fixtures. Se modificó 
 Evidencia: docs/IMPLEMENTACION_H6C_INTEGRACION_R05_ATESTACION_2026-11-06.md y docs/AUDITORIA_H6C_INTEGRACION_R05_ATESTACION_2026-11-06.md. H6-C 7/7 focales, H6-B 12/12 focales y Python global 276/276 PASS. compileall, bash -n, ShellCheck -S error, install.sh --check, tres pruebas Bash de servicio y git diff --check PASS.
 
 Limitaciones: las observaciones son sintéticas; H6-A no se invocó; no existe backend mutador systemd ni selección live en CLI. La marca de doble de prueba es una salvaguarda de diseño, no una frontera contra código Python arbitrario. Sin systemctl/Xray real, WAN, certificados/DNS/firewall/red o dependencias. No commit/push. main y Xray-Normativa/ intactas. H6-C queda IMPLEMENTADA, VERIFICADA Y AUDITADA, PASS CON LIMITACIONES. Siguiente bloque requiere diseñar el adaptador de servicio real por separado y solicitar autorización live específica.
+## 2026-11-06 — H6-D menú de perfiles conectado a R-05 fixture
+
+- Se añadió `scripts/xray_runtime_menu_bridge.py`, confinado a una raíz fixture marcada y con backend R-05 fixture explícito.
+- Se conectó «Cambiar perfil activo» desde los menús de Etapa 5 y Gestión de perfiles; exige revisión exacta validada y confirmación.
+- El modo normal permanece bloqueado; no hay backend systemd real ni aplicación de producción.
+- Evidencia: `docs/IMPLEMENTACION_H6D_MENU_PERFILES_R05_FIXTURE_2026-11-06.md` y `docs/AUDITORIA_H6D_MENU_PERFILES_R05_FIXTURE_2026-11-06.md`.
+- H6-D PASS CON LIMITACIONES; 4 pruebas focales Python, prueba de menú Bash y regresión Python 280/280 PASS.
