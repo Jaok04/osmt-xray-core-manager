@@ -1,6 +1,6 @@
 # Punto de control actual — Xray Core Manager
 
-> CORTE VIGENTE — 2026-11-06: H6-E1/E2/E3 implementadas; auditoría integral H6-E PASS CON LIMITACIONES. Instalador predeterminado Manager-only. H6-F NO LISTO END-TO-END. Rama design/user-identity-association-v1; HEAD base local/remoto antes de esta sincronización: 32496d749901d34cd1a60f720843901125b536b6. Cambios publicados y sincronizados en commit 4984ce207ff446bb097cc53c6445ad1e9b53c585; HEAD local/remoto coincidente y árbol limpio. main y Xray-Normativa/ protegidas.
+> CORTE VIGENTE — 2026-11-06: H6-E1/E2/E3 implementadas; auditoría integral H6-E PASS CON LIMITACIONES. Instalador predeterminado Manager-only. H6-F NO LISTO END-TO-END. Rama design/user-identity-association-v1; HEAD base local/remoto antes de los cambios: 32496d749901d34cd1a60f720843901125b536b6. Implementación publicada en 4984ce207ff446bb097cc53c6445ad1e9b53c585 y actualización documental en 537fb5475ce6bfcbba8401a1fced1642ca203cba; HEAD local/remoto: 537fb5475ce6bfcbba8401a1fced1642ca203cba, árbol limpio. main y Xray-Normativa/ protegidas.
 
 ## Estado operativo vigente
 
@@ -14,7 +14,7 @@
 
 Los apartados cronológicos siguientes se conservan como historial. Este bloque prevalece ante contradicciones.
 
-> El punto de control operativo vigente es el bloque B3 añadido a continuación. Los apartados anteriores se conservan como historial y quedan superados cuando contradigan este bloque.
+> Registro histórico del punto de control B3 (2026-11-05). El corte vigente es el bloque 2026-11-06 del encabezado; los estados anteriores se conservan por trazabilidad.
 
 **Fecha del corte:** 2026-11-05
 **Siguiente tarea:** realizar el contraste documental preliminar del siguiente bloque del plan MVP y definir su alcance antes de cualquier edición. No ejecutar operaciones live por inferencia.
