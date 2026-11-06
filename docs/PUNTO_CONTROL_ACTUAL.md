@@ -1545,3 +1545,11 @@ Limitaciones: las observaciones son sintéticas; H6-A no se invocó; no existe b
 ## H6-D — estado actualizado (2026-11-06)
 
 Menú de perfiles conectado a R-05 fixture-only mediante puente confinado a raíz marcada. En modo normal queda bloqueado. No live, no systemd real, no Xray real. Focal 4/4 + menú Bash PASS; Python global 280/280 PASS. Auditoría H6-D PASS CON LIMITACIONES.
+
+## Punto de control — H6-E1 (2026-11-06)
+
+H6-E1 implementada y auditada PASS CON LIMITACIONES. El adaptador read-only ahora valida NeedDaemonReload=no, ausencia de drop-ins, Type=simple, ExecStartPre/ExecStart efectivos y exactos. La configuración runtime debe ser root:xray/0640 y se comprueba la identidad inode durante la apertura.
+
+Evidencia: 20/20 focales H6-A; 289/289 Python global; compileall, bash -n, ShellCheck -S error, pruebas Bash de servicio, install.sh --check y git diff --check PASS. Sólo mocks/fixtures; no systemctl real, no /proc, no Xray real ni acciones mutadoras.
+
+H6-E2 es el siguiente bloque previsto. No hay backend live, selector en menú/CLI ni autorización para operaciones reales. Sin commit/push; main y Xray-Normativa/ intactas.

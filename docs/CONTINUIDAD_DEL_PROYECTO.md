@@ -1563,3 +1563,11 @@ Limitaciones: las observaciones son sintéticas; H6-A no se invocó; no existe b
 ## Continuidad H6-D (2026-11-06)
 
 H6-D conectó la opción «Cambiar perfil activo» de Etapa 5 y Gestión de perfiles con `scripts/xray_runtime_menu_bridge.py`, limitado a fixtures R-05 marcados y rutas confinadas. Revisión exacta validada y confirmación obligatorias. En modo normal la operación está bloqueada. No existe conexión con H6-A ni backend systemd real; no se modificó Xray real. Ver `docs/IMPLEMENTACION_H6D_MENU_PERFILES_R05_FIXTURE_2026-11-06.md` y `docs/AUDITORIA_H6D_MENU_PERFILES_R05_FIXTURE_2026-11-06.md`.
+
+## Continuidad H6-E1 — contrato systemd read-only (2026-11-06)
+
+H6-E1 amplió scripts/xray_runtime_systemd_adapter.py: consulta y valida NeedDaemonReload, DropInPaths, Type, ExecStartPre y ExecStart; rechaza definiciones pendientes, drop-ins y argv divergentes. Corrige la comprobación de grupo del archivo runtime a root:xray/0640 y detecta sustitución de inode entre lstat y open.
+
+Evidencia: docs/IMPLEMENTACION_H6E1_CONTRATO_OBSERVACION_SYSTEMD_2026-11-06.md y docs/AUDITORIA_H6E1_CONTRATO_OBSERVACION_SYSTEMD_2026-11-06.md. 20/20 focales, 289/289 Python globales, compileall, bash -n, ShellCheck, pruebas Bash de servicio, install.sh --check y diff-check PASS.
+
+Limitaciones: todas las consultas systemd fueron mockeadas; no se inspeccionó /proc, no hay backend mutador ni integración live. La compatibilidad exacta del formato ExecStart se deberá contrastar en entorno objetivo sólo cuando exista autorización para una prueba de lectura real. Siguiente: H6-E2 — inspección aislada de identidad de proceso. No commit/push; no modificar main ni Xray-Normativa/.

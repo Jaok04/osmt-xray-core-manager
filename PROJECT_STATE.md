@@ -1438,3 +1438,11 @@ Limitaciones: las observaciones son sintéticas; H6-A no se invocó; no existe b
 ## H6-D — integración de menú de perfiles con R-05 fixture (2026-11-06)
 
 Estado: IMPLEMENTADA Y AUDITADA, PASS CON LIMITACIONES. El menú Etapa 5 y Gestión de perfiles enrutan a un puente fixture-only que exige marcador R-02, rutas confinadas, revisión validada y confirmación. En modo normal permanece bloqueado. Backend explícito `xray_runtime_service_adapter`; no H6-A/systemd real, no Xray real, no aplicación live. Pruebas: puente 4/4, menú Bash PASS, Python global 280/280 PASS. Documentos: `docs/IMPLEMENTACION_H6D_MENU_PERFILES_R05_FIXTURE_2026-11-06.md`, `docs/AUDITORIA_H6D_MENU_PERFILES_R05_FIXTURE_2026-11-06.md`.
+
+## Addendum 2026-11-06 — H6-E1
+
+H6-E1 amplió el observador H6-A para comprobar la definición efectiva de xray.service: NeedDaemonReload=no, ausencia de DropInPaths, Type=simple, ExecStartPre y ExecStart con argv exactos. La validación de config.json exige root:xray y modo 0640, coherente con modules/xray_service.sh, y compara identidad inode entre lstat y descriptor abierto.
+
+Auditoría: 20/20 pruebas focales H6-A, 289/289 Python global, compileall, bash -n, ShellCheck -S error, pruebas Bash de servicio, install.sh --check y git diff --check PASS. Las pruebas sustituyen systemctl por mocks; no se inspeccionó /proc ni se realizaron operaciones live.
+
+H6-E1 PASS CON LIMITACIONES. H6-E2 queda como siguiente subbloque: identidad de proceso con mocks. No hay backend systemd mutador ni selector live. Sin commit/push; main y Xray-Normativa/ intactas.

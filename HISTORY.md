@@ -1426,3 +1426,12 @@ Limitaciones: las observaciones son sintéticas; H6-A no se invocó; no existe b
 - El modo normal permanece bloqueado; no hay backend systemd real ni aplicación de producción.
 - Evidencia: `docs/IMPLEMENTACION_H6D_MENU_PERFILES_R05_FIXTURE_2026-11-06.md` y `docs/AUDITORIA_H6D_MENU_PERFILES_R05_FIXTURE_2026-11-06.md`.
 - H6-D PASS CON LIMITACIONES; 4 pruebas focales Python, prueba de menú Bash y regresión Python 280/280 PASS.
+
+## 2026-11-06 — H6-E1 contrato de observación systemd
+
+- Se amplió H6-A con NeedDaemonReload, DropInPaths, Type, ExecStartPre y ExecStart efectivos; se rechazan definiciones pendientes, drop-ins y comandos divergentes.
+- Se corrigió la validación de config.json para exigir root:xray y modo 0640, y se detecta sustitución del inode durante la apertura.
+- Pruebas: 20/20 focales H6-A; 289/289 Python globales; compileall, bash -n, ShellCheck -S error, pruebas Bash de servicio, install.sh --check y git diff --check PASS.
+- Todas las consultas systemd de pruebas usan mocks. Sin systemctl real, acciones mutadoras, inspección /proc, cambios live o dependencias.
+- Documentos: docs/IMPLEMENTACION_H6E1_CONTRATO_OBSERVACION_SYSTEMD_2026-11-06.md y docs/AUDITORIA_H6E1_CONTRATO_OBSERVACION_SYSTEMD_2026-11-06.md.
+- H6-E1 PASS CON LIMITACIONES. Sin commit/push; H6-E2 pendiente.

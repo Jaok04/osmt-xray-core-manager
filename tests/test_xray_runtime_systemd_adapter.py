@@ -32,6 +32,7 @@ class RuntimeSystemdReadOnlyAdapterTests(unittest.TestCase):
         self.unit_file.chmod(0o644)
         self.config_file.write_text('{"log":{"loglevel":"warning"}}\n', encoding="utf-8")
         self.config_file.chmod(0o640)
+        self.config_gid = self.config_file.stat().st_gid
         self.values = {
             "LoadState": "loaded",
             "ActiveState": "active",
@@ -46,13 +47,20 @@ class RuntimeSystemdReadOnlyAdapterTests(unittest.TestCase):
             "User": "xray",
             "Group": "xray",
             "UnitFileState": "disabled",
+            "NeedDaemonReload": "no",
+            "DropInPaths": "",
+            "Type": "simple",
+            "ExecStartPre": "{ path=/usr/local/bin/xray ; argv[]=/usr/local/bin/xray run -test -config /etc/xray/config.json ; }",
+            "ExecStart": "{ path=/usr/local/bin/xray ; argv[]=/usr/local/bin/xray run -config /etc/xray/config.json ; }",
         }
 
     def tearDown(self):
         self.tmp.cleanup()
 
     def observe(self):
-        with mock.patch.object(adapter, "_systemctl_show", return_value=dict(self.values)):
+        group = mock.Mock(gr_gid=self.config_gid)
+        with mock.patch.object(adapter, "_systemctl_show", return_value=dict(self.values)), \
+                mock.patch.object(adapter.grp, "getgrnam", return_value=group):
             return adapter.status(unit_file=self.unit_file, config_file=self.config_file)
 
     def test_status_is_read_only_and_does_not_infer_generation(self):
@@ -127,6 +135,73 @@ class RuntimeSystemdReadOnlyAdapterTests(unittest.TestCase):
         self.config_file.hardlink_to(target)
         with self.assertRaises(adapter.SystemdAdapterError):
             self.observe()
+
+    def test_observation_includes_effective_unit_contract(self):
+        value = self.observe()
+        self.assertEqual(value["need_daemon_reload"], "no")
+        self.assertEqual(value["drop_in_paths"], "")
+        self.assertEqual(value["service_type"], "simple")
+
+    def test_rejects_pending_daemon_reload(self):
+        self.values["NeedDaemonReload"] = "yes"
+        with self.assertRaises(adapter.SystemdAdapterError):
+            self.observe()
+
+    def test_rejects_drop_in_override(self):
+        self.values["DropInPaths"] = "/etc/systemd/system/xray.service.d/override.conf"
+        with self.assertRaises(adapter.SystemdAdapterError):
+            self.observe()
+
+    def test_rejects_wrong_effective_execstart(self):
+        self.values["ExecStart"] = "{ path=/bin/false ; argv[]=/bin/false ; }"
+        with self.assertRaises(adapter.SystemdAdapterError):
+            self.observe()
+
+    def test_rejects_wrong_effective_execstartpre(self):
+        self.values["ExecStartPre"] = "{ path=/bin/true ; argv[]=/bin/true ; }"
+        with self.assertRaises(adapter.SystemdAdapterError):
+            self.observe()
+
+    def test_rejects_unexpected_execstart_arguments(self):
+        self.values["ExecStart"] = (
+            "{ path=/usr/local/bin/xray ; argv[]=/usr/local/bin/xray run "
+            "-config /etc/xray/config.json -confdir /tmp/extra ; }"
+        )
+        with self.assertRaises(adapter.SystemdAdapterError):
+            self.observe()
+
+    def test_rejects_non_simple_service_type(self):
+        self.values["Type"] = "notify"
+        with self.assertRaises(adapter.SystemdAdapterError):
+            self.observe()
+
+    def test_rejects_config_with_wrong_group(self):
+        group = mock.Mock(gr_gid=self.config_gid + 1)
+        with mock.patch.object(adapter, "_systemctl_show", return_value=dict(self.values)), \
+                mock.patch.object(adapter.grp, "getgrnam", return_value=group):
+            with self.assertRaises(adapter.SystemdAdapterError):
+                adapter.status(unit_file=self.unit_file, config_file=self.config_file)
+
+    def test_systemctl_query_requests_effective_unit_properties(self):
+        values = [
+            "loaded", "active", "running", "success", "0", "1234",
+            "Thu 2026-11-05 18:00:00 -05", "Thu 2026-11-05 18:00:00 -05",
+            "a" * 32, str(self.unit_file), "xray", "xray", "disabled",
+            "no", "", "simple",
+            "{ path=/usr/local/bin/xray ; argv[]=/usr/local/bin/xray run -test -config /etc/xray/config.json ; }",
+            "{ path=/usr/local/bin/xray ; argv[]=/usr/local/bin/xray run -config /etc/xray/config.json ; }",
+        ]
+        completed = mock.Mock(returncode=0, stdout="\n".join(values) + "\n")
+        with mock.patch.object(adapter.subprocess, "run", return_value=completed) as run:
+            result = adapter._systemctl_show()
+        self.assertEqual(result["NeedDaemonReload"], "no")
+        self.assertEqual(result["DropInPaths"], "")
+        self.assertEqual(result["Type"], "simple")
+        self.assertEqual(result["ExecStart"].split()[1], "path=/usr/local/bin/xray")
+        command = run.call_args.args[0]
+        self.assertIn("NeedDaemonReload", command[3])
+        self.assertIn("ExecStart", command[3])
+        self.assertNotIn("shell", command)
 
 
 if __name__ == "__main__":

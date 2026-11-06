@@ -7,9 +7,11 @@ atestación posterior ligada al InvocationID de systemd.
 """
 from __future__ import annotations
 
+import grp
 import hashlib
 import os
 import re
+import shlex
 import stat
 import subprocess
 from pathlib import Path
@@ -34,6 +36,11 @@ PROPERTIES = (
     "User",
     "Group",
     "UnitFileState",
+    "NeedDaemonReload",
+    "DropInPaths",
+    "Type",
+    "ExecStartPre",
+    "ExecStart",
 )
 
 
@@ -86,7 +93,7 @@ def _check_unit_file(path: Path) -> None:
         _fail("La unidad xray.service no coincide con el contrato administrado.")
 
 
-def _read_config_hash(path: Path) -> str | None:
+def _read_config_hash(path: Path, *, expected_gid: int) -> str | None:
     try:
         _check_path_components(path.parent)
         entry = path.lstat()
@@ -103,8 +110,10 @@ def _read_config_hash(path: Path) -> str | None:
         _fail("No se pudo abrir la configuración runtime para calcular su hash.")
     try:
         info = os.fstat(fd)
-        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
-                or info.st_uid != 0 or stat.S_IMODE(info.st_mode) != 0o640
+        if ((info.st_dev, info.st_ino) != (entry.st_dev, entry.st_ino)
+                or not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                or info.st_uid != 0 or info.st_gid != expected_gid
+                or stat.S_IMODE(info.st_mode) != 0o640
                 or info.st_size < 1 or info.st_size > MAX_CONFIG_BYTES):
             _fail("La configuración runtime tiene tipo, propietario, enlaces, permisos o tamaño inseguros.")
         digest = hashlib.sha256()
@@ -155,6 +164,28 @@ def _systemctl_show(systemctl_path: str = "/usr/bin/systemctl") -> dict:
     return dict(zip(PROPERTIES, values, strict=True))
 
 
+def _validate_exec_property(value: str, *, pre_start: bool) -> None:
+    if not isinstance(value, str) or not value.strip():
+        _fail("systemd no devolvió el comando efectivo de ejecución de xray.service.")
+    normalized = " ".join(value.split())
+    if not re.search(r"(?:^|[;{]\s*)path=/usr/local/bin/xray(?:\s*;|$)", normalized):
+        _fail("El ejecutable efectivo de xray.service no coincide con el binario administrado.")
+    match = re.search(r"(?:^|[;{]\s*)argv\[\]=([^;]*)(?:;|$)", normalized)
+    if match is None:
+        _fail("systemd no devolvió argv efectivo para xray.service.")
+    try:
+        argv = shlex.split(match.group(1))
+    except ValueError:
+        _fail("systemd devolvió argv efectivo mal formado para xray.service.")
+    expected = ["/usr/local/bin/xray", "run", "-config", "/etc/xray/config.json"]
+    if pre_start:
+        expected = ["/usr/local/bin/xray", "run", "-test", "-config", "/etc/xray/config.json"]
+    if argv != expected:
+        _fail("Los argumentos efectivos de xray.service no coinciden con el contrato administrado.")
+    if "allow_failure=yes" in normalized or "ignore_errors=yes" in normalized:
+        _fail("El comando efectivo de xray.service contiene una opción de fallo no permitida.")
+
+
 def status(
     *,
     unit_file: Path = DEFAULT_UNIT_FILE,
@@ -171,6 +202,14 @@ def status(
         _fail("systemd está usando una unidad distinta de la unidad administrada.")
     if observed["User"] != "xray" or observed["Group"] != "xray":
         _fail("La identidad efectiva de xray.service no coincide con xray:xray.")
+    if observed["NeedDaemonReload"] != "no":
+        _fail("systemd indica que la definición de xray.service necesita daemon-reload.")
+    if observed["DropInPaths"].strip():
+        _fail("xray.service tiene drop-ins adicionales no contemplados por el contrato administrado.")
+    if observed["Type"] != "simple":
+        _fail("El tipo efectivo de xray.service no coincide con Type=simple.")
+    _validate_exec_property(observed["ExecStartPre"], pre_start=True)
+    _validate_exec_property(observed["ExecStart"], pre_start=False)
     if observed["LoadState"] not in {"loaded", "not-found", "masked", "error", "bad-setting"}:
         _fail("systemd devolvió un LoadState no reconocido.")
     if observed["ActiveState"] not in {
@@ -184,7 +223,11 @@ def status(
     if invocation_id and not re.fullmatch(r"[0-9a-fA-F]{32}", invocation_id):
         _fail("systemd devolvió un InvocationID inválido.")
 
-    config_hash = _read_config_hash(config_file)
+    try:
+        config_gid = grp.getgrnam("xray").gr_gid
+    except KeyError:
+        _fail("No existe el grupo xray requerido para validar config.json.")
+    config_hash = _read_config_hash(config_file, expected_gid=config_gid)
     return {
         "unit": UNIT,
         "load_state": observed["LoadState"],
@@ -200,6 +243,9 @@ def status(
         "user": observed["User"],
         "group": observed["Group"],
         "unit_file_state": observed["UnitFileState"],
+        "need_daemon_reload": observed["NeedDaemonReload"],
+        "drop_in_paths": observed["DropInPaths"],
+        "service_type": observed["Type"],
         "runtime_config_sha256": config_hash,
         # No se infiere la generación cargada a partir del estado/hash del archivo.
         "loaded_generation_id": None,
