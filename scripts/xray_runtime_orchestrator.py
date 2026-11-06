@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import secrets
+from contextvars import ContextVar
+from functools import wraps
 from argparse import Namespace
 from pathlib import Path
 
@@ -12,9 +14,79 @@ import xray_runtime_active_profile as active_profile_store_module
 import xray_runtime_preflight as preflight
 import xray_runtime_publisher as publisher
 import xray_runtime_service_adapter as service_adapter
+import xray_runtime_attestation as runtime_attestation
 import xray_runtime_staging as staging
 
 GENERATION_PREFIX = "generation-"
+_SERVICE_BACKEND = ContextVar("xray_runtime_service_backend", default=service_adapter)
+
+
+def _service_backend():
+    return _SERVICE_BACKEND.get()
+
+
+def _with_service_backend(function):
+    """Inyección interna de backend; solo se admiten dobles de prueba explícitos."""
+    @wraps(function)
+    def wrapped(*args, service_backend=None, **kwargs):
+        backend = service_adapter if service_backend is None else service_backend
+        if backend is not service_adapter and getattr(backend, "RUNTIME_BACKEND_TEST_ONLY", False) is not True:
+            _fail("Backend externo no habilitado: H6-C solo admite el adaptador fixture o dobles de prueba.")
+        required = ("status", "start", "restart", "restore", "ServiceAdapterError")
+        if any(not hasattr(backend, name) for name in required):
+            _fail("El backend inyectado no cumple el contrato R-05.")
+        token = _SERVICE_BACKEND.set(backend)
+        try:
+            return function(*args, **kwargs)
+        finally:
+            _SERVICE_BACKEND.reset(token)
+    return wrapped
+
+
+def _attestation_snapshot(stage: str, record: dict):
+    backend = _service_backend()
+    provider = getattr(backend, "attestation_snapshot", None)
+    if not callable(provider):
+        return None
+    if getattr(backend, "RUNTIME_BACKEND_TEST_ONLY", False) is not True:
+        _fail("La captura de atestación H6-C solo está disponible en dobles de prueba.")
+    return provider(stage, record)
+
+
+def _persist_test_attestation(record: dict, before: dict | None):
+    if before is None:
+        return None
+    backend = _service_backend()
+    store = getattr(backend, "attestation_store", None)
+    unit_file = getattr(backend, "attestation_unit_file", None)
+    if not isinstance(store, runtime_attestation.AttestationStore) or unit_file is None:
+        _fail("El backend de prueba no configuró almacén y unidad para H6-B.")
+    after = _attestation_snapshot("after", record)
+    confirmed = _attestation_snapshot("confirmed", record)
+    result = store.record(record, before, after, confirmed, Path(unit_file))
+    return {"status": result["status"], "attestation": result["attestation"]}
+
+
+def _recovery_attestation(record: dict):
+    backend = _service_backend()
+    store = getattr(backend, "attestation_store", None)
+    if store is None:
+        return None
+    if not isinstance(store, runtime_attestation.AttestationStore):
+        raise runtime_attestation.AttestationError("Almacén H6-B inyectado no válido.")
+    evidence = store.read(record["operation_id"])
+    if evidence is None:
+        raise runtime_attestation.AttestationError(
+            "La transición se recuperó sin atestación H6-B persistida; no se marca como completada."
+        )
+    if (evidence["generation_id"] != record["orchestration"]["generation_id"]
+            or evidence["config_sha256"] != record["publication"]["config_sha256"]):
+        raise runtime_attestation.AttestationError(
+            "La atestación H6-B no corresponde a la generación/hash del journal."
+        )
+    return {"status": "ATTESTED_RECOVERED", "attestation": evidence}
+
+
 
 
 class RuntimeOrchestrationError(Exception):
@@ -93,7 +165,7 @@ def _commit_active_profile(active_profile_store: Path | None, adapter_root: Path
         return None
     generation_id = record["orchestration"]["generation_id"]
     config_hash = record["publication"]["config_sha256"]
-    observed = service_adapter.status(adapter_root, request_generation_id=generation_id)
+    observed = _service_backend().status(adapter_root, request_generation_id=generation_id)
     if not _matches(observed, state="active", generation_id=generation_id,
                     config_sha256=config_hash):
         raise active_profile_store_module.ActiveProfileError(
@@ -170,10 +242,10 @@ def _restore_after_failure(
             record["orchestration"]["rollback"]["service_status"] = "failed"
             return _mark_recovery_required(operation_dir, record, "No se restaura automáticamente un estado previo failed/unknown.")
         try:
-            observed = service_adapter.status(
+            observed = _service_backend().status(
                 adapter_root, request_generation_id=record["orchestration"]["generation_id"]
             )
-        except service_adapter.ServiceAdapterError as exc:
+        except _service_backend().ServiceAdapterError as exc:
             record["orchestration"]["rollback"]["service_status"] = "failed"
             return _mark_recovery_required(
                 operation_dir, record,
@@ -200,7 +272,7 @@ def _restore_after_failure(
                 return _mark_recovery_required(operation_dir, record, "El servicio informa una generación distinta; se restauró el archivo, pero se conserva el estado externo para intervención.")
             else:
                 try:
-                    result = service_adapter.restore(
+                    result = _service_backend().restore(
                         adapter_root,
                         generation_id=record["orchestration"]["generation_id"],
                         expected_current_generation_id=record["orchestration"]["generation_id"],
@@ -209,10 +281,10 @@ def _restore_after_failure(
                         previous_config_sha256=old_hash,
                         outcome=restore_outcome,
                     )
-                    observed = service_adapter.status(
+                    observed = _service_backend().status(
                         adapter_root, request_generation_id=record["orchestration"]["generation_id"]
                     )
-                except service_adapter.ServiceAdapterError:
+                except _service_backend().ServiceAdapterError:
                     result, observed = {"result": "failed"}, None
                 if (observed is None or result["result"] != "restored"
                         or not _matches(observed, state="active", generation_id=old_generation,
@@ -263,13 +335,13 @@ def _execute_restart(
         config_hash = record["publication"]["config_sha256"]
         initial = record["orchestration"]["initial_service"]
         try:
-            before = service_adapter.status(adapter_root, request_generation_id=gen)
+            before = _service_backend().status(adapter_root, request_generation_id=gen)
             unchanged = _matches(
                 before, state=initial["active_state"],
                 generation_id=initial["loaded_generation_id"],
                 config_sha256=initial["loaded_config_sha256"],
             )
-        except service_adapter.ServiceAdapterError:
+        except _service_backend().ServiceAdapterError:
             before, unchanged = None, False
         if not unchanged:
             if before is not None:
@@ -279,6 +351,7 @@ def _execute_restart(
                 record["orchestration"]["verification"]["verified_at"] = journal.now()
             _save(operation_dir, record)
         else:
+            attestation_before = _attestation_snapshot("before", record)
             record["orchestration"]["request"] = {
                 "generation_id": gen, "action": "restart",
                 "requested_at": journal.now(), "result": "requested",
@@ -289,27 +362,35 @@ def _execute_restart(
             if crash_at == "after_restart_request":
                 raise journal.SimulatedCrash("after_restart_request")
             try:
-                result = service_adapter.restart(
+                result = _service_backend().restart(
                     adapter_root, generation_id=gen, config_sha256=config_hash,
                     expected_generation_id=initial["loaded_generation_id"],
                     expected_config_sha256=initial["loaded_config_sha256"],
                     outcome=restart_outcome,
                 )
                 record["orchestration"]["request"]["result"] = result["result"]
-            except service_adapter.ServiceAdapterError:
+            except _service_backend().ServiceAdapterError:
                 record["orchestration"]["request"]["result"] = "exception"
             _save(operation_dir, record)
             if crash_at == "after_restart_transition":
                 raise journal.SimulatedCrash("after_restart_transition")
             try:
-                observed = service_adapter.status(adapter_root, request_generation_id=gen)
+                observed = _service_backend().status(adapter_root, request_generation_id=gen)
                 verified = _matches(observed, state="active", generation_id=gen, config_sha256=config_hash)
                 _record_observation(record, observed, "pass" if verified else "fail")
-            except service_adapter.ServiceAdapterError:
+            except _service_backend().ServiceAdapterError:
                 record["orchestration"]["verification"]["status"] = "fail"
                 record["orchestration"]["verification"]["verified_at"] = journal.now()
                 verified = False
             _save(operation_dir, record)
+            attestation_result = None
+            if verified and attestation_before is not None:
+                try:
+                    attestation_result = _persist_test_attestation(record, attestation_before)
+                except Exception:
+                    record["orchestration"]["verification"]["status"] = "fail"
+                    verified = False
+                    _save(operation_dir, record)
             if verified:
                 record["state"] = "service_verified"
                 record["orchestration"]["phase"] = "service_verified"
@@ -327,7 +408,7 @@ def _execute_restart(
                             active_profile_store, adapter_root, operation_id, record
                         )
                     except (active_profile_store_module.ActiveProfileError,
-                            service_adapter.ServiceAdapterError, OSError) as exc:
+                            _service_backend().ServiceAdapterError, OSError) as exc:
                         active_error = str(exc)[:240]
                 result = {
                     "status": "COMPLETED" if active_error is None else "COMPLETED_ACTIVE_REGISTER_PENDING",
@@ -336,6 +417,8 @@ def _execute_restart(
                     "runtime_published": True, "service_action_performed": True,
                     "service_verified": True,
                 }
+                if attestation_result is not None:
+                    result["runtime_attestation"] = attestation_result
                 if active_profile_store is not None:
                     result["active_profile_record"] = active_result
                     result["active_profile_error"] = active_error
@@ -364,13 +447,13 @@ def _execute_start(
         config_hash = record["publication"]["config_sha256"]
         initial = record["orchestration"]["initial_service"]
         try:
-            before = service_adapter.status(adapter_root, request_generation_id=gen)
+            before = _service_backend().status(adapter_root, request_generation_id=gen)
             unchanged = _matches(
                 before, state="inactive",
                 generation_id=initial["loaded_generation_id"],
                 config_sha256=initial["loaded_config_sha256"],
             )
-        except service_adapter.ServiceAdapterError:
+        except _service_backend().ServiceAdapterError:
             before, unchanged = None, False
         if not unchanged:
             if before is not None:
@@ -380,29 +463,38 @@ def _execute_start(
                 record["orchestration"]["verification"]["verified_at"] = journal.now()
             _save(operation_dir, record)
         else:
+            attestation_before = _attestation_snapshot("before", record)
             try:
-                result = service_adapter.start(
+                result = _service_backend().start(
                     adapter_root, generation_id=gen, config_sha256=config_hash,
                     expected_generation_id=initial["loaded_generation_id"],
                     expected_config_sha256=initial["loaded_config_sha256"],
                     outcome=start_outcome,
                 )
                 record["orchestration"]["request"]["result"] = result["result"]
-            except service_adapter.ServiceAdapterError:
+            except _service_backend().ServiceAdapterError:
                 record["orchestration"]["request"]["result"] = "exception"
             _save(operation_dir, record)
             if crash_at == "after_start_transition":
                 raise journal.SimulatedCrash("after_start_transition")
             try:
-                observed = service_adapter.status(adapter_root, request_generation_id=gen)
+                observed = _service_backend().status(adapter_root, request_generation_id=gen)
                 verified = _matches(observed, state="active", generation_id=gen,
                                      config_sha256=config_hash)
                 _record_observation(record, observed, "pass" if verified else "fail")
-            except service_adapter.ServiceAdapterError:
+            except _service_backend().ServiceAdapterError:
                 record["orchestration"]["verification"]["status"] = "fail"
                 record["orchestration"]["verification"]["verified_at"] = journal.now()
                 verified = False
             _save(operation_dir, record)
+            attestation_result = None
+            if verified and attestation_before is not None:
+                try:
+                    attestation_result = _persist_test_attestation(record, attestation_before)
+                except Exception:
+                    record["orchestration"]["verification"]["status"] = "fail"
+                    verified = False
+                    _save(operation_dir, record)
             if verified:
                 record["state"] = "service_verified"
                 record["orchestration"]["phase"] = "service_verified"
@@ -420,7 +512,7 @@ def _execute_start(
                             active_profile_store, adapter_root, operation_id, record
                         )
                     except (active_profile_store_module.ActiveProfileError,
-                            service_adapter.ServiceAdapterError, OSError) as exc:
+                            _service_backend().ServiceAdapterError, OSError) as exc:
                         active_error = str(exc)[:240]
                 result = {
                     "status": "COMPLETED" if active_error is None else "COMPLETED_ACTIVE_REGISTER_PENDING",
@@ -429,6 +521,8 @@ def _execute_start(
                     "service_action_performed": True, "service_started": True,
                     "service_verified": True,
                 }
+                if attestation_result is not None:
+                    result["runtime_attestation"] = attestation_result
                 if active_profile_store is not None:
                     result["active_profile_record"] = active_result
                     result["active_profile_error"] = active_error
@@ -441,6 +535,7 @@ def _execute_start(
     )
 
 
+@_with_service_backend
 def start_pending_operation(
     *, operation_store: Path, operation_id: str, lifecycle_lock: Path,
     application_lock: Path, adapter_root: Path, confirm_start: bool,
@@ -466,7 +561,7 @@ def start_pending_operation(
         if initial["active_state"] != "inactive":
             _fail("El inicio explícito B4 requiere estado inicial inactive.")
         gen = record["orchestration"]["generation_id"]
-        observed = service_adapter.status(adapter_root, request_generation_id=gen)
+        observed = _service_backend().status(adapter_root, request_generation_id=gen)
         if not _matches(observed, state="inactive",
                         generation_id=initial["loaded_generation_id"],
                         config_sha256=initial["loaded_config_sha256"]):
@@ -492,6 +587,7 @@ def start_pending_operation(
     )
 
 
+@_with_service_backend
 def apply_operation(
     *, staging_args: Namespace, service_root: Path, operation_store: Path,
     lifecycle_lock: Path, application_lock: Path, lease_root: Path,
@@ -507,7 +603,7 @@ def apply_operation(
         _fail("R-05 fixture requiere root para los almacenes POSIX aislados.")
     if active_profile_store is not None:
         active_profile_store_module.ActiveProfileStore(active_profile_store).prepare()
-    initial = service_adapter.status(adapter_root)
+    initial = _service_backend().status(adapter_root)
     preflight_result = preflight.preflight(
         staging_args.profile_store, staging_args.master_key, staging_args.validation_store,
         staging_args.profile_id, staging_args.revision, staging_args.xray_binary,
@@ -538,8 +634,8 @@ def apply_operation(
     operation_id = prepared["operation_id"]
     operation_dir, record = _load(operation_store, operation_id)
     try:
-        rechecked = service_adapter.status(adapter_root, request_generation_id=generation_id)
-    except service_adapter.ServiceAdapterError as exc:
+        rechecked = _service_backend().status(adapter_root, request_generation_id=generation_id)
+    except _service_backend().ServiceAdapterError as exc:
         return _mark_recovery_required(operation_dir, record, f"No se pudo revalidar el servicio fixture: {exc}")
     if (record["service"]["active_state"] != initial["active_state"]
             or record["service"]["sub_state"] != initial["sub_state"]
@@ -577,12 +673,12 @@ def apply_operation(
     operation_dir, record = _load(operation_store, operation_id)
     if record["service"]["active_state"] == "inactive" or not confirm_restart:
         try:
-            current = service_adapter.status(adapter_root, request_generation_id=generation_id)
+            current = _service_backend().status(adapter_root, request_generation_id=generation_id)
             initial = record["orchestration"]["initial_service"]
             unchanged = _matches(current, state=initial["active_state"],
                                  generation_id=initial["loaded_generation_id"],
                                  config_sha256=initial["loaded_config_sha256"])
-        except service_adapter.ServiceAdapterError:
+        except _service_backend().ServiceAdapterError:
             unchanged = False
         if not unchanged:
             return _restore_after_failure(
@@ -622,18 +718,28 @@ def _recover_one(
             return {"operation_id": operation_id, "status": "SKIPPED_LEGACY"}
         state = record["state"]
         if state == "completed":
+            try:
+                attestation_result = _recovery_attestation(record)
+            except runtime_attestation.AttestationError as exc:
+                return _mark_recovery_required(operation_dir, record, str(exc))
             if active_profile_store is not None:
                 try:
                     active_result = _commit_active_profile(
                         active_profile_store, adapter_root, operation_id, record
                     )
                 except (active_profile_store_module.ActiveProfileError,
-                        service_adapter.ServiceAdapterError, OSError) as exc:
+                        _service_backend().ServiceAdapterError, OSError) as exc:
                     return {"operation_id": operation_id, "status": "ACTIVE_REGISTER_RECONCILIATION_REQUIRED",
                             "state": state, "reason": str(exc)[:240]}
-                return {"operation_id": operation_id, "status": "NO_OP",
-                        "state": state, "active_profile_record": active_result}
-            return {"operation_id": operation_id, "status": "NO_OP", "state": state}
+                result = {"operation_id": operation_id, "status": "NO_OP",
+                          "state": state, "active_profile_record": active_result}
+                if attestation_result is not None:
+                    result["runtime_attestation"] = attestation_result
+                return result
+            result = {"operation_id": operation_id, "status": "NO_OP", "state": state}
+            if attestation_result is not None:
+                result["runtime_attestation"] = attestation_result
+            return result
         if state in {"published_pending_apply", "published_pending_start", "rolled_back", "recovery_required"}:
             return {"operation_id": operation_id, "status": "NO_OP", "state": state}
         gen = record["orchestration"]["generation_id"]
@@ -679,7 +785,7 @@ def _recover_one(
             initial = record["orchestration"]["initial_service"]
             initial_state = initial["active_state"]
             confirmation = record["orchestration"]["confirmation"]
-            observed_before = service_adapter.status(adapter_root, request_generation_id=gen)
+            observed_before = _service_backend().status(adapter_root, request_generation_id=gen)
             if not _matches(observed_before, state=initial_state,
                             generation_id=initial["loaded_generation_id"],
                             config_sha256=initial["loaded_config_sha256"]):
@@ -711,12 +817,16 @@ def _recover_one(
                 adapter_root, "success", "success", active_profile_store=active_profile_store,
             )
         if state in {"service_restart_requested", "service_start_requested", "service_verified"}:
-            observed = service_adapter.status(adapter_root, request_generation_id=gen)
+            observed = _service_backend().status(adapter_root, request_generation_id=gen)
             matches_new = _matches(
                 observed, state="active", generation_id=gen,
                 config_sha256=record["publication"]["config_sha256"],
             )
             if matches_new:
+                try:
+                    attestation_result = _recovery_attestation(record)
+                except runtime_attestation.AttestationError as exc:
+                    return _mark_recovery_required(operation_dir, record, str(exc))
                 _record_observation(record, observed, "pass")
                 record["state"] = "completed"
                 record["orchestration"]["phase"] = "completed"
@@ -729,7 +839,7 @@ def _recover_one(
                             active_profile_store, adapter_root, operation_id, record
                         )
                     except (active_profile_store_module.ActiveProfileError,
-                            service_adapter.ServiceAdapterError, OSError) as exc:
+                            _service_backend().ServiceAdapterError, OSError) as exc:
                         active_error = str(exc)[:240]
                 result = {"operation_id": operation_id,
                           "status": "COMPLETED" if active_error is None else "COMPLETED_ACTIVE_REGISTER_PENDING",
@@ -737,6 +847,8 @@ def _recover_one(
                 if active_profile_store is not None:
                     result["active_profile_record"] = active_result
                     result["active_profile_error"] = active_error
+                if attestation_result is not None:
+                    result["runtime_attestation"] = attestation_result
                 return result
             # liberar y entrar al rollback coordinado con sus propios locks
             journal.release_locks(fds)
@@ -756,7 +868,7 @@ def _recover_one(
         if state in {"prepared", "validated", "snapshot_saved"}:
             return {"operation_id": operation_id, "status": "NO_PUBLISH", "state": state}
         return _mark_recovery_required(operation_dir, record, "Estado R-05 no reconocido durante recuperación.")
-    except service_adapter.ServiceAdapterError as exc:
+    except _service_backend().ServiceAdapterError as exc:
         if "record" in locals() and record.get("publication", {}).get("status") == "published":
             if fds:
                 journal.release_locks(fds)
@@ -773,6 +885,7 @@ def _recover_one(
             journal.release_locks(fds)
 
 
+@_with_service_backend
 def recover_operations(
     *, operation_store: Path, lifecycle_lock: Path, application_lock: Path,
     adapter_root: Path, active_profile_store: Path | None = None,

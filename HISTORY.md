@@ -1397,3 +1397,25 @@ El propietario aceptó formalmente R-05 en el alcance fixture-only corregido y r
 - La generación/hash cargados permanecen no atestiguados; no se infieren desde ActiveState ni desde el registro activo.
 - 11/11 pruebas focales, 59/59 R-05+B4, 257/257 Python globales; smoke Bash, ShellCheck, AST y diff-check PASS.
 - Sin llamadas systemd reales, acciones mutadoras, cambios runtime, dependencias, commit ni push.
+
+
+## H6-B — atestación persistente de generación systemd (2026-11-06)
+
+Se implementó H6-B en alcance aislado: `scripts/xray_runtime_attestation.py` y `tests/test_xray_runtime_attestation.py`. La atestación enlaza operation_id, generation_id, SHA-256 publicado, InvocationID nuevo/estable, ActiveEnterTimestamp, SHA-256 de la unidad y fecha UTC. El almacén reservado es `/var/lib/xray-manager/attestations`, pero no se creó ni se utilizó en el sistema real.
+
+Contraste normativo: Etapa 5 §§4, 5 y 7 exige distinguir configuración guardada/aplicada, verificar la configuración realmente ejecutada y actualizar el registro activo solo después de verificar. Etapa 6 §2 exige observación del estado/proceso y verificación de funcionamiento. H6-B aporta evidencia técnica para ese objetivo, pero aún no completa la activación funcional ni la verificación end-to-end.
+
+Auditoría: 12/12 pruebas focales H6-B; 269/269 Python global; pruebas Bash de servicio, control de servicio y preparación PASS; compileall, bash -n global, ShellCheck -S error, install.sh --check y git diff --check PASS. El módulo no invoca systemctl, subprocess, shell ni eval.
+
+Limitaciones: observaciones sintéticas; sin systemctl/Xray real; no conectado a H6-A, R-05, B4, menú ni CLI. La futura integración debe mantener el lock de ciclo de vida durante transición, observaciones y persistencia, y usar snapshots directos de H6-A. H6-B queda IMPLEMENTADA, VERIFICADA Y AUDITADA, PASS CON LIMITACIONES. No se hizo commit ni push. HEAD continúa `be524eef65037f74bb36ee9e7fd9b385c3ffb613`; rama `design/user-identity-association-v1`. `main` y `Xray-Normativa/` permanecen intactas. No hubo operaciones live ni cambios de runtime, systemd, certificados, DNS, firewall, puertos, red o dependencias.
+
+Siguiente paso propuesto: H6-C, integración del almacén/atestación con R-05 mediante backend inyectable, manteniendo fixture como default y sin habilitar ejecución real desde CLI. Requiere revisión y autorización del alcance de integración; no habilita operaciones live.
+
+
+## H6-C — integración R-05/H6-B (2026-11-06)
+
+El propietario autorizó H6-C exclusivamente con mocks y fixtures. Se modificó scripts/xray_runtime_orchestrator.py para inyección de backend por contexto, manteniendo el adaptador fixture R-05 como default. Los backends alternativos sólo se aceptan como dobles de prueba explícitos; no hay selector real en CLI. Se conectó la persistencia H6-B a las rutas fixture de start/restart, con snapshots sintéticos before/after/confirmed dentro del lock de ciclo de vida. Divergencias provocan rollback fixture. Recovery valida la atestación persistida y falla cerrado si falta.
+
+Evidencia: docs/IMPLEMENTACION_H6C_INTEGRACION_R05_ATESTACION_2026-11-06.md y docs/AUDITORIA_H6C_INTEGRACION_R05_ATESTACION_2026-11-06.md. H6-C 7/7 focales, H6-B 12/12 focales y Python global 276/276 PASS. compileall, bash -n, ShellCheck -S error, install.sh --check, tres pruebas Bash de servicio y git diff --check PASS.
+
+Limitaciones: las observaciones son sintéticas; H6-A no se invocó; no existe backend mutador systemd ni selección live en CLI. La marca de doble de prueba es una salvaguarda de diseño, no una frontera contra código Python arbitrario. Sin systemctl/Xray real, WAN, certificados/DNS/firewall/red o dependencias. No commit/push. main y Xray-Normativa/ intactas. H6-C queda IMPLEMENTADA, VERIFICADA Y AUDITADA, PASS CON LIMITACIONES. Siguiente bloque requiere diseñar el adaptador de servicio real por separado y solicitar autorización live específica.
