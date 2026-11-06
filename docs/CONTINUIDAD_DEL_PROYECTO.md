@@ -1,6 +1,6 @@
 # Protocolo de continuidad — Xray Core Manager
 
-> PUNTO DE REANUDACIÓN VIGENTE — 2026-11-06: H6-E1/E2/E3 implementadas y auditoría integral H6-E PASS CON LIMITACIONES. El instalador predeterminado despliega sólo Xray Manager; Xray-core se instala después desde el menú. H6-F NO LISTO END-TO-END. Rama design/user-identity-association-v1; HEAD base local/remoto antes de esta actualización: 32496d749901d34cd1a60f720843901125b536b6. Cambios de esta sincronización pendientes de commit/push. main y Xray-Normativa/ protegidas.
+> PUNTO DE REANUDACIÓN VIGENTE — 2026-11-06: H6-E1/E2/E3 implementadas y auditoría integral H6-E PASS CON LIMITACIONES. El instalador predeterminado despliega sólo Xray Manager; Xray-core se instala después desde el menú. H6-F NO LISTO END-TO-END. Rama design/user-identity-association-v1; HEAD base local/remoto antes de esta actualización: 32496d749901d34cd1a60f720843901125b536b6. Sincronización confirmada: commit 4984ce207ff446bb097cc53c6445ad1e9b53c585 publicado en la rama autorizada; HEAD local/remoto coincidente y árbol limpio. main y Xray-Normativa/ protegidas.
 
 > Para continuar: leer AGENTS.md, PROJECT_STATE.md, este documento, docs/PUNTO_CONTROL_ACTUAL.md, HISTORY.md y docs/AUDITORIA_H6E_INTEGRAL_2026-11-06.md. Verificar HEAD y árbol de trabajo antes de modificar. No habilitar backend live ni ejecutar acciones systemd/Xray reales sin autorización específica.
 

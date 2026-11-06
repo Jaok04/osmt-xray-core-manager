@@ -1,6 +1,6 @@
 # Punto de control actual — Xray Core Manager
 
-> CORTE VIGENTE — 2026-11-06: H6-E1/E2/E3 implementadas; auditoría integral H6-E PASS CON LIMITACIONES. Instalador predeterminado Manager-only. H6-F NO LISTO END-TO-END. Rama design/user-identity-association-v1; HEAD base local/remoto antes de esta sincronización: 32496d749901d34cd1a60f720843901125b536b6. Cambios de esta actualización pendientes de commit/push. main y Xray-Normativa/ protegidas.
+> CORTE VIGENTE — 2026-11-06: H6-E1/E2/E3 implementadas; auditoría integral H6-E PASS CON LIMITACIONES. Instalador predeterminado Manager-only. H6-F NO LISTO END-TO-END. Rama design/user-identity-association-v1; HEAD base local/remoto antes de esta sincronización: 32496d749901d34cd1a60f720843901125b536b6. Cambios publicados y sincronizados en commit 4984ce207ff446bb097cc53c6445ad1e9b53c585; HEAD local/remoto coincidente y árbol limpio. main y Xray-Normativa/ protegidas.
 
 ## Estado operativo vigente
 

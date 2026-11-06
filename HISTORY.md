@@ -1484,4 +1484,4 @@ Limitaciones: las observaciones son sintéticas; H6-A no se invocó; no existe b
 - Se reconcilian los estados de H6-E2/H6-E3 con la auditoría integral H6-E4; los expedientes individuales conservan sus resultados focales y remiten al dictamen conjunto.
 - Se actualizan los encabezados vigentes de PROJECT_STATE, PUNTO_CONTROL_ACTUAL y CONTINUIDAD para reflejar H6-E, Manager-only y los bloqueos reales de H6-F.
 - H6-F deja de tratar el cambio de instalador como decisión pendiente; permanecen Certbot/ACME, VPS de aceptación, endpoint/Host/SNI, puertos y backend mutador live.
-- La cronología histórica no se borra; los estados antiguos se consideran superados cuando contradicen los bloques vigentes.
+- La cronología histórica no se borra; los estados antiguos se consideran superados cuando contradicen los bloques vigentes. Commit de sincronización: 4984ce207ff446bb097cc53c6445ad1e9b53c585; push confirmado y HEAD local/remoto coincidente. main permanece en 656ecedc506a94a6461aee296b20871d51a38bf3.

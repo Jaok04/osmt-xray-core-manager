@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente» al final de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado vigente:** 2026-11-06 — H6-E1/E2/E3 implementadas y auditoría integral H6-E PASS CON LIMITACIONES; instalador Manager-only por defecto implementado. Rama design/user-identity-association-v1; sincronización pendiente del commit de esta actualización. HEAD base local/remoto verificado antes de los cambios: 32496d749901d34cd1a60f720843901125b536b6. Regresión: Python 332/332 y Bash 62/62 PASS; ShellCheck, compileall, bash -n, install.sh --check y git diff --check PASS.
+**Corte de estado vigente:** 2026-11-06 — H6-E1/E2/E3 implementadas y auditoría integral H6-E PASS CON LIMITACIONES; instalador Manager-only por defecto implementado. Rama design/user-identity-association-v1; sincronización confirmada en GitHub y VPS. Commit de implementación/documentación: 4984ce207ff446bb097cc53c6445ad1e9b53c585. HEAD local/remoto coincidente. Regresión: Python 332/332 y Bash 62/62 PASS; ShellCheck, compileall, bash -n, install.sh --check y git diff --check PASS.
 **Estado global:** Etapa 1 aceptada; Etapas 2–6 abiertas/parciales. H6-E PASS CON LIMITACIONES. H6-F NO LISTO END-TO-END. Backend runtime live NO IMPLEMENTADO/AUTORIZADO; ACME/Certbot y endpoint público pendientes de decisión. No se ejecutó prueba end-to-end ni operaciones live.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -1489,4 +1489,4 @@ Evidencia: tests/install.sh PASS; Python 332/332, Bash 62/62, bash -n, ShellChec
 
 ## Reconciliación documental y sincronización (2026-11-06)
 
-Los estados cronológicos anteriores a este corte se conservan por trazabilidad. Para el estado operativo prevalece el bloque Estado vigente — corte 2026-11-06. H6-E4 es la auditoría integral del bloque H6-E y está documentada; no habilita live. El cambio Manager-only está implementado. H6-F mantiene bloqueos ACME/Certbot, endpoint/Host/SNI, VPS de aceptación y backend mutador. Publicación de esta actualización: pendiente hasta confirmar el push y el SHA remoto.
+Los estados cronológicos anteriores a este corte se conservan por trazabilidad. Para el estado operativo prevalece el bloque Estado vigente — corte 2026-11-06. H6-E4 es la auditoría integral del bloque H6-E y está documentada; no habilita live. El cambio Manager-only está implementado. H6-F mantiene bloqueos ACME/Certbot, endpoint/Host/SNI, VPS de aceptación y backend mutador. Publicación confirmada: 4984ce207ff446bb097cc53c6445ad1e9b53c585 en design/user-identity-association-v1; GitHub y VPS coinciden, árbol limpio. main permanece en 656ecedc506a94a6461aee296b20871d51a38bf3.
