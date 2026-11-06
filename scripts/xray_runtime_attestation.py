@@ -11,7 +11,11 @@ INV_RE = re.compile(r"[0-9a-fA-F]{32}\Z")
 DEFAULT_ROOT = Path("/var/lib/xray-manager/attestations")
 MAX_BYTES = 16384
 FIELDS = {"schema_version","operation_id","generation_id","config_sha256","invocation_id",
-          "active_enter_timestamp","unit_fragment_sha256","attested_at","service_unit"}
+          "active_enter_timestamp","unit_fragment_sha256","attested_at","service_unit",
+          "process_identity"}
+PROCESS_FIELDS = {"pid", "starttime_ticks", "executable_path", "executable_sha256",
+                  "effective_uid", "effective_gid", "argv"}
+PROCESS_ARGV = ["/usr/local/bin/xray", "run", "-config", "/etc/xray/config.json"]
 
 class AttestationError(Exception):
     pass
@@ -38,7 +42,7 @@ def strict_json(data):
     return value
 
 def validate(value):
-    if set(value) != FIELDS or type(value.get("schema_version")) is not int or value["schema_version"] != 1:
+    if set(value) != FIELDS or type(value.get("schema_version")) is not int or value["schema_version"] != 2:
         fail("Esquema de atestación inválido.")
     if not isinstance(value["operation_id"],str) or not OP_RE.fullmatch(value["operation_id"]): fail("operation_id inválido.")
     if not isinstance(value["generation_id"],str) or not GEN_RE.fullmatch(value["generation_id"]): fail("generation_id inválido.")
@@ -46,6 +50,22 @@ def validate(value):
         if not isinstance(value[key],str) or not SHA_RE.fullmatch(value[key]): fail(key+" inválido.")
     if not isinstance(value["invocation_id"],str) or not INV_RE.fullmatch(value["invocation_id"]): fail("InvocationID inválido.")
     if value["service_unit"] != "xray.service": fail("Unidad no permitida.")
+    process = value["process_identity"]
+    if not isinstance(process, dict) or set(process) != PROCESS_FIELDS:
+        fail("Evidencia persistida de identidad del proceso inválida.")
+    if type(process["pid"]) is not int or process["pid"] <= 1:
+        fail("PID de proceso atestado inválido.")
+    if type(process["starttime_ticks"]) is not int or process["starttime_ticks"] < 0:
+        fail("starttime de proceso atestado inválido.")
+    if process["executable_path"] != "/usr/local/bin/xray":
+        fail("Ruta de ejecutable atestada no permitida.")
+    if not isinstance(process["executable_sha256"], str) or not SHA_RE.fullmatch(process["executable_sha256"]):
+        fail("SHA-256 de ejecutable atestado inválido.")
+    for key in ("effective_uid", "effective_gid"):
+        if type(process[key]) is not int or process[key] < 0:
+            fail("UID/GID de proceso atestado inválidos.")
+    if process["argv"] != PROCESS_ARGV:
+        fail("argv de proceso atestado no permitido.")
     for key in ("active_enter_timestamp","attested_at"):
         if not isinstance(value[key],str) or not value[key].strip(): fail(key+" ausente.")
     try: parsed = datetime.fromisoformat(value["attested_at"].replace("Z","+00:00"))
@@ -92,6 +112,45 @@ def valid_observation(value, expected_hash, unit_path):
     ts = value.get("active_enter_timestamp")
     if not isinstance(ts,str) or not ts.strip() or ts in {"n/a","0"}: fail("ActiveEnterTimestamp inválido.")
 
+def process_observation(value):
+    process = value.get("process_identity") if isinstance(value, dict) else None
+    if not isinstance(process, dict):
+        fail("Falta evidencia H6-E2 del proceso.")
+    required = {
+        "pid", "process_starttime_ticks", "executable_path", "executable_sha256",
+        "effective_uid", "effective_gid", "argv", "identity_verified",
+        "read_only", "configuration_loaded", "configuration_evidence",
+    }
+    if not required.issubset(process):
+        fail("Evidencia H6-E2 incompleta.")
+    if (process["identity_verified"] is not True or process["read_only"] is not True
+            or process["configuration_loaded"] is not False
+            or process["configuration_evidence"] != "not_attested"):
+        fail("La evidencia H6-E2 no cumple el contrato read-only.")
+    if type(process["pid"]) is not int or process["pid"] != value.get("main_pid"):
+        fail("PID inspeccionado no coincide con MainPID.")
+    if type(process["process_starttime_ticks"]) is not int or process["process_starttime_ticks"] < 0:
+        fail("starttime H6-E2 inválido.")
+    if process["executable_path"] != "/usr/local/bin/xray":
+        fail("Ejecutable H6-E2 no coincide con Xray administrado.")
+    if not isinstance(process["executable_sha256"], str) or not SHA_RE.fullmatch(process["executable_sha256"]):
+        fail("SHA-256 H6-E2 inválido.")
+    for key in ("effective_uid", "effective_gid"):
+        if type(process[key]) is not int or process[key] < 0:
+            fail("UID/GID H6-E2 inválidos.")
+    if list(process["argv"]) != PROCESS_ARGV:
+        fail("argv H6-E2 no coincide con Xray administrado.")
+    return {
+        "pid": process["pid"],
+        "starttime_ticks": process["process_starttime_ticks"],
+        "executable_path": process["executable_path"],
+        "executable_sha256": process["executable_sha256"],
+        "effective_uid": process["effective_uid"],
+        "effective_gid": process["effective_gid"],
+        "argv": list(process["argv"]),
+    }
+
+
 def build_attestation(operation,before,after,confirmed,unit_file):
     if not isinstance(operation,dict): fail("Falta journal R-05.")
     op_id = operation.get("operation_id"); orch = operation.get("orchestration"); pub = operation.get("publication")
@@ -131,9 +190,14 @@ def build_attestation(operation,before,after,confirmed,unit_file):
         fail("La invocación o ActiveEnterTimestamp no permanecen estables.")
     if after["invocation_id"] == before.get("invocation_id"):
         fail("La transición no produjo una nueva invocación systemd.")
-    record = {"schema_version":1,"operation_id":op_id,"generation_id":gen,"config_sha256":config_hash,
+    process_after = process_observation(after)
+    process_confirmed = process_observation(confirmed)
+    if process_after != process_confirmed:
+        fail("La identidad del proceso cambió entre after y confirmed.")
+    record = {"schema_version":2,"operation_id":op_id,"generation_id":gen,"config_sha256":config_hash,
               "invocation_id":after["invocation_id"].lower(),"active_enter_timestamp":after["active_enter_timestamp"],
-              "unit_fragment_sha256":digest,"attested_at":now(),"service_unit":"xray.service"}
+              "unit_fragment_sha256":digest,"attested_at":now(),"service_unit":"xray.service",
+              "process_identity":process_after}
     return validate(record)
 
 class AttestationStore:

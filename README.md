@@ -25,7 +25,8 @@ La implementación incluye menú principal, catálogo de modalidades, gestión l
 ## Límites operativos y seguridad
 
 - Crear o editar conexiones no genera ni aplica automáticamente una configuración al runtime de Xray.
-- La instalación prepara Xray-core y `xray.service`, pero no habilita ni inicia el servicio.
+- La instalación predeterminada despliega únicamente Xray Core Manager; Xray-core se instala después desde su menú.
+- La opción explícita `--with-xray` conserva el flujo integral de instalación verificada de Xray-core y preparación de `xray.service`, sin habilitar ni iniciar el servicio.
 - Iniciar, reiniciar o habilitar el servicio requiere que `/etc/xray/config.json` exista y supere la validación del binario como usuario de servicio `xray`.
 - Habilitar el inicio automático no inicia Xray; deshabilitarlo no detiene un servicio que ya esté activo.
 - Detener Xray no deshabilita el inicio automático.
@@ -44,7 +45,9 @@ sudo ./install.sh --install
 sudo /opt/xray-manager/bin/xray-manager
 ```
 
-El instalador instala solo dependencias faltantes, sin ejecutar `apt upgrade`. Despliega el Manager en `/opt/xray-manager`, instala la versión Xray aprobada, verifica su SHA-256 y prepara la cuenta y unidad systemd. No sobrescribe unidades ajenas ni activa el servicio.
+El instalador instala solo dependencias faltantes, sin ejecutar `apt upgrade`. Por defecto despliega únicamente el Manager en `/opt/xray-manager`; no descarga Xray-core, no crea la cuenta `xray` ni modifica `/etc/xray` o systemd.
+
+Después, desde **[1] Administración de Xray-core**, selecciona **[1] Instalar Xray-core** y luego **[7] Preparar servicio**. Como alternativa explícita para instalaciones integrales, `sudo ./install.sh --install --with-xray` instala Xray con verificación SHA-256 y prepara la cuenta/unidad systemd. En ambos casos el servicio queda detenido y deshabilitado; su activación requiere una acción posterior y confirmación.
 
 ## Menú de servicio
 

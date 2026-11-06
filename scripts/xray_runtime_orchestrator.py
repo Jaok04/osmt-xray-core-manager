@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import secrets
 from contextvars import ContextVar
 from functools import wraps
@@ -15,6 +16,7 @@ import xray_runtime_preflight as preflight
 import xray_runtime_publisher as publisher
 import xray_runtime_service_adapter as service_adapter
 import xray_runtime_attestation as runtime_attestation
+import xray_runtime_process_attestation as process_attestation
 import xray_runtime_staging as staging
 
 GENERATION_PREFIX = "generation-"
@@ -53,6 +55,42 @@ def _attestation_snapshot(stage: str, record: dict):
     return provider(stage, record)
 
 
+
+
+def _validate_process_snapshot(snapshot: dict) -> None:
+    """Exige evidencia del proceso correlacionada con el snapshot systemd."""
+    if not isinstance(snapshot, dict):
+        _fail("Snapshot de atestación inválido.")
+    process = snapshot.get("process_identity")
+    if not isinstance(process, dict):
+        _fail("Falta evidencia H6-E2 del proceso en el snapshot de atestación.")
+    if (process.get("identity_verified") is not True
+            or process.get("read_only") is not True
+            or process.get("configuration_loaded") is not False
+            or process.get("configuration_evidence") != "not_attested"):
+        _fail("La evidencia del proceso no cumple el contrato read-only H6-E2.")
+    pid = snapshot.get("main_pid")
+    if (type(pid) is not int or pid <= 1 or process.get("pid") != pid
+            or process.get("systemd_main_pid") != pid):
+        _fail("El PID inspeccionado no coincide con MainPID de systemd.")
+    if (process.get("systemd_invocation_id") != snapshot.get("invocation_id")
+            or process.get("systemd_active_enter_timestamp") != snapshot.get("active_enter_timestamp")):
+        _fail("La evidencia del proceso no corresponde a la invocación systemd observada.")
+    if (type(process.get("process_starttime_ticks")) is not int
+            or process["process_starttime_ticks"] < 0):
+        _fail("starttime del proceso inválido.")
+    if process.get("executable_path") != process_attestation.process_identity.EXPECTED_EXECUTABLE:
+        _fail("El ejecutable inspeccionado no es el Xray administrado.")
+    if (not isinstance(process.get("executable_sha256"), str)
+            or not re.fullmatch(r"[0-9a-f]{64}", process["executable_sha256"])):
+        _fail("SHA-256 del ejecutable inválido.")
+    if tuple(process.get("argv", ())) != process_attestation.EXPECTED_ARGV:
+        _fail("argv del proceso no coincide con el contrato administrado.")
+    for field in ("effective_uid", "effective_gid"):
+        if type(process.get(field)) is not int or process[field] < 0:
+            _fail("UID/GID efectivos del proceso inválidos.")
+
+
 def _persist_test_attestation(record: dict, before: dict | None):
     if before is None:
         return None
@@ -63,6 +101,17 @@ def _persist_test_attestation(record: dict, before: dict | None):
         _fail("El backend de prueba no configuró almacén y unidad para H6-B.")
     after = _attestation_snapshot("after", record)
     confirmed = _attestation_snapshot("confirmed", record)
+    _validate_process_snapshot(after)
+    _validate_process_snapshot(confirmed)
+    after_process = after["process_identity"]
+    confirmed_process = confirmed["process_identity"]
+    stable_process_fields = (
+        "pid", "process_starttime_ticks", "executable_sha256",
+        "systemd_invocation_id", "systemd_active_enter_timestamp",
+    )
+    if any(after_process.get(field) != confirmed_process.get(field)
+           for field in stable_process_fields):
+        _fail("La identidad del proceso cambió entre las observaciones after/confirmed.")
     result = store.record(record, before, after, confirmed, Path(unit_file))
     return {"status": result["status"], "attestation": result["attestation"]}
 

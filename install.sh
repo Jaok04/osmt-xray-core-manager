@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Instala Xray Core Manager y prepara Xray-core sin activar el servicio.
+# Instala Xray Core Manager; Xray-core es una fase opcional explícita.
 set -Eeuo pipefail
 IFS=$'\n\t'
 umask 077
@@ -9,16 +9,22 @@ readonly DEFAULT_PREFIX="/"
 PREFIX="${XRAY_MANAGER_INSTALL_PREFIX:-$DEFAULT_PREFIX}"
 SKIP_DEPS="${XRAY_MANAGER_SKIP_DEPENDENCIES:-0}"
 ACTION="install"
+INSTALL_REQUESTED=0
+WITH_XRAY=0
 
 usage() {
     cat <<'USAGE'
-Uso: sudo ./install.sh [--check | --install] [--help]
+Uso: sudo ./install.sh [--check | --install [--with-xray]] [--help]
 
-  --check    Comprueba plataforma, privilegios y dependencias; no modifica nada.
-  --install  Instala las dependencias faltantes y despliega Xray Core Manager.
-  --help     Muestra esta ayuda.
+  --check       Comprueba plataforma, privilegios y dependencias; no modifica nada.
+  --install     Instala dependencias faltantes y despliega únicamente Xray Core Manager.
+  --with-xray   Añade explícitamente la instalación verificada de Xray-core y
+                la preparación de xray.service. Requiere --install.
+  --help        Muestra esta ayuda.
 
-La instalación prepara Xray-core y xray.service, pero no habilita ni inicia el servicio.
+Por defecto no instala Xray-core, no crea la cuenta xray ni modifica systemd.
+Xray-core puede instalarse después desde Administración de Xray-core.
+Incluso con --with-xray, el servicio queda detenido y deshabilitado.
 USAGE
 }
 
@@ -32,7 +38,8 @@ ok() { printf '[OK] %s\n' "$*"; }
 while (($#)); do
     case "$1" in
         --check) ACTION=check ;;
-        --install) ACTION=install ;;
+        --install) ACTION=install; INSTALL_REQUESTED=1 ;;
+        --with-xray) WITH_XRAY=1 ;;
         --help | -h)
             usage
             exit 0
@@ -59,6 +66,8 @@ assert_no_symlink_components() {
     done
 }
 [[ "$PREFIX" == "/" || "$PREFIX" == /* ]] || fail "el prefijo de instalación debe ser absoluto"
+[[ "$WITH_XRAY" == 0 || ( "$ACTION" == install && "$INSTALL_REQUESTED" == 1 ) ]] ||
+    fail "--with-xray requiere --install"
 [[ -f "$SOURCE_ROOT/bin/xray-manager" && -f "$SOURCE_ROOT/config/paths.sh" &&
     -f "$SOURCE_ROOT/modules/main_menu.sh" && -f "$SOURCE_ROOT/lib/json_store.sh" ]] ||
     fail "el directorio de origen no contiene un árbol válido de Xray Core Manager"
@@ -89,17 +98,22 @@ for candidate in \
     "$(path /var/log/xray-manager)" \
     "$(path /var/cache/xray-manager)" \
     "$(path /var/backups/xray-manager)" \
-    "$(path /var/lib/xray)" \
-    "$(path /etc/xray)" \
-    "$(path /usr/local/bin/xray)" \
-    "$(path /usr/local/share/xray)" \
-    "$(path /etc/systemd/system)" \
-    "$(path /etc/systemd/system/xray.service)" \
     "$(path /var/lib/xray-manager/connections/connections.json)" \
     "$(path /etc/xray-manager/preferences.conf)" \
     "$(path /var/lib/xray-manager/state/install.json)"; do
     assert_no_symlink_components "$candidate"
 done
+if [[ "$WITH_XRAY" == 1 ]]; then
+    for candidate in \
+        "$(path /var/lib/xray)" \
+        "$(path /etc/xray)" \
+        "$(path /usr/local/bin/xray)" \
+        "$(path /usr/local/share/xray)" \
+        "$(path /etc/systemd/system)" \
+        "$(path /etc/systemd/system/xray.service)"; do
+        assert_no_symlink_components "$candidate"
+    done
+fi
 connections_preflight="$(path /var/lib/xray-manager/connections/connections.json)"
 if [[ -e "$connections_preflight" ]]; then
     [[ -f "$connections_preflight" ]] || fail "el registro de conexiones existente no es un archivo regular"
@@ -323,6 +337,7 @@ fi
 
 ok "Directorios, permisos y archivos iniciales del Manager verificados"
 
+if [[ "$WITH_XRAY" == 1 ]]; then
 # Fase B: instalar el core verificado y preparar su unidad, sin habilitarla ni iniciarla.
 XRAY_ADMIN_BIN="/usr/local/bin/xray"
 XRAY_ADMIN_DATA="/usr/local/share/xray"
@@ -386,3 +401,13 @@ printf '  Preferencias: %s\n' "$preferences_file"
 printf '  Estado:       %s\n' "$state_file"
 printf '\nXray-core quedó instalado; xray.service está detenido y deshabilitado.\n'
 printf 'El registro de usuarios no se inicializó ni migró.\n'
+
+else
+    printf '\nINSTALACIÓN DE XRAY CORE MANAGER COMPLETADA\n'
+    printf '  Código:       %s\n' "$APP_ROOT"
+    printf '  Conexiones:   %s\n' "$connections_file"
+    printf '  Preferencias: %s\n' "$preferences_file"
+    printf '  Estado:       %s\n' "$state_file"
+    printf '\nXray-core no fue instalado y xray.service no fue creado ni modificado.\n'
+    printf 'Usa Administración de Xray-core → Instalar Xray-core cuando quieras instalarlo.\n'
+fi

@@ -1435,3 +1435,53 @@ Limitaciones: las observaciones son sintéticas; H6-A no se invocó; no existe b
 - Todas las consultas systemd de pruebas usan mocks. Sin systemctl real, acciones mutadoras, inspección /proc, cambios live o dependencias.
 - Documentos: docs/IMPLEMENTACION_H6E1_CONTRATO_OBSERVACION_SYSTEMD_2026-11-06.md y docs/AUDITORIA_H6E1_CONTRATO_OBSERVACION_SYSTEMD_2026-11-06.md.
 - H6-E1 PASS CON LIMITACIONES. Sin commit/push; H6-E2 pendiente.
+
+## 2026-11-06 — H6-E2 identidad del proceso Xray
+
+- Nuevo scripts/xray_runtime_process_identity.py: inspección read-only de PID/starttime, UID/GID efectivos, /proc/PID/exe, argv exacto y SHA-256 del ejecutable.
+- Rechaza PID/identidad/argv/ejecutable/permisos/hardlinks inválidos y cambios observables durante inspección; raíces procfs alternativas requieren marcador fixture.
+- No afirma qué configuración cargó Xray; configuration_loaded=false y configuration_evidence=not_attested.
+- Pruebas focales 22/22; Python global 332/332; py_compile, compileall, bash -n, pruebas Bash de servicio, install.sh --check, ShellCheck -S error y git diff --check PASS.
+- Sólo procfs y binario simulados; no integrado con H6-A/R-05, no proceso/systemd/Xray real, sin operaciones live ni dependencias.
+- Documentos: docs/IMPLEMENTACION_H6E2_IDENTIDAD_PROCESO_2026-11-06.md y docs/AUDITORIA_H6E2_IDENTIDAD_PROCESO_2026-11-06.md. H6-E3/E4 pendientes.
+
+## 2026-11-06 — H6-E3 correlación H6-A/H6-E2 y persistencia R-05
+
+- Nuevo scripts/xray_runtime_process_attestation.py: correlaciona snapshots systemd antes/después con identidad H6-E2 de MainPID; exige estabilidad de PID, InvocationID, ActiveEnterTimestamp y unidad.
+- R-05 ahora exige process_identity en after/confirmed y comprueba PID, starttime, hash, UID/GID, ejecutable, argv e identidad de invocación; divergencias siguen rollback/fail-closed.
+- H6-B atestación schema v2 persiste PID, starttime, ejecutable/hash, UID/GID y argv validados. No existían registros persistentes reales schema v1.
+- Pruebas focales: correlación 16/16, H6-B 15/15, R-05/H6-C 9/9; Python global 332/332 PASS.
+- py_compile, compileall, bash -n, pruebas Bash de servicio, install.sh --check, ShellCheck -S error y git diff --check PASS.
+- Sólo mocks/dobles/fixtures; sin systemctl/Xray/procfs real, backend mutador ni selector live.
+- Documentos: docs/IMPLEMENTACION_H6E3_CORRELACION_PROCESO_ATESTACION_2026-11-06.md y docs/AUDITORIA_H6E3_CORRELACION_PROCESO_ATESTACION_2026-11-06.md. H6-E4 pendiente.
+
+## 2026-11-06 — auditoría integral H6-E
+
+- Auditoría conjunta H6-A/B/C/D/E1/E2/E3 documentada en docs/AUDITORIA_H6E_INTEGRAL_2026-11-06.md.
+- H6-E2 ampliada a 22/22; correlación 16/16; H6-B schema v2 15/15; H6-C 9/9; Python global 332/332.
+- compileall, py_compile, bash -n, tres pruebas Bash de servicio, install.sh --check, ShellCheck -S error y git diff --check PASS.
+- Dictamen PASS CON LIMITACIONES. No systemctl/proceso Xray/procfs real, backend mutador, prueba WAN ni instalación limpia end-to-end. H6-F requiere evaluación y autorización live específica.
+
+## 2026-11-06 — H6-F evaluación de preparación live
+
+- Revisión read-only del instalador, menús Xray, controlador systemd, ACME, compositor/exportador VLESS-WS-TLS y normativa aprobada.
+- Hallazgos: install.sh instala Xray y prepara unidad por defecto; Certbot no se instala automáticamente; Etapa 4 mantiene pendiente la selección formal ACME; exportador usa hellen.tvrc.me como endpoint por defecto; R-05/menu runtime sigue fixture-only.
+- Plan de primera aceptación y lista de autorizaciones en docs/EVALUACION_H6F_PREPARACION_PRUEBA_REAL_2026-11-06.md.
+- Dictamen: NO LISTO END-TO-END. Sin systemctl/Xray/Certbot real, DNS/firewall, emisión de certificado ni WAN. No hubo cambios de código en esta evaluación, dependencias, commit ni push.
+
+## 2026-11-06 — instalador Manager-only por defecto
+
+- install.sh --install ahora despliega únicamente Xray Core Manager. Xray-core, usuario/grupo xray, /etc/xray y xray.service quedan fuera del modo predeterminado.
+- --install --with-xray conserva la instalación integral anterior; --with-xray sin --install se rechaza.
+- Preflight de rutas Xray se ejecuta sólo en modo integral. Manager-only conserva validación de rutas propias, locks, permisos, estado e idempotencia.
+- README y docs de Fase B actualizados; H6-F actualizado con el bloqueo de instalador resuelto.
+- tests/install.sh verifica Manager-only, fixtures Xray intactos, rutas Xray simbólicas no seguidas en Manager-only y rechazo en modo integral; también prueba Fase A+B explícita.
+- Python 332/332 y Bash 62/62 PASS; bash -n, ShellCheck -S error, compileall, install.sh --check y git diff --check PASS.
+- Sólo prefijos temporales. Sin instalación real, systemctl, Xray, Certbot, DNS/firewall ni WAN. Sin commit/push.
+
+## 2026-11-06 — actualización de continuidad y sincronización solicitada
+
+- Se reconcilian los estados de H6-E2/H6-E3 con la auditoría integral H6-E4; los expedientes individuales conservan sus resultados focales y remiten al dictamen conjunto.
+- Se actualizan los encabezados vigentes de PROJECT_STATE, PUNTO_CONTROL_ACTUAL y CONTINUIDAD para reflejar H6-E, Manager-only y los bloqueos reales de H6-F.
+- H6-F deja de tratar el cambio de instalador como decisión pendiente; permanecen Certbot/ACME, VPS de aceptación, endpoint/Host/SNI, puertos y backend mutador live.
+- La cronología histórica no se borra; los estados antiguos se consideran superados cuando contradicen los bloques vigentes.

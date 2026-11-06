@@ -7,6 +7,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"scripts")); sys.path.insert(0,str(ROOT/"tests"))
 import test_xray_runtime_journal as journal_helpers
 import xray_runtime_attestation as attestation
+import xray_runtime_process_attestation as process_attestation
 import xray_runtime_journal as journal
 import xray_runtime_journal as journal
 import xray_runtime_orchestrator as orchestrator
@@ -41,6 +42,23 @@ class MockRuntimeBackend:
             "runtime_config_sha256":digest,"invocation_id":invocation,
             "active_enter_timestamp":"Thu 2026-11-05 18:00:00 -05" if state=="active" else "n/a"
         }
+        if stage in {"after", "confirmed"}:
+            value["process_identity"] = {
+                "pid": value["main_pid"],
+                "process_starttime_ticks": 98765,
+                "executable_path": process_attestation.process_identity.EXPECTED_EXECUTABLE,
+                "executable_sha256": "d" * 64,
+                "argv": process_attestation.EXPECTED_ARGV,
+                "effective_uid": 991,
+                "effective_gid": 991,
+                "identity_verified": True,
+                "systemd_main_pid": value["main_pid"],
+                "systemd_invocation_id": value["invocation_id"],
+                "systemd_active_enter_timestamp": value["active_enter_timestamp"],
+                "configuration_loaded": False,
+                "configuration_evidence": "not_attested",
+                "read_only": True,
+            }
         self.snapshots.append((stage,value))
         return value
 
@@ -116,6 +134,35 @@ class H6CIntegrationTests(unittest.TestCase):
         self.assertIsNone(self.store.read(result["operation_id"]))
         state=fixture_adapter.status(self.adapter_root)
         self.assertEqual(state["loaded_config_sha256"],hashlib.sha256(self.fx.previous_bytes).hexdigest())
+    def test_missing_process_identity_fails_closed_and_rolls_back(self):
+        original=self.backend.attestation_snapshot
+        def without_process(stage,record):
+            value=original(stage,record)
+            if stage=="after":
+                value.pop("process_identity",None)
+            return value
+        self.backend.attestation_snapshot=without_process
+        result=self.apply("active")
+        self.assertEqual(result["status"],"ROLLED_BACK")
+        state=fixture_adapter.status(self.adapter_root)
+        self.assertEqual(state["loaded_config_sha256"],
+                         hashlib.sha256(self.fx.previous_bytes).hexdigest())
+
+    def test_process_identity_change_between_after_and_confirmed_fails_closed(self):
+        original=self.backend.attestation_snapshot
+        def changed_process(stage,record):
+            value=original(stage,record)
+            if stage=="confirmed":
+                value["process_identity"]=dict(value["process_identity"],
+                                               process_starttime_ticks=98766)
+            return value
+        self.backend.attestation_snapshot=changed_process
+        result=self.apply("active")
+        self.assertEqual(result["status"],"ROLLED_BACK")
+        state=fixture_adapter.status(self.adapter_root)
+        self.assertEqual(state["loaded_config_sha256"],
+                         hashlib.sha256(self.fx.previous_bytes).hexdigest())
+
     def test_start_path_attests_only_after_explicit_confirmation(self):
         pending=self.apply("inactive")
         self.assertEqual(pending["status"],"PUBLISHED_PENDING_START")

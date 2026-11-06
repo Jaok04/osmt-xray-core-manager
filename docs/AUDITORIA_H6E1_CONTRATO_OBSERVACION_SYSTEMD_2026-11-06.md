@@ -39,3 +39,7 @@
 ## 4. Resultado
 
 H6-E1 queda IMPLEMENTADA, VERIFICADA Y AUDITADA en alcance read-only/mocks, PASS CON LIMITACIONES. H6-E2 puede continuar con el diseño e implementación aislada de identidad del proceso. Cualquier conexión mutadora o prueba live requiere autorización independiente.
+
+## Estado posterior — auditoría integral H6-E (2026-11-06)
+
+H6-E2 y H6-E3 se implementaron después de este corte; la auditoría integral H6-E4 quedó completada con dictamen PASS CON LIMITACIONES. Consultar docs/AUDITORIA_H6E_INTEGRAL_2026-11-06.md. Las limitaciones originales de H6-E1 siguen vigentes: systemctl real y formato efectivo de ExecStart/ExecStartPre aún no contrastados en el entorno objetivo; no se habilitan operaciones live.

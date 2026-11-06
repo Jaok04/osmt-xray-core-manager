@@ -35,3 +35,7 @@ Todas las consultas systemd de las pruebas usan mocks. Los archivos de unidad y 
 H6-E1 no inspecciona todavía /proc, identidad real del proceso, PID reuse ni hash del ejecutable; eso corresponde a H6-E2. No conecta H6-A al orquestador R-05 ni crea un backend mutador. No habilita selector live en menú/CLI. No demuestra qué bytes de configuración fueron cargados por Xray.
 
 No se modificaron modules/xray_service.sh, la unidad systemd real, /etc/xray, runtime, certificados, DNS, firewall, puertos, red ni dependencias. No se modificó Xray-Normativa/ ni main. No hubo commit ni push.
+
+## Estado posterior — auditoría integral H6-E (2026-11-06)
+
+H6-E2 y H6-E3 se implementaron después de este corte; la auditoría integral H6-E4 quedó completada con dictamen PASS CON LIMITACIONES. Consultar docs/IMPLEMENTACION_H6E2_IDENTIDAD_PROCESO_2026-11-06.md, docs/IMPLEMENTACION_H6E3_CORRELACION_PROCESO_ATESTACION_2026-11-06.md y docs/AUDITORIA_H6E_INTEGRAL_2026-11-06.md. H6-E no habilita backend mutador ni operaciones live.

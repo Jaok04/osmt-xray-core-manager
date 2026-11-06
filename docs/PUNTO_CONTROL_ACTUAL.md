@@ -1,5 +1,19 @@
 # Punto de control actual — Xray Core Manager
 
+> CORTE VIGENTE — 2026-11-06: H6-E1/E2/E3 implementadas; auditoría integral H6-E PASS CON LIMITACIONES. Instalador predeterminado Manager-only. H6-F NO LISTO END-TO-END. Rama design/user-identity-association-v1; HEAD base local/remoto antes de esta sincronización: 32496d749901d34cd1a60f720843901125b536b6. Cambios de esta actualización pendientes de commit/push. main y Xray-Normativa/ protegidas.
+
+## Estado operativo vigente
+
+- H6-E2: inspector read-only de PID/starttime, UID/GID efectivos, ejecutable, argv y hash.
+- H6-E3: correlación H6-A/H6-E2 con MainPID, InvocationID y ActiveEnterTimestamp; gate R-05 y atestación schema v2.
+- H6-E4: auditoría integral del conjunto H6-E documentada en docs/AUDITORIA_H6E_INTEGRAL_2026-11-06.md, PASS CON LIMITACIONES.
+- Python 332/332 y Bash 62/62 PASS; ShellCheck, compileall, bash -n, install.sh --check y diff-check PASS.
+- install.sh --install despliega sólo Xray Core Manager. install.sh --install --with-xray conserva la instalación integral explícita. Xray-core puede instalarse después desde el menú.
+- No hay backend mutador runtime live ni selector en CLI/menú. No se ha probado systemd/proceso Xray real, configuración realmente cargada, WAN ni cliente externo.
+- H6-F no está listo end-to-end: Certbot/ACME requiere decisión y autorización; falta confirmar endpoint público y parámetros Host/SNI; se requiere VPS de aceptación separada y autorización específica para operaciones live.
+
+Los apartados cronológicos siguientes se conservan como historial. Este bloque prevalece ante contradicciones.
+
 > El punto de control operativo vigente es el bloque B3 añadido a continuación. Los apartados anteriores se conservan como historial y quedan superados cuando contradigan este bloque.
 
 **Fecha del corte:** 2026-11-05
@@ -1553,3 +1567,37 @@ H6-E1 implementada y auditada PASS CON LIMITACIONES. El adaptador read-only ahor
 Evidencia: 20/20 focales H6-A; 289/289 Python global; compileall, bash -n, ShellCheck -S error, pruebas Bash de servicio, install.sh --check y git diff --check PASS. Sólo mocks/fixtures; no systemctl real, no /proc, no Xray real ni acciones mutadoras.
 
 H6-E2 es el siguiente bloque previsto. No hay backend live, selector en menú/CLI ni autorización para operaciones reales. Sin commit/push; main y Xray-Normativa/ intactas.
+
+## Punto de control — H6-E2 (2026-11-06)
+
+H6-E2 implementada y verificada en fixtures, PASS CON LIMITACIONES. El nuevo inspector scripts/xray_runtime_process_identity.py comprueba PID/starttime, UID/GID efectivos, ejecutable /proc/PID/exe, argv exacto y hash del binario; rechaza inconsistencias y cambios observables durante la inspección. No afirma qué configuración cargó el proceso.
+
+Evidencia: 22/22 pruebas focales, 332/332 Python global, py_compile, compileall, bash -n, tres pruebas Bash de servicio, install.sh --check, ShellCheck -S error y git diff --check PASS. No se consultó /proc real ni systemd/Xray real. No se conectó con H6-A/R-05, no hay backend mutador ni selector live. H6-E3 y H6-E4 pendientes. Sin commit/push; main y Xray-Normativa/ intactas.
+
+## Punto de control — H6-E3 (2026-11-06)
+
+H6-E3 implementada y verificada con dobles/fixtures, PASS CON LIMITACIONES. Se correlaciona H6-A con H6-E2 para verificar MainPID, proceso, ejecutable, argv, UID/GID, starttime, InvocationID y ActiveEnterTimestamp estables. R-05 falla cerrado si falta o diverge process_identity. H6-B schema v2 persiste la identidad del proceso junto con la invocación.
+
+Evidencia: correlación 16/16, H6-B 15/15, H6-C 9/9, Python global 332/332; py_compile, compileall, bash -n, pruebas Bash de servicio, install.sh --check, ShellCheck -S error y git diff --check PASS. No hubo systemctl/Xray/procfs real ni backend mutador. H6-E4 pendiente; H6-F/live no habilitado. Sin commit/push; main y Xray-Normativa/ intactas.
+
+## Punto de control — auditoría integral H6-E (2026-11-06)
+
+Dictamen H6-E: PASS CON LIMITACIONES. H6-E2 22/22; correlación 16/16; H6-B schema v2 15/15; H6-C 9/9; Python global 332/332. py_compile, compileall, bash -n, pruebas Bash de servicio, install.sh --check, ShellCheck -S error y git diff --check PASS.
+
+No hubo systemctl/Xray/procfs real, backend mutador, prueba WAN ni instalación limpia end-to-end. No se demuestra aún qué configuración carga Xray ni la conexión de cliente. Próximo control: H6-F, evaluación de preparación y autorización live específica. Sin commit/push; main y Xray-Normativa/ intactas.
+
+## Punto de control — H6-F evaluación read-only (2026-11-06)
+
+Evaluación de preparación completada; NO LISTO END-TO-END. Hallazgos principales: install.sh instala Xray y prepara systemd por defecto; Certbot no se instala automáticamente; la normativa Etapa 4 deja pendiente la selección formal ACME; el exportador VLESS-WS-TLS usa hellen.tvrc.me por defecto; R-05 sigue fixture-only y no hay backend mutador live.
+
+El plan y autorizaciones necesarias están en docs/EVALUACION_H6F_PREPARACION_PRUEBA_REAL_2026-11-06.md. No se ejecutó systemctl/Xray/Certbot real, ni se tocaron DNS, firewall, puertos, dependencias o WAN. Se requiere autorización específica antes de habilitar el backend real y ejecutar la prueba en una VPS limpia.
+
+## Punto de control — instalador Manager-only (2026-11-06)
+
+Implementado: install.sh --install instala sólo Xray Core Manager. No descarga Xray-core, no crea usuario/grupo xray, no crea /etc/xray ni modifica xray.service. La instalación integral se conserva con --install --with-xray; el flag requiere --install. README, docs de Fase B y H6-F actualizados.
+
+Pruebas: tests/install.sh PASS; Python 332/332; Bash 62/62; bash -n, ShellCheck -S error, compileall, install.sh --check y git diff --check PASS. Sólo prefijos temporales. No se instaló Xray ni se ejecutó systemctl real. H6-F sigue NO LISTO END-TO-END por backend live, ACME y endpoint público. Sin commit/push.
+
+## Actualización documental — 2026-11-06
+
+H6-E4 corresponde a la auditoría integral de H6-A/B/C/D/E1/E2/E3 y queda completada con PASS CON LIMITACIONES. La modificación Manager-only del instalador está implementada y probada en prefijos temporales. H6-F no está lista end-to-end: backend runtime live no disponible, Certbot requiere decisión/autorización, endpoint y valores Host/SNI deben confirmarse, y falta designar una VPS de aceptación. Los estados antiguos que contradigan el encabezado vigente son históricos.

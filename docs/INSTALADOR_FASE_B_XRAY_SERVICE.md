@@ -4,7 +4,7 @@ Estado: implementada y validada en una VPS desechable con Ubuntu 24.04.4 LTS (20
 
 ## Alcance
 
-La Fase B amplía install.sh después de desplegar el Manager:
+La Fase B amplía install.sh después de desplegar el Manager. Desde el cambio de flujo del 2026-11-06, esta fase es opcional y sólo se ejecuta con `--install --with-xray`; la instalación predeterminada despliega únicamente el Manager. El mismo flujo de Xray-core está disponible después desde el menú de Administración de Xray-core:
 
 1. Verifica condiciones previas del servicio antes de modificar el binario.
 2. Instala Xray-core en la versión fijada por config/xray-version.conf, usando el flujo existente de descarga oficial, SHA-256, extracción segura, respaldo y rollback.
@@ -41,7 +41,7 @@ La unidad ejecuta Xray como usuario no privilegiado xray:xray, incluye reinicio 
 ## Pruebas
 
 - tests/xray_service.sh: unidad, identidad simulada, idempotencia, colisiones, configuración inválida y rutas simbólicas.
-- tests/install.sh: instalación aislada de Fase A+B, conservación de datos, permisos, estado y unidad.
+- tests/install.sh: instalación aislada Manager-only por defecto y Fase A+B explícita con `--with-xray`, conservación de datos, permisos, estado y unidad.
 - tests/stage1_dependencies.sh: dependencias adicionales de systemd y cuentas de sistema.
 
 La descarga/verificación/instalación real de Xray-core se validó en un prefijo temporal en la VPS desechable. La unidad real del host pasó `systemd-analyze verify` y permaneció inactive/disabled. La persistencia tras reinicio y la activación real de la unidad siguen pendientes de una prueba controlada; no se ejecutó instalación real en la VPS de desarrollo.
@@ -65,3 +65,11 @@ El análisis estático systemd-analyze security informó un nivel de exposición
 ## Advertencias del release validado
 
 Xray 26.10.31 aceptó todas las configuraciones generadas, pero emitió avisos deprecación para WebSocket y gRPC, recomendando migración futura a XHTTP. También advirtió sobre REALITY en puertos distintos de 443. Son advertencias, no fallos de validación; se conservan las modalidades aprobadas y deben considerarse en la planificación de compatibilidad futura.
+
+## Flujo de instalación actualizado (2026-11-06)
+
+- `sudo ./install.sh --install`: instala sólo Xray Core Manager. No descarga ni instala Xray-core, no crea usuario/grupo `xray`, no prepara `/etc/xray` y no crea/modifica `xray.service`.
+- `sudo ./install.sh --install --with-xray`: conserva la instalación integral anterior, con verificación SHA-256 y preparación de unidad; no inicia ni habilita el servicio.
+- Después de instalar sólo el Manager, Xray-core se instala desde **Administración de Xray-core → Instalar Xray-core** y la unidad se prepara desde **Preparar servicio**.
+
+Las pruebas aisladas verifican ambas modalidades. El flujo Manager-only no inspecciona ni cambia fixtures de Xray preexistentes.
