@@ -1513,3 +1513,28 @@ R-05 queda CORREGIDA, VERIFICADA Y AUDITADA LOCALMENTE; aceptación formal pendi
 ## Addendum vigente — aceptación formal y autorización de publicación R-05 (2026-11-05)
 
 El propietario acepta R-05 en el alcance fixture-only auditado y autoriza commit/push exclusivamente en `design/user-identity-association-v1`. La auditoría registra 43/43 pruebas focales R-05, 230/230 Python globales y 61/61 Bash globales PASS. La aceptación no habilita UI, registro persistente de perfil activo, adaptador systemd real ni operaciones live. R-06/live sigue NO AUTORIZADA; Etapas 2, 5 y 6 permanecen ABIERTAS. No modificar `main` ni `Xray-Normativa/`.
+
+## Continuidad B4 fixture-only — 2026-11-05
+
+El propietario autorizó B4 únicamente en fixtures/mocks. La implementación añade registro activo persistente aislado, ligado a profile_id/revision/validation_id/generation_id/config_sha256/operation_id. Solo se actualiza tras observar servicio fixture \`active\` con generación y hash exactos. Estados pending y rollback conservan el registro anterior.
+
+Se añadió acción \`start\` fixture por CAS para operaciones \`published_pending_start\`, siempre con confirmación explícita. La publicación desde servicio inactive no inicia automáticamente. Journal schema 2 registra \`service_start_requested\`; recovery evita repetir start y puede reconciliar una caída tras transición/verificación.
+
+Leer primero:
+- \`docs/IMPLEMENTACION_B4_APLICACION_FIXTURE_2026-11-05.md\`
+- \`docs/AUDITORIA_B4_APLICACION_FIXTURE_2026-11-05.md\`
+
+Pruebas: 59/59 focales R05+B4; 246/246 Python global; 61/61 suites Bash. \`compileall\`, \`bash -n\`, ShellCheck, \`install.sh --check\` y \`git diff --check\` PASS.
+
+No continuar a systemd real sin autorización separada. Falta integración de menú y adaptador real. No modificar \`Xray-Normativa/\` ni \`main\`; no publicar sin autorización explícita. HEAD base \`2902b2ef602dfe97acf62428d6b7c35ce7c81d5d\`.
+
+## Continuidad H6-A — observación systemd read-only (2026-11-05)
+
+Leer:
+- `docs/DISENO_ADAPTADOR_SYSTEMD_REAL_INTEGRACION_RUNTIME_2026-11-05.md`
+- `docs/IMPLEMENTACION_H6A_ADAPTADOR_SYSTEMD_OBSERVACION_2026-11-05.md`
+- `docs/AUDITORIA_H6A_ADAPTADOR_SYSTEMD_OBSERVACION_2026-11-05.md`
+
+Se añadió `scripts/xray_runtime_systemd_adapter.py` con consulta read-only de propiedades allowlist para `xray.service`, comprobación de unidad y hash del archivo runtime. No afirma generación/hash cargados: ambos permanecen nulos sin atestación de InvocationID. Las 11 pruebas focales usan mocks.
+
+Regresión: 11/11 focales H6-A, 59/59 R-05+B4 y 257/257 Python globales PASS; smoke Bash, ShellCheck, AST y diff-check PASS. No se invocó systemctl real ni se modificó runtime. El adaptador no está conectado a R-05 ni a los menús; no hay acciones mutadoras. Siguiente: atestación generation/hash/InvocationID e inyección de backend manteniendo fixture como default. H6/live requiere autorización nueva y específica. No publicar sin autorización; no modificar `main` ni `Xray-Normativa/`.

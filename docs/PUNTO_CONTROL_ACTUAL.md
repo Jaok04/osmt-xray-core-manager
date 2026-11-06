@@ -1502,3 +1502,21 @@ R-05 queda CORREGIDA, VERIFICADA Y AUDITADA LOCALMENTE; aceptación formal pendi
 ## Actualización de control — aceptación formal R-05 y publicación autorizada (2026-11-05)
 
 R-05 queda ACEPTADA FORMALMENTE por el propietario, limitada al alcance fixture-only y a las restricciones de `docs/AUDITORIA_R05_ORQUESTACION_FIXTURE_2026-11-05.md`. El propietario autoriza commit/push exclusivamente en `design/user-identity-association-v1`. No se autoriza adaptador systemd real, UI, integración del registro persistente de perfil activo ni R-06/live. Etapas 2, 5 y 6 permanecen ABIERTAS. `main` y `Xray-Normativa/` no se modifican.
+
+## Punto de control — B4 fixture-only (2026-11-05)
+
+B4 recibió autorización limitada a fixtures/mocks. Se implementó el registro activo independiente y el flujo de start explícito simulado para \`published_pending_start\`. El registro solo se actualiza después de verificar \`active\` + generation_id + SHA-256; pending/rollback preservan el registro anterior. Recovery reconcilia por generación/hash y es idempotente.
+
+Código: \`scripts/xray_runtime_active_profile.py\`, \`scripts/xray_runtime_orchestrator.py\`, \`scripts/xray_runtime_service_adapter.py\`, \`scripts/xray_runtime_journal.py\`. Pruebas B4 añadidas a \`tests/test_xray_runtime_orchestrator.py\`.
+
+Evidencia: \`docs/IMPLEMENTACION_B4_APLICACION_FIXTURE_2026-11-05.md\`, \`docs/AUDITORIA_B4_APLICACION_FIXTURE_2026-11-05.md\`. 59/59 focales, 246/246 Python global, 61/61 suites Bash; análisis estático PASS.
+
+Limitación: este bloque no integra menú de producción ni systemd real. No acredita funcionamiento en VPS ni conexión WAN. No hubo operaciones live, commit o push. \`Xray-Normativa/\` y \`main\` siguen intactas. HEAD base: \`2902b2ef602dfe97acf62428d6b7c35ce7c81d5d\`.
+
+## Punto de control — H6-A observación systemd read-only (2026-11-05)
+
+H6-A añade un adaptador Python separado de observación systemd. Consulta propiedades de `xray.service`, verifica la unidad administrada y calcula el hash del archivo runtime sin inferir que sea el hash cargado por el proceso. La generación y el hash cargados quedan no atestiguados. No hay métodos mutadores ni integración con R-05/menús.
+
+Evidencia: 11/11 focales H6-A, 59/59 R-05+B4, 257/257 Python globales, smoke Bash, ShellCheck, AST y diff-check PASS. Las pruebas usan mocks; no se invocó systemctl real.
+
+No se modificó runtime, unidades, certificados, DNS, firewall, puertos/red, dependencias, `main` ni `Xray-Normativa/`. Sin commit/push. H6/live continúa NO AUTORIZADA.

@@ -409,7 +409,7 @@ def read_journal(operation_dir: Path) -> dict:
         "prepared", "validated", "snapshot_saved", "config_published",
         "rollback_started", "rollback_config_restored", "rollback_failed",
         "rolled_back", "aborted", "recovery_required",
-        "service_restart_requested", "service_verified",
+        "service_restart_requested", "service_start_requested", "service_verified",
         "published_pending_apply", "published_pending_start", "completed",
     }
     if (schema_version not in {1, 2} or set(value) != expected_fields
@@ -417,7 +417,7 @@ def read_journal(operation_dir: Path) -> dict:
             or not OP_RE.fullmatch(operation_dir.name)
             or not isinstance(value["state"], str) or value["state"] not in allowed_states
             or (schema_version == 1 and value["state"] in {
-                "service_restart_requested", "service_verified",
+                "service_restart_requested", "service_start_requested", "service_verified",
                 "published_pending_apply", "published_pending_start", "completed",
             })):
         fail("Journal runtime corrupto o con identidad incorrecta.")
@@ -591,7 +591,7 @@ def read_journal(operation_dir: Path) -> dict:
     if schema_version == 2:
         orchestration = value["orchestration"]
         fields = {"generation_id", "phase", "confirmation", "initial_service", "request", "verification", "rollback"}
-        phases = {"prepared", "published", "restart_requested", "service_verified", "pending_apply",
+        phases = {"prepared", "published", "restart_requested", "start_requested", "service_verified", "pending_apply",
                   "pending_start", "rollback_started", "rolled_back", "recovery_required", "completed"}
         if (not isinstance(orchestration, dict) or set(orchestration) != fields
                 or not isinstance(orchestration["generation_id"], str)
@@ -615,7 +615,7 @@ def read_journal(operation_dir: Path) -> dict:
         request = orchestration["request"]
         if (not isinstance(request, dict) or set(request) != {"generation_id", "action", "requested_at", "result"}
                 or request["generation_id"] != orchestration["generation_id"]
-                or not isinstance(request["action"], str) or request["action"] not in {"none", "restart", "restore"}
+                or not isinstance(request["action"], str) or request["action"] not in {"none", "start", "restart", "restore"}
                 or not isinstance(request["result"], str)
                 or request["result"] not in {"not_requested", "requested", "accepted", "rejected", "timeout", "response_lost", "exception"}
                 or (request["requested_at"] is not None and not isinstance(request["requested_at"], str))):
@@ -645,13 +645,14 @@ def read_journal(operation_dir: Path) -> dict:
                 or (rollback_meta["last_error"] is not None and not isinstance(rollback_meta["last_error"], str))):
             fail("Metadatos de rollback R-05 inválidos.")
         if value["state"] in {"published_pending_apply", "published_pending_start", "service_restart_requested",
-                               "service_verified", "completed"} and publication["status"] != "published":
+                               "service_start_requested", "service_verified", "completed"} and publication["status"] != "published":
             fail("Un estado R-05 posterior a publicación no contiene publicación confirmada.")
         if value["state"] == "rolled_back" and rollback["status"] != "rolled_back":
             fail("El estado rolled_back no coincide con el contrato R-04.")
         expected_phase = {
             "config_published": "published",
             "service_restart_requested": "restart_requested",
+            "service_start_requested": "start_requested",
             "service_verified": "service_verified",
             "published_pending_apply": "pending_apply",
             "published_pending_start": "pending_start",
@@ -665,18 +666,24 @@ def read_journal(operation_dir: Path) -> dict:
             fail("La fase R-05 no coincide con el estado durable del journal.")
         if value["state"] in {"service_verified", "completed"} and verification["status"] != "pass":
             fail("No se permite declarar servicio verificado/completado sin evidencia PASS.")
-        if value["state"] in {"service_restart_requested", "service_verified", "completed"} and (
-                request["action"] != "restart" or orchestration["confirmation"] != "accepted"
-                or initial["active_state"] != "active"):
-            fail("La petición restart no tiene confirmación/estado inicial active.")
+        if value["state"] in {"service_restart_requested", "service_start_requested", "service_verified", "completed"}:
+            expected_action = "restart" if initial["active_state"] == "active" else "start"
+            if (request["action"] != expected_action or orchestration["confirmation"] != "accepted"
+                    or initial["active_state"] not in {"active", "inactive"}):
+                fail("La acción de servicio no coincide con el estado inicial y su confirmación.")
+            if value["state"] == "service_restart_requested" and initial["active_state"] != "active":
+                fail("service_restart_requested requiere estado inicial active.")
+            if value["state"] == "service_start_requested" and initial["active_state"] != "inactive":
+                fail("service_start_requested requiere estado inicial inactive.")
         if request["action"] == "none" and (
                 request["result"] != "not_requested" or request["requested_at"] is not None):
             fail("Una operación sin acción de servicio contiene una petición inesperada.")
         if request["action"] != "none" and (
                 request["result"] == "not_requested" or request["requested_at"] is None):
             fail("La petición al adaptador carece de fecha/resultado.")
-        if value["state"] in {"config_published", "service_restart_requested", "service_verified",
-                              "published_pending_apply", "published_pending_start", "completed"} and initial["active_state"] not in {"active", "inactive"}:
+        if value["state"] in {"config_published", "service_restart_requested", "service_start_requested",
+                              "service_verified", "published_pending_apply", "published_pending_start",
+                              "completed"} and initial["active_state"] not in {"active", "inactive"}:
             fail("No se puede publicar desde un estado inicial failed/unknown.")
         if value["state"] == "published_pending_apply" and (
                 orchestration["confirmation"] != "rejected" or initial["active_state"] != "active"):
@@ -1066,7 +1073,7 @@ def recover_store(
                 continue
             if journal["state"] in {
                 "config_published", "rollback_started", "rollback_config_restored",
-                "rollback_failed", "rolled_back", "service_restart_requested",
+                "rollback_failed", "rolled_back", "service_restart_requested", "service_start_requested",
                 "service_verified", "published_pending_apply", "published_pending_start", "completed",
             }:
                 recovered.append({

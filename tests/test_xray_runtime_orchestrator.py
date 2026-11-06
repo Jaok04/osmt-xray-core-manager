@@ -17,6 +17,7 @@ import test_xray_runtime_journal as journal_test_helpers
 import xray_runtime_journal as journal
 import xray_runtime_orchestrator as orchestrator
 import xray_runtime_service_adapter as adapter
+import xray_runtime_active_profile as active_profiles
 
 
 def _concurrent_restart_worker(root, barrier, output, generation_id, config_sha256,
@@ -705,8 +706,321 @@ class RuntimeOrchestratorTests(unittest.TestCase):
         self.assertEqual(len(restart_events), 1)
         self.assertEqual(restart_events[0]["generation_id"], gen)
         self.assertNotIn("subprocess", adapter.__dict__)
-        self.assertTrue(all(event["action"] in {"status", "restart", "restore"} for event in events))
+        self.assertTrue(all(event["action"] in {"status", "start", "restart", "restore"} for event in events))
 
+
+    def _apply_with_active_register(self, *, active_state="active", confirm_restart=True,
+                                    restart_outcome="success", crash_at=None):
+        self.configure(active_state)
+        self.patch_pipeline()
+        return orchestrator.apply_operation(
+            staging_args=self.staging_args,
+            service_root=self.fx.service_root,
+            operation_store=self.fx.operation_store,
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            lease_root=self.fx.lease_root,
+            service_uid=self.fx.service_uid,
+            service_gid=self.fx.service_gid,
+            adapter_root=self.adapter_root,
+            confirm_restart=confirm_restart,
+            restart_outcome=restart_outcome,
+            crash_at=crash_at,
+            active_profile_store=self.fx.base / "active-profile-store",
+        )
+
+    def _seed_active_register(self):
+        store = active_profiles.ActiveProfileStore(self.fx.base / "active-profile-store")
+        record = {
+            "schema_version": 1,
+            "profile_id": "profile-" + "9" * 32,
+            "revision": "r000009",
+            "validation_id": "pvalidation-" + "8" * 32,
+            "generation_id": "generation-" + "7" * 32,
+            "config_sha256": "6" * 64,
+            "operation_id": "runtime-op-" + "5" * 32,
+            "applied_at": journal.now(),
+            "service_unit": "xray.service",
+            "service_state": "active",
+            "config_target": "etc/xray/config.json",
+        }
+        store.set_active(record)
+        return store, record
+
+    def test_b4_active_register_written_only_after_verified_restart(self):
+        result = self._apply_with_active_register()
+        self.assertEqual(result["status"], "COMPLETED")
+        record = active_profiles.ActiveProfileStore(
+            self.fx.base / "active-profile-store"
+        ).read()
+        operation = self.record(result)
+        self.assertEqual(record["profile_id"], operation["source"]["profile_id"])
+        self.assertEqual(record["revision"], operation["source"]["revision"])
+        self.assertEqual(record["validation_id"], operation["source"]["validation_id"])
+        self.assertEqual(record["generation_id"], operation["orchestration"]["generation_id"])
+        self.assertEqual(record["config_sha256"], operation["publication"]["config_sha256"])
+        self.assertEqual(record["service_state"], "active")
+        self.assertEqual(record["config_target"], "etc/xray/config.json")
+        self.assertEqual(result["active_profile_record"]["status"], "ACTIVE_PROFILE_RECORDED")
+
+    def test_b4_pending_apply_preserves_previous_active_register(self):
+        store, previous = self._seed_active_register()
+        result = self._apply_with_active_register(confirm_restart=False)
+        self.assertEqual(result["status"], "PUBLISHED_PENDING_APPLY")
+        self.assertEqual(store.read(), previous)
+
+    def test_b4_inactive_pending_start_preserves_previous_active_register(self):
+        store, previous = self._seed_active_register()
+        result = self._apply_with_active_register(active_state="inactive")
+        self.assertEqual(result["status"], "PUBLISHED_PENDING_START")
+        self.assertEqual(store.read(), previous)
+        self.assertFalse(any(event["action"] == "restart" for event in adapter.audit_events(self.adapter_root)))
+
+    def test_b4_failed_restart_and_rollback_preserve_previous_active_register(self):
+        store, previous = self._seed_active_register()
+        result = self._apply_with_active_register(restart_outcome="reject")
+        self.assertEqual(result["status"], "ROLLED_BACK")
+        self.assertEqual(store.read(), previous)
+
+    def test_b4_recovery_after_verified_service_transition_updates_register(self):
+        with self.assertRaises(journal.SimulatedCrash):
+            self._apply_with_active_register(crash_at="after_service_verified")
+        self.assertIsNone(active_profiles.ActiveProfileStore(
+            self.fx.base / "active-profile-store"
+        ).read())
+        recovered = orchestrator.recover_operations(
+            operation_store=self.fx.operation_store,
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            active_profile_store=self.fx.base / "active-profile-store",
+        )
+        self.assertEqual(recovered["operations"][0]["status"], "COMPLETED")
+        record = active_profiles.ActiveProfileStore(
+            self.fx.base / "active-profile-store"
+        ).read()
+        operation = journal.read_journal(next((self.fx.operation_store / "operations").iterdir()))
+        self.assertEqual(record["generation_id"], operation["orchestration"]["generation_id"])
+        self.assertEqual(record["config_sha256"], operation["publication"]["config_sha256"])
+
+    def test_b4_recovery_reconciles_completed_journal_with_missing_register(self):
+        result = self.apply()
+        self.assertEqual(result["status"], "COMPLETED")
+        recovered = orchestrator.recover_operations(
+            operation_store=self.fx.operation_store,
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            active_profile_store=self.fx.base / "active-profile-store",
+        )
+        self.assertEqual(recovered["operations"][0]["status"], "NO_OP")
+        record = active_profiles.ActiveProfileStore(
+            self.fx.base / "active-profile-store"
+        ).read()
+        self.assertEqual(record["generation_id"], result["generation_id"])
+
+    def test_b4_active_register_rejects_symlinked_active_file(self):
+        root = self.fx.base / "active-profile-store"
+        store = active_profiles.ActiveProfileStore(root)
+        store.prepare()
+        target = self.fx.base / "outside-active.json"
+        target.write_text("{}")
+        target.chmod(0o600)
+        (root / active_profiles.ACTIVE_FILE).symlink_to(target)
+        with self.assertRaises(active_profiles.ActiveProfileError):
+            store.read()
+
+    def test_b4_completed_recovery_is_idempotent_for_active_register(self):
+        result = self._apply_with_active_register()
+        store = active_profiles.ActiveProfileStore(self.fx.base / "active-profile-store")
+        first = store.read()
+        recovered = orchestrator.recover_operations(
+            operation_store=self.fx.operation_store,
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            active_profile_store=self.fx.base / "active-profile-store",
+        )
+        second = store.read()
+        self.assertEqual(first, second)
+        self.assertEqual(recovered["operations"][0]["active_profile_record"]["status"], "ALREADY_RECORDED")
+        self.assertEqual(result["status"], "COMPLETED")
+
+    def test_b4_invalid_active_store_fails_before_publication_or_service_action(self):
+        root = self.fx.base / "active-profile-store"
+        root.mkdir(mode=0o700)
+        marker = root / active_profiles.MARKER
+        marker.write_text('{"schema_version":1,"purpose":"not-the-b4-fixture"}\\n')
+        marker.chmod(0o600)
+        self.configure("active")
+        self.patch_pipeline()
+        with self.assertRaises(active_profiles.ActiveProfileError):
+            orchestrator.apply_operation(
+                staging_args=self.staging_args, service_root=self.fx.service_root,
+                operation_store=self.fx.operation_store, lifecycle_lock=self.fx.lifecycle_lock,
+                application_lock=self.fx.application_lock, lease_root=self.fx.lease_root,
+                service_uid=self.fx.service_uid, service_gid=self.fx.service_gid,
+                adapter_root=self.adapter_root, confirm_restart=True,
+                active_profile_store=root,
+            )
+        self.assertEqual(self.fx.previous_config.read_bytes(), self.fx.previous_bytes)
+        self.assertFalse(any(event["action"] == "restart" for event in adapter.audit_events(self.adapter_root)))
+
+    def _publish_inactive_for_b4_start(self):
+        result = self.apply(active_state="inactive")
+        self.assertEqual(result["status"], "PUBLISHED_PENDING_START")
+        return result
+
+    def test_b4_explicit_start_after_pending_start_verifies_and_records_profile(self):
+        pending = self._publish_inactive_for_b4_start()
+        result = orchestrator.start_pending_operation(
+            operation_store=self.fx.operation_store,
+            operation_id=pending["operation_id"],
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            confirm_start=True,
+            active_profile_store=self.fx.base / "active-profile-store",
+        )
+        self.assertEqual(result["status"], "COMPLETED")
+        self.assertTrue(result["service_started"])
+        state = adapter.status(self.adapter_root)
+        self.assertEqual(state["active_state"], "active")
+        self.assertEqual(state["loaded_generation_id"], pending["generation_id"])
+        record = active_profiles.ActiveProfileStore(
+            self.fx.base / "active-profile-store"
+        ).read()
+        self.assertEqual(record["generation_id"], pending["generation_id"])
+        self.assertEqual(record["profile_id"], self.fx.staging_manifest["profile_id"])
+
+    def test_b4_explicit_start_requires_confirmation_and_leaves_pending_state(self):
+        pending = self._publish_inactive_for_b4_start()
+        result = orchestrator.start_pending_operation(
+            operation_store=self.fx.operation_store,
+            operation_id=pending["operation_id"],
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            confirm_start=False,
+            active_profile_store=self.fx.base / "active-profile-store",
+        )
+        self.assertEqual(result["status"], "START_CONFIRMATION_REQUIRED")
+        self.assertEqual(journal.read_journal(
+            self.fx.operation_store / "operations" / pending["operation_id"]
+        )["state"], "published_pending_start")
+        self.assertEqual(adapter.status(self.adapter_root)["active_state"], "inactive")
+        self.assertFalse(any(event["action"] == "start" for event in adapter.audit_events(self.adapter_root)))
+
+    def test_b4_rejected_explicit_start_rolls_back_config_and_keeps_service_inactive(self):
+        pending = self._publish_inactive_for_b4_start()
+        result = orchestrator.start_pending_operation(
+            operation_store=self.fx.operation_store,
+            operation_id=pending["operation_id"],
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            confirm_start=True,
+            start_outcome="reject",
+            active_profile_store=self.fx.base / "active-profile-store",
+        )
+        self.assertEqual(result["status"], "ROLLED_BACK")
+        self.assertEqual(self.fx.previous_config.read_bytes(), self.fx.previous_bytes)
+        self.assertEqual(adapter.status(self.adapter_root)["active_state"], "inactive")
+        self.assertIsNone(active_profiles.ActiveProfileStore(
+            self.fx.base / "active-profile-store"
+        ).read())
+
+    def test_b4_start_recovery_after_transition_does_not_start_twice(self):
+        pending = self._publish_inactive_for_b4_start()
+        with self.assertRaises(journal.SimulatedCrash):
+            orchestrator.start_pending_operation(
+                operation_store=self.fx.operation_store,
+                operation_id=pending["operation_id"],
+                lifecycle_lock=self.fx.lifecycle_lock,
+                application_lock=self.fx.application_lock,
+                adapter_root=self.adapter_root,
+                confirm_start=True,
+                active_profile_store=self.fx.base / "active-profile-store",
+                crash_at="after_start_transition",
+            )
+        recovered = orchestrator.recover_operations(
+            operation_store=self.fx.operation_store,
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            active_profile_store=self.fx.base / "active-profile-store",
+        )
+        self.assertEqual(recovered["operations"][0]["status"], "COMPLETED")
+        starts = [event for event in adapter.audit_events(self.adapter_root)
+                  if event["action"] == "start"]
+        self.assertEqual(len(starts), 1)
+        record = active_profiles.ActiveProfileStore(
+            self.fx.base / "active-profile-store"
+        ).read()
+        self.assertEqual(record["generation_id"], pending["generation_id"])
+
+    def test_b4_start_requested_journal_is_deferred_to_r05_by_r03_and_r04(self):
+        pending = self._publish_inactive_for_b4_start()
+        with self.assertRaises(journal.SimulatedCrash):
+            orchestrator.start_pending_operation(
+                operation_store=self.fx.operation_store,
+                operation_id=pending["operation_id"],
+                lifecycle_lock=self.fx.lifecycle_lock,
+                application_lock=self.fx.application_lock,
+                adapter_root=self.adapter_root,
+                confirm_start=True,
+                crash_at="after_start_transition",
+            )
+        op_dir = self.fx.operation_store / "operations" / pending["operation_id"]
+        before = (op_dir / "journal.json").read_bytes()
+        r03_result = self.fx.recover()
+        r04_result = orchestrator.publisher.recover_publications(
+            self.fx.operation_store, self.fx.lifecycle_lock, self.fx.application_lock
+        )
+        after = (op_dir / "journal.json").read_bytes()
+        self.assertEqual(before, after)
+        self.assertEqual(r03_result["operations"][0]["action"], "deferred_to_R04_R05_recovery")
+        self.assertEqual(r04_result["operations"][0]["action"], "deferred_to_R05_recovery")
+        self.assertEqual(journal.read_journal(op_dir)["state"], "service_start_requested")
+        self.recover()
+        self.assertEqual(journal.read_journal(op_dir)["state"], "completed")
+
+    def test_b4_start_failure_after_transition_fails_closed_without_active_record(self):
+        pending = self._publish_inactive_for_b4_start()
+        result = orchestrator.start_pending_operation(
+            operation_store=self.fx.operation_store,
+            operation_id=pending["operation_id"],
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            confirm_start=True,
+            start_outcome="failed_after",
+            active_profile_store=self.fx.base / "active-profile-store",
+        )
+        self.assertEqual(result["status"], "RECOVERY_REQUIRED")
+        self.assertEqual(self.fx.previous_config.read_bytes(), self.fx.previous_bytes)
+        self.assertEqual(adapter.status(self.adapter_root)["active_state"], "failed")
+        self.assertIsNone(active_profiles.ActiveProfileStore(
+            self.fx.base / "active-profile-store"
+        ).read())
+
+    def test_b4_active_register_rejects_inactive_or_unverified_claim(self):
+        store = active_profiles.ActiveProfileStore(self.fx.base / "active-profile-store")
+        value = {
+            "schema_version": 1,
+            "profile_id": "profile-" + "a" * 32,
+            "revision": "r000001",
+            "validation_id": "pvalidation-" + "b" * 32,
+            "generation_id": "generation-" + "c" * 32,
+            "config_sha256": "d" * 64,
+            "operation_id": "runtime-op-" + "e" * 32,
+            "applied_at": journal.now(),
+            "service_unit": "xray.service",
+            "service_state": "inactive",
+            "config_target": "etc/xray/config.json",
+        }
+        with self.assertRaises(active_profiles.ActiveProfileError):
+            store.set_active(value)
 
 if __name__ == "__main__":
     unittest.main()

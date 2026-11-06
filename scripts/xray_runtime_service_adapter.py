@@ -324,6 +324,60 @@ def restart(root: Path, *, generation_id: str, config_sha256: str,
         return {"result": result, "generation_id": generation_id, "service_action_performed": True}
 
 
+def start(root: Path, *, generation_id: str, config_sha256: str,
+          expected_generation_id: str | None, expected_config_sha256: str | None,
+          outcome: str = "success") -> dict:
+    """Simula start explícito desde inactive con CAS; nunca invoca systemd."""
+    with _fixture_lock(root):
+        _validate_request(generation_id, config_sha256)
+        allowed = {"success", "reject", "timeout_before", "timeout_after",
+                   "response_lost_after", "exception_before", "wrong_generation",
+                   "wrong_hash", "failed_after"}
+        if not isinstance(outcome, str) or outcome not in allowed:
+            _fail("Perfil de resultado start simulado no permitido.")
+        if expected_generation_id is not None and (
+                not isinstance(expected_generation_id, str)
+                or not GENERATION_RE.fullmatch(expected_generation_id)):
+            _fail("generation_id esperado previo inválido para start.")
+        if expected_config_sha256 is not None and (
+                not isinstance(expected_config_sha256, str)
+                or not SHA_RE.fullmatch(expected_config_sha256)):
+            _fail("Hash esperado previo inválido para start.")
+        state, audit = _load(root)
+        event = {"action": "start", "unit": "xray.service", "generation_id": generation_id,
+                 "config_sha256": config_sha256, "expected_generation_id": expected_generation_id,
+                 "expected_config_sha256": expected_config_sha256, "outcome": outcome}
+        if (state["active_state"] != "inactive"
+                or state["loaded_generation_id"] != expected_generation_id
+                or state["loaded_config_sha256"] != expected_config_sha256):
+            _record(root, audit, {**event, "result": "rejected_precondition"})
+            return {"result": "rejected", "generation_id": generation_id,
+                    "service_action_performed": False, "precondition_failed": True}
+        if outcome not in {"reject", "timeout_before", "exception_before"}:
+            if outcome == "wrong_generation":
+                state["loaded_generation_id"] = "generation-" + ("0" * 32 if generation_id[-1] != "0" else "1" * 32)
+                state["loaded_config_sha256"] = config_sha256
+            elif outcome == "wrong_hash":
+                state["loaded_generation_id"] = generation_id
+                state["loaded_config_sha256"] = hashlib.sha256(b"wrong-config").hexdigest()
+            else:
+                state["loaded_generation_id"] = generation_id
+                state["loaded_config_sha256"] = config_sha256
+            state["active_state"], state["sub_state"] = "active", "running"
+            if outcome == "failed_after":
+                state["active_state"], state["sub_state"] = "failed", "failed"
+            _atomic_write(root / STATE_FILE, state)
+        result = {
+            "success": "accepted", "reject": "rejected", "timeout_before": "timeout",
+            "timeout_after": "timeout", "response_lost_after": "response_lost",
+            "exception_before": "exception", "wrong_generation": "accepted",
+            "wrong_hash": "accepted", "failed_after": "accepted",
+        }[outcome]
+        _record(root, audit, {**event, "result": result})
+        return {"result": result, "generation_id": generation_id,
+                "service_action_performed": outcome not in {"reject", "timeout_before", "exception_before"}}
+
+
 def restore(root: Path, *, generation_id: str, expected_current_generation_id: str,
             previous_state: str, previous_generation_id: str | None,
             previous_config_sha256: str | None, outcome: str = "success") -> dict:

@@ -1381,3 +1381,19 @@ La corrección y reauditoría se realizaron exclusivamente con fixtures y tempor
 ## 2026-11-05 — aceptación formal y autorización de publicación R-05
 
 El propietario aceptó formalmente R-05 en el alcance fixture-only corregido y re-auditado: exclusión mutua interproceso con `fcntl.flock` cubriendo las transacciones completas de estado, restart, restore y auditoría; pruebas multiproceso de concurrencia y rechazo de lock symlink. Evidencia: 43/43 pruebas focales R-05, 230/230 Python globales y 61/61 Bash globales PASS, además de controles estáticos y `install.sh --check`. El propietario autorizó commit/push exclusivamente en `design/user-identity-association-v1`. La aceptación no cubre UI, registro persistente de perfil activo, adaptador systemd real ni operaciones live. Etapas 2, 5 y 6 permanecen ABIERTAS; R-06/live NO AUTORIZADA. `main` y `Xray-Normativa/` quedan excluidas.
+
+## 2026-11-05 — B4 fixture-only
+
+- Añadido registro activo de perfil fixture-only, con validación estricta, permisos privados, bloqueo interproceso y escritura atómica.
+- Integrado el registro con verificación R05 y recuperación idempotente.
+- Añadida acción start simulada por CAS para \`published_pending_start\`, con confirmación explícita.
+- Auditoría: 59/59 focales, 246/246 Python, 61/61 Bash; análisis estático PASS.
+- Sin operaciones live, dependencias nuevas, cambios en Xray-Normativa/main, commit ni push.
+
+## 2026-11-05 — H6-A adaptador systemd read-only
+
+- Añadido adaptador separado `scripts/xray_runtime_systemd_adapter.py`; sólo observa `xray.service` mediante propiedades allowlist y `systemctl show`.
+- Calcula hash del archivo runtime como dato del archivo, sin atribuirlo al proceso.
+- La generación/hash cargados permanecen no atestiguados; no se infieren desde ActiveState ni desde el registro activo.
+- 11/11 pruebas focales, 59/59 R-05+B4, 257/257 Python globales; smoke Bash, ShellCheck, AST y diff-check PASS.
+- Sin llamadas systemd reales, acciones mutadoras, cambios runtime, dependencias, commit ni push.

@@ -8,6 +8,7 @@ from argparse import Namespace
 from pathlib import Path
 
 import xray_runtime_journal as journal
+import xray_runtime_active_profile as active_profile_store_module
 import xray_runtime_preflight as preflight
 import xray_runtime_publisher as publisher
 import xray_runtime_service_adapter as service_adapter
@@ -47,10 +48,10 @@ def _save(path: Path, record: dict) -> None:
 
 def _service_action_performed(record: dict) -> bool:
     request = record["orchestration"]["request"]
-    restart_attempted = request["action"] == "restart" and request["result"] not in {
+    service_action_attempted = request["action"] in {"start", "restart"} and request["result"] not in {
         "not_requested", "requested", "rejected", "exception",
     }
-    return restart_attempted or record["orchestration"]["rollback"]["service_status"] == "restored"
+    return service_action_attempted or record["orchestration"]["rollback"]["service_status"] == "restored"
 
 
 def _mark_recovery_required(path: Path, record: dict, reason: str) -> dict:
@@ -85,6 +86,35 @@ def _matches(observed: dict, *, state: str, generation_id: str | None,
             and observed["loaded_config_sha256"] == config_sha256)
 
 
+def _commit_active_profile(active_profile_store: Path | None, adapter_root: Path,
+                           operation_id: str, record: dict) -> dict | None:
+    """Registra el perfil solo con servicio fixture active y generación/hash exactos."""
+    if active_profile_store is None:
+        return None
+    generation_id = record["orchestration"]["generation_id"]
+    config_hash = record["publication"]["config_sha256"]
+    observed = service_adapter.status(adapter_root, request_generation_id=generation_id)
+    if not _matches(observed, state="active", generation_id=generation_id,
+                    config_sha256=config_hash):
+        raise active_profile_store_module.ActiveProfileError(
+            "El servicio fixture ya no coincide con la generación publicada; no se actualiza el perfil activo."
+        )
+    value = {
+        "schema_version": 1,
+        "profile_id": record["source"]["profile_id"],
+        "revision": record["source"]["revision"],
+        "validation_id": record["source"]["validation_id"],
+        "generation_id": generation_id,
+        "config_sha256": config_hash,
+        "operation_id": operation_id,
+        "applied_at": journal.now(),
+        "service_unit": "xray.service",
+        "service_state": "active",
+        "config_target": "etc/xray/config.json",
+    }
+    return active_profile_store_module.ActiveProfileStore(active_profile_store).set_active(value)
+
+
 def _restore_after_failure(
     operation_store: Path, operation_id: str, lifecycle_lock: Path,
     application_lock: Path, adapter_root: Path, restore_outcome: str = "success",
@@ -95,8 +125,9 @@ def _restore_after_failure(
         operation_dir, record = _load(operation_store, operation_id)
         if record["state"] == "rolled_back":
             return {"status": "ALREADY_ROLLED_BACK", "operation_id": operation_id}
-        if record["state"] not in {"config_published", "service_restart_requested", "service_verified",
-                                   "rollback_started", "rollback_config_restored", "rollback_failed"}:
+        if record["state"] not in {"config_published", "service_restart_requested", "service_start_requested",
+                                   "service_verified", "rollback_started", "rollback_config_restored",
+                                   "rollback_failed"}:
             return _mark_recovery_required(operation_dir, record, "Estado no recuperable por rollback R-05.")
         if record["state"] not in {"rollback_started", "rollback_config_restored", "rollback_failed"}:
             record["state"] = "rollback_started"
@@ -220,6 +251,7 @@ def _execute_restart(
     operation_store: Path, operation_id: str, lifecycle_lock: Path,
     application_lock: Path, adapter_root: Path, restart_outcome: str,
     restore_outcome: str, crash_at: str | None = None,
+    active_profile_store: Path | None = None,
 ) -> dict:
     fds = publisher._acquire(operation_store, lifecycle_lock, application_lock)
     verified = False
@@ -287,17 +319,176 @@ def _execute_restart(
                 record["state"] = "completed"
                 record["orchestration"]["phase"] = "completed"
                 _save(operation_dir, record)
-                return {
-                    "status": "COMPLETED", "operation_id": operation_id,
+                active_result = None
+                active_error = None
+                if active_profile_store is not None:
+                    try:
+                        active_result = _commit_active_profile(
+                            active_profile_store, adapter_root, operation_id, record
+                        )
+                    except (active_profile_store_module.ActiveProfileError,
+                            service_adapter.ServiceAdapterError, OSError) as exc:
+                        active_error = str(exc)[:240]
+                result = {
+                    "status": "COMPLETED" if active_error is None else "COMPLETED_ACTIVE_REGISTER_PENDING",
+                    "operation_id": operation_id,
                     "generation_id": gen, "config_sha256": config_hash,
                     "runtime_published": True, "service_action_performed": True,
                     "service_verified": True,
                 }
+                if active_profile_store is not None:
+                    result["active_profile_record"] = active_result
+                    result["active_profile_error"] = active_error
+                return result
     finally:
         journal.release_locks(fds)
     return _restore_after_failure(
         operation_store, operation_id, lifecycle_lock, application_lock,
         adapter_root, restore_outcome, crash_at,
+    )
+
+
+def _execute_start(
+    operation_store: Path, operation_id: str, lifecycle_lock: Path,
+    application_lock: Path, adapter_root: Path, start_outcome: str = "success",
+    restore_outcome: str = "success", crash_at: str | None = None,
+    active_profile_store: Path | None = None,
+) -> dict:
+    """Ejecuta start explícito solo en el adaptador fixture B4."""
+    fds = publisher._acquire(operation_store, lifecycle_lock, application_lock)
+    try:
+        operation_dir, record = _load(operation_store, operation_id)
+        if record["state"] != "service_start_requested":
+            _fail("La operación debe tener start explícito confirmado.")
+        gen = record["orchestration"]["generation_id"]
+        config_hash = record["publication"]["config_sha256"]
+        initial = record["orchestration"]["initial_service"]
+        try:
+            before = service_adapter.status(adapter_root, request_generation_id=gen)
+            unchanged = _matches(
+                before, state="inactive",
+                generation_id=initial["loaded_generation_id"],
+                config_sha256=initial["loaded_config_sha256"],
+            )
+        except service_adapter.ServiceAdapterError:
+            before, unchanged = None, False
+        if not unchanged:
+            if before is not None:
+                _record_observation(record, before, "fail")
+            else:
+                record["orchestration"]["verification"]["status"] = "fail"
+                record["orchestration"]["verification"]["verified_at"] = journal.now()
+            _save(operation_dir, record)
+        else:
+            try:
+                result = service_adapter.start(
+                    adapter_root, generation_id=gen, config_sha256=config_hash,
+                    expected_generation_id=initial["loaded_generation_id"],
+                    expected_config_sha256=initial["loaded_config_sha256"],
+                    outcome=start_outcome,
+                )
+                record["orchestration"]["request"]["result"] = result["result"]
+            except service_adapter.ServiceAdapterError:
+                record["orchestration"]["request"]["result"] = "exception"
+            _save(operation_dir, record)
+            if crash_at == "after_start_transition":
+                raise journal.SimulatedCrash("after_start_transition")
+            try:
+                observed = service_adapter.status(adapter_root, request_generation_id=gen)
+                verified = _matches(observed, state="active", generation_id=gen,
+                                     config_sha256=config_hash)
+                _record_observation(record, observed, "pass" if verified else "fail")
+            except service_adapter.ServiceAdapterError:
+                record["orchestration"]["verification"]["status"] = "fail"
+                record["orchestration"]["verification"]["verified_at"] = journal.now()
+                verified = False
+            _save(operation_dir, record)
+            if verified:
+                record["state"] = "service_verified"
+                record["orchestration"]["phase"] = "service_verified"
+                _save(operation_dir, record)
+                if crash_at == "after_service_verified":
+                    raise journal.SimulatedCrash("after_service_verified")
+                record["state"] = "completed"
+                record["orchestration"]["phase"] = "completed"
+                _save(operation_dir, record)
+                active_result = None
+                active_error = None
+                if active_profile_store is not None:
+                    try:
+                        active_result = _commit_active_profile(
+                            active_profile_store, adapter_root, operation_id, record
+                        )
+                    except (active_profile_store_module.ActiveProfileError,
+                            service_adapter.ServiceAdapterError, OSError) as exc:
+                        active_error = str(exc)[:240]
+                result = {
+                    "status": "COMPLETED" if active_error is None else "COMPLETED_ACTIVE_REGISTER_PENDING",
+                    "operation_id": operation_id, "generation_id": gen,
+                    "config_sha256": config_hash, "runtime_published": True,
+                    "service_action_performed": True, "service_started": True,
+                    "service_verified": True,
+                }
+                if active_profile_store is not None:
+                    result["active_profile_record"] = active_result
+                    result["active_profile_error"] = active_error
+                return result
+    finally:
+        journal.release_locks(fds)
+    return _restore_after_failure(
+        operation_store, operation_id, lifecycle_lock, application_lock,
+        adapter_root, restore_outcome, crash_at,
+    )
+
+
+def start_pending_operation(
+    *, operation_store: Path, operation_id: str, lifecycle_lock: Path,
+    application_lock: Path, adapter_root: Path, confirm_start: bool,
+    active_profile_store: Path | None = None, start_outcome: str = "success",
+    restore_outcome: str = "success", crash_at: str | None = None,
+) -> dict:
+    """Inicia explícitamente una publicación pending_start; requiere confirmación y fixture."""
+    if type(confirm_start) is not bool:
+        _fail("confirm_start debe ser una decisión booleana explícita.")
+    if not confirm_start:
+        return {"status": "START_CONFIRMATION_REQUIRED", "operation_id": operation_id,
+                "service_action_performed": False}
+    if os.geteuid() != 0:
+        _fail("B4 fixture requiere root para los almacenes POSIX aislados.")
+    if active_profile_store is not None:
+        active_profile_store_module.ActiveProfileStore(active_profile_store).prepare()
+    fds = publisher._acquire(operation_store, lifecycle_lock, application_lock)
+    try:
+        operation_dir, record = _load(operation_store, operation_id)
+        if record["state"] != "published_pending_start":
+            _fail("Solo se puede iniciar una operación published_pending_start.")
+        initial = record["orchestration"]["initial_service"]
+        if initial["active_state"] != "inactive":
+            _fail("El inicio explícito B4 requiere estado inicial inactive.")
+        gen = record["orchestration"]["generation_id"]
+        observed = service_adapter.status(adapter_root, request_generation_id=gen)
+        if not _matches(observed, state="inactive",
+                        generation_id=initial["loaded_generation_id"],
+                        config_sha256=initial["loaded_config_sha256"]):
+            _fail("El servicio cambió desde la publicación; no se solicita start.")
+        target = publisher._config_target(
+            Path(record["service"]["service_root"]), record["service"]["gid"]
+        )
+        publisher._verify_published(target, record["publication"]["config_sha256"],
+                                    record["service"]["gid"])
+        record["orchestration"]["confirmation"] = "accepted"
+        record["orchestration"]["request"] = {
+            "generation_id": gen, "action": "start",
+            "requested_at": journal.now(), "result": "requested",
+        }
+        record["orchestration"]["phase"] = "start_requested"
+        record["state"] = "service_start_requested"
+        _save(operation_dir, record)
+    finally:
+        journal.release_locks(fds)
+    return _execute_start(
+        operation_store, operation_id, lifecycle_lock, application_lock,
+        adapter_root, start_outcome, restore_outcome, crash_at, active_profile_store,
     )
 
 
@@ -307,12 +498,15 @@ def apply_operation(
     service_uid: int, service_gid: int, adapter_root: Path,
     confirm_restart: bool, restart_outcome: str = "success",
     restore_outcome: str = "success", crash_at: str | None = None,
+    active_profile_store: Path | None = None,
 ) -> dict:
     """Ejecuta R-01→R-04 y orquesta solo el servicio fixture R-05."""
     if type(confirm_restart) is not bool:
         _fail("confirm_restart debe ser una decisión booleana explícita.")
     if os.geteuid() != 0:
         _fail("R-05 fixture requiere root para los almacenes POSIX aislados.")
+    if active_profile_store is not None:
+        active_profile_store_module.ActiveProfileStore(active_profile_store).prepare()
     initial = service_adapter.status(adapter_root)
     preflight_result = preflight.preflight(
         staging_args.profile_store, staging_args.master_key, staging_args.validation_store,
@@ -412,12 +606,14 @@ def apply_operation(
     return _execute_restart(
         operation_store, operation_id, lifecycle_lock, application_lock,
         adapter_root, restart_outcome, restore_outcome, crash_at,
+        active_profile_store,
     )
 
 
 def _recover_one(
     operation_store: Path, operation_id: str, lifecycle_lock: Path,
     application_lock: Path, adapter_root: Path,
+    active_profile_store: Path | None = None,
 ) -> dict:
     fds = publisher._acquire(operation_store, lifecycle_lock, application_lock)
     try:
@@ -425,7 +621,20 @@ def _recover_one(
         if record["schema_version"] != 2:
             return {"operation_id": operation_id, "status": "SKIPPED_LEGACY"}
         state = record["state"]
-        if state in {"completed", "published_pending_apply", "published_pending_start", "rolled_back", "recovery_required"}:
+        if state == "completed":
+            if active_profile_store is not None:
+                try:
+                    active_result = _commit_active_profile(
+                        active_profile_store, adapter_root, operation_id, record
+                    )
+                except (active_profile_store_module.ActiveProfileError,
+                        service_adapter.ServiceAdapterError, OSError) as exc:
+                    return {"operation_id": operation_id, "status": "ACTIVE_REGISTER_RECONCILIATION_REQUIRED",
+                            "state": state, "reason": str(exc)[:240]}
+                return {"operation_id": operation_id, "status": "NO_OP",
+                        "state": state, "active_profile_record": active_result}
+            return {"operation_id": operation_id, "status": "NO_OP", "state": state}
+        if state in {"published_pending_apply", "published_pending_start", "rolled_back", "recovery_required"}:
             return {"operation_id": operation_id, "status": "NO_OP", "state": state}
         gen = record["orchestration"]["generation_id"]
         if state == "snapshot_saved":
@@ -499,9 +708,9 @@ def _recover_one(
             fds = []
             return _execute_restart(
                 operation_store, operation_id, lifecycle_lock, application_lock,
-                adapter_root, "success", "success",
+                adapter_root, "success", "success", active_profile_store=active_profile_store,
             )
-        if state in {"service_restart_requested", "service_verified"}:
+        if state in {"service_restart_requested", "service_start_requested", "service_verified"}:
             observed = service_adapter.status(adapter_root, request_generation_id=gen)
             matches_new = _matches(
                 observed, state="active", generation_id=gen,
@@ -512,8 +721,23 @@ def _recover_one(
                 record["state"] = "completed"
                 record["orchestration"]["phase"] = "completed"
                 _save(operation_dir, record)
-                return {"operation_id": operation_id, "status": "COMPLETED",
-                        "reconciled_by_generation": True, "service_action_performed": True}
+                active_result = None
+                active_error = None
+                if active_profile_store is not None:
+                    try:
+                        active_result = _commit_active_profile(
+                            active_profile_store, adapter_root, operation_id, record
+                        )
+                    except (active_profile_store_module.ActiveProfileError,
+                            service_adapter.ServiceAdapterError, OSError) as exc:
+                        active_error = str(exc)[:240]
+                result = {"operation_id": operation_id,
+                          "status": "COMPLETED" if active_error is None else "COMPLETED_ACTIVE_REGISTER_PENDING",
+                          "reconciled_by_generation": True, "service_action_performed": True}
+                if active_profile_store is not None:
+                    result["active_profile_record"] = active_result
+                    result["active_profile_error"] = active_error
+                return result
             # liberar y entrar al rollback coordinado con sus propios locks
             journal.release_locks(fds)
             fds = []
@@ -551,10 +775,12 @@ def _recover_one(
 
 def recover_operations(
     *, operation_store: Path, lifecycle_lock: Path, application_lock: Path,
-    adapter_root: Path,
+    adapter_root: Path, active_profile_store: Path | None = None,
 ) -> dict:
     """Reconcilia journals R-05 sin repetir acciones ambiguas ni tocar servicios reales."""
     journal.check_operation_store(operation_store)
+    if active_profile_store is not None:
+        active_profile_store_module.ActiveProfileStore(active_profile_store).prepare()
     operations = operation_store / "operations"
     if not operations.exists():
         return {"status": "RECOVERY_COMPLETE", "operations": [], "service_action_performed": False}
@@ -567,7 +793,7 @@ def recover_operations(
         if record["schema_version"] == 2:
             results.append(_recover_one(
                 operation_store, record["operation_id"], lifecycle_lock,
-                application_lock, adapter_root,
+                application_lock, adapter_root, active_profile_store,
             ))
     return {"status": "RECOVERY_COMPLETE", "operations": results,
             "service_action_performed": any(item.get("service_action_performed", False) for item in results)}
