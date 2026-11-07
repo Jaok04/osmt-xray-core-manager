@@ -2,7 +2,7 @@
 
 **Estado:** IMPLEMENTADO Y VERIFICADO EN PRUEBAS AUTOMATIZADAS; validación remota real con PAT pendiente.
 **Rama:** `design/user-identity-association-v1`.
-**HEAD base:** `b00314c931b06829548d3096b9fce740e1bbb216`; cambios de esta tarea todavía locales en esta fotografía.
+**Commit de implementación:** `8d76275b6bfb1eeda5eaa859b45f979804784094`; la actualización documental de continuidad se registra en el commit siguiente. La sincronización final se verifica después del push.
 
 - El instalador admite un único `install.sh`, autenticación Fine-grained PAT `Contents: Read-only`, descarga por commit SHA y verificación de helper/árbol Git.
 - Archivos principales: `install.sh`, `scripts/installer_bootstrap.py`, `tests/test_installer_bootstrap.py`.

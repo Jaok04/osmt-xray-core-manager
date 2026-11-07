@@ -1,6 +1,6 @@
 # Punto de reanudación vigente — instalador autónomo GitHub (2026-11-06)
 
-El propietario aprobó implementar la instalación desde un único `install.sh` para el repositorio privado. La implementación está en el árbol de trabajo de `/opt/xray-manager`, rama `design/user-identity-association-v1`, sobre HEAD base `b00314c931b06829548d3096b9fce740e1bbb216`; todavía no está publicada en esta fotografía.
+El propietario aprobó implementar la instalación desde un único `install.sh` para el repositorio privado. La implementación está en el árbol de trabajo de `/opt/xray-manager`, rama `design/user-identity-association-v1`, commit de implementación `8d76275b6bfb1eeda5eaa859b45f979804784094`; la actualización de continuidad se registra en el commit documental siguiente y se publicará junto con él.
 
 - Fine-grained PAT de GitHub, limitado al repositorio `Jaok04/xray-core-manager` con `Contents: Read-only`.
 - El bootstrap inicial obtiene `install.sh` mediante GitHub API; el instalador descarga el árbol completo de un commit inmutable, verifica helper SHA-256 y todos los Git blobs, y despliega sin `.git` ni historial.

@@ -4,6 +4,7 @@
 **Dictamen:** PASS EN PRUEBAS AUTOMATIZADAS — VALIDACIÓN GITHUB/VPS REAL PENDIENTE
 **Alcance:** bootstrap de un único `install.sh`, autenticación PAT read-only, fijación de commit, integridad del helper y del árbol de distribución.
 **Tipo de revisión:** auditoría interna de implementación; no independiente.
+**Commit auditado:** `8d76275b6bfb1eeda5eaa859b45f979804784094`.
 
 ## 1. Controles revisados
 

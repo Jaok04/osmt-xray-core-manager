@@ -4,6 +4,7 @@
 **Rama:** `design/user-identity-association-v1`
 **Estado:** IMPLEMENTADO Y VERIFICADO EN PRUEBAS AUTOMATIZADAS; validación real con PAT en VPS limpia pendiente.
 **Decisión aprobada:** `docs/DECISION_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`.
+**Commit de implementación:** `8d76275b6bfb1eeda5eaa859b45f979804784094`.
 
 ## 1. Resultado
 

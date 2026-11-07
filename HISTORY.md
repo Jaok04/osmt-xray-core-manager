@@ -8,7 +8,7 @@ Se añadió `docs/INSTALACION_DESDE_VPS_LIMPIA.md` con el bootstrap inicial de `
 
 Verificación: bootstrap focal 18/18; Python 406/406; Bash 62/62; `tests/install.sh`, compileall, bash -n, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. El extractor verificó 330/330 archivos de un `git archive` local.
 
-Límite: no se ejecutó GitHub API con PAT real ni bootstrap en la VPS nueva. La aceptación operativa queda pendiente de esa prueba. No se instaló Xray ni se tocaron runtime, systemd live, DNS, firewall, puertos, certificados o red. `main` y `Xray-Normativa/` intactas. HEAD base de implementación: `b00314c931b06829548d3096b9fce740e1bbb216`.
+Límite: no se ejecutó GitHub API con PAT real ni bootstrap en la VPS nueva. La aceptación operativa queda pendiente de esa prueba. No se instaló Xray ni se tocaron runtime, systemd live, DNS, firewall, puertos, certificados o red. `main` y `Xray-Normativa/` intactas. Commit de implementación: `8d76275b6bfb1eeda5eaa859b45f979804784094`; commit documental de continuidad posterior en la misma rama autorizada.
 
 ## 2026-11-05 — Implementación y auditoría focal B3 VLESS-WS-TLS
 
