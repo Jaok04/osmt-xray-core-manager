@@ -1,0 +1,91 @@
+# Paquete para revisión independiente — H6-G3
+
+## Objetivo
+
+Solicitar a un revisor humano o a otra IA, que no haya participado en la implementación, una revisión técnica adversarial e independiente de H6-G3-A/B/C/D y del informe de segunda pasada G3-E.
+
+## Estado exacto del árbol a revisar
+
+- Repositorio: `Jaok04/xray-core-manager` (privado).
+- Rama local autorizada: `design/user-identity-association-v1`.
+- HEAD observado: `9bab1dbed7d4873aa30a3fd00a976a1d666d9355`.
+- Ruta de desarrollo: `/opt/xray-manager` en la VPS `Implementación-Xray`.
+- Los cambios de G2/G3 están en el árbol de trabajo y NO están committeados ni publicados.
+- No cambiar de rama, no resetear, no limpiar el árbol y no sobrescribir archivos.
+- No modificar `main/` ni `Xray-Normativa/`.
+
+## Lectura obligatoria
+
+1. `docs/DECISION_H6G3_COORDINACION_TRANSACCIONAL_2026-11-06.md`
+2. `docs/IMPLEMENTACION_H6G3_A_B_COORDINACION_LOCKS_2026-11-06.md`
+3. `docs/IMPLEMENTACION_H6G3_C_TIMEOUT_RECONCILIACION_2026-11-06.md`
+4. `docs/IMPLEMENTACION_H6G3_D_ROLLBACK_FIXTURE_2026-11-06.md`
+5. `docs/AUDITORIA_H6G3_E_SEGUNDA_PASADA_2026-11-06.md`
+6. `scripts/xray_runtime_publisher.py`
+7. `scripts/xray_runtime_orchestrator.py`
+8. `scripts/xray_runtime_journal.py`
+9. `scripts/xray_runtime_service_adapter.py`
+10. `scripts/xray_runtime_live_backend.py`
+11. `scripts/xray_runtime_operation_evidence.py`
+12. `modules/xray_service.sh`
+13. `scripts/xray_runtime_service_control.py`
+14. `tests/test_xray_runtime_publisher.py`
+15. `tests/test_xray_runtime_orchestrator.py`
+16. `tests/test_xray_runtime_live_backend.py`
+17. `tests/test_xray_runtime_operation_evidence.py`
+18. `tests/test_xray_runtime_service_control.py`
+19. `tests/xray_service_control.sh`
+
+Contrastar las obligaciones funcionales pertinentes con la normativa aprobada en `Xray-Normativa/`, sin modificarla.
+
+## Contrato que debe comprobarse
+
+- Orden estricto lifecycle lock -> application lock; liberación inversa.
+- Un único ámbito coordinador mantiene ambos locks durante apply/start/restart/recovery hasta observación, rollback o `RECOVERY_REQUIRED`.
+- Helpers anidados reutilizan el propietario; no reacquieren ni liberan locks externos.
+- Timeout/response-lost: observar y correlacionar antes de cualquier retry; no repetir ciegamente.
+- Drift externo, snapshot corrupto o estado ambiguo no deben sobrescribirse ni repararse destructivamente.
+- Rollback de configuración y recuperación del proceso/servicio son dimensiones distintas.
+- `RECOVERY_REQUIRED` no debe entrar en ciclos automáticos de retry.
+- Journal, snapshot, generación, validación y hashes deben mantener correlación e integridad.
+- R-05 continúa fixture-only; ninguna ruta puede habilitar live accidentalmente.
+- El backend live debe rechazar evidencia fixture o evidencia no correlacionada.
+
+## Instrucciones de seguridad para el revisor
+
+- Revisión read-only. No ejecutar `systemctl`, no iniciar/detener/reiniciar Xray, no publicar en `/etc/xray`, no tocar runtime persistente, certificados, DNS, firewall, puertos ni red.
+- No ejecutar operaciones live ni instalar/actualizar dependencias.
+- No acceder a `/etc/xray-manager/keys/master.key` ni imprimir secretos.
+- No ejecutar comandos destructivos de Git (`reset`, `clean`, checkout forzado, rebase, commit, push).
+- Las pruebas automatizadas existentes usan fixtures; las suites de integración pueden llamar a Xray con `run -test` sobre archivos temporales. Si se ejecutan, confirmar que no haya side effects persistentes.
+- No asumir que el estado `HEAD` contiene los cambios: inspeccionar el árbol de trabajo completo y `git diff`/archivos no rastreados.
+
+## Pruebas adversariales que debe intentar reproducir
+
+1. Contextos anidados con las mismas rutas: demostrar un solo propietario y que un tercero no puede adquirir lifecycle lock antes de finalizar rollback.
+2. Contextos anidados con rutas distintas: comprobar rechazo fail-closed.
+3. Fallo/crash en cada frontera: antes y después de publicación, persistencia de solicitud start, transición, observación, rollback de bytes, restore del servicio y escritura final del journal.
+4. Timeout antes de transición, timeout después de transición, response-lost y fallo de reobservación.
+5. Estado `failed`/`unknown`, PID/InvocationID inconsistentes, generación ajena y hash runtime distinto.
+6. Snapshot corrupto o ausente, drift externo antes/durante rollback y recovery repetido.
+7. Repetición de recovery: comprobar idempotencia byte-a-byte y ausencia de acciones duplicadas.
+8. Import graph/entrypoints: demostrar que R-05 y menú no importan/instancian el backend live.
+9. Evidencia fixture presentada al backend live: debe ser rechazada.
+10. Comprobar preservación de `main` y `Xray-Normativa/`.
+
+## Entregable solicitado
+
+Emitir un informe separado con:
+
+- Dictamen `PASS`, `PASS CON LIMITACIONES` o `FAIL`.
+- Hallazgos ordenados por severidad (BLOCKER/CRITICAL/HIGH/MEDIUM/LOW).
+- Cada hallazgo con archivo, función y líneas; escenario reproducible; impacto; prueba que falla o evidencia que lo demuestra; corrección propuesta.
+- Pruebas ejecutadas, comandos exactos y resultados.
+- Limitaciones y cualquier punto no verificable.
+- Confirmación expresa de que la revisión fue independiente y que no se modificó el árbol.
+
+No aceptar un PASS basado únicamente en que las pruebas existentes pasan. Buscar defectos de concurrencia, TOCTOU, pérdida de locks, errores de recuperación, journal no durable y bypass de backend.
+
+## Prompt listo para el revisor
+
+Actúa como auditor sénior independiente de Bash/Python, Linux, concurrencia, persistencia transaccional y systemd. No participaste en la implementación. Revisa el árbol de trabajo actual en `/opt/xray-manager` siguiendo este paquete y el contrato G3. Tu tarea no es continuar desarrollando ni confiar en el informe previo: intenta refutarlo. Inspecciona el código real, reconstruye los flujos y reproduce adversarialmente los escenarios indicados, exclusivamente con fixtures y en modo read-only respecto al sistema real. No ejecutes operaciones live ni modifiques archivos. Entrega un informe técnico con severidad, archivo/línea, evidencia reproducible, pruebas y dictamen. Si no puedes acceder al árbol local no inventes hallazgos ni resultados: solicita el diff/archivos exactos que falten.

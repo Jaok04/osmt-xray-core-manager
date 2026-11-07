@@ -13,12 +13,15 @@ import re
 import secrets
 import stat
 import sys
+from contextvars import ContextVar
+from contextlib import contextmanager
 from pathlib import Path
 
 import xray_runtime_journal as journal
 import xray_runtime_staging as staging
 
 TEMP_RE = re.compile(r"\.config\.json\.r04tmp-[0-9a-f]{32}\.json\Z")
+_ACTIVE_LOCK_CONTEXT = ContextVar("xray_runtime_publisher_lock_context", default=None)
 
 
 def fail(message: str) -> None:
@@ -143,20 +146,54 @@ def _clean_publish_temps(config_dir: Path, service_gid: int) -> int:
     return removed
 
 
-def _load_operation(operation_store: Path, operation_id: str) -> tuple[Path, dict]:
+def _load_operation(operation_store: Path, operation_id: str, *, verify_snapshot: bool = True) -> tuple[Path, dict]:
     if not journal.OP_RE.fullmatch(operation_id):
         fail("operation_id inválido.")
     operations = operation_store / "operations"
     journal.check_dir(operations, 0o700, 0, 0)
     operation_dir = operations / operation_id
     record = journal.read_journal(operation_dir)
-    _snapshot_metadata(operation_dir, record)
+    if verify_snapshot:
+        _snapshot_metadata(operation_dir, record)
     return operation_dir, record
 
 
-def _acquire(operation_store: Path, lifecycle_lock: Path, application_lock: Path) -> list[int]:
+def _lock_identity(operation_store: Path, lifecycle_lock: Path, application_lock: Path) -> tuple[str, str, str]:
     journal.check_operation_store(operation_store)
     journal.check_fixture_locks(operation_store, lifecycle_lock, application_lock)
+    return tuple(os.path.abspath(path) for path in (operation_store, lifecycle_lock, application_lock))
+
+
+@contextmanager
+def transaction_locks(operation_store: Path, lifecycle_lock: Path, application_lock: Path):
+    """Propietario único de lifecycle->application locks; contextos anidados los reutilizan."""
+    identity = _lock_identity(operation_store, lifecycle_lock, application_lock)
+    active = _ACTIVE_LOCK_CONTEXT.get()
+    if active is not None:
+        if active[0] != identity:
+            fail("No se permite cambiar el conjunto de locks dentro de una transacción runtime.")
+        yield
+        return
+    fds = []
+    try:
+        fds.append(journal.acquire_lock(Path(identity[1])))
+        fds.append(journal.acquire_lock(Path(identity[2])))
+        token = _ACTIVE_LOCK_CONTEXT.set((identity, tuple(fds)))
+        try:
+            yield
+        finally:
+            _ACTIVE_LOCK_CONTEXT.reset(token)
+    finally:
+        journal.release_locks(fds)
+
+
+def _acquire(operation_store: Path, lifecycle_lock: Path, application_lock: Path) -> list[int]:
+    identity = _lock_identity(operation_store, lifecycle_lock, application_lock)
+    active = _ACTIVE_LOCK_CONTEXT.get()
+    if active is not None:
+        if active[0] != identity:
+            fail("Los locks solicitados no coinciden con la transacción runtime propietaria.")
+        return []
     fds = []
     try:
         fds.append(journal.acquire_lock(lifecycle_lock))
@@ -367,7 +404,16 @@ def rollback_operation(
         fail("Timeout de rollback R-04 fuera de rango.")
     fds = _acquire(operation_store, lifecycle_lock, application_lock)
     try:
-        operation_dir, record = _load_operation(operation_store, operation_id)
+        operation_dir, record = _load_operation(
+            operation_store, operation_id, verify_snapshot=False
+        )
+        try:
+            _snapshot_metadata(operation_dir, record)
+        except journal.RuntimeJournalError as exc:
+            return _mark_recovery_required(
+                operation_dir, record,
+                f"Snapshot inválido durante rollback; no se modifica el runtime: {exc}",
+            )
         if record["state"] == "rollback_config_restored":
             snapshot = _snapshot_metadata(operation_dir, record)
             previous = snapshot["previous_config"]
@@ -411,7 +457,15 @@ def recover_publications(
             if record["state"] in {"snapshot_saved", "config_published", "rollback_started"}:
                 target = _config_target(Path(record["service"]["service_root"]), record["service"]["gid"])
                 _clean_publish_temps(target.parent, record["service"]["gid"])
-                snapshot = _snapshot_metadata(operation_dir, record)
+                try:
+                    snapshot = _snapshot_metadata(operation_dir, record)
+                except journal.RuntimeJournalError as exc:
+                    result = _mark_recovery_required(
+                        operation_dir, record,
+                        f"Snapshot inválido durante recuperación; no se modifica el runtime: {exc}",
+                    )
+                    results.append({"operation_id": record["operation_id"], **result})
+                    continue
                 current, current_meta = _read_current(target, record["service"]["gid"])
                 previous = snapshot["previous_config"]
                 staged_hash = record["staging"]["config_sha256"]
@@ -442,7 +496,15 @@ def recover_publications(
                     result = _rollback_locked(operation_dir, record, timeout)
                     results.append({"operation_id": record["operation_id"], **result})
             elif record["state"] in {"rollback_config_restored", "rolled_back"}:
-                snapshot = _snapshot_metadata(operation_dir, record)
+                try:
+                    snapshot = _snapshot_metadata(operation_dir, record)
+                except journal.RuntimeJournalError as exc:
+                    result = _mark_recovery_required(
+                        operation_dir, record,
+                        f"Snapshot inválido al verificar rollback; no se modifica el runtime: {exc}",
+                    )
+                    results.append({"operation_id": record["operation_id"], **result})
+                    continue
                 previous = snapshot["previous_config"]
                 target = _config_target(Path(record["service"]["service_root"]), record["service"]["gid"])
                 current, meta = _read_current(target, record["service"]["gid"])

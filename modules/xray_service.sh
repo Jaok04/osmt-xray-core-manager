@@ -667,3 +667,60 @@ xray_service_action_locked() {
             ;;
     esac
 }
+
+
+# Puente interno para R-05: recibe un descriptor de lifecycle lock heredado.
+# No adquiere otro lock ni permite confiar únicamente en una variable de entorno.
+xray_service_action_inherited_lock() {
+    local action="${1:-}" fd="${XRAY_MANAGER_LIFECYCLE_LOCK_FD:-}"
+    local lock_path="${XRAY_MANAGER_LIFECYCLE_LOCK:-/run/lock/xray-manager-lifecycle.lock}"
+    local fd_path expected_identity actual_identity owner_pid lock_record
+
+    case "$action" in
+        start | restart | stop) ;;
+        *)
+            xray_service_fail "acción heredada no permitida: $action"
+            return 1
+            ;;
+    esac
+    xray_service_control_require_root || return 1
+
+    [[ "$fd" =~ ^[0-9]+$ ]] || {
+        xray_service_fail "no se proporcionó un descriptor lifecycle lock válido"
+        return 1
+    }
+    [[ "$lock_path" == /* && -f "$lock_path" && ! -L "$lock_path" ]] || {
+        xray_service_fail "la ruta lifecycle lock no es un archivo regular seguro"
+        return 1
+    }
+    [[ -e "/proc/$$/fd/$fd" ]] || {
+        xray_service_fail "el descriptor lifecycle lock no está abierto"
+        return 1
+    }
+    fd_path="$(readlink -- "/proc/$$/fd/$fd" 2>/dev/null || true)"
+    [[ "$fd_path" == "$lock_path" ]] || {
+        xray_service_fail "el descriptor heredado no corresponde a la ruta lifecycle lock"
+        return 1
+    }
+
+    expected_identity="$(stat -Lc '%d:%i:%u:%g:%a' -- "$lock_path" 2>/dev/null)" || return 1
+    actual_identity="$(stat -Lc '%d:%i:%u:%g:%a' -- "/proc/$$/fd/$fd" 2>/dev/null)" || return 1
+    [[ "$expected_identity" == "$actual_identity" && "$actual_identity" =~ ^[0-9]+:[0-9]+:0:0:600$ ]] || {
+        xray_service_fail "el descriptor lifecycle lock no conserva identidad root:root 0600"
+        return 1
+    }
+    owner_pid="${XRAY_MANAGER_LIFECYCLE_LOCK_OWNER_PID:-}"
+    [[ "$owner_pid" =~ ^[1-9][0-9]*$ ]] || {
+        xray_service_fail "no se proporcionó el PID propietario del lifecycle lock"
+        return 1
+    }
+    lock_record="$(sed -n \
+        's/^lock:[[:space:]]*[0-9][0-9]*:[[:space:]]*FLOCK[[:space:]]*ADVISORY[[:space:]]*WRITE[[:space:]]*\([0-9][0-9]*\)[[:space:]]*\([[:xdigit:]]*:[[:xdigit:]]*:[0-9]*\)[[:space:]]*0[[:space:]]*EOF$/\1 \2/p' \
+        "/proc/$$/fdinfo/$fd" 2>/dev/null)"
+    [[ "${lock_record%% *}" == "$owner_pid" && "${lock_record##*:}" == "$(stat -Lc '%i' -- "/proc/$$/fd/$fd" 2>/dev/null)" ]] || {
+        xray_service_fail "el descriptor heredado no acredita un FLOCK exclusivo propiedad del proceso R-05"
+        return 1
+    }
+
+    xray_service_action_locked "$action"
+}

@@ -6,6 +6,7 @@ import os
 import re
 import secrets
 from contextvars import ContextVar
+import inspect
 from functools import wraps
 from argparse import Namespace
 from pathlib import Path
@@ -42,6 +43,25 @@ def _with_service_backend(function):
             return function(*args, **kwargs)
         finally:
             _SERVICE_BACKEND.reset(token)
+    return wrapped
+
+
+def _with_transaction_locks(function):
+    """Mantiene lifecycle->application durante toda la operación; anidados reutilizan."""
+    signature = inspect.signature(function)
+
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        bound = signature.bind_partial(*args, **kwargs)
+        required = ("operation_store", "lifecycle_lock", "application_lock")
+        if any(name not in bound.arguments for name in required):
+            _fail("La operación transaccional no recibió sus rutas de locks.")
+        with publisher.transaction_locks(
+            bound.arguments["operation_store"],
+            bound.arguments["lifecycle_lock"],
+            bound.arguments["application_lock"],
+        ):
+            return function(*args, **kwargs)
     return wrapped
 
 
@@ -236,6 +256,7 @@ def _commit_active_profile(active_profile_store: Path | None, adapter_root: Path
     return active_profile_store_module.ActiveProfileStore(active_profile_store).set_active(value)
 
 
+@_with_transaction_locks
 def _restore_after_failure(
     operation_store: Path, operation_id: str, lifecycle_lock: Path,
     application_lock: Path, adapter_root: Path, restore_outcome: str = "success",
@@ -299,6 +320,17 @@ def _restore_after_failure(
             return _mark_recovery_required(
                 operation_dir, record,
                 f"La configuración se restauró, pero no se pudo consultar el servicio fixture: {exc}",
+            )
+        if observed["active_state"] in {"failed", "unknown"}:
+            record["orchestration"]["rollback"]["service_status"] = "failed"
+            record["orchestration"]["rollback"]["last_error"] = (
+                "La observación del servicio terminó en estado "
+                f"{observed['active_state']}; se prohíbe otra mutación automática."
+            )
+            return _mark_recovery_required(
+                operation_dir, record,
+                "La configuración se restauró, pero el servicio está failed/unknown; "
+                "se conserva el estado para recuperación manual y no se reintenta.",
             )
         if initial_state == "inactive":
             if observed["active_state"] == "inactive":
@@ -368,6 +400,7 @@ def _restore_after_failure(
         journal.release_locks(fds)
 
 
+@_with_transaction_locks
 def _execute_restart(
     operation_store: Path, operation_id: str, lifecycle_lock: Path,
     application_lock: Path, adapter_root: Path, restart_outcome: str,
@@ -480,6 +513,7 @@ def _execute_restart(
     )
 
 
+@_with_transaction_locks
 def _execute_start(
     operation_store: Path, operation_id: str, lifecycle_lock: Path,
     application_lock: Path, adapter_root: Path, start_outcome: str = "success",
@@ -585,6 +619,7 @@ def _execute_start(
 
 
 @_with_service_backend
+@_with_transaction_locks
 def start_pending_operation(
     *, operation_store: Path, operation_id: str, lifecycle_lock: Path,
     application_lock: Path, adapter_root: Path, confirm_start: bool,
@@ -628,6 +663,8 @@ def start_pending_operation(
         record["orchestration"]["phase"] = "start_requested"
         record["state"] = "service_start_requested"
         _save(operation_dir, record)
+        if crash_at == "after_start_request":
+            raise journal.SimulatedCrash("after_start_request")
     finally:
         journal.release_locks(fds)
     return _execute_start(
@@ -680,8 +717,26 @@ def apply_operation(
             "loaded_config_sha256": initial["loaded_config_sha256"],
         },
     )
-    operation_id = prepared["operation_id"]
+    return _continue_apply_operation(
+        operation_store=operation_store, operation_id=prepared["operation_id"],
+        lifecycle_lock=lifecycle_lock, application_lock=application_lock,
+        adapter_root=adapter_root, generation_id=generation_id,
+        confirm_restart=confirm_restart, timeout=staging_args.timeout,
+        restart_outcome=restart_outcome, restore_outcome=restore_outcome,
+        crash_at=crash_at, active_profile_store=active_profile_store,
+    )
+
+
+@_with_transaction_locks
+def _continue_apply_operation(
+    *, operation_store: Path, operation_id: str, lifecycle_lock: Path,
+    application_lock: Path, adapter_root: Path, generation_id: str,
+    confirm_restart: bool, timeout: int, restart_outcome: str,
+    restore_outcome: str, crash_at: str | None,
+    active_profile_store: Path | None,
+) -> dict:
     operation_dir, record = _load(operation_store, operation_id)
+    initial = record["orchestration"]["initial_service"]
     try:
         rechecked = _service_backend().status(adapter_root, request_generation_id=generation_id)
     except _service_backend().ServiceAdapterError as exc:
@@ -713,7 +768,7 @@ def apply_operation(
     _save(operation_dir, record)
     published = publisher.publish_operation(
         operation_store, operation_id, lifecycle_lock, application_lock,
-        timeout=staging_args.timeout,
+        timeout=timeout,
     )
     if published["status"] not in {"CONFIG_PUBLISHED", "ALREADY_PUBLISHED"}:
         return _mark_recovery_required(operation_dir, journal.read_journal(operation_dir), "R-04 no confirmó la publicación.")
@@ -755,6 +810,7 @@ def apply_operation(
     )
 
 
+@_with_transaction_locks
 def _recover_one(
     operation_store: Path, operation_id: str, lifecycle_lock: Path,
     application_lock: Path, adapter_root: Path,

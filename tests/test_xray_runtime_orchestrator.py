@@ -325,10 +325,30 @@ class RuntimeOrchestratorTests(unittest.TestCase):
         self.assertEqual(state["active_state"], "active")
         self.assertEqual(state["loaded_config_sha256"], hashlib.sha256(self.fx.previous_bytes).hexdigest())
 
-    def test_service_becoming_unknown_after_restart_requires_verified_rollback(self):
+    def test_service_becoming_unknown_after_restart_requires_recovery_without_mutation(self):
         result = self.apply(restart_outcome="unknown_after")
-        self.assertEqual(result["status"], "ROLLED_BACK")
-        self.assertEqual(adapter.status(self.adapter_root)["active_state"], "active")
+        self.assertEqual(result["status"], "RECOVERY_REQUIRED")
+        record = self.record(result)
+        self.assertEqual(record["state"], "recovery_required")
+        self.assertEqual(record["orchestration"]["rollback"]["config_status"], "restored")
+        self.assertEqual(record["orchestration"]["rollback"]["service_status"], "failed")
+        self.assertEqual(adapter.status(self.adapter_root)["active_state"], "unknown")
+        events = adapter.audit_events(self.adapter_root)
+        self.assertFalse(any(event["action"] == "restore" for event in events))
+        before = len(events)
+        recovered = self.recover()
+        self.assertEqual(recovered["operations"][0]["status"], "NO_OP")
+        self.assertEqual(len(adapter.audit_events(self.adapter_root)), before)
+
+    def test_service_becoming_failed_after_restart_requires_recovery_without_mutation(self):
+        result = self.apply(restart_outcome="failed_after")
+        self.assertEqual(result["status"], "RECOVERY_REQUIRED")
+        record = self.record(result)
+        self.assertEqual(record["state"], "recovery_required")
+        self.assertEqual(record["orchestration"]["rollback"]["config_status"], "restored")
+        self.assertEqual(adapter.status(self.adapter_root)["active_state"], "failed")
+        events = adapter.audit_events(self.adapter_root)
+        self.assertFalse(any(event["action"] == "restore" for event in events))
 
     def test_active_without_previous_config_fails_closed_before_publish(self):
         self.fx.previous_config.unlink()
@@ -371,12 +391,6 @@ class RuntimeOrchestratorTests(unittest.TestCase):
         self.assertEqual(result["status"], "ROLLED_BACK")
         self.assertEqual(self.record(result)["state"], "rolled_back")
 
-    def test_failed_post_restart_restores_previous_active_service(self):
-        result = self.apply(restart_outcome="failed_after")
-        self.assertEqual(result["status"], "ROLLED_BACK")
-        state = adapter.status(self.adapter_root)
-        self.assertEqual(state["active_state"], "active")
-        self.assertEqual(state["loaded_config_sha256"], hashlib.sha256(self.fx.previous_bytes).hexdigest())
 
     def test_r04_config_rollback_failure_is_reported_without_claiming_restore(self):
         self.configure("active")
@@ -394,6 +408,85 @@ class RuntimeOrchestratorTests(unittest.TestCase):
         record = self.record(result)
         self.assertEqual(record["orchestration"]["rollback"]["config_status"], "failed")
         self.assertNotEqual(self.fx.previous_config.read_bytes(), self.fx.previous_bytes)
+
+    def test_lifecycle_lock_remains_owned_across_publish_restart_and_rollback(self):
+        self.configure("active")
+        self.patch_pipeline()
+        original_restart = adapter.restart
+        original_rollback = orchestrator.publisher._rollback_locked
+        observed = {"restart": False, "rollback": False}
+
+        def assert_lock_held(stage):
+            with self.assertRaises(journal.RuntimeJournalError):
+                journal.acquire_lock(self.fx.lifecycle_lock)
+            observed[stage] = True
+
+        def guarded_restart(*args, **kwargs):
+            assert_lock_held("restart")
+            return original_restart(*args, **kwargs)
+
+        def guarded_rollback(*args, **kwargs):
+            assert_lock_held("rollback")
+            return original_rollback(*args, **kwargs)
+
+        with mock.patch.object(adapter, "restart", side_effect=guarded_restart), \
+             mock.patch.object(orchestrator.publisher, "_rollback_locked", side_effect=guarded_rollback):
+            result = orchestrator.apply_operation(
+                staging_args=self.staging_args, service_root=self.fx.service_root,
+                operation_store=self.fx.operation_store, lifecycle_lock=self.fx.lifecycle_lock,
+                application_lock=self.fx.application_lock, lease_root=self.fx.lease_root,
+                service_uid=self.fx.service_uid, service_gid=self.fx.service_gid,
+                adapter_root=self.adapter_root, confirm_restart=True, restart_outcome="reject",
+            )
+        self.assertEqual(result["status"], "ROLLED_BACK")
+        self.assertEqual(observed, {"restart": True, "rollback": True})
+
+    def test_recovery_keeps_lifecycle_lock_through_nested_rollback(self):
+        with self.assertRaises(journal.SimulatedCrash):
+            self.apply(crash_at="after_restart_request")
+        original_rollback = orchestrator.publisher._rollback_locked
+        observed = {"rollback": False}
+
+        def guarded_rollback(*args, **kwargs):
+            with self.assertRaises(journal.RuntimeJournalError):
+                journal.acquire_lock(self.fx.lifecycle_lock)
+            observed["rollback"] = True
+            return original_rollback(*args, **kwargs)
+
+        with mock.patch.object(orchestrator.publisher, "_rollback_locked", side_effect=guarded_rollback):
+            result = self.recover()
+        self.assertEqual(result["operations"][0]["status"], "ROLLED_BACK")
+        self.assertEqual(observed, {"rollback": True})
+
+    def test_pending_start_holds_lifecycle_lock_through_start_and_rollback(self):
+        pending = self.apply(active_state="inactive")
+        self.assertEqual(pending["status"], "PUBLISHED_PENDING_START")
+        original_start = adapter.start
+        original_rollback = orchestrator.publisher._rollback_locked
+        observed = {"start": False, "rollback": False}
+
+        def assert_lock_held(stage):
+            with self.assertRaises(journal.RuntimeJournalError):
+                journal.acquire_lock(self.fx.lifecycle_lock)
+            observed[stage] = True
+
+        def guarded_start(*args, **kwargs):
+            assert_lock_held("start")
+            return original_start(*args, **kwargs)
+
+        def guarded_rollback(*args, **kwargs):
+            assert_lock_held("rollback")
+            return original_rollback(*args, **kwargs)
+
+        with mock.patch.object(adapter, "start", side_effect=guarded_start), \
+             mock.patch.object(orchestrator.publisher, "_rollback_locked", side_effect=guarded_rollback):
+            result = orchestrator.start_pending_operation(
+                operation_store=self.fx.operation_store, operation_id=pending["operation_id"],
+                lifecycle_lock=self.fx.lifecycle_lock, application_lock=self.fx.application_lock,
+                adapter_root=self.adapter_root, confirm_start=True, start_outcome="reject",
+            )
+        self.assertEqual(result["status"], "ROLLED_BACK")
+        self.assertEqual(observed, {"start": True, "rollback": True})
 
     def test_service_lock_contention_prevents_restart_and_recovery_resumes(self):
         self.configure("active")
@@ -421,13 +514,20 @@ class RuntimeOrchestratorTests(unittest.TestCase):
         final = journal.read_journal(next((self.fx.operation_store / "operations").iterdir()))
         self.assertEqual(final["state"], "completed")
 
-    def test_service_restore_failure_leaves_recovery_required(self):
-        result = self.apply(restart_outcome="failed_after", restore_outcome="fail")
+    def test_service_restore_failure_leaves_recovery_required_without_retry(self):
+        result = self.apply(restart_outcome="wrong_hash", restore_outcome="fail")
         self.assertEqual(result["status"], "RECOVERY_REQUIRED")
         record = self.record(result)
         self.assertEqual(record["state"], "recovery_required")
         self.assertEqual(record["orchestration"]["rollback"]["config_status"], "restored")
         self.assertEqual(record["orchestration"]["rollback"]["service_status"], "failed")
+        before = adapter.audit_events(self.adapter_root)
+        restore_count = sum(event["action"] == "restore" for event in before)
+        self.assertEqual(restore_count, 1)
+        recovered = self.recover()
+        self.assertEqual(recovered["operations"][0]["status"], "NO_OP")
+        after = adapter.audit_events(self.adapter_root)
+        self.assertEqual(sum(event["action"] == "restore" for event in after), restore_count)
 
     def test_crash_after_r04_rename_before_journal_commit_is_reconciled(self):
         self.configure("active")
@@ -533,7 +633,7 @@ class RuntimeOrchestratorTests(unittest.TestCase):
 
     def test_crash_after_config_rollback_resumes_service_reconciliation(self):
         with self.assertRaises(journal.SimulatedCrash):
-            self.apply(restart_outcome="failed_after", crash_at="after_rollback_config")
+            self.apply(restart_outcome="wrong_hash", crash_at="after_rollback_config")
         first = journal.read_journal(next((self.fx.operation_store / "operations").iterdir()))
         self.assertEqual(first["state"], "rollback_config_restored")
         self.recover()
@@ -543,11 +643,42 @@ class RuntimeOrchestratorTests(unittest.TestCase):
 
     def test_crash_after_service_restore_is_idempotently_finalized(self):
         with self.assertRaises(journal.SimulatedCrash):
-            self.apply(restart_outcome="failed_after", crash_at="after_service_restore")
+            self.apply(restart_outcome="wrong_hash", crash_at="after_service_restore")
         self.recover()
         final = journal.read_journal(next((self.fx.operation_store / "operations").iterdir()))
         self.assertEqual(final["state"], "rolled_back")
         self.assertEqual(final["orchestration"]["rollback"]["service_status"], "unchanged")
+        restores_before = sum(event["action"] == "restore" for event in adapter.audit_events(self.adapter_root))
+        self.assertEqual(restores_before, 1)
+        again = self.recover()
+        self.assertEqual(again["operations"][0]["status"], "NO_OP")
+        restores_after = sum(event["action"] == "restore" for event in adapter.audit_events(self.adapter_root))
+        self.assertEqual(restores_after, restores_before)
+
+    def test_recovery_refuses_foreign_service_generation_after_config_rollback(self):
+        with self.assertRaises(journal.SimulatedCrash):
+            self.apply(restart_outcome="wrong_hash", crash_at="after_rollback_config")
+        operation_dir = next((self.fx.operation_store / "operations").iterdir())
+        record = journal.read_journal(operation_dir)
+        current = adapter.status(self.adapter_root)
+        foreign_generation = "generation-" + "f" * 32
+        adapter.restart(
+            self.adapter_root,
+            generation_id=foreign_generation,
+            config_sha256="a" * 64,
+            expected_generation_id=current["loaded_generation_id"],
+            expected_config_sha256=current["loaded_config_sha256"],
+        )
+        events_before = adapter.audit_events(self.adapter_root)
+        restores_before = sum(event["action"] == "restore" for event in events_before)
+        result = self.recover()
+        self.assertEqual(result["operations"][0]["status"], "RECOVERY_REQUIRED")
+        final = journal.read_journal(operation_dir)
+        self.assertEqual(final["state"], "recovery_required")
+        self.assertEqual(final["orchestration"]["rollback"]["config_status"], "restored")
+        self.assertEqual(adapter.status(self.adapter_root)["loaded_generation_id"], foreign_generation)
+        restores_after = sum(event["action"] == "restore" for event in adapter.audit_events(self.adapter_root))
+        self.assertEqual(restores_after, restores_before)
 
     def test_r03_and_r04_recovery_defer_schema_v2_to_r05(self):
         result = self.apply(confirm_restart=False)
@@ -984,6 +1115,102 @@ class RuntimeOrchestratorTests(unittest.TestCase):
         self.assertEqual(journal.read_journal(op_dir)["state"], "service_start_requested")
         self.recover()
         self.assertEqual(journal.read_journal(op_dir)["state"], "completed")
+
+    def test_b4_start_timeout_after_transition_is_reconciled_without_retry(self):
+        pending = self._publish_inactive_for_b4_start()
+        result = orchestrator.start_pending_operation(
+            operation_store=self.fx.operation_store,
+            operation_id=pending["operation_id"],
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            confirm_start=True,
+            start_outcome="timeout_after",
+        )
+        self.assertEqual(result["status"], "COMPLETED")
+        record = self.record(result)
+        self.assertEqual(record["orchestration"]["request"]["result"], "timeout")
+        self.assertEqual(record["orchestration"]["verification"]["status"], "pass")
+        starts = [event for event in adapter.audit_events(self.adapter_root)
+                  if event["action"] == "start"]
+        self.assertEqual(len(starts), 1)
+
+    def test_b4_start_lost_response_after_transition_is_reconciled_without_retry(self):
+        pending = self._publish_inactive_for_b4_start()
+        result = orchestrator.start_pending_operation(
+            operation_store=self.fx.operation_store,
+            operation_id=pending["operation_id"],
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            confirm_start=True,
+            start_outcome="response_lost_after",
+        )
+        self.assertEqual(result["status"], "COMPLETED")
+        self.assertEqual(self.record(result)["orchestration"]["request"]["result"], "response_lost")
+        starts = [event for event in adapter.audit_events(self.adapter_root)
+                  if event["action"] == "start"]
+        self.assertEqual(len(starts), 1)
+
+    def test_b4_crash_after_start_request_recovers_without_issuing_start(self):
+        pending = self._publish_inactive_for_b4_start()
+        with self.assertRaises(journal.SimulatedCrash):
+            orchestrator.start_pending_operation(
+                operation_store=self.fx.operation_store,
+                operation_id=pending["operation_id"],
+                lifecycle_lock=self.fx.lifecycle_lock,
+                application_lock=self.fx.application_lock,
+                adapter_root=self.adapter_root,
+                confirm_start=True,
+                crash_at="after_start_request",
+            )
+        events_before = [event for event in adapter.audit_events(self.adapter_root)
+                         if event["action"] == "start"]
+        self.assertEqual(len(events_before), 0)
+        recovered = self.recover()
+        self.assertEqual(recovered["operations"][0]["status"], "ROLLED_BACK")
+        events_after = [event for event in adapter.audit_events(self.adapter_root)
+                        if event["action"] == "start"]
+        self.assertEqual(len(events_after), 0)
+        record = self.record(pending)
+        self.assertEqual(record["orchestration"]["request"]["result"], "requested")
+        self.assertEqual(record["state"], "rolled_back")
+
+    def test_timeout_reobservation_failure_restores_config_but_requires_recovery(self):
+        original_status = adapter.status
+        def fail_status_after_restart(root, **kwargs):
+            events = adapter.audit_events(root)
+            if any(event.get("action") == "restart" for event in events):
+                raise adapter.ServiceAdapterError("observación fixture no disponible")
+            return original_status(root, **kwargs)
+        with mock.patch.object(adapter, "status", side_effect=fail_status_after_restart):
+            result = self.apply(restart_outcome="timeout_after")
+        self.assertEqual(result["status"], "RECOVERY_REQUIRED")
+        record = self.record(result)
+        self.assertEqual(record["state"], "recovery_required")
+        self.assertEqual(record["orchestration"]["request"]["result"], "timeout")
+        self.assertEqual(record["orchestration"]["rollback"]["config_status"], "restored")
+        self.assertEqual(self.fx.previous_config.read_bytes(), self.fx.previous_bytes)
+        events = adapter.audit_events(self.adapter_root)
+        self.assertFalse(any(event.get("action") == "restore" for event in events))
+
+    def test_b4_start_timeout_before_transition_rolls_back_without_retry(self):
+        pending = self._publish_inactive_for_b4_start()
+        result = orchestrator.start_pending_operation(
+            operation_store=self.fx.operation_store,
+            operation_id=pending["operation_id"],
+            lifecycle_lock=self.fx.lifecycle_lock,
+            application_lock=self.fx.application_lock,
+            adapter_root=self.adapter_root,
+            confirm_start=True,
+            start_outcome="timeout_before",
+        )
+        self.assertEqual(result["status"], "ROLLED_BACK")
+        self.assertEqual(self.record(result)["orchestration"]["request"]["result"], "timeout")
+        starts = [event for event in adapter.audit_events(self.adapter_root)
+                  if event["action"] == "start"]
+        self.assertEqual(len(starts), 1)
+        self.assertEqual(adapter.status(self.adapter_root)["active_state"], "inactive")
 
     def test_b4_start_failure_after_transition_fails_closed_without_active_record(self):
         pending = self._publish_inactive_for_b4_start()

@@ -315,6 +315,69 @@ class RuntimePublisherTests(unittest.TestCase):
         self.assertEqual(journal.read_journal(pathlib.Path(self.operation["operation_dir"]))["state"],
                          "rollback_config_restored")
 
+    def test_rollback_refuses_external_runtime_drift_without_overwrite(self):
+        self.publish()
+        external = b'{"external_actor":true,"must_preserve":true}\n'
+        self.write_target(external)
+        result = self.rollback()
+        self.assertEqual(result["status"], "RECOVERY_REQUIRED")
+        self.assertEqual(self.target.read_bytes(), external)
+        record = journal.read_journal(pathlib.Path(self.operation["operation_dir"]))
+        self.assertEqual(record["state"], "recovery_required")
+        self.assertIn("no coincide", record["rollback"]["last_error"])
+
+    def test_rollback_refuses_corrupted_snapshot_without_overwrite(self):
+        self.publish()
+        snapshot = pathlib.Path(self.operation["operation_dir"]) / "snapshot/config.json"
+        snapshot.write_bytes(b'{"tampered_snapshot":true}\n')
+        snapshot.chmod(0o600)
+        staged = self.target.read_bytes()
+        result = self.rollback()
+        self.assertEqual(result["status"], "RECOVERY_REQUIRED")
+        self.assertEqual(self.target.read_bytes(), staged)
+        record = journal.read_journal(pathlib.Path(self.operation["operation_dir"]))
+        self.assertEqual(record["state"], "recovery_required")
+        self.assertIn("Snapshot inválido", record["rollback"]["last_error"])
+
+    def test_recovery_after_rollback_rename_preserves_external_drift(self):
+        self.publish()
+        with self.assertRaises(journal.SimulatedCrash):
+            self.rollback(crash_at="after_rollback_rename")
+        external = b'{"external_after_crash":true}\n'
+        self.write_target(external)
+        result = self.recover()
+        self.assertEqual(result["operations"][0]["status"], "RECOVERY_REQUIRED")
+        self.assertEqual(self.target.read_bytes(), external)
+        record = journal.read_journal(pathlib.Path(self.operation["operation_dir"]))
+        self.assertEqual(record["state"], "recovery_required")
+
+    def test_repeated_recovery_after_rollback_is_read_only_and_idempotent(self):
+        self.publish()
+        with self.assertRaises(journal.SimulatedCrash):
+            self.rollback(crash_at="after_rollback_rename")
+        first = self.recover()
+        self.assertEqual(first["operations"][0]["status"], "ROLLBACK_CONFIG_RESTORED")
+        journal_path = pathlib.Path(self.operation["operation_dir"]) / "journal.json"
+        journal_bytes = journal_path.read_bytes()
+        config_bytes = self.target.read_bytes()
+        second = self.recover()
+        self.assertEqual(second["operations"][0]["status"], "ROLLBACK_CONFIG_RESTORED")
+        self.assertEqual(journal_path.read_bytes(), journal_bytes)
+        self.assertEqual(self.target.read_bytes(), config_bytes)
+
+    def test_recovery_marks_corrupted_snapshot_recovery_required_without_overwrite(self):
+        self.publish()
+        snapshot = pathlib.Path(self.operation["operation_dir"]) / "snapshot/config.json"
+        snapshot.write_bytes(b'{"tampered_during_recovery":true}\n')
+        snapshot.chmod(0o600)
+        staged = self.target.read_bytes()
+        result = self.recover()
+        self.assertEqual(result["operations"][0]["status"], "RECOVERY_REQUIRED")
+        self.assertEqual(self.target.read_bytes(), staged)
+        record = journal.read_journal(pathlib.Path(self.operation["operation_dir"]))
+        self.assertEqual(record["state"], "recovery_required")
+        self.assertIn("Snapshot inválido", record["rollback"]["last_error"])
+
     def test_snapshot_corruption_blocks_publication(self):
         snapshot = pathlib.Path(self.operation["operation_dir"]) / "snapshot/config.json"
         snapshot.write_bytes(b"corrupt")
@@ -322,6 +385,29 @@ class RuntimePublisherTests(unittest.TestCase):
         with self.assertRaises(journal.RuntimeJournalError):
             self.publish()
         self.assertEqual(self.target.read_bytes(), self.previous_bytes)
+
+    def test_nested_transaction_context_reuses_one_lock_owner(self):
+        with publisher.transaction_locks(
+            self.operation_store, self.lifecycle_lock, self.application_lock
+        ):
+            self.assertEqual(
+                publisher._acquire(self.operation_store, self.lifecycle_lock, self.application_lock),
+                [],
+            )
+            with publisher.transaction_locks(
+                self.operation_store, self.lifecycle_lock, self.application_lock
+            ):
+                self.assertEqual(
+                    publisher._acquire(self.operation_store, self.lifecycle_lock, self.application_lock),
+                    [],
+                )
+            with self.assertRaises(journal.RuntimeJournalError):
+                publisher._acquire(
+                    self.operation_store, self.lifecycle_lock,
+                    self.lock_dir / "different-application.lock",
+                )
+        fd = journal.acquire_lock(self.lifecycle_lock)
+        journal.release_locks([fd])
 
     def test_lock_contention_blocks_publication(self):
         fd = journal.acquire_lock(self.lifecycle_lock)

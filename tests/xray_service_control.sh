@@ -180,6 +180,57 @@ xray_service_action enable >"$TMP/enable.out"
 xray_service_action disable >"$TMP/disable.out"
 [[ "$(<"$XRAY_MOCK_ENABLED")" == disabled ]]
 
+# El puente R-05 reutiliza el descriptor lifecycle lock ya adquirido:
+# no vuelve a abrir/adquirir otro lock y delega en el controlador único.
+exec {bridge_fd}>>"$XRAY_MANAGER_LIFECYCLE_LOCK"
+flock -x "$bridge_fd"
+export XRAY_MANAGER_LIFECYCLE_LOCK_FD="$bridge_fd"
+export XRAY_MANAGER_LIFECYCLE_LOCK_OWNER_PID="$(awk '/^lock:/ {print $6; exit}' "/proc/$$/fdinfo/$bridge_fd")"
+xray_service_action_inherited_lock start >"$TMP/inherited-lock-start.out"
+grep -q 'quedó iniciado y activo' "$TMP/inherited-lock-start.out"
+[[ "$(<"$XRAY_MOCK_STATE")" == active ]]
+unset XRAY_MANAGER_LIFECYCLE_LOCK_FD XRAY_MANAGER_LIFECYCLE_LOCK_OWNER_PID
+flock -u "$bridge_fd"
+exec {bridge_fd}>&-
+
+# Un descriptor abierto pero sin lock no puede adquirirlo ni autorizar la acción.
+exec {unlocked_fd}>>"$XRAY_MANAGER_LIFECYCLE_LOCK"
+export XRAY_MANAGER_LIFECYCLE_LOCK_FD="$unlocked_fd"
+export XRAY_MANAGER_LIFECYCLE_LOCK_OWNER_PID="$$"
+log_before="$(wc -l <"$XRAY_MOCK_LOG")"
+if xray_service_action_inherited_lock stop >"$TMP/unlocked-lock.out" 2>&1; then
+    echo 'ERROR: el puente adquirió o aceptó un descriptor sin lock.' >&2
+    exit 1
+fi
+grep -q 'no acredita un FLOCK exclusivo propiedad del proceso R-05' "$TMP/unlocked-lock.out"
+[[ "$(wc -l <"$XRAY_MOCK_LOG")" == "$log_before" ]]
+unset XRAY_MANAGER_LIFECYCLE_LOCK_FD XRAY_MANAGER_LIFECYCLE_LOCK_OWNER_PID
+exec {unlocked_fd}>&-
+
+# Un descriptor de otro archivo no puede autorizar una mutación.
+exec {wrong_fd}>"$TMP/wrong.lock"
+chmod 600 "$TMP/wrong.lock"
+export XRAY_MANAGER_LIFECYCLE_LOCK_FD="$wrong_fd"
+log_before="$(wc -l <"$XRAY_MOCK_LOG")"
+if xray_service_action_inherited_lock stop >"$TMP/wrong-lock.out" 2>&1; then
+    echo 'ERROR: el puente aceptó un descriptor de otro archivo.' >&2
+    exit 1
+fi
+grep -q 'no corresponde a la ruta lifecycle lock' "$TMP/wrong-lock.out"
+[[ "$(wc -l <"$XRAY_MOCK_LOG")" == "$log_before" ]]
+unset XRAY_MANAGER_LIFECYCLE_LOCK_FD XRAY_MANAGER_LIFECYCLE_LOCK_OWNER_PID
+exec {wrong_fd}>&-
+
+# La ausencia de descriptor también bloquea antes de systemd.
+log_before="$(wc -l <"$XRAY_MOCK_LOG")"
+unset XRAY_MANAGER_LIFECYCLE_LOCK_OWNER_PID
+if xray_service_action_inherited_lock stop >"$TMP/missing-lock-fd.out" 2>&1; then
+    echo 'ERROR: el puente aceptó una operación sin descriptor heredado.' >&2
+    exit 1
+fi
+grep -q 'descriptor lifecycle lock válido' "$TMP/missing-lock-fd.out"
+[[ "$(wc -l <"$XRAY_MOCK_LOG")" == "$log_before" ]]
+
 # Journal query is bounded; invalid limits and foreign/tampered units are rejected.
 xray_service_show_logs 50 >"$TMP/logs.out"
 grep -q 'fixture log line' "$TMP/logs.out"

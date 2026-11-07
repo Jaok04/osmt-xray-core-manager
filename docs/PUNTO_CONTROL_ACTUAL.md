@@ -1601,3 +1601,92 @@ Pruebas: tests/install.sh PASS; Python 332/332; Bash 62/62; bash -n, ShellCheck 
 ## Actualización documental — 2026-11-06
 
 H6-E4 corresponde a la auditoría integral de H6-A/B/C/D/E1/E2/E3 y queda completada con PASS CON LIMITACIONES. La modificación Manager-only del instalador está implementada y probada en prefijos temporales. H6-F no está lista end-to-end: backend runtime live no disponible, Certbot requiere decisión/autorización, endpoint y valores Host/SNI deben confirmarse, y falta designar una VPS de aceptación. Los estados antiguos que contradigan el encabezado vigente son históricos.
+
+
+## H6-G2 — puente seguro hacia el controlador de servicio (2026-11-06)
+
+Contrato G1 aprobado y documentado en `docs/DECISION_H6G1_CONTRATO_BACKEND_RUNTIME_LIVE_2026-11-06.md`. El propietario aprobó el contrato H6-G1 y autorizó la implementación G2 en desarrollo, exclusivamente con mocks/fixtures. Se agregó `scripts/xray_runtime_service_control.py` y el punto de entrada `xray_service_action_inherited_lock()` en `modules/xray_service.sh`. Python hereda explícitamente el descriptor lifecycle lock hacia Bash; ambos lados verifican ruta/inode y condiciones de seguridad. Las acciones permitidas en este puente son start/restart/stop y se delegan al controlador único `xray_service.sh`; Python no ejecuta systemctl directamente.
+
+Pruebas: puente Python 9/9; observación systemd y atestación de proceso/identidad 58/58; Python global 341/341; las 62 suites Bash ejecutadas finalizaron correctamente; `bash -n`, `py_compile` y `git diff --check` PASS. La integración Python→Bash utilizó systemctl mock. Las pruebas VLESS/VMess con Xray 26.10.31 validan configuraciones en entorno temporal, no una instancia real expuesta a WAN.
+
+**Límites:** G2 está IMPLEMENTADA PARCIALMENTE; falta auditoría formal independiente. El puente no está conectado a R-05, no se habilitó backend live en `_with_service_backend` ni en el menú. No se modificó journal/orquestador, runtime persistente, unidad systemd real, `/etc/xray`, certificados, DNS, firewall, puertos ni red. No se ejecutaron acciones reales start/restart/stop, ACME ni conexión externa. El hash del archivo runtime sigue sin equivaler a evidencia de configuración cargada en memoria.
+
+Archivos de esta entrega: `modules/xray_service.sh`, `scripts/xray_runtime_service_control.py`, `tests/test_xray_runtime_service_control.py`, `tests/xray_service_control.sh` y `docs/IMPLEMENTACION_H6G2_PUENTE_CONTROL_SERVICIO_2026-11-06.md`.
+
+Estado Git: rama `design/user-identity-association-v1`, HEAD base `9bab1dbed7d4873aa30a3fd00a976a1d666d9355`; árbol con cambios locales sin commit. Sin push. `main` y `Xray-Normativa/` intactas. Las VPS de prueba no fueron utilizadas.
+
+**Siguiente:** auditoría formal del puente G2 y luego G3: diseñar la semántica live de observación, transición, correlación de InvocationID y rollback sin inferir configuración cargada. No habilitar live hasta superar G3/G4/G5 y recibir autorización específica para el host real.
+
+
+## Punto de control actualizado — H6-G2-B (2026-11-06)
+
+El backend live aislado se implementó y validó con mocks (14/14 nuevas; suite Python 355/355; Bash 62/62). No se habilitó en R-05 ni en el menú. No ejecutado systemd real. Rollback/restore live no implementado y falla cerrado. Estado: H6-G2 parcial; siguiente paso: revisión independiente y auditoría G2; después G3 integración transaccional con journal/publicación/recuperación.
+
+
+## Punto de control — auditoría H6-G2 (2026-11-06)
+
+Dictamen PASS CON LIMITACIONES; G2 NO CERRADO. Bloqueadores para integración live: F-01 estado inactive contradictorio aceptado; F-02 ausencia de evidencia de generación publicada/validada para start; F-03 propiedad/handoff lifecycle lock no demostrada. G3 debe resolver además timeout/RECOVERY_REQUIRED y rollback live. Backend live deshabilitado, fixture default. Ver `docs/AUDITORIA_H6G2_BACKEND_RUNTIME_LIVE_2026-11-06.md`.
+
+
+## H6-G2 — resolución F-01 (2026-11-06)
+
+Se corrigió la validación de snapshots systemd en `scripts/xray_runtime_live_backend.py`. Un estado `inactive` ahora rechaza PID distinto de `null/0` e InvocationID residual. Un estado `active` requiere PID entero mayor que 1, InvocationID hexadecimal de 32 caracteres, subestado `running` y resultado `success`. Se agregaron pruebas adversariales. Resultado: 17/17 focales, Python global 358/358, Bash 62/62, py_compile, bash -n focal, ShellCheck y diff-check PASS.
+
+F-01 queda corregido y verificado únicamente con fixtures. H6-G2 no se cierra ni se habilita live. F-02/F-03 siguen siendo bloqueadores para integración; F-04/F-05 se resolverán en G3. No hubo acciones sobre systemd/Xray real, runtime, certificados, DNS, firewall, puertos ni red. Sin commit/push; `main` y `Xray-Normativa/` intactas. Informe: `docs/IMPLEMENTACION_H6G2_F01_VALIDACION_ESTADOS_2026-11-06.md`.
+
+
+## H6-G2 — F-02: contrato y lector de evidencia (2026-11-06)
+
+Se implementó `scripts/xray_runtime_operation_evidence.py` para verificar operation_id/generation_id, journal schema 2, publicación confirmada, rollback no iniciado, staging/lease, informe persistido exacto, checks requeridos, hash de binario y hash de bytes runtime. El historial de validación se consulta read-only. El backend live dejó de aceptar un SHA-256 libre y exige evidencia correlacionada con operación y generación; solo acepta `environment=live`.
+
+Límite deliberado: el journal actual está restringido a fixtures, por lo que el lector devuelve `environment=fixture` y el backend lo rechaza para mutaciones live. No se debilitó el aislamiento ni se conectó R-05/menú. F-02 queda implementado para el contrato y verificado en fixtures, pero evidencia live sigue pendiente de G3. Pruebas: backend 20/20, lector 9/9, Python 370/370, Bash 62/62; verificaciones estáticas PASS. Sin acciones live ni commit/push. Documentos: `docs/DECISION_H6G2_F02_EVIDENCIA_OPERACION_GENERACION_2026-11-06.md`, `docs/IMPLEMENTACION_H6G2_F02_EVIDENCIA_OPERACION_2026-11-06.md`.
+
+
+## Punto de control — H6-G2 F-03 (2026-11-06)
+
+Corregida la comprobación de propiedad/handoff del lifecycle lock en el puente Python/Bash. La prueba usa `/proc/.../fdinfo` para acreditar FLOCK exclusivo vinculado al descriptor y PID propietario R-05; no vuelve a adquirir el lock. Pruebas focales Python 12/12 y Bash PASS. F-03 implementado en aislamiento, pendiente auditoría. G2 sigue abierto y live deshabilitado.
+
+Limitación: aún no se integró R-05 ni se extendió el lock sobre toda la transacción; G3 debe resolver ese ciclo de vida y evitar reacquisiciones anidadas. Ver `docs/IMPLEMENTACION_H6G2_F03_PROPIEDAD_LIFECYCLE_LOCK_2026-11-06.md`.
+
+## Punto de control — H6-G3-A/B (2026-11-06)
+
+**Estado:** implementado y verificado en fixtures; auditoría independiente pendiente. Se agregó `publisher.transaction_locks()` como único propietario de lifecycle→application. Apply, start pendiente, restart, rollback y `_recover_one()` reutilizan el mismo ámbito sin reacquisiciones internas ni ventanas entre transición y rollback.
+
+**Pruebas:** Python 377/377; Bash 62/62; py_compile/compileall, bash -n, ShellCheck -S error y git diff --check PASS. Las pruebas de lock verifican contención durante publicación/transición/rollback y en start/recovery anidados.
+
+**No habilita live:** journal y publisher siguen fixture-only; backend live continúa desconectado y rechazando evidencia fixture. G3-C, G3-D y G3-E pendientes. Sin systemctl/Xray real, red, certificados, DNS, firewall, puertos ni dependencias. Sin commit/push; main y Xray-Normativa/ intactas.
+
+
+## H6-G3-C — reconciliación de timeout/ambigüedad (2026-11-06)
+
+Implementado en R-05 fixture. Los resultados timeout/response_lost se conservan en el journal y la transición se decide por observación exacta de estado, generación y hash. Timeout antes de la acción con estado previo intacto permite rollback de configuración sin mutar servicio; timeout o respuesta perdida después de transición exacta se reconcilia como completado sin repetir acción. Si la observación es failed/unknown, no correlacionada o no disponible, se restaura la configuración cuando es seguro y se registra `RECOVERY_REQUIRED`, sin otra mutación de servicio. Ese estado queda como `NO_OP` en recuperaciones automáticas.
+
+Se añadió failpoint de prueba tras persistir start request y pruebas para start timeout_before/timeout_after/response_lost_after, crash antes de start, estados failed/unknown y reobservación fallida. Suite focal R-05: 67/67 PASS. Evidencia: `docs/IMPLEMENTACION_H6G3_C_TIMEOUT_RECONCILIACION_2026-11-06.md`.
+
+**Límites:** sólo fixtures/mocks. El backend live continúa aislado, sin reconciliación durable propia, sin conexión a R-05/CLI/menú. No se modifica journal para aceptar live ni se realiza rollback live. G3-C implementado focalmente; auditoría pendiente. G3-D y G3-E pendientes; H6-G2 permanece abierto. Sin systemctl/Xray real, dependencias, cambios persistentes, commit ni push.
+
+
+## H6-G3-D — rollback fixture adversarial e idempotencia (2026-11-06)
+
+La auditoría adversarial encontró un defecto: si el snapshot se corrompía después de publicar, `_load_operation()` lanzaba antes de que rollback/recovery pudiera persistir `RECOVERY_REQUIRED`. Se ajustó el camino controlado del publicador para leer el journal estructuralmente, validar snapshot y registrar `recovery_required` ante corrupción, sin usar el snapshot ni sobrescribir el runtime.
+
+Pruebas adversariales añadidas: drift externo antes de rollback; snapshot corrupto durante rollback y recovery; drift externo después de crash tras rename; recovery repetido byte-a-byte idempotente; generación de servicio ajena después de restaurar configuración; crash después de restaurar servicio sin repetir restore; fallo de restore seguido de recovery `NO_OP`. Se conservan pruebas de symlink/hardlink, TOCTOU, ausencia de snapshot previo y crashes de rename.
+
+Resultados: publicador + orquestador 86/86 PASS; Python global 388/388 PASS. Documento: `docs/IMPLEMENTACION_H6G3_D_ROLLBACK_FIXTURE_2026-11-06.md`.
+
+**Estado:** G3-A/B/C/D implementados y verificados con fixtures. G3-E auditoría independiente integral pendiente. H6-G2 permanece abierto; backend live no conectado y no habilitado. Sin systemctl/Xray real, dependencias, operaciones persistentes, commit ni push. `main` y `Xray-Normativa/` intactas.
+
+
+## H6-G3-E — auditoría integral de segunda pasada (2026-11-06)
+
+Se completó una segunda pasada sobre G3-A/B/C/D, contrastando el contrato transaccional, publicador R-04, orquestador R-05, journal, rollback, recuperación y aislamiento live. **Dictamen: PASS CON LIMITACIONES en alcance fixture.** No se identificó un defecto bloqueante nuevo dentro de ese alcance.
+
+Validación global: Python **388/388**, Bash **62/62**, `bash -n` global, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. Los 14 archivos normativos maestros coinciden byte a byte con `Xray-Normativa/`; el único archivo adicional es el README auxiliar. `main` y `Xray-Normativa/` permanecen sin modificaciones.
+
+Esta revisión fue realizada por la misma sesión que participó en la implementación: es una **auditoría de segunda pasada, no independiente**. No habilita live. El backend live sigue desconectado y bloqueado; H6-G2 permanece abierto y el MVP NO está listo para despliegue end-to-end. Las suites de protocolos invocaron Xray 26.10.31 únicamente con `run -test` sobre configuraciones temporales; no se inició un servidor ni se modificó runtime persistente.
+
+Informe: `docs/AUDITORIA_H6G3_E_SEGUNDA_PASADA_2026-11-06.md`. Sin systemctl real, cambios de runtime, certificados, DNS, firewall, puertos, red, dependencias, VPS de pruebas, commit o push.
+
+## Próximo paso obligatorio — revisión independiente H6-G3
+
+Preparado `docs/PAQUETE_REVISION_INDEPENDIENTE_H6G3_2026-11-06.md`. Pendiente que otra IA o revisor humano inspeccione el árbol de trabajo real y emita informe adversarial. Hasta entonces G3-E sólo es segunda pasada; no integrar ni habilitar backend live.
