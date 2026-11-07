@@ -1782,3 +1782,57 @@ Se confirmó ausencia de restaurador general para `shared_snapshot_writer.py`. D
 **Resultado global PASS:** 62/62 suites Bash; 23/23 archivos Python; `bash -n` global; `compileall`; ShellCheck `-S error` global; `./install.sh --check`; `git diff --check`. Las pruebas Python se ejecutaron con `PYTHONPATH=.`. La primera ejecución individual sin esa variable falló por `ModuleNotFoundError: scripts`; la repetición correcta pasó en su totalidad.
 
 **No cambia el estado de despliegue:** el restaurador general de shared snapshots sigue sin implementarse; el diseño requiere aprobación. `certbot.timer`/deploy hook no están habilitados; la recarga Xray no está integrada; H6 live continúa desconectado de R-05. No se hicieron operaciones live ni cambios en VPS Pruebas. `main` y `Xray-Normativa/` siguen intactos.
+
+## Regla prioritaria de continuidad — primer servidor funcional desde el Administrador (2026-11-07)
+
+**Prioridad máxima del proyecto:** conseguir el primer despliegue end-to-end de un servidor Xray funcional usando el Administrador, con el flujo más básico que cumpla la normativa y sin configuración manual externa. El objetivo inicial se mantiene en **VLESS + WebSocket + TLS**, para pruebas.tvrc.me, TCP/443.
+
+La secuencia de trabajo debe priorizar únicamente los bloqueos necesarios para demostrar ese resultado:
+1. reconciliar de forma segura el estado del Manager con la instalación Xray ya verificada en VPS Pruebas;
+2. completar desde el Administrador la gestión del certificado TLS;
+3. crear y validar desde el Administrador la configuración VLESS-WS-TLS mínima;
+4. preparar y activar el servicio mediante el controlador único del Administrador;
+5. verificar el estado real del servicio y realizar una conexión desde un cliente externo.
+
+Posponer funciones avanzadas, automatizaciones, ampliaciones de protocolos, restauradores y mejoras no imprescindibles hasta que el primer servidor esté operativo y probado. No recortar verificaciones de integridad, seguridad, rollback, auditoría ni documentación obligatorias. «Lo más básico» significa el menor alcance funcional necesario, no saltarse controles.
+
+Toda fase debe declarar explícitamente si acerca o no al primer lanzamiento. Si una tarea no es un bloqueo para ese objetivo, se aplaza. No confundir pruebas fixture con un servidor real ni declarar MVP completado sin evidencia de conexión externa.
+
+Esta prioridad gobierna la planificación y la continuidad futura hasta que el propietario la cambie expresamente.
+
+## H6-H1 — decisiones aprobadas y límites (2026-11-07)
+
+Contrato aprobado por el propietario. Se fijan: almacén /var/lib/xray-manager/runtime-operations; snapshots byte-exactos root-only 0600, no cifrados adicionalmente y excluidos de backups; retención indefinida para operaciones no terminales y recovery_required, 30 días para terminales con limpieza explícita auditada; un único journal JSON autoritativo atómico; si no existía configuración previa, recovery_required sin borrar configuración ni crear placeholder; completed requiere atestación de bytes realmente cargados.
+
+Pendiente implementación H6-H1-B/C exclusivamente en VPS desarrollo con fixtures/mocks/temporales y auditoría H6-H1-D. No systemctl real, no /etc/xray, no VPS Pruebas, no conexión a R-05/menú, no R-06/live. Ver docs/DISENO_JOURNAL_RUNTIME_LIVE_H6H1_2026-11-07.md.
+
+## Corrección de estado VPS Pruebas — verificación más reciente (2026-11-07)
+
+Esta verificación sustituye cualquier instrucción anterior que indique que Xray no está instalado o que el DNS A aún debe configurarse. En VPS Pruebas (Termalin 08827b29-b7f9-4625-8ff3-351918a03c96), Xray 26.10.31 está instalado y su binario/geodata coinciden con el manifiesto mediante xray_install_integrity.py verify. No reinstalar ni repetir SIGPIPE. El estado install.json sigue desactualizado con xray_installed=false y debe reconciliarse sin reinstalación.
+
+El A de pruebas.tvrc.me resuelve a 172.235.129.166, coincidente con la IPv4 pública observada por curl -4 api.ipify.org. DNS está configurado y propagado; no volver a modificarlo. AAAA no está verificado para uso operativo. Aún faltan /etc/xray, xray.service, configuración VLESS, certificado TLS y conexión externa. No hay listener TCP 80/443; UFW está inactivo. Certbot/ACME no se han ejecutado y no se han realizado cambios live adicionales.
+
+Siguiente foco: desde el Administrador, reconciliar install.json; completar la ruta Certbot/certificado y configuración VLESS-WS-TLS; luego preparar y activar servicio solo con autorización live específica. Mantener el objetivo de mínimo despliegue funcional. No hacer configuración manual externa ni repetir tareas ya verificadas.
+
+## Prioridad de ejecución MVP — B4-MIN (2026-11-07)
+
+La inspección confirma que B1/B2/B3 deben reutilizarse, no reimplementarse. B4 es el bloqueo principal: falta conectar aplicación de configuración y control live de xray.service desde el Administrador. B5 requiere posteriormente conexión externa real. El contrato H6-H1 está aprobado, pero su implementación completa no se asumirá como prerrequisito si B4-MIN puede cumplir las garantías normativas con alcance menor y auditable. Detalle: `docs/ESTADO_PRIORIZACION_MVP_2026-11-07.md`. Próximo paso técnico: diseño B4-MIN en fixtures, sin cambios live ni VPS Pruebas.
+
+## B4-MIN — brecha de atestación (2026-11-07)
+
+La evidencia actual correlaciona systemd/MainPID/InvocationID y hash del archivo, pero no los bytes entregados al proceso Xray. No marcar `completed` con esa evidencia. Diseño preliminar y 20 pruebas propuestas en `docs/DISENO_B4_MIN_EVIDENCIA_CONFIGURACION_CARGADA_2026-11-07.md`; requiere aprobación antes de implementar. No cambios funcionales, no unidad real, no R-06/live.
+
+## B4-MIN — primera implementación fixture (2026-11-07)
+
+El propietario aprobó las tres decisiones del diseño: memfd sellado como mecanismo de evidencia, publicación separada del inicio cuando el servicio está inactive, y conservación de `xray.service` con futuro lanzador root-owned/evidencia root-only sujeto a autorización de despliegue. Se añadió `scripts/xray_runtime_config_attestation.py` (primitivas fixture aisladas) y `tests/test_xray_runtime_config_attestation.py`. Pruebas nuevas 10/10 PASS; regresión focal de process-attestation/backend live/systemd adapter 56/56 PASS; total 66/66 PASS. La prueba demuestra que el descriptor memfd sellado sobrevive a exec y el proceso hijo lee los bytes exactos; no demuestra compatibilidad de Xray real con `/proc/self/fd/N`. Sin integración al menú/R-05/backend live; no se modificó unidad ni runtime, no se usó VPS Pruebas y no se hizo commit/push. Próximo paso: probar con binario Xray fijado sólo en entorno aislado, confirmar compatibilidad `-config /proc/self/fd/N` y diseñar el lanzador real separado con guardas, antes de cualquier integración live.
+
+### B4-MIN: compatibilidad del binario Xray (2026-11-07)
+Xray 26.10.31 validó la configuración sintética desde el `memfd` sellado heredado mediante enlace simbólico temporal `config.json` → `/proc/self/fd/N` (`Configuration OK`, exit 0). La ruta directa no funciona por la detección de extensión. Prueba como root; pendiente UID/GID `xray` y sandbox systemd. No habilita live ni autoriza cambios de unidad o despliegue. Ver `docs/IMPLEMENTACION_FIXTURE_B4_MEMFD_2026-11-07.md`.
+
+### B4-MIN: UID no privilegiado y Test VPS (2026-11-07)
+Prueba Xray 26.10.31 como `nobody` satisfactoria (`Configuration OK`, exit 0) usando memfd sellado heredado. Test VPS inspeccionado en solo lectura: no hay usuario/grupo `xray` ni unidad `xray.service`; no existe sandbox systemd real para validar. No se creó identidad ni unidad. La identidad y la unidad deben prepararse exclusivamente desde el Administrador; la ejecución real conserva autorización live específica. Ver documento de implementación B4.
+
+
+## Regla permanente del propietario — no configuración manual (2026-11-07)
+
+Toda configuración del sistema y Xray debe realizarse desde Xray-Core Manager. No preparar manualmente usuarios/grupos, directorios/permisos, unidad systemd, configuración runtime, certificados, firewall, puertos, DNS, red o dependencias. Si falta una capacidad, implementarla primero en el Administrador y ejecutar después la operación desde su menú/módulo con preflight, confirmación, locks, verificación y auditoría. Solo se permiten inspecciones read-only y pruebas automatizadas aisladas fuera del flujo del Administrador. Operaciones live requieren autorización específica. Controlador systemd único: `modules/xray_service.sh`. No modificar `Xray-Normativa/`.

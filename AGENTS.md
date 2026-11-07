@@ -46,7 +46,25 @@ La documentación preliminar aprobada es la línea base funcional. Las mejoras e
 
 Documento operativo: `docs/REGLA_CONTRASTE_DOCUMENTACION_PRELIMINAR.md`.
 
-## 2.2 Regla obligatoria: auditoría integral y cierre de etapas
+
+## 2.2 Regla permanente: toda configuración del sistema se realiza desde el Administrador
+
+**No se permite configurar manualmente el sistema operativo o Xray fuera de Xray-Core Manager como procedimiento de implementación, despliegue, prueba o recuperación del proyecto.** El objetivo de producto es que una persona pueda instalar y operar Xray desde una VPS limpia utilizando exclusivamente las funciones del Administrador.
+
+Esta regla incluye, entre otros: creación/modificación de usuarios y grupos de servicio; directorios, propietarios y permisos; instalación y configuración de unidades systemd y sus restricciones; archivos de configuración de Xray; certificados y renovaciones; firewall, puertos, DNS, red y dependencias.
+
+Requisitos obligatorios:
+1. Toda operación necesaria debe implementarse en el módulo y flujo de menú responsable del Administrador. Las operaciones systemd de Xray deben conservar `modules/xray_service.sh` como controlador único.
+2. El Administrador debe detectar requisitos ausentes o inconsistentes, presentar qué va a cambiar, solicitar confirmación cuando corresponda, ejecutar con locks y preflight, verificar postcondiciones y registrar evidencia/auditoría.
+3. Debe contemplar errores parciales, rollback o `recovery_required` cuando no sea seguro revertir. Nunca declarar éxito solo porque un comando devolvió cero.
+4. Las pruebas deben usar fixtures/entornos aislados o ejecutar las operaciones a través del propio Administrador. No preparar el host manualmente para facilitar una prueba.
+5. Los comandos de terminal pueden utilizarse para inspección read-only, diagnóstico, pruebas automatizadas del código y verificación independiente; no para sustituir la función administrativa que el producto debe ofrecer.
+6. Si falta una capacidad administrativa, implementar primero esa capacidad dentro del Administrador. No pedir al propietario que cree usuarios, grupos, unidades, archivos o configuraciones manualmente.
+7. Esta regla no elimina la autorización explícita requerida para operaciones live: antes de ejecutar una operación real, debe obtenerse autorización específica para el host y el alcance. La autorización para implementar o publicar código no equivale a autorización de despliegue.
+8. No se modifica `Xray-Normativa/` por esta regla. Se registra como decisión permanente del propietario en documentación técnica/gobernanza; cualquier ajuste de la normativa funcional requeriría autorización específica.
+
+
+## 2.3 Regla obligatoria: auditoría integral y cierre de etapas
 
 **Ninguna etapa puede declararse TERMINADA/COMPLETADA sin una auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos.** Cerrar un módulo, pasar pruebas, publicar código o sincronizar la VPS no cierra la etapa.
 
