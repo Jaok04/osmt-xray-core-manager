@@ -1731,3 +1731,13 @@ Preparado `docs/PAQUETE_REVISION_INDEPENDIENTE_H6G3_2026-11-06.md`. Pendiente qu
 - Archivo técnico: `docs/IMPLEMENTACION_CORRECCION_SIGPIPE_EXTRACCION_XRAY_2026-11-07.md`.
 - Regresión global PASS: Bash 62/62, Python 406/406, bash -n global, compileall, ShellCheck global, install.sh --check y diff-check. Publicado en `design/user-identity-association-v1`, commit `38cc0ddfac9ab3093a1c5442d14fa04c9e416e42`. Próximo paso: actualizar VPS Pruebas con respaldo, verificar commit y repetir instalación real capturando stdout/stderr y RC.
 - No iniciar ni preparar `xray.service`; no configurar ACME/DNS/firewall/puertos; no activar runtime. El usuario autorizó corrección, pruebas, publicación y actualización de la VPS, y la prueba de instalación Xray. Cualquier acción adicional sobre servicio/runtime sigue fuera del alcance.
+
+## Punto de reanudación — instalación guiada de Certbot (2026-11-07)
+
+Implementación local en rama autorizada `design/user-identity-association-v1`: el menú ACME comprueba `certbot --version`; si no existe, pregunta al operador y, con aceptación, instala únicamente el paquete `certbot` desde APT Ubuntu bajo lock compartido; verifica la versión antes de permitir la solicitud. Rechazo/fallo cancela. Evidencia y alcance en `docs/IMPLEMENTACION_INSTALACION_CERTBOT_DESDE_MENU_2026-11-07.md`. Regresión: Bash 62/62, Python 406/406, sintaxis, compileall, ShellCheck focal y diff-check PASS. Sin APT/Certbot real, ACME live, cambios de red/servicio/runtime ni despliegue en VPS Pruebas. Pendiente auditoría y autorización de publicación.
+
+## Punto de reanudación operativo — VPS Pruebas / primer servidor (2026-11-07)
+
+Dominio corregido por el usuario: **`pruebas.tvrc.me`**, no `prueba.tvrc.me`. Perfil objetivo VLESS + WS + TLS, TCP/443. Inspección read-only: Xray 26.10.31 y geodata presentes; manifiesto válido y verificación de integridad PASS. No reinstalar Xray ni reabrir SIGPIPE. La ruta `/opt/xray-manager` en Pruebas es bootstrap sin `.git`. Existe discrepancia en `install.json` (`xray_installed=false`) que debe reconciliarse con los artefactos íntegros sin reinstalar.
+
+Todavía no hay `/etc/xray`, `xray.service`, listener 80/443 ni conexión configurada; `connections.json` está vacío. UFW inactivo. DNS A/AAAA para `pruebas.tvrc.me` no resolvía en el corte. IPv4 observada `172.235.129.166`, confirmar públicamente antes de crear A. No se instaló Certbot ni se ejecutó ACME/DNS/firewall/puertos/systemd. Siguiente: DNS, reconciliar estado, decidir timer Certbot, ACME, configuración desde menú, servicio y prueba externa. Documento autoritativo: `docs/PRIMER_LANZAMIENTO_VPS_PRUEBAS_2026-11-07.md`.

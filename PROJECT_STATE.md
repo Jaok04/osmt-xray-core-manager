@@ -1618,3 +1618,23 @@ Informe: `docs/AUDITORIA_H6G3_E_SEGUNDA_PASADA_2026-11-06.md`. Sin systemctl rea
 ## H6-G3 — paquete de revisión independiente preparado
 
 Se creó `docs/PAQUETE_REVISION_INDEPENDIENTE_H6G3_2026-11-06.md` con inventario de archivos, contrato, restricciones de seguridad, escenarios adversariales y prompt para otro revisor. La revisión independiente aún no se ha ejecutado ni se declara completada. G3-E sigue siendo auditoría de segunda pasada de la misma sesión. Backend live no habilitado; sin commit/push.
+
+## Estado vigente — instalación guiada de Certbot desde menú (2026-11-07)
+
+- Implementada en `modules/certificates.sh` la comprobación previa de `certbot --version` al entrar en «Obtener certificado nuevo (ACME)».
+- Si Certbot falta, el Administrador solicita consentimiento. Con aceptación, exige root y Ubuntu, adquiere el lock de ciclo de vida, ejecuta `apt-get update` e instala únicamente `certbot` (`--no-install-recommends`); después verifica `certbot --version` antes de permitir continuar.
+- Rechazo, fallo APT o fallo de verificación cancela el flujo sin solicitud ACME.
+- Pruebas: Bash 62/62 PASS; Python 406/406 PASS; Bash syntax global, compileall, ShellCheck focal y diff-check PASS. La prueba de menú simula disponibilidad, ausencia, consentimiento, APT y verificación posterior.
+- No se ejecutó APT, no se instaló Certbot, no se solicitó ACME real y no se modificaron DNS, firewall, puertos, certificados persistentes, Xray, systemd, runtime ni VPS Pruebas.
+- Documentación: `docs/IMPLEMENTACION_INSTALACION_CERTBOT_DESDE_MENU_2026-11-07.md` y addendum en `docs/DECISION_B2_ACME_CERTBOT.md`.
+- Estado: implementación local en VPS desarrollo, pendiente auditoría y autorización de publicación/despliegue. `Xray-Normativa/` y `main` intactos.
+
+## Punto de control vigente — primer lanzamiento VPS Pruebas (2026-11-07)
+
+El FQDN correcto es **`pruebas.tvrc.me`** (se descarta `prueba.tvrc.me`). Objetivo inicial: VLESS + WebSocket + TLS por TCP/443, configurado desde el Administrador.
+
+La última inspección read-only de VPS Pruebas (Termalin host ID `08827b29-b7f9-4625-8ff3-351918a03c96`, Ubuntu 24.04.4 x86_64, `/opt/xray-manager`) encontró Xray 26.10.31, geodata y manifiesto. La orden `python3 scripts/xray_install_integrity.py verify ...` terminó PASS; binario y geodata coinciden con el manifiesto. Por tanto, **Xray sí está instalado e íntegro**; no repetir instalación ni SIGPIPE. Hay inconsistencia de estado: `install.json` dice `xray_installed=false`; reconciliar sin sobrescribir los artefactos verificados.
+
+Aún no hay `/etc/xray`, `xray.service` ni proceso/listener 80/443; `connections.json` es lista vacía. UFW inactivo. DNS A/AAAA de `pruebas.tvrc.me` no resolvía durante la comprobación. IP observada `172.235.129.166/24` en `eth0`, pendiente confirmar como IPv4 pública antes de apuntar DNS. Certificado y conexión externa pendientes.
+
+Próxima secuencia: DNS → reconciliar estado Manager/Xray → decisión y auditoría de `certbot.timer` → Certbot/ACME desde menú → conexión VLESS+WS+TLS desde menú → preparar/iniciar systemd desde Manager con autorización específica → cliente externo. No hubo cambios live en este corte. Ver `docs/PRIMER_LANZAMIENTO_VPS_PRUEBAS_2026-11-07.md` para la guía de continuidad autoritativa.

@@ -1599,3 +1599,14 @@ Informe: `docs/AUDITORIA_H6G3_E_SEGUNDA_PASADA_2026-11-06.md`. Sin systemctl rea
 La segunda prueba real en VPS Pruebas permitió identificar el fallo interno: tras descarga y SHA-256 correctos y extracción segura, `xray_admin_extract_stage()` ejecutaba `xray version | head -n 1`. `head` cerraba la tubería anticipadamente; con `pipefail`, el SIGPIPE del productor hacía fallar la función. Se sustituyó por captura de salida completa, validación del código de Xray y presentación de la primera línea sin tubería. Se amplió `tests/xray_admin.sh` con un ejecutable fixture que emite 20.000 líneas, reproduciendo el escenario. Informe: `docs/IMPLEMENTACION_CORRECCION_SIGPIPE_EXTRACCION_XRAY_2026-11-07.md`. La VPS Pruebas no conserva binario/geodata/manifiesto parcial y `xray.service` sigue ausente. Sin modificación de servicio/runtime ni dependencias. La regresión global y publicación se registrarán con sus resultados finales.
 
 Publicación de la corrección SIGPIPE: commit `38cc0ddfac9ab3093a1c5442d14fa04c9e416e42`, push confirmado y HEAD local/remoto coincidente en `design/user-identity-association-v1`. Regresión completa: Bash 62/62, Python 406/406, bash -n global, compileall, ShellCheck global `-S error`, `install.sh --check` y `git diff --check` PASS. Actualización de VPS Pruebas pendiente.
+
+## 2026-11-07 — Instalación guiada de Certbot desde el menú
+
+- El menú ACME comprueba Certbot antes de solicitar dominio y correo. Si falta, solicita confirmación y ofrece instalar solo `certbot` desde APT Ubuntu; usa lock de ciclo de vida y verifica la instalación antes de continuar.
+- Añadidas pruebas fixture para Certbot presente/ausente, consentimiento, comandos APT y verificación posterior.
+- Bash 62/62, Python 406/406 y comprobaciones estáticas focales PASS.
+- Sin instalación real de paquetes, solicitud ACME, cambios live ni despliegue. Pendiente auditoría/publicación.
+
+## 2026-11-07 — Punto exacto de continuidad del primer lanzamiento en VPS Pruebas
+
+Se corrigió el FQDN de pruebas a `pruebas.tvrc.me` (no `prueba.tvrc.me`). La inspección read-only posterior encontró Xray 26.10.31, geodata y manifiesto de integridad válidos en VPS Pruebas; verificación PASS. Se rectifica el estado anterior: Xray sí está instalado e íntegro, aunque `install.json` conserva `xray_installed=false`. Servicio systemd, `/etc/xray`, configuración VLESS, certificado y conexión externa siguen pendientes. DNS A/AAAA no resolvía en el corte; IP observada `172.235.129.166` pendiente confirmar como pública. No se ejecutaron cambios live. Se creó `docs/PRIMER_LANZAMIENTO_VPS_PRUEBAS_2026-11-07.md` y se actualizaron los documentos de continuidad/punto de control. La implementación local de Certbot sigue pendiente de auditoría sobre `certbot.timer` y no debe asumirse publicada/desplegada.
