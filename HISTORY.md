@@ -4,7 +4,7 @@ Se corrigió `modules/xray_admin.sh`: `xray_admin_install_menu_action()` conserv
 
 Contraste normativo de Etapas 1 y 6: conforme al manejo de errores y continuidad del administrador; `Xray-Normativa/` no se modificó. Verificación en VPS de desarrollo: Bash 62/62, Python 406/406, `bash -n` global, compileall, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. La revisión fue realizada por la misma sesión, no independiente.
 
-La causa interna del primer intento real de instalación en VPS Pruebas sigue desconocida; el cambio corrige el defecto confirmado de propagación/visibilidad, no demuestra que aquella fuera la única causa. No se reintentó instalación ni se modificó VPS Pruebas, systemd o runtime. Cambio local IMPLEMENTADO/VERIFICADO, NO PUBLICADO; el propietario prohibió commit/push y despliegue en esta tarea. HEAD base local/remoto `a47d2e4f4a039430ab8ef0b6b60769113a32f894`. Informe: `docs/IMPLEMENTACION_CORRECCION_ERROR_INSTALADOR_XRAY_2026-11-07.md`.
+La causa interna del primer intento real de instalación en VPS Pruebas sigue desconocida; el cambio corrige el defecto confirmado de propagación/visibilidad, no demuestra que aquella fuera la única causa. No se reintentó instalación ni se modificó VPS Pruebas, systemd o runtime. Cambio IMPLEMENTADO, VERIFICADO y PUBLICADO en GitHub; commit `1c0604975f807ade714d837ab49d71e2e4db517f`. La VPS de pruebas no fue modificada ni desplegada. Informe: `docs/IMPLEMENTACION_CORRECCION_ERROR_INSTALADOR_XRAY_2026-11-07.md`.
 
 ## 2026-11-06 — Instalador autónomo con autenticación GitHub y descarga verificada
 

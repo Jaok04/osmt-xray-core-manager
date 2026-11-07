@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-07
 **Rama:** `design/user-identity-association-v1`
-**Estado:** IMPLEMENTADA Y VERIFICADA EN PRUEBAS AUTOMATIZADAS; NO PUBLICADA.
+**Estado:** IMPLEMENTADA, VERIFICADA Y PUBLICADA EN GITHUB; NO DESPLEGADA EN VPS DE PRUEBAS.
 
 ## Antecedente
 
@@ -36,5 +36,5 @@ Se consultaron `Xray-Normativa/01_Menu_Principal/Etapa_1_Menu_Principal.md`, su 
 - No se volvió a ejecutar instalación real, no se modificó la VPS de pruebas y no se instaló ni inició Xray-core.
 - No se ejecutaron cambios de systemd/runtime, red, DNS, firewall, puertos, certificados ni dependencias.
 - Esta verificación fue ejecutada por la misma sesión que implementó el cambio; no es una auditoría independiente.
-- Cambio implementado y verificado en el checkout de desarrollo. Sin commit, push ni despliegue, conforme a la limitación expresa del propietario.
-- HEAD base: `a47d2e4f4a039430ab8ef0b6b60769113a32f894`; remoto consultado durante esta sesión seguía en ese mismo SHA.
+- Cambio implementado y verificado en el checkout de desarrollo; publicado en `design/user-identity-association-v1`.
+- Commit: `1c0604975f807ade714d837ab49d71e2e4db517f`; HEAD local/remoto confirmado. No se desplegó en VPS de pruebas.

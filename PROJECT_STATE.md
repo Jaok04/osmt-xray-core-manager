@@ -35,8 +35,8 @@
 - Verificación en VPS de desarrollo: Bash 62/62 archivos PASS; Python 406/406 PASS; `bash -n` global, compileall, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS.
 - Contraste normativo de Etapas 1 y 6 realizado; `Xray-Normativa/` intacta y documentos originales coincidentes con el respaldo.
 - **Límite:** el defecto de propagación del menú está corregido; la causa interna del primer fallo real de instalación sigue sin determinarse. No se repitió instalación real ni se tocó la VPS de pruebas/runtime.
-- Estado: IMPLEMENTADO y VERIFICADO en desarrollo; NO PUBLICADO, NO SINCRONIZADO a VPS de pruebas y NO ACEPTADO formalmente. No commit/push por restricción expresa.
-- Informe: `docs/IMPLEMENTACION_CORRECCION_ERROR_INSTALADOR_XRAY_2026-11-07.md`. HEAD base local/remoto: `a47d2e4f4a039430ab8ef0b6b60769113a32f894`.
+- Estado: IMPLEMENTADO, VERIFICADO y PUBLICADO en GitHub; pendiente de despliegue en VPS de pruebas y aceptación formal. No se modificó la VPS de pruebas.
+- Informe: `docs/IMPLEMENTACION_CORRECCION_ERROR_INSTALADOR_XRAY_2026-11-07.md`. Commit funcional/documental: `1c0604975f807ade714d837ab49d71e2e4db517f`.
 
 ## Estado vigente — corte 2026-11-06
 
