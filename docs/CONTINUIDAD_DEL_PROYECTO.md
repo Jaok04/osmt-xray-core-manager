@@ -49,6 +49,14 @@ Archivos: docs/DECISION_B3_VLESS_WS_TLS.md, docs/IMPLEMENTACION_B3_VLESS_WS_TLS_
 
 **Siguiente paso:** continuar con el contraste preliminar read-only del siguiente bloque del MVP. No implementar sin presentar discrepancias y recibir autorización expresa. No modificar main, Xray-Normativa/ ni infraestructura live.
 
+## Actualización de continuidad — 2026-11-07
+
+Último cambio local en desarrollo: corrección del manejo de errores de `xray_admin_install_menu_action()` en `modules/xray_admin.sh`, con regresión en `tests/xray_admin.sh`. La acción ahora conserva el código de `xray_admin_install_version()` a través de `ui_pause` y muestra un mensaje explícito cuando falla. Ver `docs/IMPLEMENTACION_CORRECCION_ERROR_INSTALADOR_XRAY_2026-11-07.md` y `docs/PUNTO_CONTROL_ACTUAL.md`.
+
+Validación ejecutada en VPS de desarrollo: Bash 62/62, Python 406/406, `bash -n` global, compileall, ShellCheck `-S error`, `install.sh --check` y diff-check PASS. No es auditoría independiente. El primer fallo real en VPS Pruebas no tiene causa identificada porque no se capturó su código/salida; no afirmar que este cambio resuelve necesariamente esa causa. No se repitió la instalación, no se tocó VPS Pruebas ni runtime.
+
+El propietario limitó expresamente esta tarea: no commit/push y no despliegue en VPS Pruebas. El checkout local contiene cambios sin publicar. Rama autorizada `design/user-identity-association-v1`; HEAD base local/remoto `a47d2e4f4a039430ab8ef0b6b60769113a32f894`. Al retomar, inspeccionar `git status` y diff antes de cualquier acción.
+
 ## 1. Objetivo
 
 Permitir que cualquier IA o desarrollador retome el proyecto desde su último estado válido aunque el chat original se haya perdido, borrado o sustituido. La fuente de continuidad es el repositorio y la evidencia de la VPS, no la memoria de una conversación.

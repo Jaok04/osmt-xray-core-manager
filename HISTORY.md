@@ -1,3 +1,11 @@
+## 2026-11-07 — Corrección del manejo de errores del menú de instalación Xray-core
+
+Se corrigió `modules/xray_admin.sh`: `xray_admin_install_menu_action()` conserva el código de salida de `xray_admin_install_version()` aunque la pausa posterior falle o termine correctamente, y presenta un mensaje explícito de error con operación, versión y código. Se agregó una regresión a `tests/xray_admin.sh` que simula retorno 37 y verifica tanto el código propagado como el mensaje.
+
+Contraste normativo de Etapas 1 y 6: conforme al manejo de errores y continuidad del administrador; `Xray-Normativa/` no se modificó. Verificación en VPS de desarrollo: Bash 62/62, Python 406/406, `bash -n` global, compileall, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. La revisión fue realizada por la misma sesión, no independiente.
+
+La causa interna del primer intento real de instalación en VPS Pruebas sigue desconocida; el cambio corrige el defecto confirmado de propagación/visibilidad, no demuestra que aquella fuera la única causa. No se reintentó instalación ni se modificó VPS Pruebas, systemd o runtime. Cambio local IMPLEMENTADO/VERIFICADO, NO PUBLICADO; el propietario prohibió commit/push y despliegue en esta tarea. HEAD base local/remoto `a47d2e4f4a039430ab8ef0b6b60769113a32f894`. Informe: `docs/IMPLEMENTACION_CORRECCION_ERROR_INSTALADOR_XRAY_2026-11-07.md`.
+
 ## 2026-11-06 — Instalador autónomo con autenticación GitHub y descarga verificada
 
 El propietario aprobó la descarga del proyecto desde un único `install.sh`, autenticación con Fine-grained PAT de solo lectura y despliegue del árbol completo sin clonar Git. Se fijó el alcance en `docs/DECISION_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`.

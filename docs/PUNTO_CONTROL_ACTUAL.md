@@ -1,3 +1,19 @@
+# Punto de control vigente — corrección del reporte de instalación Xray-core (2026-11-07)
+
+**Estado:** corrección IMPLEMENTADA y VERIFICADA en VPS de desarrollo; NO PUBLICADA ni desplegada.
+**Rama:** `design/user-identity-association-v1`; HEAD base local/remoto `a47d2e4f4a039430ab8ef0b6b60769113a32f894`.
+
+- Se corrigió `modules/xray_admin.sh`: el menú captura el código original de instalación, muestra error explícito y lo conserva después de `ui_pause`.
+- Regresión añadida en `tests/xray_admin.sh` para un fallo simulado código 37.
+- Verificación: Bash 62/62, Python 406/406, `bash -n` global, compileall, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS.
+- Contraste normativo Etapas 1 y 6 realizado; `Xray-Normativa/` sin cambios.
+- La causa interna del primer fallo real sigue desconocida: no se capturó su código ni su salida completa.
+- No se repitió instalación en VPS Pruebas, no se modificó sistema/runtime, no se hizo commit/push.
+
+**Siguiente paso permitido:** revisar el diff/documentación de esta corrección. Para reintentar la instalación real en VPS Pruebas se requiere autorización específica; antes se debe capturar la salida completa y código de la operación para determinar la causa original. La publicación sigue expresamente pendiente de autorización.
+
+---
+
 # Punto de control vigente — instalador autónomo GitHub (2026-11-06)
 
 **Estado:** IMPLEMENTADO Y VERIFICADO EN PRUEBAS AUTOMATIZADAS; validación remota real con PAT pendiente.

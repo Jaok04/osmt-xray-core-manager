@@ -28,6 +28,16 @@
 - HEAD base antes de esta implementación: `b00314c931b06829548d3096b9fce740e1bbb216`; cambios locales aún no publicados en esta fotografía. `main` y `Xray-Normativa/` intactas.
 - Documentos: `docs/DECISION_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`, `docs/IMPLEMENTACION_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md` y `docs/AUDITORIA_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`.
 
+## Actualización vigente — corrección del reporte de errores de instalación Xray-core (2026-11-07)
+
+- Se corrigió `xray_admin_install_menu_action()` para capturar y conservar el código de salida de `xray_admin_install_version()` incluso después de `ui_pause`; los fallos muestran operación, versión y código y no se presentan como instalación exitosa.
+- Se añadió regresión en `tests/xray_admin.sh` que inyecta código 37 y verifica retorno y mensaje.
+- Verificación en VPS de desarrollo: Bash 62/62 archivos PASS; Python 406/406 PASS; `bash -n` global, compileall, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS.
+- Contraste normativo de Etapas 1 y 6 realizado; `Xray-Normativa/` intacta y documentos originales coincidentes con el respaldo.
+- **Límite:** el defecto de propagación del menú está corregido; la causa interna del primer fallo real de instalación sigue sin determinarse. No se repitió instalación real ni se tocó la VPS de pruebas/runtime.
+- Estado: IMPLEMENTADO y VERIFICADO en desarrollo; NO PUBLICADO, NO SINCRONIZADO a VPS de pruebas y NO ACEPTADO formalmente. No commit/push por restricción expresa.
+- Informe: `docs/IMPLEMENTACION_CORRECCION_ERROR_INSTALADOR_XRAY_2026-11-07.md`. HEAD base local/remoto: `a47d2e4f4a039430ab8ef0b6b60769113a32f894`.
+
 ## Estado vigente — corte 2026-11-06
 
 ## Actualización de ejecución — H6-G2 F-01 (2026-11-06)

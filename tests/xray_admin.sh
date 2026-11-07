@@ -33,6 +33,24 @@ grep -q 'Operación cancelada' "$cancel_output"
 [[ "$FETCH_COUNT" -eq 0 ]]
 rm -f -- "$cancel_output"
 
+# Una falla de instalación debe conservar su código y mostrarse después de la confirmación.
+original_install_function="$(declare -f xray_admin_install_version)"
+xray_admin_install_version() { return 37; }
+ui_confirm() { return 0; }
+menu_failure_output="$(mktemp)"
+if xray_admin_install_menu_action install >"$menu_failure_output" 2>&1; then
+	printf 'ERROR: el menú ocultó una falla simulada de instalación.\n' >&2
+	exit 1
+else
+	menu_failure_rc=$?
+fi
+[[ "$menu_failure_rc" -eq 37 ]]
+grep -Fq 'falló (código 37)' "$menu_failure_output"
+grep -Fq 'no se considera instalada' "$menu_failure_output"
+rm -f -- "$menu_failure_output"
+eval "$original_install_function"
+ui_confirm() { return 1; }
+
 # Integración de instalación/rollback con fixtures: nunca usa las rutas reales.
 tmp="$(mktemp -d)"
 XRAY_MANAGER_LIFECYCLE_LOCK="$tmp/lifecycle.lock"

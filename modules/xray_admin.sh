@@ -526,7 +526,7 @@ xray_admin_prepare_service_menu_action() {
 
 
 xray_admin_install_menu_action() {
-	local mode="$1" version choice
+	local mode="$1" version choice operation_rc=0 pause_rc=0
 	ui_clear
 	ui_title "SELECCIÓN DE VERSIÓN COMPATIBLE"
 	printf 'Versiones disponibles con adaptador validado:\n\n'
@@ -560,9 +560,21 @@ xray_admin_install_menu_action() {
 	printf 'Se reemplazarán únicamente el binario y los archivos geoip/geosite.\n'
 	printf 'Configuración, certificados, servicio systemd y datos del administrador no se modificarán.\n'
 	if ui_confirm "¿Confirmas ejecutar esta operación en el VPS?"; then
-		xray_admin_install_version "$version" "$mode"
+		if xray_admin_install_version "$version" "$mode"; then
+			:
+		else
+			operation_rc=$?
+			printf 'ERROR: la operación de %s de Xray-core %s falló (código %s). Revisa los mensajes anteriores; no se considera instalada.\n' \
+				"$mode" "$version" "$operation_rc" >&2
+		fi
 	else
 		printf 'Operación cancelada.\n'
 	fi
-	ui_pause
+
+	# La pausa no debe ocultar el resultado de la operación principal.
+	ui_pause || pause_rc=$?
+	if ((operation_rc != 0)); then
+		return "$operation_rc"
+	fi
+	return "$pause_rc"
 }
