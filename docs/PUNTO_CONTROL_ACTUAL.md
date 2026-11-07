@@ -1729,5 +1729,5 @@ Preparado `docs/PAQUETE_REVISION_INDEPENDIENTE_H6G3_2026-11-06.md`. Pendiente qu
 - Corrección implementada en desarrollo: capturar salida completa, comprobar estado del binario y mostrar primera línea sin pipe truncado.
 - Regresión `tests/xray_admin.sh`: fixture de 20.000 líneas para detectar SIGPIPE. Prueba focal PASS.
 - Archivo técnico: `docs/IMPLEMENTACION_CORRECCION_SIGPIPE_EXTRACCION_XRAY_2026-11-07.md`.
-- Próximo paso: completar regresión global, publicar sólo en `design/user-identity-association-v1`, actualizar VPS Pruebas con respaldo, verificar commit y repetir instalación real capturando stdout/stderr y RC.
+- Regresión global PASS: Bash 62/62, Python 406/406, bash -n global, compileall, ShellCheck global, install.sh --check y diff-check. Publicado en `design/user-identity-association-v1`, commit `38cc0ddfac9ab3093a1c5442d14fa04c9e416e42`. Próximo paso: actualizar VPS Pruebas con respaldo, verificar commit y repetir instalación real capturando stdout/stderr y RC.
 - No iniciar ni preparar `xray.service`; no configurar ACME/DNS/firewall/puertos; no activar runtime. El usuario autorizó corrección, pruebas, publicación y actualización de la VPS, y la prueba de instalación Xray. Cualquier acción adicional sobre servicio/runtime sigue fuera del alcance.

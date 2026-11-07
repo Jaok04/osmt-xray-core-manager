@@ -2,7 +2,7 @@
 
 **Fecha:** 2026-11-07  
 **Rama:** `design/user-identity-association-v1`  
-**Estado:** IMPLEMENTADA Y VERIFICADA EN DESARROLLO; publicación pendiente.
+**Estado:** IMPLEMENTADA, VERIFICADA Y PUBLICADA EN GITHUB; actualización de VPS Pruebas pendiente.
 
 ## Antecedente y evidencia real
 
@@ -38,4 +38,5 @@ Se contrastó la corrección con la documentación aprobada en `Xray-Normativa/`
 - No se modifica VPS Pruebas, `systemd`, runtime, configuración, certificados, DNS, firewall, puertos ni red durante esta fase.
 - No se actualizan dependencias.
 - La revisión y pruebas las realiza la misma sesión que implementa; no constituye auditoría independiente.
-- La instalación real de Xray-core en VPS Pruebas requiere actualización del Administrador y una ejecución posterior autorizada por el propietario. La corrección no se considera validada en producción hasta completar esa prueba.
+- Commit publicado: `38cc0ddfac9ab3093a1c5442d14fa04c9e416e42` en `design/user-identity-association-v1`; HEAD local y remoto coinciden.
+- La actualización de VPS Pruebas y la instalación real de Xray-core 26.10.31 siguen pendientes. La corrección no se considera validada en ese host hasta completar esa prueba.

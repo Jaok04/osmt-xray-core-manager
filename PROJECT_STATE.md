@@ -48,7 +48,7 @@
 - Informe: `docs/IMPLEMENTACION_CORRECCION_SIGPIPE_EXTRACCION_XRAY_2026-11-07.md`.
 - Contraste normativo Etapas 1 y 6: sin cambio de alcance; los documentos maestros originales coinciden con el respaldo y `Xray-Normativa/` no se modificó.
 - La VPS Pruebas sigue sin binario Xray, geodata, manifiesto ni unidad `xray.service`; el rollback del intento real no dejó instalación parcial.
-- Regresión global: Bash 62/62 y Python 406/406 PASS; bash -n global, compileall, ShellCheck global -S error, install.sh --check y git diff --check PASS. Publicación y despliegue de la corrección deben confirmarse por separado. No se instaló Xray ni se modificó systemd/runtime en esta fase de desarrollo.
+- Regresión global: Bash 62/62 y Python 406/406 PASS; bash -n global, compileall, ShellCheck global -S error, install.sh --check y git diff --check PASS. Corrección publicada en `design/user-identity-association-v1`, commit `38cc0ddfac9ab3093a1c5442d14fa04c9e416e42`; actualización de VPS Pruebas y repetición de instalación real pendientes. No se instaló Xray ni se modificó systemd/runtime en esta fase de desarrollo.
 
 ## Estado vigente — corte 2026-11-06
 
