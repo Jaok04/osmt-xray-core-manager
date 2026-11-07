@@ -1741,3 +1741,44 @@ Implementación local en rama autorizada `design/user-identity-association-v1`: 
 Dominio corregido por el usuario: **`pruebas.tvrc.me`**, no `prueba.tvrc.me`. Perfil objetivo VLESS + WS + TLS, TCP/443. Inspección read-only: Xray 26.10.31 y geodata presentes; manifiesto válido y verificación de integridad PASS. No reinstalar Xray ni reabrir SIGPIPE. La ruta `/opt/xray-manager` en Pruebas es bootstrap sin `.git`. Existe discrepancia en `install.json` (`xray_installed=false`) que debe reconciliarse con los artefactos íntegros sin reinstalar.
 
 Todavía no hay `/etc/xray`, `xray.service`, listener 80/443 ni conexión configurada; `connections.json` está vacío. UFW inactivo. DNS A/AAAA para `pruebas.tvrc.me` no resolvía en el corte. IPv4 observada `172.235.129.166`, confirmar públicamente antes de crear A. No se instaló Certbot ni se ejecutó ACME/DNS/firewall/puertos/systemd. Siguiente: DNS, reconciliar estado, decidir timer Certbot, ACME, configuración desde menú, servicio y prueba externa. Documento autoritativo: `docs/PRIMER_LANZAMIENTO_VPS_PRUEBAS_2026-11-07.md`.
+
+
+## Punto de control — renovación automática Certbot y recarga Xray (2026-11-07)
+
+Se inspeccionaron `certificate_store.py`, `certificate_resolver.py`, `certificate_acme.py`, `xray_runtime_live_backend.py`, R-05 y `modules/xray_service.sh`. El catálogo/resolutor solo admiten revisión 1; la importación ACME crea un nuevo `certificate_id`, no rota uno existente. H6 live permanece desconectada de R-05 y sin rollback transaccional completo.
+
+Se documentó el diseño en `docs/DISENO_RENOVACION_CERTBOT_XRAY_2026-11-07.md`. La política propuesta permite `certbot.timer`, pero el hook solo debe actualizar una revisión central validada y solicitar recarga si Xray ya estaba activo; nunca debe iniciar un servicio detenido ni ejecutar `systemctl` por su cuenta.
+
+**No implementado ni habilitado:** no hay hook operativo ni schema v2; no se instaló/activó Certbot/timer, no se solicitó ACME, no se modificaron almacenes reales, clave maestra, Xray/systemd/runtime, VPS Pruebas, DNS, firewall, puertos o red. Sin commit/push. Próximo bloque: schema v2 y migración/rotación fixture, seguido de adaptación del resolver.
+
+## Punto de control — schema v2 TLS (2026-11-07)
+
+Implementación inicial parcial en desarrollo. El catálogo lee schema v1/v2; import/rotación managed usa revisiones inmutables; migración v1→v2 explícita copia/verifica y conserva el archivo legacy; rollback valida blob cifrado, certificado/clave, huellas y vigencia antes de activar una revisión; auditoría recorre el historial. El resolutor usa `active_revision` y liga el lease a esa revisión. ACME CLI admite ID central explícito para rotación. El snapshot writer incluye archivos managed versionados y excluye referencias a secretos.
+
+Pruebas focales store, resolver, snapshot writer y ACME PASS; Python 406/406, Bash 62/62. Ver `docs/IMPLEMENTACION_SCHEMA_V2_CERTIFICADOS_2026-11-07.md`.
+
+No apto para despliegue: falta restauración snapshot v2 E2E, menú de migración/rotación/rollback, revisión completa de consumidores y pruebas adversariales de interrupción/corrupción. No se habilita Certbot timer ni deploy hook; no se aplicó ni recargó Xray. Sin operaciones live, VPS Pruebas, clave maestra real, commit o push.
+
+## Actualización — menú y endurecimiento schema v2 TLS (2026-11-07)
+
+El menú de Certificados incorpora auditoría, migración explícita v1→v2, rollback por ID/revisión e importación ACME con rotación opcional de ID existente. Las operaciones destructivas requieren auditoría sin referencias rotas/entradas inseguras y confirmación; los huérfanos se advierten y conservan. Se endureció la unicidad de huellas a todo el historial de revisiones y se añadieron pruebas de colisión histórica y de destino de migración preexistente incorrecto.
+
+La revisión de consumidores no encontró dependencia de nombres legacy `managed/<id>.pem`: consumidores consultan `load_catalog()` y proyección activa; resolver fija revisión en lease; backup VLESS valida IDs TLS centrales pero no restaura el almacén de certificados. No existe restaurador general para los paquetes del `shared_snapshot_writer.py`; por ello, la restauración general del snapshot TLS v2 queda pendiente de un contrato específico aprobado. No inventar implementación fuera de ese contrato.
+
+No habilitar `certbot.timer`/hook ni recarga Xray. Sin operaciones live, master.key real, VPS Pruebas, commit o push. Estado global de pruebas de esta pasada aún pendiente.
+
+Validación global de esta segunda pasada: Bash **62/62**, Python **406/406**, `bash -n`, `compileall`, ShellCheck `-S error`, `./install.sh --check` y `git diff --check` PASS. Xray 26.10.31 solo validó configuraciones temporales con `run -test`; no hubo servidor ni cambios runtime.
+
+Control adicional de rotación ACME: el ID debe existir para la ruta de menú; importador exige catálogo v2, almacenamiento managed y conservación de todos los SAN históricos. La prueba fixture de omisión de SAN rechaza la rotación sin alterar revisión activa. ACME focal 12/12 PASS; batería global posterior pendiente.
+
+Validación final tras protección SAN: Bash **62/62**, Python **407/407**, `bash -n` global, `compileall`, ShellCheck focal de los Bash modificados, `install.sh --check` y `git diff --check` PASS. ShellCheck global completo pasó antes del último ajuste y ShellCheck focal se repitió después.
+
+## Diseño de restore shared snapshots (2026-11-07)
+
+Se confirmó ausencia de restaurador general para `shared_snapshot_writer.py`. Diseño propuesto en `docs/DISENO_RESTAURACION_SHARED_SNAPSHOT_2026-11-07.md`: reader autenticado y estricto, preflight sin mutaciones, merge no destructivo, dependencias TLS solo resueltas con blobs privados ya existentes/verificados en destino, journal transaccional y restore data-only sin runtime. Requiere aprobación de política de conflictos, snapshots parciales, TLS, locks/journal y categorías antes de implementar. No hubo cambios live.
+
+## Auditoría final del bloque TLS v2 — 2026-11-07
+
+**Resultado global PASS:** 62/62 suites Bash; 23/23 archivos Python; `bash -n` global; `compileall`; ShellCheck `-S error` global; `./install.sh --check`; `git diff --check`. Las pruebas Python se ejecutaron con `PYTHONPATH=.`. La primera ejecución individual sin esa variable falló por `ModuleNotFoundError: scripts`; la repetición correcta pasó en su totalidad.
+
+**No cambia el estado de despliegue:** el restaurador general de shared snapshots sigue sin implementarse; el diseño requiere aprobación. `certbot.timer`/deploy hook no están habilitados; la recarga Xray no está integrada; H6 live continúa desconectado de R-05. No se hicieron operaciones live ni cambios en VPS Pruebas. `main` y `Xray-Normativa/` siguen intactos.

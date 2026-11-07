@@ -1759,3 +1759,42 @@ Todavía NO existe `/etc/xray`, `xray.service` no existe/no está activo, no hay
 **Siguiente paso:** (1) confirmar IP pública y configurar/verificar `A pruebas.tvrc.me`; (2) reconciliar el booleano `xray_installed=false` sin tocar artefactos íntegros; (3) resolver antes de APT el efecto de `certbot.timer` y la política de renovación; (4) obtener certificado desde el menú; (5) crear VLESS+WS+TLS desde el menú; (6) preparar/iniciar servicio desde el Administrador con autorización específica; (7) probar cliente externo. Detalle completo, comandos de verificación, evidencias y restricciones en `docs/PRIMER_LANZAMIENTO_VPS_PRUEBAS_2026-11-07.md`.
 
 La corrección SIGPIPE ya está publicada en `design/user-identity-association-v1` (`38cc0dd...` código, `2c068a4...` docs) y el código corregido se observó en la VPS; no se acreditó un SHA Git instalado porque el directorio de Pruebas es bootstrap sin `.git`. La implementación guiada Certbot sigue local y no publicada: sus fixtures pasaron, pero debe auditarse el comportamiento del timer antes de desplegarla. No confundir pruebas fixture con instalación/servicio real.
+
+
+## Continuidad — diseño de renovación Certbot/Xray (2026-11-07)
+
+Leer `docs/DISENO_RENOVACION_CERTBOT_XRAY_2026-11-07.md`. La inspección encontró que el almacén y resolutor TLS admiten únicamente revisión 1. El importador ACME crea un certificado nuevo y no rota el `certificate_id` existente. Por ello, un deploy hook no puede actualizar de forma segura los certificados asociados a conexiones.
+
+El backend live continúa desconectado de R-05; no existe rollback transaccional certificado/configuración/proceso. No implementar un hook que ejecute `systemctl` directamente ni habilitar `certbot.timer` todavía. Política objetivo: renovar automáticamente; validar y versionar el certificado; aplicar/recargar solo si Xray estaba activo; nunca iniciar Xray desde el hook. Mutaciones exclusivamente a través de `modules/xray_service.sh` bajo R-05.
+
+Siguiente paso: diseñar e implementar schema v2 del almacén, migración explícita v1→v2, revisiones inmutables y rotación/rollback con fixtures; adaptar `certificate_resolver.py`; luego hook idempotente y finalmente integración H6 live auditada. Sin operaciones live, APT/Certbot/ACME, systemd/runtime, VPS Pruebas, DNS/firewall/puertos/red, commit o push.
+
+## Continuidad inmediata — schema v2 del almacén TLS (2026-11-07)
+
+Revisar `docs/IMPLEMENTACION_SCHEMA_V2_CERTIFICADOS_2026-11-07.md`. En desarrollo se implementó la primera parte del schema v2: lectura compatible v1/v2, historial `revisions[]`, `active_revision`, importación y rotación managed versionada, migración explícita v1→v2 con copia verificada y originales preservados, rollback con verificación criptográfica/vigencia, auditoría de todas las revisiones y resolución TLS por revisión activa. El CLI ACME admite `--certificate-id` explícito; no hay asociación automática de lineage. El snapshot writer exporta certificados managed versionados sin claves privadas ni referencias secretas.
+
+Validación focal: store, resolver, snapshot writer PASS; ACME 11/11. Global Python 406/406 y Bash 62/62 PASS. Cambios solo en VPS desarrollo. El trabajo no está cerrado ni listo para despliegue.
+
+Pendiente obligatorio: adaptar/testear restauración snapshot v2 end-to-end; integrar migración/rotación/rollback al menú con confirmaciones; auditar consumidores completos y pruebas de fallo/corrupción; auditoría adversarial independiente. No habilitar `certbot.timer` ni deploy hook hasta completar ese trabajo y la integración transaccional de R-05. No usar VPS Pruebas, no leer master.key real, no APT/ACME/systemd/runtime, no commit/push.
+
+## Continuidad — schema v2 TLS, segunda pasada (2026-11-07)
+
+El menú ya permite auditar el almacén, migrar v1→v2, rotar un ID existente desde la importación Certbot y hacer rollback a una revisión concreta. Cada operación sensible exige auditoría limpia y confirmación; la rotación es managed/versionada y no aplica Xray automáticamente. El historial completo ahora exige huellas únicas. Ver `docs/IMPLEMENTACION_SCHEMA_V2_CERTIFICADOS_2026-11-07.md`.
+
+La revisión de consumidores confirmó compatibilidad por `load_catalog()` y la proyección de la revisión activa. `shared_snapshot_writer.py` crea snapshot TLS v2, pero el repositorio no tiene un restaurador general para esos paquetes. `vless_backup.py` solo restaura su propio formato VLESS/VMess y valida referencias a certificados centrales existentes; no restaura el catálogo TLS. Mantener esta limitación explícita y diseñar/aprobar contrato general de restore antes de implementarlo.
+
+Pruebas focales del menú/store pasan. Ejecutar batería global completa y revisión final. No APT/Certbot/ACME, no leer clave maestra real, no systemd/runtime ni VPS Pruebas. Sin commit/push.
+
+Validación global de la segunda pasada: 62 suites Bash y 406 tests Python PASS; `bash -n`, `compileall`, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. No se ejecutó runtime live. El restaurador general de shared snapshots sigue pendiente de contrato aprobado.
+
+La rotación ACME ya comprueba existencia del `certificate_id`, schema v2, tipo managed y conservación de todos los SAN históricos; la prueba de pérdida de SAN falla cerrada sin cambiar el catálogo. ACME focal 12/12 PASS. La suite global se repite tras este ajuste.
+
+Validación tras el control SAN: 62 suites Bash y 407 tests Python PASS; `bash -n` y `compileall` globales, ShellCheck focal de archivos Bash modificados, `install.sh --check` y diff-check PASS. ShellCheck global completo pasó en la pasada anterior.
+
+Se creó `docs/DISENO_RESTAURACION_SHARED_SNAPSHOT_2026-11-07.md`: el repo no tiene lector/restaurador de paquetes shared snapshots. El formato excluye claves privadas y `secret_ref`; una restauración no puede inventar material TLS. La propuesta es restore autenticado, preflight, merge no destructivo, TLS solo con blob cifrado local existente y verificado, journal durable y data-only sin runtime. No implementar hasta aprobar decisiones pendientes del diseño.
+
+## Reanudación exacta — auditoría global TLS v2 (2026-11-07)
+
+La batería final de la rama de desarrollo terminó: **62/62 Bash y 23/23 Python PASS**, además de `bash -n`, `compileall`, ShellCheck global `-S error`, `install.sh --check` y `git diff --check`. Para ejecutar pruebas Python individuales usar `PYTHONPATH=. python3 tests/test_*.py`; sin `PYTHONPATH` una prueba que importa `scripts` no encuentra el paquete.
+
+Cambios de schema v2, resolver, ACME, snapshot writer, menú, tests y documentación quedan listos para sincronización en `design/user-identity-association-v1`. No declarar listo para producción: restore general shared snapshot pendiente; su diseño requiere aprobación; Certbot timer/hook y recarga Xray siguen sin habilitar; H6 live no está conectado a R-05. No se hicieron operaciones live ni cambios en VPS Pruebas. `main` y `Xray-Normativa/` permanecen protegidos.

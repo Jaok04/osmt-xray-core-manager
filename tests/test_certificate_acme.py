@@ -153,6 +153,45 @@ class CertificateAcmeTests(unittest.TestCase):
                 requested_domains=["other.example.invalid"], staging_parent=staging, store_args=args,
             )
 
+    def test_rotation_rejects_certificate_that_drops_historical_sans(self):
+        old_cert_source, old_key_source = self.make_certificate("old.example.invalid")
+        old_cert, old_key = self.base / "old-cert.pem", self.base / "old-key.pem"
+        old_cert.write_bytes(old_cert_source.read_bytes()); old_key.write_bytes(old_key_source.read_bytes())
+        old_cert.chmod(0o600); old_key.chmod(0o600)
+        new_cert, new_key = self.make_certificate("new.example.invalid")
+        store_base = self.base / "rotation-store"
+        managed = store_base / "managed"; secrets = store_base / "secrets"
+        managed.mkdir(parents=True, mode=0o700); secrets.mkdir(mode=0o700); store_base.chmod(0o700)
+        master = self.base / "rotation-master.key"; master.write_bytes(b"S" * 32); master.chmod(0o600)
+        store_args = Namespace(
+            base=str(store_base), catalog=str(store_base / "catalog.json"),
+            managed_dir=str(managed), secrets_dir=str(secrets), master_key=str(master),
+            lock=str(store_base / "catalog.lock"), certificate_id="cert-rotation-sans",
+        )
+        import_args = Namespace(**vars(store_args), storage_type="managed",
+                                certificate_file=str(old_cert), private_key_file=str(old_key))
+        certificate_store.import_certificate(import_args)
+        config = self.base / "rotation-letsencrypt"
+        archive = config / "archive" / "rotation-fixture"
+        live = config / "live" / "rotation-fixture"
+        archive.mkdir(parents=True, mode=0o700); live.mkdir(parents=True, mode=0o700); config.chmod(0o700)
+        (archive / "fullchain1.pem").write_bytes(new_cert.read_bytes())
+        (archive / "privkey1.pem").write_bytes(new_key.read_bytes())
+        (archive / "fullchain1.pem").chmod(0o600); (archive / "privkey1.pem").chmod(0o600)
+        (live / "fullchain.pem").symlink_to("../../archive/rotation-fixture/fullchain1.pem")
+        (live / "privkey.pem").symlink_to("../../archive/rotation-fixture/privkey1.pem")
+        staging = self.base / "rotation-staging"; staging.mkdir(mode=0o700)
+        with self.assertRaisesRegex(acme.AcmeError, "no conserva todos los SAN"):
+            acme.stage_and_import(
+                config_dir=config, cert_name="rotation-fixture",
+                requested_domains=["new.example.invalid"], staging_parent=staging, store_args=store_args,
+            )
+        catalog = certificate_store.load_catalog(pathlib.Path(store_args.catalog))
+        record = catalog["certificates"][0]
+        self.assertEqual(record["active_revision"], 1)
+        self.assertEqual(len(record["revisions"]), 1)
+        self.assertEqual(list(staging.iterdir()), [])
+
     def test_imported_certificate_is_usable_by_tls_resolver_fixture(self):
         cert, key = self.make_certificate()
         config = self.base / "letsencrypt"

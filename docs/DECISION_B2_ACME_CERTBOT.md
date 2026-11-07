@@ -48,3 +48,16 @@ El propietario autorizó B2-A a B2-G en modo fixture-only. Esto permite código,
 ## 5. Restricciones permanentes
 
 La clave maestra existente se utiliza únicamente a través del Certificate Store; nunca se lee manualmente, regenera ni modifica. Las claves privadas no se imprimen, registran ni incluyen en argumentos. Los certificados vigentes no se reemplazan ante fallos. No se modifica Xray-Normativa/.
+
+## Addendum — instalación guiada desde el menú (2026-11-07)
+
+El propietario solicitó que el Administrador compruebe Certbot al iniciar una solicitud y, si falta, pregunte si desea instalarlo. Se autoriza la implementación de esa experiencia en código y fixtures. El flujo instala exclusivamente el paquete `certbot` desde APT de Ubuntu tras confirmación explícita, usa el lock de ciclo de vida, verifica `certbot --version` y solo entonces permite continuar con el flujo ACME. Rechazar, fallar APT o fallar la verificación bloquea la solicitud. No se incluyen plugins DNS API ni renovación automática. Esta decisión no autoriza ejecutar APT, instalar Certbot, solicitar certificados reales, modificar red/firewall/puertos/servicios ni desplegar en VPS Pruebas; esas operaciones requieren consentimiento en el propio menú y autorización específica del entorno.
+
+
+## Addendum — política de renovación y recarga Xray (2026-11-07)
+
+Se inicia el diseño de renovación automática con `certbot.timer` y aplicación controlada al runtime. La política objetivo es permitir la renovación automática, pero no iniciar Xray si estaba detenido y no recargarlo si la validación del certificado/configuración falla. El deploy hook no ejecutará `systemctl` directamente: delegará en el controlador único `modules/xray_service.sh` mediante la integración transaccional R-05/H6.
+
+La inspección del código actual encontró bloqueos que deben resolverse antes de implementar un hook operativo: el almacén `certificate_store.py` y el resolutor `certificate_resolver.py` solo admiten revisión 1; la importación ACME crea un `certificate_id` nuevo y no rota uno existente; el backend live sigue desconectado de R-05 y `restore()` live falla cerrado. Por ello, no se instala ni habilita el timer/hook todavía.
+
+El diseño detallado está en `docs/DISENO_RENOVACION_CERTBOT_XRAY_2026-11-07.md`. Próximo bloque: schema versionado de certificados compatible con catálogo v1, migración explícita, rotación inmutable y pruebas fixture. Esta decisión de diseño no autoriza APT, Certbot, ACME, systemd, runtime, VPS Pruebas ni publicación.

@@ -211,14 +211,20 @@ def _certificate_record(
     ]
     if len(matches) != 1:
         raise ResolverError("certificado central no encontrado")
-    item = matches[0]
-    if item.get("status") != "active" or item.get("revision") != 1:
-        raise ResolverError("certificado central inactivo o revisión no soportada")
+    stored_item = matches[0]
+    if stored_item.get("status") != "active":
+        raise ResolverError("certificado central inactivo")
+    try:
+        item = store.active_revision_record(stored_item)
+    except store.StoreError as exc:
+        raise ResolverError("revisión activa del certificado no válida") from exc
+    revision = item["revision"]
     if item["storage_type"] == "managed":
-        if item["certificate_source"] != f"managed/{certificate_id}.pem":
+        expected_source = f"managed/{certificate_id}.r{revision:06d}.pem" if "revisions" in stored_item else f"managed/{certificate_id}.pem"
+        if item["certificate_source"] != expected_source:
             raise ResolverError("referencia managed no válida")
         _check_private_dir(managed_dir)
-        cert_path = managed_dir / f"{certificate_id}.pem"
+        cert_path = managed_dir / Path(item["certificate_source"]).name
         certificate_bytes = store.read_regular(
             cert_path, store.MAX_CERTIFICATE_BYTES, require_private=True
         )
@@ -231,17 +237,17 @@ def _certificate_record(
         )
     else:
         raise ResolverError("tipo de almacenamiento no admitido")
-    expected_secret = f"secrets/{certificate_id}.r000001.bin"
+    expected_secret = f"secrets/{certificate_id}.r{revision:06d}.bin"
     if item.get("secret_ref") != expected_secret:
         raise ResolverError("referencia al secreto central no válida")
     _check_private_dir(secrets_dir)
     blob = store.read_regular(
-        secrets_dir / f"{certificate_id}.r000001.bin",
+        secrets_dir / f"{certificate_id}.r{revision:06d}.bin",
         crypto.MAX_BLOB_BYTES,
         require_private=True,
     )
     key = crypto.load_master_key(master_key_file)
-    private_key_bytes = crypto.decrypt_private_key(blob, key, certificate_id, 1)
+    private_key_bytes = crypto.decrypt_private_key(blob, key, certificate_id, revision)
     metadata = store.parse_certificate(certificate_bytes, private_key_bytes)
     now = datetime.now(timezone.utc).isoformat()
     if now < metadata["not_before"] or now > metadata["not_after"]:

@@ -984,10 +984,20 @@ def _build_snapshot_members(
             resource_id = f"certificate:{cid}"
             sanitized = copy.deepcopy(item)
             sanitized.pop("secret_ref", None)
-            if item["storage_type"] == "reference":
-                sanitized["certificate_source"] = None
-            else:
-                cert_path = paths.certificates_managed / f"{cid}.pem"
+            revision_items = item["revisions"] if "revisions" in item else [certificate_store._legacy_revision(item)]
+            sanitized_revisions = sanitized.get("revisions", [])
+            for revision_item in revision_items:
+                revision = revision_item["revision"]
+                sanitized_revision = next((x for x in sanitized_revisions if x.get("revision") == revision), None)
+                if sanitized_revision is not None:
+                    sanitized_revision.pop("secret_ref", None)
+                if revision_item["storage_type"] == "reference":
+                    if sanitized_revision is not None:
+                        sanitized_revision["certificate_source"] = None
+                    if revision == item.get("active_revision", item.get("revision")):
+                        sanitized["certificate_source"] = None
+                    continue
+                cert_path = paths.certificates_managed / Path(revision_item["certificate_source"]).name
                 try:
                     cert_bytes = package_zip.read_root_regular(
                         cert_path, paths.certificates_managed, limit=MAX_CERTIFICATE_BYTES
@@ -996,22 +1006,26 @@ def _build_snapshot_members(
                     raise SnapshotBlocked("certificado público managed ausente o inseguro") from exc
                 metadata = _certificate_public_metadata(cert_bytes)
                 for field in ("fingerprint_sha256", "public_key_fingerprint_sha256", "subject", "issuer", "sans", "not_before", "not_after"):
-                    if metadata[field] != item[field]:
+                    if metadata[field] != revision_item[field]:
                         raise SnapshotBlocked("metadatos del certificado público no coinciden con el catálogo")
+                if "revisions" in item:
+                    member_name = f"certificates/managed/{cid}.r{revision:06d}.pem"
+                else:
+                    member_name = f"certificates/managed/{cid}.pem"
                 cert_member = package_zip.ZipMember.from_path(
-                    f"certificates/managed/{cid}.pem", cert_path,
-                    allowed_root=paths.certificates_managed,
+                    member_name, cert_path, allowed_root=paths.certificates_managed,
                 )
                 cert_member_id = _register_member(cert_member, "certificates.tls", members_by_hash, categories_by_hash)
-                resources[resource_id] = _new_resource(resource_id, "certificate", "tls", [cert_member_id], completeness="PARTIAL")
+                resources.setdefault(resource_id, _new_resource(resource_id, "certificate", "tls", completeness="PARTIAL"))
+                resources[resource_id]["member_ids"].append(cert_member_id)
+                resources[resource_id]["member_ids"] = sorted(set(resources[resource_id]["member_ids"]))
             exclusion_id = _add_exclusion(exclusions, resource_id, "tls_private_key", "excluded_by_default")
-            if resource_id not in resources:
-                resources[resource_id] = _new_resource(resource_id, "certificate", "tls", completeness="PARTIAL")
+            resources.setdefault(resource_id, _new_resource(resource_id, "certificate", "tls", completeness="PARTIAL"))
             resources[resource_id]["exclusion_ids"].append(exclusion_id)
             resources[resource_id]["exclusion_ids"] = sorted(set(resources[resource_id]["exclusion_ids"]))
             sanitized_certificates.append(sanitized)
             reasons.add("secret_excluded")
-            if item["storage_type"] == "reference":
+            if any(x["storage_type"] == "reference" for x in revision_items):
                 dep_id = f"tls:{cid}"
                 _add_dependency(dependencies, dep_id, "tls_reference", resource_id, item["fingerprint_sha256"], "pending_restore_preflight")
                 resources[resource_id]["dependency_ids"].append(dep_id)

@@ -16,6 +16,16 @@
 
 
 
+## Actualización vigente — diseño de renovación Certbot y recarga Xray (2026-11-07)
+
+- Se inspeccionó el código ACME, el almacén central, el resolutor TLS y el backend runtime live antes de diseñar la renovación automática.
+- Hallazgo bloqueante: `certificate_store.py` y `certificate_resolver.py` solo admiten revisión 1; `stage_and_import()` crea un nuevo `certificate_id` y no actualiza el existente referenciado por conexiones. No hay rotación versionada ni rollback conjunto certificado/configuración/proceso.
+- H6-G2/R-05 continúa sin integración live habilitada; el backend live no puede ser invocado por un hook y `restore()` live sigue fallando cerrado.
+- Se creó `docs/DISENO_RENOVACION_CERTBOT_XRAY_2026-11-07.md` con contrato, riesgos, schema versionado requerido, orden de locks, hook idempotente, política de timer y pruebas fixture.
+- Política objetivo: renovación automática Certbot; aplicar solo cuando el servicio estaba activo y la configuración/certificado nuevos superan validación; nunca iniciar Xray desde el hook si estaba detenido. Delegar mutaciones únicamente en `modules/xray_service.sh` bajo R-05.
+- Estado: DISEÑO, no implementación operativa. No se creó hook instalado, no se consultó ni activó `certbot.timer`, no se ejecutó APT/Certbot/ACME, no se tocó almacén real, clave maestra, systemd, runtime, DNS, firewall, puertos, red o VPS Pruebas. No commit/push.
+- Siguiente paso técnico: diseñar e implementar schema v2 de certificados con compatibilidad/migración explícita v1→v2, revisiones inmutables y rotación fixture; después adaptar el resolutor y continuar con el hook.
+
 ## Actualización vigente — instalador autónomo con GitHub privado (2026-11-06)
 
 - El propietario aprobó implementar un instalador de un solo archivo, autenticación Fine-grained PAT read-only y descarga del árbol completo sin clonar Git.
@@ -1638,3 +1648,37 @@ La última inspección read-only de VPS Pruebas (Termalin host ID `08827b29-b7f9
 Aún no hay `/etc/xray`, `xray.service` ni proceso/listener 80/443; `connections.json` es lista vacía. UFW inactivo. DNS A/AAAA de `pruebas.tvrc.me` no resolvía durante la comprobación. IP observada `172.235.129.166/24` en `eth0`, pendiente confirmar como IPv4 pública antes de apuntar DNS. Certificado y conexión externa pendientes.
 
 Próxima secuencia: DNS → reconciliar estado Manager/Xray → decisión y auditoría de `certbot.timer` → Certbot/ACME desde menú → conexión VLESS+WS+TLS desde menú → preparar/iniciar systemd desde Manager con autorización específica → cliente externo. No hubo cambios live en este corte. Ver `docs/PRIMER_LANZAMIENTO_VPS_PRUEBAS_2026-11-07.md` para la guía de continuidad autoritativa.
+
+## Estado vigente — implementación inicial schema v2 de certificados (2026-11-07)
+
+Se inició la evolución del almacén TLS en desarrollo, rama `design/user-identity-association-v1`. `certificate_store.py` ya lee v1/v2, importa y rota mediante revisiones managed versionadas, migra v1→v2 de forma explícita con copia verificada y conservación de originales, permite rollback tras verificar integridad/vigencia y audita todas las revisiones. `certificate_resolver.py` consume `active_revision` y registra la revisión exacta en el lease. ACME CLI admite `--certificate-id` explícito para rotar un ID; no hay correlación automática de lineage. El escritor de snapshots incluye ficheros managed versionados y omite referencias secretas.
+
+Pruebas focales: `tests/certificate_store.sh` PASS (migración, rotación, rollback, integridad); `tests/certificate_resolver.sh` PASS (lease r2); `tests/shared_snapshot_writer.sh` PASS; `tests/test_certificate_acme.py` 11/11 PASS. Suite Python 406/406 y suites Bash 62/62 PASS. Documento: `docs/IMPLEMENTACION_SCHEMA_V2_CERTIFICADOS_2026-11-07.md`.
+
+**Estado PARCIAL; no apto para despliegue.** Pendiente: restauración snapshot v2 end-to-end, integración de migración/rotación/rollback en menú, revisión completa de consumidores y pruebas adversariales de interrupción/corrupción. La rotación de IDs existentes se restringe a `managed`; los certificados `reference` siguen dependiendo de la inmutabilidad externa y disponibilidad de su ruta. No se habilita certbot.timer ni hook de renovación/recarga Xray. Sin clave maestra real, ACME/APT, runtime/systemd, VPS Pruebas, commit o push. `main` y `Xray-Normativa/` intactas.
+
+## Schema v2 TLS — segunda pasada de integración (2026-11-07)
+
+Se integraron al menú de Certificados la auditoría, migración v1→v2, rollback por ID/revisión e importación ACME con rotación opcional de un `certificate_id` existente. Migración/rollback y rotación exigen auditoría limpia y confirmación; se conserva cualquier huérfano y se informa que la rotación no aplica runtime. `certificate_store.load_catalog()` e importación ahora rechazan huellas duplicadas en cualquier revisión histórica.
+
+Revisión de consumidores: `vless_config_store.py`, `vmess_config_store.py`, `vless_client_export.py`, `certificate_migration.py`, resolver, ACME y `vless_backup.py` utilizan la proyección activa/ID central sin depender del filename legacy managed. `shared_snapshot_writer.py` escribe snapshots de catálogo TLS v2 versionados. No existe un restaurador general para esos shared snapshots; `vless_backup.py` es un flujo separado que valida referencias a certificados existentes y no reconstruye el almacén central. No se implementó un restaurador improvisado: requiere contrato aprobado. El restore general de shared snapshot v2 permanece como bloqueo para completar el ciclo de respaldo/restauración.
+
+Pruebas focales nuevas: menú de migración/rollback/rotación y rechazo de huellas históricas duplicadas y colisión de destino de migración. Estado sigue fixture-only; pendiente batería global tras cambios y revisión final. No APT/Certbot/ACME, no master.key real, no systemd/runtime, no VPS Pruebas, no commit/push.
+
+Validación global posterior a la integración: **62/62 suites Bash PASS**, **406/406 tests Python PASS**, `bash -n` global, `compileall`, `shellcheck -S error` global, `./install.sh --check` y `git diff --check` PASS. Xray 26.10.31 se utilizó solo con `run -test` en archivos temporales. No se inició servidor ni se modificó runtime persistente.
+
+Control adicional de rotación ACME: si el `certificate_id` existe, el importador exige schema v2, tipo `managed` y que los SAN de la nueva revisión incluyan todos los SAN históricos. El menú verifica que el ID exista antes de tratarlo como rotación. Prueba fixture de pérdida de SAN rechazada sin modificar catálogo; ACME focal 12/12 PASS. Repetir suite global después de este último ajuste.
+
+Validación final tras control SAN: **62/62 suites Bash PASS**, **407/407 tests Python PASS**, `bash -n` global, `compileall`, ShellCheck focal de archivos Bash modificados, `./install.sh --check` y `git diff --check` PASS. ShellCheck global completo había pasado en la pasada inmediatamente anterior; tras el último ajuste se repitió focalmente en los archivos Bash afectados.
+
+## Diseño pendiente — restore de shared snapshots (2026-11-07)
+
+Se documentó `docs/DISENO_RESTAURACION_SHARED_SNAPSHOT_2026-11-07.md` tras confirmar que el repo solo tiene writer/ZIP emitter/encryption wrapper, no reader/restorer general. El snapshot TLS excluye `secret_ref` y claves privadas; por eso no puede recrear un certificado activo sin blob AES-GCM local. La propuesta exige autenticación completa antes de parsear ZIP, reader estricto, preflight, merge no destructivo, reconciliación TLS solo si existe blob local verificable, journal transaccional y restauración data-only sin runtime. Es diseño, no implementación; requiere aprobación de las decisiones listadas antes de codificar.
+
+## Auditoría final y sincronización — schema v2 TLS (2026-11-07)
+
+La batería global posterior al control SAN terminó correctamente en la VPS de desarrollo: **62/62 suites Bash PASS** y **23/23 archivos de pruebas Python PASS** (con `PYTHONPATH=.`); `bash -n` global, `compileall`, **ShellCheck -S error global**, `./install.sh --check` y `git diff --check` PASS. La primera invocación aislada de pruebas Python sin `PYTHONPATH=.` falló por resolución del paquete `scripts`; se repitió con el entorno correcto y las 23 pruebas pasaron. No fue un fallo funcional.
+
+Se conservan los límites: schema v2 y menú verificados con fixtures; restaurador general de shared snapshots no implementado; diseño de restore pendiente de aprobación; renovación Certbot/timer y hook de recarga Xray no habilitados; backend live H6 desconectado de R-05. No se ejecutaron APT, Certbot/ACME real, operaciones systemd/runtime, cambios DNS/firewall/puertos ni acciones en VPS Pruebas. No se leyó la clave maestra real. `main` y `Xray-Normativa/` permanecen intactos.
+
+Se sincroniza este bloque junto con la implementación y sus documentos en `design/user-identity-association-v1`. La publicación no implica despliegue ni cierre de H6/MVP.

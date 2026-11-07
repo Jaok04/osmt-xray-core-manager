@@ -427,6 +427,19 @@ def stage_and_import(
     missing = sorted(set(requested_domains) - set(metadata.get("sans", [])))
     if missing:
         raise AcmeError("el certificado emitido no cubre todos los dominios solicitados")
+    certificate_id = getattr(store_args, "certificate_id", None)
+    if certificate_id:
+        catalog = store.load_catalog(Path(store_args.catalog).absolute())
+        existing = next((item for item in catalog["certificates"] if item["certificate_id"] == certificate_id), None)
+        if existing is not None:
+            if catalog["schema_version"] != store.SCHEMA_VERSION:
+                raise AcmeError("el catálogo v1 debe migrarse explícitamente antes de rotar un certificate_id")
+            if existing["storage_type"] != "managed":
+                raise AcmeError("la rotación de un certificado reference no está permitida; conviértelo mediante un flujo explícito")
+            active = store.active_revision_record(existing)
+            missing_historical_sans = sorted(set(active.get("sans", [])) - set(metadata.get("sans", [])))
+            if missing_historical_sans:
+                raise AcmeError("la nueva revisión no conserva todos los SAN del certificado activo")
     if validated_callback is not None:
         validated_callback(metadata)
     safe_private_dir(staging_parent)
@@ -498,6 +511,7 @@ def build_parser() -> argparse.ArgumentParser:
     imp.add_argument("--domain", action="append", required=True)
     imp.add_argument("--email", required=True)
     imp.add_argument("--cert-name", required=True)
+    imp.add_argument("--certificate-id", help="ID central existente para rotar su certificado")
     imp.add_argument("--request-id", required=True)
     imp.add_argument("--config-dir", default="/etc/letsencrypt")
     imp.add_argument("--staging-parent", default="/run/xray-manager-acme-staging")
@@ -532,7 +546,7 @@ def main() -> int:
             store_args = Namespace(
                 base=args.base, catalog=args.catalog, managed_dir=args.managed_dir,
                 secrets_dir=args.secrets_dir, master_key=args.master_key, lock=args.lock,
-                certificate_id=None,
+                certificate_id=args.certificate_id,
             )
             def mark_validated(_metadata: dict[str, Any]) -> None:
                 record["status"] = "validated"

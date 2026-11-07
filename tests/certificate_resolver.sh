@@ -21,6 +21,9 @@ head -c 32 /dev/urandom >"$MASTER"; chmod 600 "$MASTER"
 openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/private.pem" -out "$TMP/certificate.pem" -days 2 -subj "/CN=resolver.test.invalid" -addext "subjectAltName=DNS:resolver.test.invalid" >/dev/null 2>&1
 chmod 600 "$TMP/private.pem"; chmod 644 "$TMP/certificate.pem"
 python3 "$ROOT/scripts/certificate_store.py" --base "$CERT_BASE" --catalog "$CERT_CATALOG" --managed-dir "$MANAGED" --secrets-dir "$CERT_SECRETS" --master-key "$MASTER" --lock "$CERT_LOCK" import --storage-type managed --certificate-file "$TMP/certificate.pem" --private-key-file "$TMP/private.pem" --certificate-id cert-resolver >/dev/null
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/private-r2.pem" -out "$TMP/certificate-r2.pem" -days 2 -subj "/CN=resolver-r2.test.invalid" -addext "subjectAltName=DNS:resolver-r2.test.invalid" >/dev/null 2>&1
+chmod 600 "$TMP/private-r2.pem"; chmod 644 "$TMP/certificate-r2.pem"
+python3 "$ROOT/scripts/certificate_store.py" --base "$CERT_BASE" --catalog "$CERT_CATALOG" --managed-dir "$MANAGED" --secrets-dir "$CERT_SECRETS" --master-key "$MASTER" --lock "$CERT_LOCK" import --storage-type managed --certificate-file "$TMP/certificate-r2.pem" --private-key-file "$TMP/private-r2.pem" --certificate-id cert-resolver >/dev/null
 openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/reference-key.pem" -out "$TMP/reference-cert.pem" -days 2 -subj "/CN=reference-resolver.test.invalid" -addext "subjectAltName=DNS:reference-resolver.test.invalid" >/dev/null 2>&1
 chmod 600 "$TMP/reference-key.pem"; chmod 644 "$TMP/reference-cert.pem"
 python3 "$ROOT/scripts/certificate_store.py" --base "$CERT_BASE" --catalog "$CERT_CATALOG" --managed-dir "$MANAGED" --secrets-dir "$CERT_SECRETS" --master-key "$MASTER" --lock "$CERT_LOCK" import --storage-type reference --certificate-file "$TMP/reference-cert.pem" --private-key-file "$TMP/reference-key.pem" --certificate-id cert-reference >/dev/null
@@ -56,6 +59,9 @@ kw=dict(
 for cid, certid in (('vless-authorized','cert-resolver'),('vmess-authorized','cert-resolver'),('vless-reference','cert-reference')):
  result=r.prepare(connection_id=cid,certificate_id=certid,**kw)
  assert result['status']=='prepared' and result['protocol']==cid.split('-')[0]
+ if cid=='vless-authorized':
+  manifest=json.loads((pathlib.Path(result['certificate_file']).parent/'manifest.json').read_text())
+  assert manifest['certificate_revision']==2
  cert=pathlib.Path(result['certificate_file']); key=pathlib.Path(result['key_file'])
  assert cert.read_bytes().startswith(b'-----BEGIN CERTIFICATE-----')
  assert key.read_bytes().startswith(b'-----BEGIN PRIVATE KEY-----')
