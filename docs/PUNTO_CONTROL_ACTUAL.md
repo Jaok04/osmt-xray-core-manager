@@ -1721,3 +1721,13 @@ Informe: `docs/AUDITORIA_H6G3_E_SEGUNDA_PASADA_2026-11-06.md`. Sin systemctl rea
 ## Próximo paso obligatorio — revisión independiente H6-G3
 
 Preparado `docs/PAQUETE_REVISION_INDEPENDIENTE_H6G3_2026-11-06.md`. Pendiente que otra IA o revisor humano inspeccione el árbol de trabajo real y emita informe adversarial. Hasta entonces G3-E sólo es segunda pasada; no integrar ni habilitar backend live.
+
+## Punto de control vigente — 2026-11-07: corrección SIGPIPE de instalación Xray
+
+- VPS Pruebas: `/opt/xray-manager` actualizado al commit `aa9659f8468b8fb360791738323e1f63b653d8aa`; respaldo anterior `/opt/xray-manager.pre-update.20261107T114049Z`.
+- Instalación real Xray 26.10.31: fallo localizado con `bash -x`; SHA-256 oficial coincide; ZIP extraído y binario temporal ejecuta `version`; `xray version | head -n 1` provoca SIGPIPE/pipefail y aborta antes del commit.
+- Corrección implementada en desarrollo: capturar salida completa, comprobar estado del binario y mostrar primera línea sin pipe truncado.
+- Regresión `tests/xray_admin.sh`: fixture de 20.000 líneas para detectar SIGPIPE. Prueba focal PASS.
+- Archivo técnico: `docs/IMPLEMENTACION_CORRECCION_SIGPIPE_EXTRACCION_XRAY_2026-11-07.md`.
+- Próximo paso: completar regresión global, publicar sólo en `design/user-identity-association-v1`, actualizar VPS Pruebas con respaldo, verificar commit y repetir instalación real capturando stdout/stderr y RC.
+- No iniciar ni preparar `xray.service`; no configurar ACME/DNS/firewall/puertos; no activar runtime. El usuario autorizó corrección, pruebas, publicación y actualización de la VPS, y la prueba de instalación Xray. Cualquier acción adicional sobre servicio/runtime sigue fuera del alcance.

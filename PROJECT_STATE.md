@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente — corte 2026-11-06» al inicio de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado vigente:** 2026-11-06 — H6-G3-A/B/C/D implementadas en fixtures; segunda pasada PASS CON LIMITACIONES (misma sesión, no independiente). H6-G2 F-01/F-02/F-03 corregidos/implementados; F-04/F-05 pendientes y backend live no conectado. Instalador autónomo con bootstrap GitHub aprobado, implementado y verificado en pruebas automatizadas; PAT/VPS limpia real pendiente. Rama design/user-identity-association-v1. Commit de implementación: `8d76275b6bfb1eeda5eaa859b45f979804784094` en `design/user-identity-association-v1`; la actualización de continuidad se registra en el commit documental siguiente. La publicación y el HEAD remoto se verifican al sincronizar.
+**Corte de estado vigente:** 2026-11-07 — H6-G3-A/B/C/D implementadas en fixtures; segunda pasada PASS CON LIMITACIONES (misma sesión, no independiente). H6-G2 F-01/F-02/F-03 corregidos/implementados; F-04/F-05 pendientes y backend live no conectado. Bootstrap privado GitHub validado en VPS Pruebas; Manager actualizado al commit `aa9659f8468b8fb360791738323e1f63b653d8aa`. Primera instalación real de Xray-core detectó SIGPIPE en la validación de salida del binario (`head -n 1` bajo `pipefail`); corrección implementada en desarrollo con fixture de salida extensa, pruebas globales y publicación pendientes al momento de esta fotografía. La VPS Pruebas permanece sin Xray instalado ni unidad systemd. Rama design/user-identity-association-v1.
 **Estado global:** Etapa 1 aceptada; Etapas 2–6 abiertas/parciales. H6-G2 NO CERRADO; H6-G3 no tiene auditoría independiente. H6-F NO LISTO END-TO-END. Backend runtime live no integrado; no ejecutar acciones live sin autorización específica.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -37,6 +37,18 @@
 - **Límite:** el defecto de propagación del menú está corregido; la causa interna del primer fallo real de instalación sigue sin determinarse. No se repitió instalación real ni se tocó la VPS de pruebas/runtime.
 - Estado: IMPLEMENTADO, VERIFICADO y PUBLICADO en GitHub; pendiente de despliegue en VPS de pruebas y aceptación formal. No se modificó la VPS de pruebas.
 - Informe: `docs/IMPLEMENTACION_CORRECCION_ERROR_INSTALADOR_XRAY_2026-11-07.md`. Commit funcional/documental: `1c0604975f807ade714d837ab49d71e2e4db517f`.
+
+
+## Actualización vigente — corrección SIGPIPE en extracción de Xray-core (2026-11-07)
+
+- Segunda instalación real en VPS Pruebas identificó la causa: `xray_admin_extract_stage()` usaba `xray version | head -n 1`; con `pipefail`, el cierre anticipado podía producir SIGPIPE y abortar antes de instalar.
+- La traza confirmó descarga oficial, SHA-256 coincidente, extracción segura y versión temporal correcta; fallo exacto en la tubería con `head`.
+- En desarrollo se sustituyó la tubería por captura completa de salida, validación del estado del proceso y extracción de primera línea sin pipe.
+- `tests/xray_admin.sh` ahora genera fixture con 20.000 líneas después de la versión para reproducir la condición bajo pipefail.
+- Informe: `docs/IMPLEMENTACION_CORRECCION_SIGPIPE_EXTRACCION_XRAY_2026-11-07.md`.
+- Contraste normativo Etapas 1 y 6: sin cambio de alcance; los documentos maestros originales coinciden con el respaldo y `Xray-Normativa/` no se modificó.
+- La VPS Pruebas sigue sin binario Xray, geodata, manifiesto ni unidad `xray.service`; el rollback del intento real no dejó instalación parcial.
+- Regresión global: Bash 62/62 y Python 406/406 PASS; bash -n global, compileall, ShellCheck global -S error, install.sh --check y git diff --check PASS. Publicación y despliegue de la corrección deben confirmarse por separado. No se instaló Xray ni se modificó systemd/runtime en esta fase de desarrollo.
 
 ## Estado vigente — corte 2026-11-06
 

@@ -73,7 +73,7 @@ mkdir -p "$tmp/valid-work" "$tmp/valid-stage" "$tmp/bad-work" "$tmp/bad-stage"
 python3 - "$tmp/valid-work/Xray-linux-64.zip" "$tmp/bad-work/Xray-linux-64.zip" <<'PYZIP'
 import sys, zipfile
 valid, bad = sys.argv[1:]
-script = b"#!/bin/sh\nprintf 'Xray 26.10.31 fixture\n'\n"
+script = b"#!/usr/bin/python3\nimport sys\nprint('Xray 26.10.31 fixture')\nsys.stdout.write('diagnostic line\\n' * 20000)\n"
 with zipfile.ZipFile(valid, 'w', compression=zipfile.ZIP_DEFLATED) as z:
     z.writestr('xray', script)
     z.writestr('geoip.dat', b'geoip')
@@ -84,7 +84,8 @@ with zipfile.ZipFile(bad, 'w', compression=zipfile.ZIP_DEFLATED) as z:
     z.writestr('geosite.dat', b'geosite')
     z.writestr('../escape.txt', b'not allowed')
 PYZIP
-xray_admin_extract_stage 26.10.31 "$tmp/valid-work" "$tmp/valid-stage" >/dev/null
+extract_output="$(xray_admin_extract_stage 26.10.31 "$tmp/valid-work" "$tmp/valid-stage")"
+[[ "$extract_output" == 'Xray 26.10.31 fixture' ]]
 [[ -x "$tmp/valid-stage/xray" ]]
 [[ "$(cat "$tmp/valid-stage/geoip.dat")" == geoip ]]
 if xray_admin_extract_stage 26.10.31 "$tmp/bad-work" "$tmp/bad-stage" >/dev/null 2>&1; then

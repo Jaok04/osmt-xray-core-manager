@@ -1733,3 +1733,9 @@ Informe: `docs/AUDITORIA_H6G3_E_SEGUNDA_PASADA_2026-11-06.md`. Sin systemctl rea
 ## Próximo paso obligatorio — revisión independiente H6-G3
 
 Antes de integración live, entregar `docs/PAQUETE_REVISION_INDEPENDIENTE_H6G3_2026-11-06.md` a otra IA o revisor humano que no haya participado. Debe inspeccionar el árbol de trabajo real en `/opt/xray-manager`, no sólo HEAD, y emitir hallazgos reproducibles sin modificar archivos ni ejecutar operaciones live. No declarar revisión independiente hasta recibir y evaluar ese informe.
+
+## Continuidad inmediata — corrección SIGPIPE instalador Xray (2026-11-07)
+
+El último fallo real de instalación en VPS Pruebas ya está localizado. El ZIP y su SHA-256 son correctos; el binario temporal funciona. El aborto ocurría en `xray_admin_extract_stage()` por `xray version | head -n 1` bajo `set -o pipefail`. Se corrigió en desarrollo capturando la salida completa antes de extraer la primera línea. La prueba focal usa un binario fixture que emite 20.000 líneas para reproducir el cierre anticipado de tubería.
+
+Antes de continuar, revisar `docs/IMPLEMENTACION_CORRECCION_SIGPIPE_EXTRACCION_XRAY_2026-11-07.md` y el bloque vigente de `PROJECT_STATE.md`. Completar pruebas globales, publicar en la rama autorizada y actualizar la VPS Pruebas usando respaldo y verificación de commit. Después repetir la instalación Xray 26.10.31 con captura de salida y código de retorno. No iniciar/preparar systemd, no tocar runtime, DNS, firewall, puertos ni certificados. La VPS Pruebas sigue sin Xray instalado; no borrar el respaldo `/opt/xray-manager.pre-update.20261107T114049Z`.

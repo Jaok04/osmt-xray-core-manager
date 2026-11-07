@@ -193,7 +193,7 @@ xray_admin_fetch_verified_release() {
 }
 
 xray_admin_extract_stage() {
-	local version="$1" workdir="$2" stage="$3" archive
+	local version="$1" workdir="$2" stage="$3" archive version_output
 	archive="$workdir/$(xray_admin_release_asset_name)" || return 1
 	install -d -m 700 "$stage" || return 1
 	python3 - "$archive" "$stage" <<'PY' || return 1
@@ -235,12 +235,16 @@ except (OSError, zipfile.BadZipFile, RuntimeError, ValueError) as exc:
     print(f"Extracción segura fallida: {exc}", file=sys.stderr)
     raise SystemExit(1)
 PY
-	"$stage/xray" version | grep -F "Xray $version " >/dev/null || {
-		printf 'El binario descargado no declara la versión solicitada.
-' >&2
+	version_output="$("$stage/xray" version)" || {
+		printf 'No se pudo consultar la versión del binario descargado.\n' >&2
 		return 1
 	}
-	"$stage/xray" version | head -n 1
+	if ! grep -Fq "Xray $version " <<<"$version_output"; then
+		printf 'El binario descargado no declara la versión solicitada.\n' >&2
+		return 1
+	fi
+	# Captura toda la salida antes de mostrar la primera línea: evita SIGPIPE con pipefail.
+	printf '%s\n' "${version_output%%$'\n'*}"
 }
 
 xray_admin_backup_existing() {
