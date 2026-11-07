@@ -73,3 +73,8 @@ Xray 26.10.31 aceptó todas las configuraciones generadas, pero emitió avisos d
 - Después de instalar sólo el Manager, Xray-core se instala desde **Administración de Xray-core → Instalar Xray-core** y la unidad se prepara desde **Preparar servicio**.
 
 Las pruebas aisladas verifican ambas modalidades. El flujo Manager-only no inspecciona ni cambia fixtures de Xray preexistentes.
+
+
+## Distribución desde VPS limpia (2026-11-06)
+
+La descarga del código del Manager se realiza antes de esta fase mediante el bootstrap privado descrito en `docs/INSTALACION_DESDE_VPS_LIMPIA.md`. El PAT sólo necesita `Contents: Read-only`; la Fase B conserva sin cambios la verificación SHA-256 del artefacto oficial de Xray-core y la política de servicio detenido/deshabilitado. El bootstrap del Manager no instala Xray-core por defecto.

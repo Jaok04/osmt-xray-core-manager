@@ -4,8 +4,8 @@ Administrador modular de Xray-core para Linux, desarrollado en Bash.
 
 ## Estado del proyecto
 
-**Versión:** 0.2.0-dev  
-**Plataforma de referencia:** Ubuntu 24.04 LTS, amd64, Bash 5.2+  
+**Versión:** 0.2.0-dev
+**Plataforma de referencia:** Ubuntu 24.04 LTS, amd64, Bash 5.2+
 **Idioma de la interfaz:** español
 
 La implementación incluye menú principal, catálogo de modalidades, gestión local de conexiones y usuarios, administración del binario Xray-core, preparación segura de su unidad systemd y control explícito del ciclo de vida del servicio.
@@ -37,17 +37,13 @@ La implementación incluye menú principal, catálogo de modalidades, gestión l
 
 ## Instalación
 
-En Ubuntu/Debian, desde el directorio del proyecto:
+En una VPS Ubuntu/Debian limpia no es necesario clonar el repositorio. El repositorio es privado: crea un Fine-grained PAT limitado a `Jaok04/xray-core-manager` con permiso `Contents: Read-only` y sigue el comando completo de [`docs/INSTALACION_DESDE_VPS_LIMPIA.md`](docs/INSTALACION_DESDE_VPS_LIMPIA.md). El bootstrap solicita el PAT sin eco, descarga `install.sh` mediante GitHub API y verifica su blob contra el commit seleccionado. El instalador obtiene después el árbol completo de esa misma revisión, verifica el helper y cada archivo, y despliega el proyecto sin `.git` ni historial.
 
-```bash
-sudo ./install.sh --check
-sudo ./install.sh --install
-sudo /opt/xray-manager/bin/xray-manager
-```
+El instalador instala solo dependencias faltantes, sin ejecutar `apt upgrade`. Por defecto despliega únicamente el Manager en `/opt/xray-manager`; no instala Xray-core, no crea la cuenta `xray` ni modifica `/etc/xray` o systemd.
 
-El instalador instala solo dependencias faltantes, sin ejecutar `apt upgrade`. Por defecto despliega únicamente el Manager en `/opt/xray-manager`; no descarga Xray-core, no crea la cuenta `xray` ni modifica `/etc/xray` o systemd.
+Después, desde **[1] Administración de Xray-core**, selecciona **[1] Instalar Xray-core** y luego **[7] Preparar servicio**. Como alternativa explícita para instalaciones integrales, `--install --with-xray` instala Xray con verificación SHA-256 y prepara la cuenta/unidad systemd. En ambos casos el servicio queda detenido y deshabilitado; su activación requiere una acción posterior y confirmación.
 
-Después, desde **[1] Administración de Xray-core**, selecciona **[1] Instalar Xray-core** y luego **[7] Preparar servicio**. Como alternativa explícita para instalaciones integrales, `sudo ./install.sh --install --with-xray` instala Xray con verificación SHA-256 y prepara la cuenta/unidad systemd. En ambos casos el servicio queda detenido y deshabilitado; su activación requiere una acción posterior y confirmación.
+Desde el árbol ya desplegado, las comprobaciones son `sudo /opt/xray-manager/install.sh --check` y el menú se inicia con `sudo /opt/xray-manager/bin/xray-manager`.
 
 ## Menú de servicio
 

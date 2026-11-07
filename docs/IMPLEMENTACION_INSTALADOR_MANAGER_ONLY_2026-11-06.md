@@ -51,3 +51,14 @@ Todas las pruebas del cambio se ejecutaron con prefijos temporales. No se ejecut
 ## Dictamen
 
 El instalador predeterminado ahora deja el Manager listo para que Xray-core se instale desde su menú. La instalación integral anterior sigue disponible mediante autorización explícita de línea de comandos. Implementación verificada en fixtures; no implica prueba live ni despliegue end-to-end.
+
+
+## Evolución posterior — bootstrap privado de un solo archivo (2026-11-06)
+
+La implementación de autodescarga autenticada queda documentada en:
+
+- `docs/DECISION_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`.
+- `docs/IMPLEMENTACION_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`.
+- `docs/AUDITORIA_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`.
+
+El instalador ahora puede arrancar desde un único `install.sh`, autenticar el acceso privado con Fine-grained PAT `Contents: Read-only`, resolver un commit inmutable, verificar el helper y los blobs del snapshot y desplegar sin `.git`. La instalación Manager-only por defecto y la opción explícita `--with-xray` no cambian.

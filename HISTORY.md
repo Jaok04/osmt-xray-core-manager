@@ -1,3 +1,15 @@
+## 2026-11-06 — Instalador autónomo con autenticación GitHub y descarga verificada
+
+El propietario aprobó la descarga del proyecto desde un único `install.sh`, autenticación con Fine-grained PAT de solo lectura y despliegue del árbol completo sin clonar Git. Se fijó el alcance en `docs/DECISION_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`.
+
+`install.sh` ahora detecta el modo bootstrap, resuelve una revisión inmutable de `design/user-identity-association-v1`, verifica el helper con SHA-256 fijado y descarga el tarball del commit. `scripts/installer_bootstrap.py` contrasta cada archivo con el árbol Git (blob SHA-1, tamaño y modo) y rechaza traversal, symlinks, hardlinks, submódulos, duplicados, faltantes/adicionales y árboles truncados. El token sólo se transmite por cabecera HTTPS y no se persiste.
+
+Se añadió `docs/INSTALACION_DESDE_VPS_LIMPIA.md` con el bootstrap inicial de `install.sh` mediante GitHub API, y se actualizaron README y documentación de fases A/B. Manager-only sigue siendo el default; `--with-xray` sigue explícito.
+
+Verificación: bootstrap focal 18/18; Python 406/406; Bash 62/62; `tests/install.sh`, compileall, bash -n, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS. El extractor verificó 330/330 archivos de un `git archive` local.
+
+Límite: no se ejecutó GitHub API con PAT real ni bootstrap en la VPS nueva. La aceptación operativa queda pendiente de esa prueba. No se instaló Xray ni se tocaron runtime, systemd live, DNS, firewall, puertos, certificados o red. `main` y `Xray-Normativa/` intactas. HEAD base de implementación: `b00314c931b06829548d3096b9fce740e1bbb216`.
+
 ## 2026-11-05 — Implementación y auditoría focal B3 VLESS-WS-TLS
 
 El propietario autorizó B3 exclusivamente con fixtures y pruebas aisladas. Se añadió una acción contextual en el menú de conexión VLESS-WS-TLS en borrador para asociar una identidad global existente o crear una identidad y asociarla directamente, reutilizando Usuarios V2 y sus controles de UUID único/capacidad. No se duplicó el modelo de usuarios.

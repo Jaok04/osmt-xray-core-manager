@@ -2,8 +2,8 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente — corte 2026-11-06» al inicio de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado vigente:** 2026-11-06 — H6-E1/E2/E3 implementadas y auditoría integral H6-E PASS CON LIMITACIONES; instalador Manager-only por defecto implementado. Rama design/user-identity-association-v1; sincronización confirmada en GitHub y VPS. Commits de implementación/documentación y cierre de sincronización: 4984ce207ff446bb097cc53c6445ad1e9b53c585 y 537fb5475ce6bfcbba8401a1fced1642ca203cba. HEAD local/remoto: 537fb5475ce6bfcbba8401a1fced1642ca203cba. Regresión: Python 332/332 y Bash 62/62 PASS; ShellCheck, compileall, bash -n, install.sh --check y git diff --check PASS.
-**Estado global:** Etapa 1 aceptada; Etapas 2–6 abiertas/parciales. H6-E PASS CON LIMITACIONES. H6-F NO LISTO END-TO-END. Backend runtime live NO IMPLEMENTADO/AUTORIZADO; ACME/Certbot y endpoint público pendientes de decisión. No se ejecutó prueba end-to-end ni operaciones live.
+**Corte de estado vigente:** 2026-11-06 — H6-G3-A/B/C/D implementadas en fixtures; segunda pasada PASS CON LIMITACIONES (misma sesión, no independiente). H6-G2 F-01/F-02/F-03 corregidos/implementados; F-04/F-05 pendientes y backend live no conectado. Instalador autónomo con bootstrap GitHub aprobado, implementado y verificado en pruebas automatizadas; PAT/VPS limpia real pendiente. Rama design/user-identity-association-v1. HEAD base antes de esta implementación: `b00314c931b06829548d3096b9fce740e1bbb216`; cambios locales pendientes de publicación en esta fotografía.
+**Estado global:** Etapa 1 aceptada; Etapas 2–6 abiertas/parciales. H6-G2 NO CERRADO; H6-G3 no tiene auditoría independiente. H6-F NO LISTO END-TO-END. Backend runtime live no integrado; no ejecutar acciones live sin autorización específica.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
 **VPS de desarrollo:** /opt/xray-manager
@@ -15,6 +15,18 @@
 > **Segunda regla obligatoria permanente:** ninguna etapa se declara TERMINADA/COMPLETADA sin auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos, matriz de trazabilidad, pruebas y aceptación formal expresa. Cerrar un módulo no cierra su etapa. Ver `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md` y `AGENTS.md`.
 
 
+
+## Actualización vigente — instalador autónomo con GitHub privado (2026-11-06)
+
+- El propietario aprobó implementar un instalador de un solo archivo, autenticación Fine-grained PAT read-only y descarga del árbol completo sin clonar Git.
+- `install.sh` ahora detecta si sólo se dispone del archivo aislado. En ese caso autentica GitHub API, fija el commit de `design/user-identity-association-v1`, verifica el helper con SHA-256 fijado y descarga el tarball por SHA inmutable.
+- `scripts/installer_bootstrap.py` verifica cada blob Git, tamaño y modo; rechaza árboles truncados, rutas traversal, symlinks, hardlinks, submódulos, duplicados, archivos extra/faltantes y modos no admitidos. No instala `.git` ni historial.
+- PAT limitado a `Jaok04/xray-core-manager`, `Contents: Read-only`; entrada oculta o `XRAY_MANAGER_GITHUB_TOKEN`. No se guarda en disco, URLs, argumentos ni logs.
+- Procedimiento de primer bootstrap: `docs/INSTALACION_DESDE_VPS_LIMPIA.md`. `--install` sigue Manager-only; `--install --with-xray` sigue siendo explícito.
+- Pruebas actuales: bootstrap focal 18/18; Python global 406/406; Bash 62/62; ShellCheck `-S error`, `compileall`, `bash -n`, `install.sh --check` y `git diff --check` PASS. Extractor contra `git archive` local: 330/330 archivos verificados.
+- **Límite:** no se ha ejecutado GitHub API con el PAT real ni el bootstrap de un solo archivo en la VPS nueva. Validación live pendiente del propietario. No se instaló Manager/Xray en esa VPS y no se tocó runtime, DNS, firewall, puertos, certificados o red.
+- HEAD base antes de esta implementación: `b00314c931b06829548d3096b9fce740e1bbb216`; cambios locales aún no publicados en esta fotografía. `main` y `Xray-Normativa/` intactas.
+- Documentos: `docs/DECISION_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`, `docs/IMPLEMENTACION_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md` y `docs/AUDITORIA_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`.
 
 ## Estado vigente — corte 2026-11-06
 

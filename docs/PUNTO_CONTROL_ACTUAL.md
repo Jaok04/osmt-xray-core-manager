@@ -1,4 +1,19 @@
-# Punto de control actual — Xray Core Manager
+# Punto de control vigente — instalador autónomo GitHub (2026-11-06)
+
+**Estado:** IMPLEMENTADO Y VERIFICADO EN PRUEBAS AUTOMATIZADAS; validación remota real con PAT pendiente.
+**Rama:** `design/user-identity-association-v1`.
+**HEAD base:** `b00314c931b06829548d3096b9fce740e1bbb216`; cambios de esta tarea todavía locales en esta fotografía.
+
+- El instalador admite un único `install.sh`, autenticación Fine-grained PAT `Contents: Read-only`, descarga por commit SHA y verificación de helper/árbol Git.
+- Archivos principales: `install.sh`, `scripts/installer_bootstrap.py`, `tests/test_installer_bootstrap.py`.
+- Procedimiento: `docs/INSTALACION_DESDE_VPS_LIMPIA.md`.
+- Pruebas: focal 18/18; Python global 406/406; Bash 62/62; ShellCheck `-S error`, compileall, bash -n, `install.sh --check` y diff-check PASS.
+- No se probó GitHub con el PAT real ni instalación desde archivo único en la VPS nueva. El propietario debe ejecutar el procedimiento documentado y compartir salida sin secretos.
+- `--install` sigue Manager-only; `--with-xray` sigue opcional y explícito. No hay autorización implícita para iniciar servicio, modificar DNS, firewall, puertos, certificados o runtime.
+- H6-G2 continúa abierto; H6-G3 no tiene auditoría independiente. `main` y `Xray-Normativa/` permanecen intactas.
+
+## Punto de control anterior — H6-G3 y backend runtime
+
 
 > CORTE VIGENTE — 2026-11-06: H6-E1/E2/E3 implementadas; auditoría integral H6-E PASS CON LIMITACIONES. Instalador predeterminado Manager-only. H6-F NO LISTO END-TO-END. Rama design/user-identity-association-v1; HEAD base local/remoto antes de los cambios: 32496d749901d34cd1a60f720843901125b536b6. Implementación publicada en 4984ce207ff446bb097cc53c6445ad1e9b53c585 y actualización documental en 537fb5475ce6bfcbba8401a1fced1642ca203cba; HEAD local/remoto: 537fb5475ce6bfcbba8401a1fced1642ca203cba, árbol limpio. main y Xray-Normativa/ protegidas.
 

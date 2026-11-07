@@ -21,6 +21,10 @@ bash -n "$ROOT/install.sh"
 grep -q -- '--check' "$TMP/help.out"
 grep -q -- '--with-xray' "$TMP/help.out"
 grep -q 'Por defecto no instala Xray-core' "$TMP/help.out"
+grep -q 'Fine-grained PAT' "$TMP/help.out"
+helper_sha="$(sha256sum "$ROOT/scripts/installer_bootstrap.py" | awk '{print $1}')"
+grep -Fq "$helper_sha" "$ROOT/install.sh"
+grep -Fq 'design/user-identity-association-v1' "$ROOT/install.sh"
 
 # Instalación predeterminada: sólo Manager. Los fixtures Xray preexistentes
 # no deben ser validados, reemplazados ni utilizados para preparar systemd.

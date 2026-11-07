@@ -1,3 +1,21 @@
+# Punto de reanudación vigente — instalador autónomo GitHub (2026-11-06)
+
+El propietario aprobó implementar la instalación desde un único `install.sh` para el repositorio privado. La implementación está en el árbol de trabajo de `/opt/xray-manager`, rama `design/user-identity-association-v1`, sobre HEAD base `b00314c931b06829548d3096b9fce740e1bbb216`; todavía no está publicada en esta fotografía.
+
+- Fine-grained PAT de GitHub, limitado al repositorio `Jaok04/xray-core-manager` con `Contents: Read-only`.
+- El bootstrap inicial obtiene `install.sh` mediante GitHub API; el instalador descarga el árbol completo de un commit inmutable, verifica helper SHA-256 y todos los Git blobs, y despliega sin `.git` ni historial.
+- Código: `install.sh`, `scripts/installer_bootstrap.py`; pruebas: `tests/test_installer_bootstrap.py` y `tests/install.sh`.
+- Procedimiento exacto de instalación: `docs/INSTALACION_DESDE_VPS_LIMPIA.md`.
+- Pruebas: Python 406/406, Bash 62/62, bootstrap focal 18/18; compileall, bash -n, ShellCheck `-S error`, `install.sh --check` y diff-check PASS.
+- **Pendiente:** ejecutar el bootstrap real desde la VPS limpia del propietario con su PAT. No pegar el PAT en el chat. Hasta esa validación, la descarga remota privada queda probada mediante mocks/fixtures y verificación local de `git archive`, no end-to-end.
+- Manager-only continúa siendo el default. `--with-xray` sigue siendo explícito; no iniciar Xray ni cambiar DNS/firewall/puertos/certificados.
+- H6-G2 permanece abierto; H6-G3 requiere revisión adversarial interna adicional y no se declara independiente.
+- `main` y `Xray-Normativa/` no se modificaron.
+
+Para continuar: revisar `docs/DECISION_INSTALADOR_AUTODESCARGA_GITHUB_2026-11-06.md`, el informe de implementación/auditoría y ejecutar una validación en VPS limpia. No reabrir B1/B2/B3 ni las etapas ya aceptadas.
+
+---
+
 # Protocolo de continuidad — Xray Core Manager
 
 > PUNTO DE REANUDACIÓN VIGENTE — 2026-11-06: H6-E1/E2/E3 implementadas y auditoría integral H6-E PASS CON LIMITACIONES. El instalador predeterminado despliega sólo Xray Manager; Xray-core se instala después desde el menú. H6-F NO LISTO END-TO-END. Rama design/user-identity-association-v1; HEAD base local/remoto antes de esta actualización: 32496d749901d34cd1a60f720843901125b536b6. Sincronización confirmada: implementación publicada en 4984ce207ff446bb097cc53c6445ad1e9b53c585 y cierre documental en 537fb5475ce6bfcbba8401a1fced1642ca203cba; HEAD local/remoto 537fb5475ce6bfcbba8401a1fced1642ca203cba y árbol limpio. main y Xray-Normativa/ protegidas.

@@ -6,6 +6,9 @@ umask 077
 
 readonly INSTALL_VERSION="1"
 readonly DEFAULT_PREFIX="/"
+readonly GITHUB_REPOSITORY="Jaok04/xray-core-manager"
+readonly GITHUB_BRANCH="design/user-identity-association-v1"
+readonly BOOTSTRAP_HELPER_SHA256="85b508da1a94d9ec392d3ac01259bf4326a45df97105b9471aeee2bee470f98d"
 PREFIX="${XRAY_MANAGER_INSTALL_PREFIX:-$DEFAULT_PREFIX}"
 SKIP_DEPS="${XRAY_MANAGER_SKIP_DEPENDENCIES:-0}"
 ACTION="install"
@@ -17,11 +20,13 @@ usage() {
 Uso: sudo ./install.sh [--check | --install [--with-xray]] [--help]
 
   --check       Comprueba plataforma, privilegios y dependencias; no modifica nada.
-  --install     Instala dependencias faltantes y despliega únicamente Xray Core Manager.
+  --install     Descarga/verifica el árbol privado si hace falta e instala únicamente Xray Core Manager.
   --with-xray   Añade explícitamente la instalación verificada de Xray-core y
                 la preparación de xray.service. Requiere --install.
   --help        Muestra esta ayuda.
 
+Si sólo tienes este archivo, solicita un Fine-grained PAT con Contents: Read-only
+para Jaok04/xray-core-manager y descarga/verifica el commit de la rama autorizada.
 Por defecto no instala Xray-core, no crea la cuenta xray ni modifica systemd.
 Xray-core puede instalarse después desde Administración de Xray-core.
 Incluso con --with-xray, el servicio queda detenido y deshabilitado.
@@ -34,6 +39,14 @@ fail() {
 }
 info() { printf '[INFO] %s\n' "$*"; }
 ok() { printf '[OK] %s\n' "$*"; }
+
+BOOTSTRAP_DIR=""
+APT_UPDATED=0
+cleanup_bootstrap() {
+    if [[ -n "${BOOTSTRAP_DIR:-}" && -d "$BOOTSTRAP_DIR" ]]; then
+        rm -rf -- "$BOOTSTRAP_DIR"
+    fi
+}
 
 while (($#)); do
     case "$1" in
@@ -50,6 +63,12 @@ while (($#)); do
 done
 
 SOURCE_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+SOURCE_TREE_VALID=0
+if [[ -f "$SOURCE_ROOT/bin/xray-manager" && -f "$SOURCE_ROOT/config/paths.sh" &&
+    -f "$SOURCE_ROOT/modules/main_menu.sh" && -f "$SOURCE_ROOT/lib/json_store.sh" &&
+    -f "$SOURCE_ROOT/lib/operation_lock.sh" && -f "$SOURCE_ROOT/scripts/installer_bootstrap.py" ]]; then
+    SOURCE_TREE_VALID=1
+fi
 prefix_path() {
     if [[ "$PREFIX" == "/" ]]; then printf '%s' "$1"; else printf '%s%s' "${PREFIX%/}" "$1"; fi
 }
@@ -68,15 +87,14 @@ assert_no_symlink_components() {
 [[ "$PREFIX" == "/" || "$PREFIX" == /* ]] || fail "el prefijo de instalación debe ser absoluto"
 [[ "$WITH_XRAY" == 0 || ( "$ACTION" == install && "$INSTALL_REQUESTED" == 1 ) ]] ||
     fail "--with-xray requiere --install"
-[[ -f "$SOURCE_ROOT/bin/xray-manager" && -f "$SOURCE_ROOT/config/paths.sh" &&
-    -f "$SOURCE_ROOT/modules/main_menu.sh" && -f "$SOURCE_ROOT/lib/json_store.sh" ]] ||
-    fail "el directorio de origen no contiene un árbol válido de Xray Core Manager"
-
 [[ -r /etc/os-release ]] || fail "no se pudo identificar la distribución Linux"
 # shellcheck disable=SC1091
 . /etc/os-release
 if ! grep -Eiq '^(ID=(ubuntu|debian)|ID_LIKE=.*(ubuntu|debian))' /etc/os-release; then
     fail "plataforma no compatible: se requiere Ubuntu o Debian con apt-get"
+fi
+if [[ "$ACTION" == install && "$EUID" -ne 0 ]]; then
+    fail "la instalación requiere root; no se intentará autoelevar"
 fi
 
 # Preflight de rutas y archivos persistentes antes de apt-get o del despliegue.
@@ -146,9 +164,134 @@ fi
 command -v apt-get >/dev/null 2>&1 || fail "apt-get no está disponible"
 command -v dpkg-query >/dev/null 2>&1 || fail "dpkg-query no está disponible"
 
-if [[ "$ACTION" == install && "$EUID" -ne 0 ]]; then
-    fail "la instalación requiere root; no se intentará autoelevar"
+# Bootstrap: cuando se ejecuta el único install.sh descargado, obtiene el
+# helper autenticado y el árbol completo de un commit inmutable de GitHub.
+if [[ "$SOURCE_TREE_VALID" != 1 ]]; then
+    [[ "$ACTION" == install ]] ||
+        fail "--check requiere el árbol del proyecto; use --install para descargarlo desde GitHub"
+    [[ ! -e "$APP_ROOT" && ! -L "$APP_ROOT" ]] ||
+        fail "ya existe $APP_ROOT; ejecute el instalador desde esa instalación para evitar sobrescrituras"
+
+    if ! command -v python3 >/dev/null 2>&1 || ! dpkg-query -s ca-certificates >/dev/null 2>&1; then
+        info "Preparando únicamente Python 3 y certificados CA para autenticar la descarga inicial."
+        DEBIAN_FRONTEND=noninteractive apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 ca-certificates
+        APT_UPDATED=1
+    fi
+    command -v python3 >/dev/null 2>&1 || fail "Python 3 no está disponible para verificar la distribución"
+
+    if [[ -z "${XRAY_MANAGER_GITHUB_TOKEN:-}" ]]; then
+        [[ -t 0 ]] || fail "falta XRAY_MANAGER_GITHUB_TOKEN; ejecútelo en una terminal interactiva o proporciónelo por entorno"
+        read -r -s -p "Fine-grained GitHub PAT (Contents: Read-only): " XRAY_MANAGER_GITHUB_TOKEN
+        printf '\n'
+    fi
+    [[ -n "${XRAY_MANAGER_GITHUB_TOKEN:-}" ]] || fail "el token de GitHub está vacío"
+    export XRAY_MANAGER_GITHUB_TOKEN
+
+    [[ ! -L /var/tmp ]] || fail "/var/tmp no puede ser un enlace simbólico durante el bootstrap"
+    BOOTSTRAP_DIR="$(mktemp -d /var/tmp/xray-manager-bootstrap.XXXXXX)"
+    chmod 700 "$BOOTSTRAP_DIR"
+    trap cleanup_bootstrap EXIT
+    info "Autenticando con GitHub y resolviendo una revisión inmutable de $GITHUB_REPOSITORY."
+    python3 - "$GITHUB_REPOSITORY" "$GITHUB_BRANCH" "$BOOTSTRAP_HELPER_SHA256" "$BOOTSTRAP_DIR" "${XRAY_MANAGER_GITHUB_COMMIT_SHA:-}" <<'PYBOOTSTRAP'
+import base64
+import hashlib
+import json
+import os
+import re
+import sys
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote
+from urllib.request import Request, urlopen
+
+repo, ref, expected_helper_sha256, destination, pinned_commit = sys.argv[1:]
+token = os.environ.get("XRAY_MANAGER_GITHUB_TOKEN", "")
+if not token:
+    raise SystemExit("ERROR: no se recibió el token de GitHub.")
+api = "https://api.github.com"
+headers = {
+    "Authorization": "Bearer " + token,
+    "Accept": "application/vnd.github+json",
+    "X-GitHub-Api-Version": "2022-11-28",
+    "User-Agent": "xray-core-manager-installer",
+}
+def get_json(url):
+    request = Request(url, headers=headers)
+    try:
+        with urlopen(request, timeout=45) as response:
+            raw = response.read(32 * 1024 * 1024 + 1)
+    except HTTPError as exc:
+        if exc.code in (401, 403, 404):
+            raise SystemExit("ERROR: GitHub rechazó el acceso. Verifique el PAT y Contents: Read-only para Jaok04/xray-core-manager.")
+        raise SystemExit("ERROR: GitHub respondió HTTP " + str(exc.code) + ".")
+    except (URLError, TimeoutError, OSError):
+        raise SystemExit("ERROR: no se pudo conectar con GitHub.")
+    if len(raw) > 32 * 1024 * 1024:
+        raise SystemExit("ERROR: respuesta API demasiado grande.")
+    try:
+        value = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        raise SystemExit("ERROR: GitHub devolvió JSON inválido.")
+    if not isinstance(value, dict):
+        raise SystemExit("ERROR: estructura API inesperada.")
+    return value
+
+ref_value = pinned_commit if pinned_commit else ref
+commit_data = get_json(f"{api}/repos/{repo}/commits/{quote(ref_value, safe='')}")
+commit_sha = commit_data.get("sha")
+tree_sha = (commit_data.get("commit") or {}).get("tree", {}).get("sha")
+if not isinstance(commit_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
+    raise SystemExit("ERROR: SHA de commit inválido.")
+if pinned_commit and commit_sha != pinned_commit:
+    raise SystemExit("ERROR: GitHub no confirmó el commit fijado por el bootstrap.")
+if not isinstance(tree_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", tree_sha):
+    raise SystemExit("ERROR: SHA de árbol Git inválido.")
+tree = get_json(f"{api}/repos/{repo}/git/trees/{tree_sha}?recursive=1")
+if tree.get("sha") != tree_sha or tree.get("truncated") is not False:
+    raise SystemExit("ERROR: árbol Git inconsistente o truncado.")
+entries = tree.get("tree")
+if not isinstance(entries, list):
+    raise SystemExit("ERROR: árbol Git inválido.")
+helper = next((item for item in entries if item.get("path") == "scripts/installer_bootstrap.py"), None)
+if not isinstance(helper, dict) or helper.get("type") != "blob" or helper.get("mode") != "100644":
+    raise SystemExit("ERROR: no se encontró el helper de bootstrap esperado.")
+blob_sha = helper.get("sha")
+if not isinstance(blob_sha, str) or not re.fullmatch(r"[0-9a-f]{40}", blob_sha):
+    raise SystemExit("ERROR: SHA del helper inválido.")
+blob = get_json(f"{api}/repos/{repo}/git/blobs/{blob_sha}")
+if blob.get("encoding") != "base64" or not isinstance(blob.get("content"), str):
+    raise SystemExit("ERROR: GitHub no entregó el helper como blob base64.")
+try:
+    helper_bytes = base64.b64decode("".join(blob["content"].split()), validate=True)
+except (ValueError, TypeError):
+    raise SystemExit("ERROR: contenido base64 del helper inválido.")
+git_sha = hashlib.sha1(b"blob " + str(len(helper_bytes)).encode("ascii") + b"\0" + helper_bytes).hexdigest()
+sha256 = hashlib.sha256(helper_bytes).hexdigest()
+if git_sha != blob_sha or sha256 != expected_helper_sha256:
+    raise SystemExit("ERROR: la integridad del helper de bootstrap no coincide.")
+with open(os.path.join(destination, "installer_bootstrap.py"), "xb") as output:
+    output.write(helper_bytes)
+with open(os.path.join(destination, "tree.json"), "x", encoding="utf-8") as output:
+    json.dump(tree, output, separators=(",", ":"))
+with open(os.path.join(destination, "revision.json"), "x", encoding="utf-8") as output:
+    json.dump({"commit": commit_sha, "tree": tree_sha}, output)
+print("[OK] Helper verificado; revisión GitHub: " + commit_sha)
+PYBOOTSTRAP
+    python3 "$BOOTSTRAP_DIR/installer_bootstrap.py" \
+        --repo "$GITHUB_REPOSITORY" \
+        --commit "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["commit"])' "$BOOTSTRAP_DIR/revision.json")" \
+        --tree-sha "$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["tree"])' "$BOOTSTRAP_DIR/revision.json")" \
+        --tree-file "$BOOTSTRAP_DIR/tree.json" \
+        --destination "$BOOTSTRAP_DIR/source"
+    unset XRAY_MANAGER_GITHUB_TOKEN
+    SOURCE_ROOT="$BOOTSTRAP_DIR/source"
+    SOURCE_TREE_VALID=1
 fi
+
+[[ -f "$SOURCE_ROOT/bin/xray-manager" && -f "$SOURCE_ROOT/config/paths.sh" &&
+    -f "$SOURCE_ROOT/modules/main_menu.sh" && -f "$SOURCE_ROOT/lib/json_store.sh" &&
+    -f "$SOURCE_ROOT/lib/operation_lock.sh" && -f "$SOURCE_ROOT/scripts/installer_bootstrap.py" ]] ||
+    fail "el origen no contiene un árbol válido de Xray Core Manager"
 
 REQUIRED_PACKAGES=(ca-certificates coreutils curl grep gzip iproute2 jq libc-bin mawk passwd procps python3 python3-cryptography systemd tar util-linux uuid-runtime)
 REQUIRED_COMMANDS=(apt-get cut dpkg-query awk curl flock getent grep groupadd gzip id install jq python3 sha256sum sort ss systemctl systemd-analyze tar useradd uuidgen)
@@ -214,11 +357,13 @@ if ! manager_lock_acquire "$data_lock" data_fd; then
     manager_lock_release "$lifecycle_fd"
     exit 1
 fi
-trap 'manager_lock_release "$data_fd"; manager_lock_release "$lifecycle_fd"' EXIT
+trap 'manager_lock_release "$data_fd"; manager_lock_release "$lifecycle_fd"; cleanup_bootstrap' EXIT
 
 if [[ "$SKIP_DEPS" != 1 && "${#missing[@]}" -gt 0 ]]; then
     info "Se actualizarán índices e instalarán únicamente los paquetes faltantes; no se ejecutará apt upgrade."
-    DEBIAN_FRONTEND=noninteractive apt-get update
+    if [[ "$APT_UPDATED" != 1 ]]; then
+        DEBIAN_FRONTEND=noninteractive apt-get update
+    fi
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing[@]}"
 fi
 
@@ -237,8 +382,8 @@ else
     install -d -o root -g root -m 755 "$parent"
     [[ ! -L "$parent" ]] || fail "el directorio padre del destino es un enlace simbólico"
     stage="$(mktemp -d "$parent/.xray-manager-install.XXXXXX")"
-    cleanup() { [[ -z "${stage:-}" ]] || rm -rf -- "$stage"; }
-    trap cleanup EXIT
+    cleanup_stage() { [[ -z "${stage:-}" ]] || rm -rf -- "$stage"; }
+    trap 'cleanup_stage; manager_lock_release "$data_fd"; manager_lock_release "$lifecycle_fd"; cleanup_bootstrap' EXIT
     cp -a -- "$SOURCE_ROOT/." "$stage/"
     chown -R root:root "$stage"
     find "$stage" -type d -exec chmod 755 {} +
@@ -246,7 +391,6 @@ else
     chmod 755 "$stage/install.sh" "$stage/bin/xray-manager"
     mv -- "$stage" "$APP_ROOT"
     stage=""
-    trap - EXIT
     ok "Código desplegado en $APP_ROOT"
 fi
 
