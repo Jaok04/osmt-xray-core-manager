@@ -1,18 +1,17 @@
-# Punto de control vigente — B4.1 prototipo fixture de privilegios (2026-11-07)
+# Punto de control vigente — auditoría B4.1 fixture (2026-11-07)
 
-**Estado:** IMPLEMENTADO, VERIFICADO y PUBLICADO en GitHub. No integrado en runtime/live. Alcance exclusivo fixtures/pruebas aisladas.
-**Rama:** `design/user-identity-association-v1`; HEAD de partida `05dbf27089d1f62b14d5c4e4d4ceb7ccebcd89c6`; commit B4.1 `bc1b9b23b26f3ca299df66562113dfc635de2a1a`.
+**Estado:** A01–A03 corregidos; A04 mitigado con TOCTOU residual documentado. IMPLEMENTADO Y VERIFICADO EN DESARROLLO; NO PUBLICADO. HEAD base 899f29f4253f56f80d0d803207feceb743879a0a, rama design/user-identity-association-v1.
 
-- Archivos nuevos: `scripts/xray_runtime_launcher_prototype.py`, `tests/test_xray_runtime_launcher_prototype.py` y `docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md`.
-- Prototipo: memfd sellado + symlink JSON `/proc/self/fd/N`; padre escribe evidencia privada para el PID hijo antes de liberarlo; cadena `setpriv` → Xray conserva PID.
-- Xray 26.10.31 ejecutó `run -test` como `nobody:nogroup` y respondió `Configuration OK`. Capacidades verificadas: sólo `CAP_NET_BIND_SERVICE`; `NoNewPrivs=1`. Evidencia 0600 no escribible por identidad de servicio.
-- Pruebas: B4.1 9/9; B4 memfd 10/10; Python global 426/426; Bash 62/62; compileall, py_compile, bash -n, ShellCheck `-S error` sobre Bash y git diff-check PASS.
-- Limitaciones: no prueba `xray:xray`, sandbox systemd ni InvocationID real; no ejecuta daemon. No se modificó unidad, servicio, `/etc/xray`, runtime, R-05, backend live, menú ni VPS Pruebas.
-- Cambios de código y documentación publicados únicamente en la rama autorizada. Verificación de cierre: HEAD local y remoto coincidentes, árbol de trabajo limpio y `main` sin cambios.
+- Archivos modificados: scripts/xray_runtime_launcher_prototype.py y tests/test_xray_runtime_launcher_prototype.py.
+- Identidad NSS/UID/GID revalidada antes de fork; descriptor verificado por seals, tamaño y SHA-256 de bytes reales.
+- Timeout acotado; al vencer, termina el grupo de procesos y recolecta el hijo.
+- Xray y setpriv: archivo regular, no symlink, root-owned, ejecutable y no modificable por grupo/otros. Persiste límite TOCTOU entre comprobación y exec.
+- B4.1 16/16; Python 433/433; Bash 62/62; compileall, bash -n, ShellCheck -S error, install.sh --check y diff-check PASS.
+- Xray-Normativa, modules/xray_service.sh, R-05, systemd, /etc/xray, runtime y VPS Pruebas sin cambios. No se crearon cuentas/grupos ni se ejecutó servicio.
+- Sin commit/push; GitHub remoto permanece en HEAD base. El árbol local contiene cambios de código, pruebas y documentación.
 
-**Siguiente paso permitido:** revisión/auditoría focal del prototipo, robustecer negativos/recuperación si la auditoría lo exige y diseñar la prueba con identidad `xray` y sandbox systemd. Para crear identidad/unidad o probar sandbox real en un host, solicitar autorización live específica y hacerlo exclusivamente mediante Xray-Core Manager. No integrar B4.1 a R-05 ni cambiar `modules/xray_service.sh` todavía.
+**Siguiente paso:** diseñar pruebas aisladas de identidad xray:xray y sandbox systemd. La preparación live requiere autorización específica y debe realizarse mediante Xray-Core Manager. No integrar a R-05 ni cambiar el controlador systemd todavía.
 
----
 
 # Punto de control vigente — instalador autónomo GitHub (2026-11-06)
 

@@ -2,7 +2,7 @@
 
 > Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente — corte 2026-11-07» al inicio de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado vigente:** 2026-11-07 — B4.1 prototipo fixture de privilegios IMPLEMENTADO, VERIFICADO y PUBLICADO en `design/user-identity-association-v1`; commit de implementación `bc1b9b23b26f3ca299df66562113dfc635de2a1a`. Xray 26.10.31 validó configuración sintética mediante `run -test` tras descenso a `nobody:nogroup`; B4.1 9/9 y regresión Python 426/426 PASS. No probado con `xray:xray`, InvocationID real ni sandbox systemd; no ejecuta daemon. H6-G3-A/B/C/D permanecen implementadas en fixtures con auditoría independiente pendiente; H6-G2 F-04/F-05 pendientes y backend live no conectado. VPS Pruebas sin servicio Xray/systemd configurado; no se realizaron operaciones live en este cierre. Rama design/user-identity-association-v1.
+**Corte de estado vigente:** 2026-11-07 — B4.1 fixture auditado y endurecido en desarrollo; cambios actuales NO PUBLICADOS. HEAD base `899f29f4253f56f80d0d803207feceb743879a0a`. B4.1 16/16; Python 433/433; Bash 62/62 PASS. Xray 26.10.31 validó configuración sintética mediante `run -test` tras descenso a `nobody:nogroup`. No probado con `xray:xray`, InvocationID real ni sandbox systemd; no ejecuta daemon. H6-G3-A/B/C/D permanecen implementadas en fixtures con auditoría independiente pendiente; H6-G2 F-04/F-05 pendientes y backend live no conectado. VPS Pruebas sin servicio Xray/systemd configurado; no se realizaron operaciones live en este cierre. Rama design/user-identity-association-v1.
 **Estado global:** Etapa 1 aceptada; Etapas 2–6 abiertas/parciales. H6-G2 NO CERRADO; H6-G3 no tiene auditoría independiente. H6-F NO LISTO END-TO-END. Backend runtime live no integrado; no ejecutar acciones live sin autorización específica.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -17,7 +17,11 @@
 
 
 
-## Actualización vigente — B4.1 prototipo fixture de privilegios (2026-11-07)
+## Actualización vigente — auditoría focal y endurecimiento B4.1 (2026-11-07)
+
+Se corrigieron en fixtures la revalidación NSS/UID/GID, la verificación real de bytes/hash/tamaño/seals del descriptor, el timeout con terminación/recolección del hijo y la política de ejecutables root-owned no modificables por grupo/otros. B4.1 16/16, Python 433/433, Bash 62/62; compileall, bash -n, ShellCheck, install.sh --check y diff-check PASS. A04 conserva límite TOCTOU residual documentado. Cambios locales sin commit/push. No hay prueba xray:xray ni sandbox systemd real; no hubo operaciones live. Informe: docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md.
+
+## Actualización previa — B4.1 prototipo fixture de privilegios (2026-11-07)
 
 El propietario autorizó implementar B4.1 exclusivamente en desarrollo y fixtures. Se añadieron `scripts/xray_runtime_launcher_prototype.py`, `tests/test_xray_runtime_launcher_prototype.py` y `docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md`.
 

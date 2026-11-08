@@ -161,5 +161,106 @@ class LauncherPrivilegePrototypeTests(unittest.TestCase):
             )
 
 
+    def _fake_executable(self, name, body):
+        path = self.root / name
+        path.write_text("#!/bin/sh\n" + body + "\n")
+        path.chmod(0o755)
+        return path
+
+    def test_rejects_service_uid_tampering_after_plan_creation(self):
+        plan = self.plan()
+        try:
+            plan["service_uid"] = 0
+            with self.assertRaises(launcher.LauncherPrototypeError):
+                launcher.run_fixture_xray_validation(
+                    plan, xray_binary=pathlib.Path("/usr/local/bin/xray"))
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_rejects_service_gid_tampering_after_plan_creation(self):
+        plan = self.plan()
+        try:
+            plan["service_gid"] = 0
+            with self.assertRaises(launcher.LauncherPrototypeError):
+                launcher.run_fixture_xray_validation(
+                    plan, xray_binary=pathlib.Path("/usr/local/bin/xray"))
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_rejects_descriptor_content_or_metadata_tampering(self):
+        plan = self.plan()
+        try:
+            plan["fd_metadata"]["sha256"] = "0" * 64
+            with self.assertRaises(launcher.LauncherPrototypeError):
+                launcher.run_fixture_xray_validation(
+                    plan, xray_binary=pathlib.Path("/usr/local/bin/xray"))
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_rejects_replaced_sealed_descriptor_with_different_bytes(self):
+        plan = self.plan()
+        replacement = None
+        try:
+            altered = self.config.replace(b"warning", b"debuggg")
+            replacement, metadata = attestation.create_sealed_memfd(
+                altered, hashlib.sha256(altered).hexdigest())
+            original = plan["fd"]
+            plan["fd"] = replacement
+            plan["fd_metadata"] = metadata
+            with self.assertRaises(launcher.LauncherPrototypeError):
+                launcher.run_fixture_xray_validation(
+                    plan, xray_binary=pathlib.Path("/usr/local/bin/xray"))
+            os.close(original)
+            replacement = None
+        finally:
+            if replacement is not None:
+                os.close(replacement)
+            launcher.close_fixture_plan(plan)
+
+    def test_rejects_world_writable_executable(self):
+        plan = self.plan()
+        fake_xray = self._fake_executable("fake-xray-writable", "exit 0")
+        fake_xray.chmod(0o777)
+        try:
+            with self.assertRaises(launcher.LauncherPrototypeError):
+                launcher.run_fixture_xray_validation(
+                    plan, xray_binary=fake_xray)
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_rejects_symlink_executable(self):
+        plan = self.plan()
+        target = self._fake_executable("fake-xray-target", "exit 0")
+        link = self.root / "fake-xray-link"
+        link.symlink_to(target)
+        try:
+            with self.assertRaises(launcher.LauncherPrototypeError):
+                launcher.run_fixture_xray_validation(
+                    plan, xray_binary=link,
+                    setpriv_binary=pathlib.Path("/usr/bin/setpriv"))
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_timeout_terminates_and_reaps_child(self):
+        if os.geteuid() != 0:
+            self.skipTest("requiere root para ejecutar setpriv")
+        plan = self.plan()
+        fake_xray = self._fake_executable("fake-xray-sleeper", "sleep 5")
+        try:
+            started = __import__("time").monotonic()
+            result = launcher.run_fixture_xray_validation(
+                plan, xray_binary=fake_xray,
+                setpriv_binary=pathlib.Path("/usr/bin/setpriv"),
+                timeout_seconds=0.2)
+            elapsed = __import__("time").monotonic() - started
+            self.assertEqual(result.returncode, 124)
+            self.assertIn("timeout", result.stderr)
+            self.assertLess(elapsed, 2.0)
+            with self.assertRaises(ChildProcessError):
+                os.waitpid(plan["target_pid"], os.WNOHANG)
+        finally:
+            launcher.close_fixture_plan(plan)
+
+
 if __name__ == "__main__":
     unittest.main()

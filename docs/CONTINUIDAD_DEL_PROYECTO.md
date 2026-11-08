@@ -1,14 +1,13 @@
-# Punto de reanudación vigente — B4.1 prototipo fixture de privilegios (2026-11-07)
+# Punto de reanudación vigente — auditoría B4.1 fixture (2026-11-07)
 
-El propietario autorizó B4.1 sólo en desarrollo/fixtures. El prototipo `scripts/xray_runtime_launcher_prototype.py` prepara memfd sellado y enlace JSON a `/proc/self/fd/N`; el padre registra evidencia 0600 para el PID hijo antes de liberarlo a `exec(setpriv → Xray)`. El PID se conserva. Xray 26.10.31 validó la configuración sintética con `run -test` bajo `nobody:nogroup`; `NoNewPrivs=1` y únicamente `CAP_NET_BIND_SERVICE` en los conjuntos Inh/Prm/Eff/Bnd/Amb. La identidad de servicio no puede escribir la evidencia.
+B4.1 fue auditado y endurecido en desarrollo. El lanzador revalida identidad NSS/UID/GID y bytes reales del memfd (seals, tamaño y SHA-256), aplica timeout con terminación/recolección del grupo hijo y exige ejecutables regulares root-owned no modificables por grupo/otros. A01–A03 resueltos; A04 mitigado, con TOCTOU residual documentado.
 
-Pruebas B4.1 9/9; B4 memfd 10/10; Python global 426/426; Bash 62/62; compileall, py_compile, bash -n, ShellCheck `-S error` y diff-check PASS. Informe: `docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md`.
+Pruebas: B4.1 16/16; Python 433/433; Bash 62/62; compileall, bash -n, ShellCheck -S error, install.sh --check y diff-check PASS. Informe: docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md.
 
-**Limitaciones y prohibiciones:** el UID/GID es `nobody:nogroup`, InvocationID sintético y el comando es `xray run -test`, no daemon. No se probó `xray:xray` ni sandbox systemd real. No hay integración R-05/menú/backend live, ni cambios de unidad, servicio, `/etc/xray`, runtime o VPS Pruebas. Publicado sólo en `design/user-identity-association-v1`, commit `bc1b9b23b26f3ca299df66562113dfc635de2a1a`; `main` no se modificó. La regla Manager-only sigue vigente; cualquier preparación live se hace exclusivamente mediante Xray-Core Manager y requiere autorización específica por host/alcance.
+**Estado y límites:** cambios locales sin commit/push, rama design/user-identity-association-v1, HEAD base 899f29f4253f56f80d0d803207feceb743879a0a. Aún usa nobody:nogroup, InvocationID sintético y xray run -test; no daemon ni sandbox systemd real. No se tocaron R-05, menú, backend live, modules/xray_service.sh, unidad, /etc/xray, cuentas, servicio ni VPS Pruebas. Xray-Normativa permanece intacta.
 
-**Siguiente acción:** auditar el prototipo fixture y definir los requisitos pendientes para la prueba de identidad `xray` y sandbox systemd. No conectar a R-05 ni cambiar `modules/xray_service.sh` hasta completar la auditoría y obtener autorización separada.
+**Siguiente acción:** diseñar fixture de identidad xray:xray y análisis de compatibilidad del sandbox systemd. No crear cuentas/unidades ni realizar pruebas live sin autorización específica; toda preparación real debe pasar por Xray-Core Manager. No integrar a R-05/controlador hasta completar diseño, auditoría y autorización separada.
 
----
 
 # Punto de reanudación vigente — instalador autónomo GitHub (2026-11-06)
 

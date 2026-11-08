@@ -1,3 +1,11 @@
+## 2026-11-07 — Auditoría focal y endurecimiento B4.1 en fixtures
+
+Por autorización del propietario se corrigió scripts/xray_runtime_launcher_prototype.py y se amplió tests/test_xray_runtime_launcher_prototype.py. Se revalida identidad NSS/UID/GID; descriptor heredable, seals, tamaño y SHA-256 de bytes reales; timeout con terminación y recolección del grupo hijo; y propiedad/tipo/permisos de Xray y setpriv. Se añadieron negativos de manipulación UID/GID, metadatos, descriptor sustituido, binario symlink/modificable y timeout. Se documenta el límite TOCTOU residual de validación/exec.
+
+Verificación: B4.1 focal 16/16; Python global 433/433; Bash 62/62; compileall, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS. Xray 26.10.31 run -test tras descenso de privilegios y prueba de timeout PASS. No se modificó sistema live, cuentas, unidad, servicio, /etc/xray, runtime, R-05, modules/xray_service.sh ni VPS Pruebas. Xray-Normativa intacta.
+
+Estado: IMPLEMENTADO Y VERIFICADO EN FIXTURES; no publicado ni sincronizado con GitHub. Sin commit/push. Siguiente: diseñar prueba xray:xray y sandbox systemd; cualquier preparación live requiere autorización específica y debe ejecutarse desde Manager.
+
 ## 2026-11-07 — B4.1 prototipo fixture de privilegios del lanzador
 
 Por autorización expresa del propietario, se implementó B4.1 sólo en VPS desarrollo y fixtures. El nuevo `scripts/xray_runtime_launcher_prototype.py` prepara un memfd sellado y heredable, enlace temporal `.json` a `/proc/self/fd/N` y un hijo bloqueado antes de exec. El padre escribe evidencia privada 0600 para el PID hijo antes de liberarlo; el hijo ejecuta `setpriv` → Xray mediante exec, conservando PID. Se añadió `tests/test_xray_runtime_launcher_prototype.py` y el informe `docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md`.

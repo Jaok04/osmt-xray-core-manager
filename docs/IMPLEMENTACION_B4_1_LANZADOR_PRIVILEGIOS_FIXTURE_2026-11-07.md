@@ -59,3 +59,21 @@ La verificación global de regresión y controles estáticos se registra en el c
 5. Conectar al flujo transaccional R-05 y al controlador único `modules/xray_service.sh` sólo después de completar pruebas/auditoría y obtener autorización para ese alcance.
 
 **Conclusión:** el contrato de privilegios es viable en una prueba aislada con Xray real y memfd sellado. Esto no habilita operaciones live ni demuestra todavía compatibilidad con el sandbox systemd final.
+
+---
+
+## Auditoría focal B4.1 — correcciones en fixtures (2026-11-07)
+
+**Estado:** CORREGIDO Y VERIFICADO EN DESARROLLO; no integrado ni publicado. HEAD base: 899f29f4253f56f80d0d803207feceb743879a0a.
+
+- **A01 — identidad modificable (alta): RESUELTO.** Antes del fork se revalida usuario/grupo mediante NSS; UID/GID deben ser enteros no-root, coincidir con los nombres y con el grupo primario.
+- **A02 — descriptor/metadatos (alta): RESUELTO.** Se verifican heredabilidad, seals, tamaño real con fstat, lectura íntegra con pread y SHA-256 de los bytes; se contrastan metadatos. Un memfd sustituto con bytes diferentes se rechaza.
+- **A03 — espera indefinida (media): RESUELTO.** Timeout 0.1–300 s, waitpid no bloqueante, terminación del grupo de procesos y recolección del hijo. Retorno 124 identifica timeout.
+- **A04 — ejecutables (media): MITIGADO.** Xray y setpriv deben ser rutas absolutas a archivos regulares no simbólicos, propiedad de root, ejecutables y sin escritura de grupo/otros. Persiste una ventana TOCTOU entre validación y exec; no es una primitiva de producción frente a un actor que pueda modificar directorios raíz.
+
+### Pruebas y verificación
+La suite B4.1 creció de 9 a 16 pruebas: manipulación UID/GID, metadatos, sustitución de memfd, binario symlink, binario modificable y timeout con terminación/recolección. Se conserva Xray 26.10.31 run -test tras setpriv y la evidencia privada. B4.1 focal 16/16; Python global 433/433; Bash 62/62; compileall, bash -n, ShellCheck -S error, install.sh --check y git diff --check PASS.
+
+No se ejecutó systemd ni se crearon cuentas/grupos; no se tocó /etc/xray, unidad, servicio, runtime, R-05, modules/xray_service.sh ni VPS Pruebas. Xray-Normativa intacta.
+
+**Límites y siguiente paso:** identidad nobody:nogroup, InvocationID sintético y run -test; no daemon ni sandbox systemd real. Diseñar fixture xray:xray y requisitos del sandbox. No integrar a R-05/controlador ni preparar infraestructura live sin autorización específica. Sin commit ni push.

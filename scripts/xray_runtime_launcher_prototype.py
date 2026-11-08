@@ -7,13 +7,15 @@ rutas live y sólo prepara memfd/symlink/evidencia para pruebas controladas.
 from __future__ import annotations
 
 import hashlib
+import grp
 import os
 import pathlib
 import pwd
-import grp
+import signal
 import stat
 import subprocess
 import tempfile
+import time
 from typing import Any
 
 import xray_runtime_config_attestation as attestation
@@ -41,6 +43,74 @@ def _fixture_root(root: pathlib.Path) -> pathlib.Path:
     return root
 
 
+def _validate_service_identity(plan: dict[str, Any]) -> None:
+    uid, gid = plan.get("service_uid"), plan.get("service_gid")
+    user, group_name = plan.get("service_user"), plan.get("service_group")
+    if (type(uid) is not int or type(gid) is not int or uid <= 0 or gid <= 0
+            or not isinstance(user, str) or not user or not isinstance(group_name, str)
+            or not group_name):
+        raise LauncherPrototypeError("La identidad de servicio del plan no es válida.")
+    try:
+        account = pwd.getpwnam(user)
+        group = grp.getgrnam(group_name)
+    except KeyError as exc:
+        raise LauncherPrototypeError("La identidad de servicio ya no existe.") from exc
+    if (account.pw_uid == 0 or group.gr_gid == 0 or account.pw_uid != uid
+            or group.gr_gid != gid or account.pw_gid != gid):
+        raise LauncherPrototypeError("La identidad del plan fue alterada o no coincide con NSS.")
+
+
+def _validate_executable(path: pathlib.Path, label: str) -> pathlib.Path:
+    path = pathlib.Path(path)
+    try:
+        info = path.lstat()
+    except OSError as exc:
+        raise LauncherPrototypeError(f"Binario {label} no disponible.") from exc
+    if (not path.is_absolute() or not stat.S_ISREG(info.st_mode)
+            or stat.S_ISLNK(info.st_mode) or info.st_uid != 0
+            or info.st_mode & (stat.S_IWGRP | stat.S_IWOTH)
+            or not os.access(path, os.X_OK)):
+        raise LauncherPrototypeError(f"Binario {label} no cumple el contrato de propiedad/permisos.")
+    return path
+
+
+def _validate_descriptor(plan: dict[str, Any]) -> int:
+    fd = plan.get("fd")
+    if type(fd) is not int or fd < 0:
+        raise LauncherPrototypeError("Descriptor fixture inválido.")
+    try:
+        if not os.get_inheritable(fd):
+            raise LauncherPrototypeError("El descriptor no es heredable.")
+        seals = attestation.fcntl.fcntl(fd, attestation.fcntl.F_GET_SEALS)
+        size = os.fstat(fd).st_size
+        expected_size = plan.get("expected_size")
+        expected_hash = plan.get("expected_sha256")
+        metadata = plan.get("fd_metadata")
+        if (seals & attestation.REQUIRED_SEALS != attestation.REQUIRED_SEALS
+                or type(expected_size) is not int or not 1 <= expected_size <= attestation.MAX_CONFIG_BYTES
+                or size != expected_size or not isinstance(expected_hash, str)
+                or len(expected_hash) != 64 or not isinstance(metadata, dict)
+                or metadata.get("sha256") != expected_hash
+                or metadata.get("size_bytes") != expected_size
+                or type(metadata.get("seals")) is not int
+                or metadata["seals"] & attestation.REQUIRED_SEALS != attestation.REQUIRED_SEALS
+                or metadata.get("inheritable") is not True):
+            raise LauncherPrototypeError("El descriptor o sus metadatos no conservan las garantías.")
+        digest = hashlib.sha256()
+        offset = 0
+        while offset < size:
+            chunk = os.pread(fd, min(1024 * 1024, size - offset), offset)
+            if not chunk:
+                raise LauncherPrototypeError("Lectura incompleta del descriptor sellado.")
+            digest.update(chunk)
+            offset += len(chunk)
+        if digest.hexdigest() != expected_hash:
+            raise LauncherPrototypeError("El contenido del descriptor no coincide con SHA-256 esperado.")
+        return seals
+    except OSError as exc:
+        raise LauncherPrototypeError("No se pudo verificar el descriptor fixture.") from exc
+
+
 def prepare_fixture_launch(
     *, fixture_root: pathlib.Path, config: bytes, expected_sha256: str,
     invocation_id: str, service_user: str = "nobody", service_group: str = "nogroup",
@@ -54,8 +124,8 @@ def prepare_fixture_launch(
         group = grp.getgrnam(service_group)
     except KeyError as exc:
         raise LauncherPrototypeError("La identidad de prueba no existe.") from exc
-    if account.pw_uid == 0 or group.gr_gid == 0:
-        raise LauncherPrototypeError("La identidad de servicio de prueba no puede ser root.")
+    if account.pw_uid == 0 or group.gr_gid == 0 or account.pw_gid != group.gr_gid:
+        raise LauncherPrototypeError("La identidad de servicio de prueba no puede ser root y debe tener grupo primario coincidente.")
     digest = hashlib.sha256(config).hexdigest()
     if digest != expected_sha256:
         raise LauncherPrototypeError("El hash esperado no coincide con los bytes de configuración.")
@@ -88,34 +158,47 @@ def prepare_fixture_launch(
         raise
 
 
+def _terminate_child(child: int) -> None:
+    try:
+        os.killpg(child, signal.SIGKILL)
+    except ProcessLookupError:
+        pass
+    except OSError:
+        try:
+            os.kill(child, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+    while True:
+        try:
+            os.waitpid(child, 0)
+            return
+        except InterruptedError:
+            continue
+        except ChildProcessError:
+            return
+
+
 def run_fixture_xray_validation(
     plan: dict[str, Any], *, xray_binary: pathlib.Path,
     setpriv_binary: pathlib.Path = pathlib.Path("/usr/bin/setpriv"),
+    timeout_seconds: float = 30.0,
 ) -> subprocess.CompletedProcess[str]:
-    """Ejecuta Xray -test con evidencia escrita para el PID que hará exec.
-
-    Un hijo fork queda bloqueado en una tubería; el padre escribe primero la
-    evidencia root/owner-only para el PID del hijo y sólo entonces lo libera
-    para exec(setpriv -> Xray). PID se conserva en toda la cadena exec.
-    """
-    if plan.get("environment") != "fixture" or not isinstance(plan.get("fd"), int):
+    """Ejecuta Xray -test con evidencia previa a exec y timeout estricto."""
+    if not isinstance(plan, dict) or plan.get("environment") != "fixture":
         raise LauncherPrototypeError("Sólo se admiten planes fixture.")
-    binary = pathlib.Path(xray_binary)
-    setpriv = pathlib.Path(setpriv_binary)
-    if not binary.is_absolute() or not binary.is_file() or not os.access(binary, os.X_OK):
-        raise LauncherPrototypeError("Binario Xray de prueba no válido.")
-    if not setpriv.is_absolute() or not setpriv.is_file() or not os.access(setpriv, os.X_OK):
-        raise LauncherPrototypeError("setpriv no está disponible.")
-    fd = plan["fd"]
-    if not os.get_inheritable(fd):
-        raise LauncherPrototypeError("El descriptor no es heredable.")
+    if (isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float))
+            or not 0.1 <= timeout_seconds <= 300):
+        raise LauncherPrototypeError("Timeout fuera del intervalo permitido (0.1–300 s).")
+    _validate_service_identity(plan)
+    binary = _validate_executable(xray_binary, "Xray")
+    setpriv = _validate_executable(setpriv_binary, "setpriv")
+    fd = plan.get("fd")
+    _validate_descriptor(plan)
     try:
-        seals = attestation.fcntl.fcntl(fd, attestation.fcntl.F_GET_SEALS)
         link = pathlib.Path(plan["config_link"])
         workspace = pathlib.Path(plan["workspace"])
         root = _fixture_root(workspace.parent)
-        if (seals & attestation.REQUIRED_SEALS != attestation.REQUIRED_SEALS
-                or link.parent != workspace or not link.is_symlink()
+        if (not link.is_absolute() or link.parent != workspace or not link.is_symlink()
                 or os.readlink(link) != f"/proc/self/fd/{fd}"
                 or workspace.parent != root or not workspace.is_dir()
                 or not isinstance(plan.get("invocation_id"), str)
@@ -123,32 +206,40 @@ def run_fixture_xray_validation(
             raise LauncherPrototypeError("El plan fixture fue alterado o no conserva sus garantías.")
     except (OSError, KeyError, TypeError) as exc:
         raise LauncherPrototypeError("No se pudo verificar el plan fixture.") from exc
+
     argv = [
         str(setpriv), f"--reuid={plan['service_uid']}",
         f"--regid={plan['service_gid']}", "--clear-groups", "--no-new-privs",
         "--bounding-set=-all,+net_bind_service",
         "--inh-caps=+net_bind_service", "--ambient-caps=+net_bind_service",
-        "--", str(binary), "run", "-test", "-config", str(plan["config_link"]),
+        "--", str(binary), "run", "-test", "-config", str(link),
     ]
     gate_read, gate_write = os.pipe()
+    child = None
     with tempfile.TemporaryFile() as output:
-        child = os.fork()
-        if child == 0:
-            try:
-                os.close(gate_write)
-                os.dup2(output.fileno(), 1)
-                os.dup2(output.fileno(), 2)
-                os.close(output.fileno())
-                token = os.read(gate_read, 1)
-                os.close(gate_read)
-                if token != b"1":
-                    os._exit(125)
-                os.execv(argv[0], argv)
-            except BaseException:
-                os._exit(126)
-        os.close(gate_read)
-        plan["target_pid"] = child
         try:
+            child = os.fork()
+            if child == 0:
+                try:
+                    os.close(gate_write)
+                    os.setpgid(0, 0)
+                    os.dup2(output.fileno(), 1)
+                    os.dup2(output.fileno(), 2)
+                    os.close(output.fileno())
+                    token = os.read(gate_read, 1)
+                    os.close(gate_read)
+                    if token != b"1":
+                        os._exit(125)
+                    os.execv(argv[0], argv)
+                except BaseException:
+                    os._exit(126)
+            os.close(gate_read)
+            gate_read = -1
+            try:
+                os.setpgid(child, child)
+            except OSError:
+                pass
+            plan["target_pid"] = child
             evidence = attestation.write_invocation_evidence(
                 fixture_root=pathlib.Path(plan["workspace"]).parent,
                 evidence_dir=pathlib.Path(plan["workspace"]).parent / "evidence",
@@ -156,15 +247,40 @@ def run_fixture_xray_validation(
                 invocation_id=plan["invocation_id"],
             )
             plan["evidence_path"] = evidence
-            os.write(gate_write, b"1")
-        except Exception:
+            if os.write(gate_write, b"1") != 1:
+                raise LauncherPrototypeError("No se pudo liberar el hijo después de escribir evidencia.")
             os.close(gate_write)
-            os.waitpid(child, 0)
+            gate_write = -1
+            deadline = time.monotonic() + float(timeout_seconds)
+            status = None
+            while time.monotonic() < deadline:
+                try:
+                    waited, candidate = os.waitpid(child, os.WNOHANG)
+                except InterruptedError:
+                    continue
+                if waited == child:
+                    status = candidate
+                    break
+                time.sleep(min(0.02, max(0, deadline - time.monotonic())))
+            if status is None:
+                _terminate_child(child)
+                child = None
+                output.seek(0)
+                captured = output.read().decode("utf-8", errors="replace")
+                return subprocess.CompletedProcess(argv, 124, captured, "timeout: Xray fixture validation exceeded limit")
+            child = None
+            output.seek(0)
+            captured = output.read().decode("utf-8", errors="replace")
+        except Exception:
+            if child is not None:
+                _terminate_child(child)
+                child = None
             raise
-        os.close(gate_write)
-        _, status = os.waitpid(child, 0)
-        output.seek(0)
-        captured = output.read().decode("utf-8", errors="replace")
+        finally:
+            if gate_read >= 0:
+                os.close(gate_read)
+            if gate_write >= 0:
+                os.close(gate_write)
     if os.WIFEXITED(status):
         return subprocess.CompletedProcess(argv, os.WEXITSTATUS(status), captured, "")
     if os.WIFSIGNALED(status):
