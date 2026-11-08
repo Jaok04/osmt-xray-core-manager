@@ -1,7 +1,7 @@
 # B4.3-B — diseño de integración fixture del almacén persistente con el supervisor
 
 **Fecha:** 2026-11-08
-**Estado:** DISEÑO TÉCNICO; pendiente de implementación fixture y revisión adversarial.
+**Estado:** DISEÑO TÉCNICO IMPLEMENTADO EN FIXTURES; revisión adversarial independiente pendiente.
 **Base:** `1da1b77470179a2b082a0f196db56030d9f72afa`.
 **Rama prevista:** `design/user-identity-association-v1`.
 
@@ -92,6 +92,8 @@ No se permite en B4.3-B:
 
 La eventual integración productiva y cualquier operación live requerirán diseño, auditoría integral y autorización específica posterior.
 
-## 9. Siguiente paso
+## 9. Implementación y siguiente paso
 
-Implementar el adaptador de descriptor anclado y el camino opt-in `persistent_b43` exclusivamente en fixtures; añadir pruebas de gate/fallo/TOCTOU; ejecutar la batería completa; después realizar revisión adversarial independiente. No conectar R-05 ni el controlador systemd en esta fase.
+La implementación fixture del contrato se completó en `docs/IMPLEMENTACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`; la segunda pasada adversarial de la misma sesión está en `docs/AUDITORIA_B4_3B_ADAPTADOR_EVIDENCIA_FIXTURE_2026-11-08.md` y no equivale a auditoría independiente. Las pruebas focales y regresiones globales están registradas en el informe de implementación.
+
+Siguiente paso: revisión independiente de B4.3-B y corrección de hallazgos, si los hubiera. No conectar R-05 ni el controlador systemd en esta fase.
