@@ -60,6 +60,6 @@ Regresión Python completa: **458/458 PASS**.
 
 ## 6. Estado Git y siguiente paso
 
-Cambios locales sin commit ni push. Árbol de trabajo contiene dos archivos nuevos y actualizaciones documentales; los __pycache__ de pruebas se eliminaron.
+Implementación y pruebas publicadas en el commit 0fbd7ff30854c3b84e0453545833787ec78a7248. La actualización de continuidad se publicó en ce066f763830e26eedb6d8583a405096a0a2cd57. GitHub confirmó HEAD remoto ce066f763830e26eedb6d8583a405096a0a2cd57; árbol limpio.
 
 Segunda pasada completada: se añadieron pruebas de symlink en directorio padre, fallo inyectado durante publicación con limpieza del temporal y JSON corrupto persistido. La suite focal B4 completa quedó en 51/51 y la regresión Python en 458/458. Siguiente paso recomendado: diseñar la integración fixture del almacén con el supervisor, preservando el anclaje de raíz confiable y sin habilitar operaciones live.

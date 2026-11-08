@@ -6,7 +6,7 @@
 
 **Hallazgo:** el helper anterior B4.1 exige evidencia como hijo directo de la raíz fixture y no representa el path anidado B4.3; por eso se creó un módulo separado, sin integración. Los componentes desde la raíz fixture se abren por dirfd con O_NOFOLLOW; producción debe recibir una raíz previamente anclada por Manager.
 
-**Publicación:** commit 0fbd7ff30854c3b84e0453545833787ec78a7248 en design/user-identity-association-v1; HEAD local/remoto verificado y árbol limpio. **Límites:** no systemd, daemon, unidad, xray:xray, R-05, controlador, menú, backend live, runtime, VPS pruebas ni red. Próximo paso: diseñar integración fixture del almacén con el supervisor, manteniendo el anclaje de raíz confiable. Live requiere autorización específica.
+**Publicación:** implementación commit 0fbd7ff30854c3b84e0453545833787ec78a7248; continuidad/documentación commit ce066f763830e26eedb6d8583a405096a0a2cd57; HEAD local/remoto verificado y árbol limpio. **Límites:** no systemd, daemon, unidad, xray:xray, R-05, controlador, menú, backend live, runtime, VPS pruebas ni red. Próximo paso: diseñar integración fixture del almacén con el supervisor, manteniendo el anclaje de raíz confiable. Live requiere autorización específica.
 
 ---
 
