@@ -2,15 +2,15 @@
 
 ## Objetivo
 
-Solicitar a un revisor humano o a otra IA, que no haya participado en la implementación, una revisión técnica adversarial e independiente de H6-G3-A/B/C/D y del informe de segunda pasada G3-E.
+Solicitar a un revisor humano o a otra IA, que no haya participado en la implementación, una revisión técnica adversarial e independiente de H6-G3-A/B/C/D y del informe de segunda pasada G3-E. La revisión debe ejecutarse contra el HEAD actualizado indicado abajo; los hashes antiguos dentro de los informes históricos son contexto, no el árbol a revisar.
 
 ## Estado exacto del árbol a revisar
 
 - Repositorio: `Jaok04/xray-core-manager` (privado).
 - Rama local autorizada: `design/user-identity-association-v1`.
-- HEAD observado: `9bab1dbed7d4873aa30a3fd00a976a1d666d9355`.
+- HEAD objetivo: tip vigente de `origin/design/user-identity-association-v1` al iniciar la revisión. Ejecutar `git fetch origin` y comprobar que `git rev-parse HEAD` coincide con `git rev-parse origin/design/user-identity-association-v1`; anotar el SHA exacto en el informe. No usar los hashes históricos de los informes como árbol objetivo.
 - Ruta de desarrollo: `/opt/xray-manager` en la VPS `Implementación-Xray`.
-- Los cambios de G2/G3 están en el árbol de trabajo y NO están committeados ni publicados.
+- Árbol de trabajo limpio al preparar este paquete. G2/G3 están publicados; inspeccionar el HEAD actual y no asumir los cortes históricos de 2026-11-06.
 - No cambiar de rama, no resetear, no limpiar el árbol y no sobrescribir archivos.
 - No modificar `main/` ni `Xray-Normativa/`.
 
@@ -72,6 +72,7 @@ Contrastar las obligaciones funcionales pertinentes con la normativa aprobada en
 8. Import graph/entrypoints: demostrar que R-05 y menú no importan/instancian el backend live.
 9. Evidencia fixture presentada al backend live: debe ser rechazada.
 10. Comprobar preservación de `main` y `Xray-Normativa/`.
+11. Revisar `docs/DISENO_PUENTE_MINIMO_MANAGER_RUNTIME_LIVE_VLESS_WS_TLS_2026-11-08.md` sólo como contexto del siguiente objetivo; no confundir diseño con implementación ni ampliar el alcance G3.
 
 ## Entregable solicitado
 
