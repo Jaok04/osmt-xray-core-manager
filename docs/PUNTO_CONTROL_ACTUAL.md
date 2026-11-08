@@ -23,7 +23,7 @@ El cambio de `User=xray` a supervisor root afecta la semántica de `StateDirecto
 - No se integró R-05, menú o backend live.
 - No se modificó `modules/xray_service.sh`, systemd, runtime, VPS de pruebas, DNS, firewall, puertos o red.
 - `main` y `Xray-Normativa/` intactas.
-- Publicación autorizada por el propietario en la rama `design/user-identity-association-v1`; SHA definitivo pendiente de registrar tras el push.
+- Publicado en `design/user-identity-association-v1`, commit `848324977a2d42a25ecb7db0ab45f38832eaa4ee`; actualización documental de continuidad registrada en commit posterior.
 
 ## Siguiente paso permitido
 

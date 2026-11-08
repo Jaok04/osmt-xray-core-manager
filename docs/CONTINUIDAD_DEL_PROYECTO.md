@@ -10,7 +10,7 @@
 
 **Infraestructura protegida:** no hubo operaciones live; no se modificaron systemd, runtime, cuentas, DNS, firewall, puertos o red. `main` y `Xray-Normativa/` permanecen intactas. La publicación autorizada se realiza exclusivamente en `design/user-identity-association-v1`. No confundir IMPLEMENTADO/VERIFICADO con ACEPTADO ni con conectividad end-to-end.
 
-**Estado Git previo a la publicación de este expediente:** rama `design/user-identity-association-v1`, HEAD base `9cc6987cc1c2eab0861329ea7d455f4d35720ef6`; los cambios B4.2 estaban locales. El SHA final de publicación se registrará aquí y en `HISTORY.md` tras verificar GitHub.
+**Publicación verificada:** rama `design/user-identity-association-v1`; commit B4.2 `848324977a2d42a25ecb7db0ab45f38832eaa4ee`. GitHub reportó el mismo SHA para la referencia remota inmediatamente después del push. `main` no fue modificada. La actualización documental posterior deja registrado este resultado; verificar siempre el HEAD remoto real al reanudar.
 
 Para reanudar, seguir el mensaje de inicio y el procedimiento de auditoría de recuperación que aparecen más abajo; comprobar primero el HEAD remoto real, el árbol de trabajo y la integridad de `Xray-Normativa/`. Siguiente tarea: diseñar fixture del layout de directorios/sandbox, sin operaciones live.
 

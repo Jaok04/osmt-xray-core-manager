@@ -1642,4 +1642,4 @@ Verificación de documentación de la regla: B4 memfd 10/10 Python; regresión d
 - Prueba de supervisor root limitado a CAP_CHOWN/CAP_SETUID/CAP_SETGID/CAP_NET_BIND_SERVICE con NoNewPrivileges=1; máscara efectiva 0x4c1. Xray 26.10.31 `run -test` validó la configuración después del descenso a nobody:nogroup.
 - Suite B4.1/B4.2 focal: 20/20 PASS.
 - Límite: no se creó xray:xray, no se probó systemd sandbox real/InvocationID/MainPID/daemon, no se integró R-05 y no se modificó unidad/controlador/VPS de pruebas. Debe diseñarse el ownership de StateDirectory/RuntimeDirectory y la ruta de evidencia root-only compatible con ProtectSystem=strict antes de integración.
-- Informe: `docs/IMPLEMENTACION_B4_2_SUPERVISOR_CAPACIDADES_FIXTURE_2026-11-08.md`. Sin commit/push.
+- Informe: `docs/IMPLEMENTACION_B4_2_SUPERVISOR_CAPACIDADES_FIXTURE_2026-11-08.md`. Publicado en `design/user-identity-association-v1`, commit `848324977a2d42a25ecb7db0ab45f38832eaa4ee`; `git ls-remote` confirmó el mismo SHA. La actualización de continuidad/documentación se publica en un commit documental posterior.
