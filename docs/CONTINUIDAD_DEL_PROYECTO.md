@@ -2033,3 +2033,14 @@ El estado `service_observed_active` no significa `configuration_attested` ni `co
 Validación tras esta etapa: coordinador focal 7/7 PASS; Python global **529/529 PASS**; suites Bash **62/62 PASS**; `compileall`, `bash -n` global, ShellCheck global `-S error`, `install.sh --check` y `git diff --check` PASS.
 
 **Límites:** el coordinador sólo se probó con backend/observadores dobles; no se conectó al backend live real, R-05, CLI ni menú. No se ejecutó `start`/`restart`/`stop`, no se tocó systemd/Xray/configuración productiva ni VPS Pruebas. Revisión independiente H6-G3 y autorización live específica siguen pendientes.
+
+
+## B4-MIN — compatibilidad de Xray en proceso normal con memfd (2026-11-08)
+
+Se completó la validación técnica que faltaba tras la prueba `run -test`: Xray 26.10.31 no acepta `/proc/self/fd/N` directamente (ni con `-format=json`), pero sí acepta un argumento `.json` cuyo symlink root-owned apunta a `/proc/self/fd/3`. Se probó tanto `run -test` como `run` normal. En la prueba de proceso normal, el launcher sintético creó el memfd bajo `nobody:nogroup`, modo `0400`, aplicó los cuatro seals (máscara 15) y ejecutó Xray mediante `exec`. El proceso Xray permaneció activo; la inspección root-only de `/proc/PID/fd/3` confirmó propietario 65534:65534, modo 0400, tamaño 96, SHA-256 exacto y seals completos. Xray registró `Reading config` y `Xray ... started`; después se terminó el proceso aislado con SIGTERM.
+
+Esto resuelve la compatibilidad del binario y la conservación/inspección del FD tras exec, pero no prueba el sandbox systemd real ni el usuario `xray:xray`: la VPS de desarrollo carece de esa cuenta/grupo y de `xray.service`. No se creó ninguna identidad, unidad ni ruta persistente. Informe: `docs/VALIDACION_XRAY_MEMFD_LAUNCHER_PROCESO_2026-11-08.md`.
+
+Diseño recomendado para el siguiente paso: prototipo fixture de launcher ejecutado directamente como `xray:xray`, sin supervisor root persistente. El launcher abriría la configuración publicada, crearía/verificaría un memfd 0400 sellado, fijaría FD 3, validaría con `xray run -test` sobre ese mismo descriptor, reposicionaría el FD y haría `exec` de Xray. El argumento apuntaría a una ruta `.json` root-owned no reemplazable cuyo symlink apunta a `/proc/self/fd/3`. Después, un verificador root-only inspeccionaría el FD vivo y lo correlacionaría con PID/InvocationID/argv/binario. La evidencia debe etiquetarse como `sealed_memfd_process_bound`, operacional y no criptográfica del parser interno.
+
+**Estado:** GO sólo para prototipo fixture y pruebas adversariales; NO-GO para unidad systemd, backend live, R-05, menú o VPS Pruebas. Falta probar restricciones reales del sandbox (`ProtectSystem`, `ProtectProc`, `ProcSubset`, `PrivateTmp`, capacidades y procfs) mediante entorno aislado; no crear manualmente `xray:xray`. No se tocó código, runtime, sistema, certificados, DNS, firewall, puertos, `main` ni `Xray-Normativa/`.
