@@ -4,7 +4,7 @@ Por autorización expresa del propietario, se implementó B4.1 sólo en VPS desa
 
 Xray 26.10.31 validó configuración sintética mediante `run -test` como `nobody:nogroup`. `/proc/self/status` confirmó `NoNewPrivs=1` y sólo `CAP_NET_BIND_SERVICE` en Inh/Prm/Eff/Bnd/Amb. La identidad de servicio no puede escribir la evidencia. B4.1: 9/9; B4 memfd: 10/10; Python global: 426/426; Bash: 62/62; compileall/py_compile, bash -n, ShellCheck `-S error` sobre Bash y `git diff --check`: PASS.
 
-Limitaciones: no se probó `xray:xray`, sandbox systemd real ni InvocationID real; sólo `xray run -test`, no daemon. Sin integración R-05/menú/backend live; no cambios de unidad, servicio, `/etc/xray`, runtime ni VPS Pruebas. `Xray-Normativa/`, `main` y `modules/xray_service.sh` intactos. Sin commit/push; pendiente autorización de publicación. Siguiente punto: auditoría focal del prototipo y diseño de prueba bajo identidad xray/sandbox systemd; cualquier operación live requiere autorización específica y ejecución desde Manager.
+Limitaciones: no se probó `xray:xray`, sandbox systemd real ni InvocationID real; sólo `xray run -test`, no daemon. Sin integración R-05/menú/backend live; no cambios de unidad, servicio, `/etc/xray`, runtime ni VPS Pruebas. `Xray-Normativa/`, `main` y `modules/xray_service.sh` intactos. Publicado en `design/user-identity-association-v1`, commit `bc1b9b23b26f3ca299df66562113dfc635de2a1a`; la sincronización documental posterior verifica el HEAD remoto final. Siguiente punto: auditoría focal del prototipo y diseño de prueba bajo identidad xray/sandbox systemd; cualquier operación live requiere autorización específica y ejecución desde Manager.
 
 ## 2026-11-07 — Corrección del manejo de errores del menú de instalación Xray-core
 

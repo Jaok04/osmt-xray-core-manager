@@ -4,7 +4,7 @@ El propietario autorizó B4.1 sólo en desarrollo/fixtures. El prototipo `script
 
 Pruebas B4.1 9/9; B4 memfd 10/10; Python global 426/426; Bash 62/62; compileall, py_compile, bash -n, ShellCheck `-S error` y diff-check PASS. Informe: `docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md`.
 
-**Limitaciones y prohibiciones:** el UID/GID es `nobody:nogroup`, InvocationID sintético y el comando es `xray run -test`, no daemon. No se probó `xray:xray` ni sandbox systemd real. No hay integración R-05/menú/backend live, ni cambios de unidad, servicio, `/etc/xray`, runtime o VPS Pruebas. La publicación se limita a `design/user-identity-association-v1`; el SHA definitivo se consigna en el punto de control tras verificar GitHub. La regla Manager-only sigue vigente; cualquier preparación live se hace exclusivamente mediante Xray-Core Manager y requiere autorización específica por host/alcance.
+**Limitaciones y prohibiciones:** el UID/GID es `nobody:nogroup`, InvocationID sintético y el comando es `xray run -test`, no daemon. No se probó `xray:xray` ni sandbox systemd real. No hay integración R-05/menú/backend live, ni cambios de unidad, servicio, `/etc/xray`, runtime o VPS Pruebas. Publicado sólo en `design/user-identity-association-v1`, commit `bc1b9b23b26f3ca299df66562113dfc635de2a1a`; `main` no se modificó. La regla Manager-only sigue vigente; cualquier preparación live se hace exclusivamente mediante Xray-Core Manager y requiere autorización específica por host/alcance.
 
 **Siguiente acción:** auditar el prototipo fixture y definir los requisitos pendientes para la prueba de identidad `xray` y sandbox systemd. No conectar a R-05 ni cambiar `modules/xray_service.sh` hasta completar la auditoría y obtener autorización separada.
 

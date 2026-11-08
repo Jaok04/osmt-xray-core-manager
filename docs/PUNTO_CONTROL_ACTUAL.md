@@ -1,14 +1,14 @@
 # Punto de control vigente — B4.1 prototipo fixture de privilegios (2026-11-07)
 
-**Estado:** IMPLEMENTADO Y VERIFICADO en VPS desarrollo; publicación limitada a la rama autorizada en este cierre. No integrado en runtime/live. Alcance exclusivo fixtures/pruebas aisladas.
-**Rama:** `design/user-identity-association-v1`; HEAD de partida `05dbf27089d1f62b14d5c4e4d4ceb7ccebcd89c6`. SHA final de publicación: se registra en el bloque de sincronización de este documento tras verificar GitHub.
+**Estado:** IMPLEMENTADO, VERIFICADO y PUBLICADO en GitHub. No integrado en runtime/live. Alcance exclusivo fixtures/pruebas aisladas.
+**Rama:** `design/user-identity-association-v1`; HEAD de partida `05dbf27089d1f62b14d5c4e4d4ceb7ccebcd89c6`; commit B4.1 `bc1b9b23b26f3ca299df66562113dfc635de2a1a`.
 
 - Archivos nuevos: `scripts/xray_runtime_launcher_prototype.py`, `tests/test_xray_runtime_launcher_prototype.py` y `docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md`.
 - Prototipo: memfd sellado + symlink JSON `/proc/self/fd/N`; padre escribe evidencia privada para el PID hijo antes de liberarlo; cadena `setpriv` → Xray conserva PID.
 - Xray 26.10.31 ejecutó `run -test` como `nobody:nogroup` y respondió `Configuration OK`. Capacidades verificadas: sólo `CAP_NET_BIND_SERVICE`; `NoNewPrivs=1`. Evidencia 0600 no escribible por identidad de servicio.
 - Pruebas: B4.1 9/9; B4 memfd 10/10; Python global 426/426; Bash 62/62; compileall, py_compile, bash -n, ShellCheck `-S error` sobre Bash y git diff-check PASS.
 - Limitaciones: no prueba `xray:xray`, sandbox systemd ni InvocationID real; no ejecuta daemon. No se modificó unidad, servicio, `/etc/xray`, runtime, R-05, backend live, menú ni VPS Pruebas.
-- Cambios de código y documentación publicados únicamente en la rama autorizada; la verificación final de SHA remoto y árbol limpio se registra al cierre de esta sincronización.
+- Cambios de código y documentación publicados únicamente en la rama autorizada. El HEAD remoto final se verificará después de publicar esta actualización documental.
 
 **Siguiente paso permitido:** revisión/auditoría focal del prototipo, robustecer negativos/recuperación si la auditoría lo exige y diseñar la prueba con identidad `xray` y sandbox systemd. Para crear identidad/unidad o probar sandbox real en un host, solicitar autorización live específica y hacerlo exclusivamente mediante Xray-Core Manager. No integrar B4.1 a R-05 ni cambiar `modules/xray_service.sh` todavía.
 
