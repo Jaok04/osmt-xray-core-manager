@@ -2057,3 +2057,16 @@ La prueba real con Xray 26.10.31 como `nobody:nogroup` pasó: `run -test` valid�
 Validación: launcher focal **13/13 PASS**; suite Python completa **542/542 PASS**; suites Bash **62/62 PASS**; `bash -n` global, `compileall`, `install.sh --check` y `git diff --check` PASS. ShellCheck global se intentó, pero excedió el límite de ejecución en esta sesión; no se modificó ningún Bash. Informe: `docs/IMPLEMENTACION_LAUNCHER_MEMFD_FIXTURE_B4_MIN_2026-11-08.md`.
 
 **Estado:** GO sólo para diseñar/probar el sandbox fixture; NO-GO para live. No se creó `xray:xray`, no se modificó systemd, `modules/xray_service.sh`, `/etc/xray`, rutas productivas, cuentas, certificados, DNS, firewall, puertos o red. No se tocó VPS Pruebas, backend live, journal, publicador, coordinator, R-05, menú, `main` ni `Xray-Normativa/`. Siguiente paso: evaluar el sandbox systemd en un entorno aislado/fixture, especialmente visibilidad de `/proc/self/fd/3`, ruta `.json`, `ProtectSystem`, `ProtectProc`, `ProcSubset`, `PrivateTmp`, capacidades y `NoNewPrivileges`; después H6-G3 antes de integrar.
+
+
+## B4-MIN — sandbox systemd compatible con launcher memfd (2026-11-08)
+
+Se completó la prueba aislada del launcher memfd bajo un servicio systemd transitorio en la VPS de desarrollo. Ubuntu 24.04.4 utiliza systemd 255. La unidad transitoria xray-manager-sandbox-20261108.service se ejecutó como nobody:nogroup con ProtectSystem=strict, ReadOnlyPaths=/opt/xray-manager, PrivateTmp, PrivateDevices, NoNewPrivileges, ProtectProc=invisible, ProcSubset=pid, capacidades limitadas a CAP_NET_BIND_SERVICE, RestrictNamespaces, RestrictAddressFamilies y el resto de las restricciones documentadas en el informe.
+
+**Resultado PASS:** Xray 26.10.31 validó la configuración sintética mediante run -test, ejecutó el daemon mediante exec y conservó FD 3 dentro del sandbox. El verificador root-only confirmó PID/MainPID correlacionado, UID/GID 65534, descriptor memfd 0400, 96 bytes, SHA-256 exacto, cuatro seals (máscara 15) y descriptor_process_bound=true. ProtectProc=invisible y ProcSubset=pid no impidieron el acceso del proceso a /proc/self/fd/3. Se mantuvo configuration_loaded=false.
+
+La unidad se detuvo y fue descargada por --collect (LoadState=not-found); el fixture se eliminó y no quedó proceso Xray. La configuración no tenía inbounds ni abrió listeners. No se creó ni modificó unidad persistente, cuenta/grupo xray:xray, /etc/xray, runtime, certificados, DNS, firewall, puertos o red. VPS Pruebas no fue utilizada.
+
+Informe completo: docs/VALIDACION_SANDBOX_SYSTEMD_MEMFD_FIXTURE_2026-11-08.md.
+
+**Dictamen:** GO sólo para compatibilidad del prototipo memfd en el sandbox fixture probado; NO-GO para integración live. La prueba no acredita xray:xray, apertura del puerto 443, configuración final de xray.service, tráfico externo ni bytes parseados internamente por Xray. No conectar aún a modules/xray_service.sh, backend live, R-05 o menú. Siguiente paso: incorporar la evidencia a la matriz de brechas y al paquete de revisión independiente H6-G3; después resolver hallazgos y solicitar autorización live específica antes de cualquier despliegue.
