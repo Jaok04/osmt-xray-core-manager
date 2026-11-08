@@ -1,3 +1,10 @@
+
+
+# B4.3-B — diseño de integración fixture con el supervisor (2026-11-08)
+
+Se completó el diseño `docs/DISENO_INTEGRACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`, basado en HEAD `1da1b77470179a2b082a0f196db56030d9f72afa`. Es un diseño técnico, todavía NO implementado ni auditado. Define un adaptador fixture que conectará el PID del hijo bloqueado por el pipe gate con el almacén persistente B4.3-A, usando un descriptor de raíz confiable y recorrido interno por dirfd + `O_NOFOLLOW` + `fstat`. El backend nuevo será opt-in y sin fallback silencioso al almacén plano B4.1. Si falla la creación/verificación de evidencia, el hijo no debe recibir el token del gate y no debe ejecutar Xray.
+
+La evidencia conserva `prepared_before_exec`: no demuestra `exec` exitoso, proceso activo, `MainPID` ni estado systemd. H6/R-05 y cualquier integración live permanecen fuera del alcance. Siguiente paso: implementar adaptador y camino `persistent_b43` sólo en fixtures; añadir pruebas de anclaje FD, fallo del gate, symlink/TOCTOU, replay y segregación; ejecutar regresión completa y revisión adversarial. No tocar `modules/xray_service.sh`, unidades, cuentas, systemd real, runtime, VPS Pruebas, `main` ni `Xray-Normativa/`.
 # Punto de control actual — 2026-11-08 (B4.3-A)
 
 ## Prioridad

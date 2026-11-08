@@ -5,6 +5,10 @@
 **Corte de estado vigente:** 2026-11-08 — B4.3-A añade almacén fixture-only de evidencia persistente, separado de B4.1/B4.2 y sin integración al Manager. Código: scripts/xray_runtime_evidence_store.py; pruebas: tests/test_xray_runtime_evidence_store.py; informe: docs/REVISION_B4_3A_EVIDENCIA_PERSISTENTE_FIXTURE_2026-11-08.md. El almacén valida el layout B4.3, crea registros root:root 0600 sin sobrescritura, verifica InvocationID, O_NOFOLLOW, st_nlink=1, rechaza campos sensibles y comprueba segregación del usuario de servicio. Los componentes internos se abren por dirfd con O_DIRECTORY/O_NOFOLLOW y se validan mediante fstat; producción deberá recibir una raíz previamente anclada por el Manager. Pruebas: evidencia 12/12; B4.3 directorios+evidencia 21/21; conjunto focal B4 51/51; Python global 458/458; bash -n 91/91; ShellCheck global, compileall, install.sh --check y diff-check PASS. Sin integración con lanzador/R-05/menú, sin systemd real ni operaciones live. Publicado en design/user-identity-association-v1, commit 0fbd7ff30854c3b84e0453545833787ec78a7248; GitHub confirmó el mismo SHA y el árbol quedó limpio.
 
 
+## Actualización vigente — diseño B4.3-B (2026-11-08)
+
+Diseño de integración fixture del almacén persistente B4.3-A con el supervisor: `docs/DISENO_INTEGRACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`. Estado DISEÑO, no implementado. Propone adaptador opt-in con descriptor de raíz confiable, recorrido dirfd/O_NOFOLLOW/fstat y creación/verificación de evidencia antes de liberar el pipe gate. Fallo de evidencia debe impedir exec. `prepared_before_exec` no acredita proceso activo ni systemd. Próximo paso: implementación fixture y pruebas adversariales; sin R-05, controlador, systemd real ni operaciones live.
+
 **Estado global:** Etapa 1 aceptada; Etapas 2–6 abiertas/parciales. H6-G2 NO CERRADO; H6-G3 no tiene auditoría independiente. H6-F NO LISTO END-TO-END. Backend runtime live no integrado; no ejecutar acciones live sin autorización específica.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
