@@ -9,7 +9,7 @@ mkdir -m 700 "$TMP/run" "$TMP/connections" "$TMP/connections/configurations" "$T
     "$TMP/profiles" "$TMP/bindings"
 openssl rand -out "$TMP/master.key" 32
 chmod 600 "$TMP/master.key"
-openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/cert.key" -out "$TMP/cert.pem" -days 2 -subj '/CN=menu-fixture.invalid' -addext 'subjectAltName=DNS:sni.menu.invalid,DNS:hellen.tvrc.me' >/dev/null 2>&1
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TMP/cert.key" -out "$TMP/cert.pem" -days 2 -subj '/CN=menu-fixture.invalid' -addext 'subjectAltName=DNS:sni.menu.invalid,DNS:pruebas.tvrc.me' >/dev/null 2>&1
 chmod 600 "$TMP/cert.key" "$TMP/cert.pem"
 python3 "$ROOT/scripts/certificate_store.py" --base "$TMP/certificates" --catalog "$TMP/certificates/catalog.json" \
     --managed-dir "$TMP/certificates/managed" --secrets-dir "$TMP/certificates/secrets" \
@@ -92,13 +92,13 @@ inbound=json.loads(data)["inbounds"][0]
 assert inbound["streamSettings"]["wsSettings"] == {"path":"/menu","host":"ws.menu.invalid"}
 assert inbound["settings"]["clients"][0]["email"].startswith("assoc:")
 PY
-export XRAY_MANAGER_VLESS_PUBLIC_ADDRESS=hellen.tvrc.me
+export XRAY_MANAGER_VLESS_PUBLIC_ADDRESS=pruebas.tvrc.me
 export XRAY_MANAGER_VLESS_PUBLIC_PORT=443
 printf '1\n2\n\ns\n' | profiles_export_vless_clients_menu >"$TMP/export.out"
-grep -q 'Endpoint público: hellen.tvrc.me:443' "$TMP/export.out"
-grep -q 'vless://88888888-8888-4888-8888-888888888888@hellen.tvrc.me:443?' "$TMP/export.out"
+grep -q 'Endpoint público: pruebas.tvrc.me:443' "$TMP/export.out"
+grep -q 'vless://88888888-8888-4888-8888-888888888888@pruebas.tvrc.me:443?' "$TMP/export.out"
 grep -q 'sni=sni.menu.invalid' "$TMP/export.out"
 grep -q 'host=ws.menu.invalid' "$TMP/export.out"
 grep -q 'path=%2Fmenu' "$TMP/export.out"
 grep -q 'runtime_changed.*false' "$TMP/export.out"
-echo 'PASS: menú compone VLESS-WS-TLS y exporta URI NetMod para hellen.tvrc.me:443 sin activar runtime.'
+echo 'PASS: menú compone VLESS-WS-TLS y exporta URI NetMod para pruebas.tvrc.me:443 sin activar runtime.'

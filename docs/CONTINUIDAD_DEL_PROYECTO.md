@@ -2112,3 +2112,10 @@ Se añadió a `profiles_create_menu` el origen `[4] Crear perfil base para VLESS
 La prueba `tests/xray_profiles.sh` ahora crea el perfil desde el menú, recupera su revisión y verifica la estructura exacta. Validación focal: `bash -n`, ShellCheck `-S error` y `tests/xray_profiles.sh` PASS. No se modificaron Xray/systemd, runtime, certificados, DNS, firewall o puertos.
 
 Siguiente tarea: integrar en un recorrido guiado la obtención/importación TLS, manteniendo la confirmación ACME; después conectar creación de conexión/usuarios, composición, validación y primer start. La revisión independiente H6-G3 continúa pendiente y no se declara habilitado el despliegue live.
+
+
+## Continuidad — endpoint de exportación alineado al primer despliegue (2026-11-08)
+
+Se corrigió `modules/profiles.sh`: el endpoint predeterminado del exportador VLESS-WS-TLS pasa de `hellen.tvrc.me` a `pruebas.tvrc.me`, coherente con el dominio que exige el puente live y con el objetivo aprobado. La variable `XRAY_MANAGER_VLESS_PUBLIC_ADDRESS` conserva la posibilidad de una sobreescritura explícita. Se actualizaron fixture/certificado/assertions de `tests/profiles_vless_composer_menu.sh` y el diseño del puente para retirar la advertencia obsoleta.
+
+Validación focal: `tests/profiles_vless_composer_menu.sh`, `bash -n`, ShellCheck `-S error` y `git diff --check` PASS. No se emitieron URI de clientes reales ni se cambiaron DNS, certificados, firewall, puertos, runtime o servicio.

@@ -115,7 +115,7 @@ No permitir que `XRAY_RUNTIME_MENU_FIXTURE_MODE` o una variable similar active l
 - Puerto público: `443/TCP`.
 - Certificado: catálogo central y lease; emisión ACME real aún no demostrada en el host objetivo.
 - Host WebSocket y SNI del cliente: propiedades distintas; reutilizar I-03, no inferirlas una de otra.
-- El menú de exportación tiene un default histórico `hellen.tvrc.me`; antes de exportar el primer cliente debe seleccionar explícitamente `pruebas.tvrc.me` o cambiar el default mediante una modificación aprobada y probada. No usar el endpoint antiguo por accidente.
+- El default del menú de exportación debe coincidir con `pruebas.tvrc.me`; la modificación se aplica en el incremento `ed99997`/posterior y se cubre con la prueba de exportación del menú. No usar el endpoint histórico `hellen.tvrc.me` para este primer lanzamiento.
 - El mapping inbound tag → connection_id ya se genera por I-01/I-02 y se guarda por perfil/revisión; R-02 lo consume. No crear un segundo sistema de mapping.
 
 ## 7. Bloqueos y puertas previas

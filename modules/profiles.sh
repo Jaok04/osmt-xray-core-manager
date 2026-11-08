@@ -356,7 +356,7 @@ profiles_export_vless_clients_menu() {
     local connections_secrets="${XRAY_MANAGER_CONNECTION_SECRETS_DIR:-$connections_base/secrets}"
     local certificate_catalog="${XRAY_MANAGER_CERTIFICATES_CATALOG_FILE:-/var/lib/xray-manager/certificates/catalog.json}"
     mapping_root="${XRAY_MANAGER_PROFILE_BINDINGS_DIR:-/var/lib/xray-manager/profile-bindings}"
-    address="${XRAY_MANAGER_VLESS_PUBLIC_ADDRESS:-hellen.tvrc.me}"
+    address="${XRAY_MANAGER_VLESS_PUBLIC_ADDRESS:-pruebas.tvrc.me}"
     port="${XRAY_MANAGER_VLESS_PUBLIC_PORT:-443}"
 
     ui_clear
