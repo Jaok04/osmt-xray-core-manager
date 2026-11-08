@@ -1945,6 +1945,17 @@ Siguiente paso: revisión independiente del código y cobertura, corregir hallaz
 Segunda pasada de revisión (misma sesión/agente, no auditoría externa independiente). Se detectó H-01: claves de metadatos no textuales provocaban `AttributeError`; se corrigió con rechazo controlado y prueba negativa. Se normalizaron también errores OSError del descriptor raíz en el adaptador. Regresión posterior: B4.3-A/B focal 44/44, Python global 470/470, Bash 62/62, compileall, py_compile, bash -n, ShellCheck global `-S error`, `install.sh --check` y `git diff --check` PASS. Informe: `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md`. Dictamen PASS CON LIMITACIONES, sólo fixture.
 
 
-## Próxima tarea recomendada tras B4.3-B (2026-11-08)
+## Diseño del puente mínimo — etapa completada (2026-11-08)
 
-La segunda revisión técnica corrigió H-01 y deja B4.3-B PASS CON LIMITACIONES en fixtures. No equivale a auditoría externa independiente. El siguiente paso técnico es diseñar, antes de implementar, el puente mínimo entre el Manager y el supervisor fixture para comprobar el recorrido de una conexión VLESS-WS-TLS seleccionada hasta el plan de ejecución y la evidencia persistente. Debe especificar entradas/salidas, identidad del servicio, directorios/FD, contrato del certificado TLS central, validación `xray run -test`, estados y rollback. La propuesta debe señalar expresamente qué puntos existentes ya resuelven cada parte y evitar reimplementar módulos. Sin habilitar R-05 live, unidad real, `/etc/xray`, certificados ACME, puertos, daemon o VPS Pruebas. Una auditoría externa independiente sigue siendo deseable antes de integrar live.
+La segunda revisión técnica corrigió H-01 y deja B4.3-B PASS CON LIMITACIONES en fixtures. No equivale a auditoría externa independiente. El diseño del puente mínimo se completó en `docs/DISENO_PUENTE_MINIMO_MANAGER_RUNTIME_LIVE_VLESS_WS_TLS_2026-11-08.md`. La decisión recomendada es conservar la plantilla de servicio directa `xray:xray`; B4.3 supervisor root permanece como prototipo fixture y no se conecta al daemon. La siguiente tarea es obtener revisión externa independiente H6-G3 con el paquete existente; después se implementarán L1-L5 del diseño, primero en fixtures y sin habilitar live.
+
+
+## Diseño del puente mínimo Manager → runtime live (2026-11-08)
+
+Se completó el diseño `docs/DISENO_PUENTE_MINIMO_MANAGER_RUNTIME_LIVE_VLESS_WS_TLS_2026-11-08.md`, sin implementar ni habilitar live. Decisión recomendada: conservar la unidad existente `User=xray`, `Group=xray`, `ExecStart` directo; no convertirla ahora a supervisor root B4.2/B4.3, porque eso cambiaría unidad, observador, argv, capacidades, permisos y sandbox. B4.3-B no debe conectarse al daemon: su prototipo ejecuta `xray run -test` y `prepared_before_exec` no acredita configuración cargada por systemd.
+
+La matriz identifica el puente faltante: almacén live de operación/evidencia; staging live separado de R-02 fixture; publicador/rollback live; orquestador live separado de R-05; menú live con confirmaciones. Los componentes actuales de servicio, observación systemd, atestación de proceso y delegación al controlador existen, pero el backend live sigue sin lector live de evidencia y `restore()` falla cerrado.
+
+Se documentó además que el exportador conserva el endpoint default histórico `hellen.tvrc.me`; para el objetivo aprobado `pruebas.tvrc.me:443` debe especificarse el endpoint correcto antes de exportar el cliente. El mapping por perfil/revisión ya se genera mediante I-01/I-02; no debe duplicarse.
+
+Puertas previas: revisión externa independiente H6-G3 mediante `docs/PAQUETE_REVISION_INDEPENDIENTE_H6G3_2026-11-06.md`, resolución F-02/F-04/F-05 live, L1-L5 y autorización específica antes de cualquier acción real. No se modificó `modules/xray_service.sh`, backend live, R-05, journal, runtime, VPS Pruebas, `main` ni `Xray-Normativa/`.

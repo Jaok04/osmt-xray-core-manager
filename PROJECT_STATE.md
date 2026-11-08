@@ -11,7 +11,7 @@ B4.3-B implementa `create_evidence_from_root_fd()`/`verify_evidence_from_root_fd
 
 Resultados: B4.3-A/B focal 44/44; Python global 470/470; Bash 62/62; compileall, py_compile, bash -n, ShellCheck global -S error, install.sh --check y diff-check PASS. Informe: `docs/IMPLEMENTACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`. Segunda pasada adversarial, no independiente: `docs/AUDITORIA_B4_3B_ADAPTADOR_EVIDENCIA_FIXTURE_2026-11-08.md`; revisión técnica posterior: `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md` (H-01 corregido).
 
-Límites: `prepared_before_exec` no acredita exec, configuración cargada, proceso activo ni systemd. El nuevo backend se probó con ejecutable fixture; no se afirma Xray real a través del selector B4.3-B. No hay integración R-05/menú/systemd/live ni operaciones en VPS Pruebas. Siguiente paso: diseñar el puente mínimo del Manager al supervisor para validación end-to-end fixture; auditoría externa independiente deseable antes de live.
+Límites: `prepared_before_exec` no acredita exec, configuración cargada, proceso activo ni systemd. El nuevo backend se probó con ejecutable fixture; no se afirma Xray real a través del selector B4.3-B. No hay integración R-05/menú/systemd/live ni operaciones en VPS Pruebas. Siguiente paso: revisión externa independiente H6-G3; después ejecutar L1-L5 del diseño del puente mínimo Manager→runtime live. Unidad directa `xray:xray` recomendada; B4.3 supervisor root permanece fixture-only.
 
 
 ## Actualización vigente — B4.3 layout de directorios y sandbox fixture (2026-11-08)
@@ -1766,3 +1766,8 @@ El propietario aprobó las tres decisiones del diseño: memfd sellado como mecan
 
 ### Regla permanente aprobada — configuración solo desde el Administrador (2026-11-07)
 Toda configuración necesaria del sistema operativo/Xray para instalación, preparación, despliegue, pruebas, operación o recuperación debe ejecutarse desde Xray-Core Manager. Prohibido sustituir capacidades pendientes con configuración manual del host o pedir al propietario que cree usuarios/grupos, directorios/permisos, unidades systemd, archivos Xray, certificados, firewall, puertos, DNS, red o dependencias. Si falta una capacidad, implementarla primero en el Administrador. Se permiten inspecciones read-only y pruebas automatizadas aisladas. Las operaciones live siguen sujetas a autorización explícita por host/alcance. `modules/xray_service.sh` es el controlador systemd único. `Xray-Normativa/` no se modifica.
+
+
+## Diseño vigente del puente live (2026-11-08)
+
+`docs/DISENO_PUENTE_MINIMO_MANAGER_RUNTIME_LIVE_VLESS_WS_TLS_2026-11-08.md` define L1 almacén live de operación/evidencia, L2 staging live separado del fixture, L3 publicador/rollback live, L4 orquestador live separado de R-05 y L5 menú live. Se recomienda conservar el servicio actual `User=xray`/`Group=xray` con ExecStart directo; no insertar el supervisor root B4.3 en el daemon. El backend live actual exige evidencia `environment=live`, mientras el lector existente devuelve `fixture`; restore live no está implementado. No hay operaciones live autorizadas.

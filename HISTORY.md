@@ -1707,3 +1707,12 @@ La evidencia conserva `prepared_before_exec`: no demuestra `exec` exitoso, proce
 - Regresión posterior: B4.3-A/B 44/44 focal; Python global 470/470; Bash 62/62; compileall, py_compile, bash -n, ShellCheck global -S error, install.sh --check y git diff --check PASS.
 - Informe `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md`. Dictamen PASS CON LIMITACIONES, fixture-only; no es auditoría externa independiente.
 - No se modificó live, systemd, R-05, `/etc/xray`, VPS Pruebas, `main` ni `Xray-Normativa/`.
+
+
+## 2026-11-08 — diseño del puente mínimo Manager → runtime live
+
+- Se inventariaron los módulos existentes de perfil VLESS-WS-TLS, mapping I-01/I-02, certificados/leases, R-01/R-02, journal/publicador R-03/R-04, orquestador R-05, systemd, proceso y service-control H6-G2.
+- Se recomienda conservar la unidad directa `User=xray`/`Group=xray` existente. El supervisor root B4.2/B4.3 no se conectará al daemon porque exige cambiar el contrato de unidad/sandbox y sólo prueba `xray run -test`.
+- Se definieron L1-L5: almacén live de operación/evidencia, staging live, publicador/rollback live, orquestador live separado de R-05 y menú live separado del fixture.
+- Se identificó el default histórico del exportador `hellen.tvrc.me`; el primer cliente debe usar explícitamente `pruebas.tvrc.me`.
+- Diseño: `docs/DISENO_PUENTE_MINIMO_MANAGER_RUNTIME_LIVE_VLESS_WS_TLS_2026-11-08.md`. Sin cambios funcionales ni operaciones live. Revisión externa independiente H6-G3 sigue siendo puerta previa.

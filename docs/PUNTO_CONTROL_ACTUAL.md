@@ -11,7 +11,7 @@ Se implementó el adaptador `scripts/xray_runtime_supervisor_evidence.py`, las A
 - Informe: `docs/IMPLEMENTACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`.
 - Segunda pasada adversarial (misma sesión, no independiente): `docs/AUDITORIA_B4_3B_ADAPTADOR_EVIDENCIA_FIXTURE_2026-11-08.md`. Revisión técnica posterior: `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md` (H-01 corregido).
 
-Límites: el selector nuevo se probó con ejecutable fixture; la validación Xray 26.10.31 existente corresponde al camino B4.1. `prepared_before_exec` no acredita exec, configuración cargada, proceso activo ni systemd. No se modificó R-05, menú, `modules/xray_service.sh`, unidad, backend live, runtime ni VPS Pruebas. Revisión técnica posterior: `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md`, PASS CON LIMITACIONES; H-01 corregido. No es auditoría externa independiente. Siguiente paso: diseñar el puente mínimo del Manager para validar el flujo end-to-end en fixtures, sin activar operaciones live.
+Límites: el selector nuevo se probó con ejecutable fixture; la validación Xray 26.10.31 existente corresponde al camino B4.1. `prepared_before_exec` no acredita exec, configuración cargada, proceso activo ni systemd. No se modificó R-05, menú, `modules/xray_service.sh`, unidad, backend live, runtime ni VPS Pruebas. Revisión técnica posterior: `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md`, PASS CON LIMITACIONES; H-01 corregido. No es auditoría externa independiente. Siguiente paso: revisión externa independiente H6-G3; luego implementar por fases L1-L5 del diseño `docs/DISENO_PUENTE_MINIMO_MANAGER_RUNTIME_LIVE_VLESS_WS_TLS_2026-11-08.md`. Live permanece bloqueado.
 
 ---
 
