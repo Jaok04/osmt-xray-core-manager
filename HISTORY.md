@@ -1687,3 +1687,15 @@ Verificación de documentación de la regla: B4 memfd 10/10 Python; regresión d
 Se completó el diseño `docs/DISENO_INTEGRACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`, basado en HEAD `1da1b77470179a2b082a0f196db56030d9f72afa`. Es un diseño técnico, todavía NO implementado ni auditado. Define un adaptador fixture que conectará el PID del hijo bloqueado por el pipe gate con el almacén persistente B4.3-A, usando un descriptor de raíz confiable y recorrido interno por dirfd + `O_NOFOLLOW` + `fstat`. El backend nuevo será opt-in y sin fallback silencioso al almacén plano B4.1. Si falla la creación/verificación de evidencia, el hijo no debe recibir el token del gate y no debe ejecutar Xray.
 
 La evidencia conserva `prepared_before_exec`: no demuestra `exec` exitoso, proceso activo, `MainPID` ni estado systemd. H6/R-05 y cualquier integración live permanecen fuera del alcance. Siguiente paso: implementar adaptador y camino `persistent_b43` sólo en fixtures; añadir pruebas de anclaje FD, fallo del gate, symlink/TOCTOU, replay y segregación; ejecutar regresión completa y revisión adversarial. No tocar `modules/xray_service.sh`, unidades, cuentas, systemd real, runtime, VPS Pruebas, `main` ni `Xray-Normativa/`.
+
+
+## 2026-11-08 — B4.3-B adaptador de evidencia persistente en supervisor (fixtures)
+
+- Se añadieron APIs FD explícitas al almacén B4.3-A: duplicación/cierre de FD propio, marcador anclado, recorrido de todo el layout mediante `dir_fd`, `O_NOFOLLOW`, `O_DIRECTORY` y `fstat`; la API por ruta anterior se conserva.
+- Nuevo `scripts/xray_runtime_supervisor_evidence.py` valida el plan, PID bloqueado, GID, hash/tamaño del memfd y crea/verifica evidencia antes de liberar el gate.
+- `run_fixture_xray_validation()` añade `evidence_backend="persistent_b43"` opt-in; B4.1 sigue predeterminado. El FD raíz no se hereda al proceso ejecutado. Fallo de creación/verificación cierra el gate, termina/recolecta el hijo y no usa fallback.
+- Pruebas: FD anclado tras renombrar/reemplazar ruta, descriptor cerrado, symlink, drift, replay, segregación, éxito, fallos de creación/verificación, gate cerrado, no herencia y no fallback. Focal 43/43 PASS.
+- Regresión: Python 469/469; Bash 62/62; `compileall`, `py_compile`, `bash -n`, ShellCheck global `-S error`, `install.sh --check` y `git diff --check` PASS.
+- El selector nuevo se probó con ejecutable fixture; Xray 26.10.31 fue probado en el camino B4.1 existente, no en el selector B4.3-B. `prepared_before_exec` no prueba exec, configuración cargada, proceso activo ni systemd.
+- Informe: `docs/IMPLEMENTACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`. Segunda pasada de la misma sesión (no auditoría independiente): `docs/AUDITORIA_B4_3B_ADAPTADOR_EVIDENCIA_FIXTURE_2026-11-08.md`.
+- Sin integración R-05/menú/systemd/live; no se modificaron controlador, unidad, runtime, cuentas, VPS Pruebas, `main` ni `Xray-Normativa/`. Siguiente paso: revisión independiente.

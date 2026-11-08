@@ -180,6 +180,87 @@ class RuntimeEvidenceStoreTests(unittest.TestCase):
                 invocation_id=self.invocation,
             )
 
+    def _root_fd(self):
+        return os.open(self.root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+
+    def test_fd_api_creates_and_verifies_persistent_record(self):
+        root_fd = self._root_fd()
+        try:
+            name = evidence.create_evidence_from_root_fd(
+                fixture_root_fd=root_fd, service_gid=self.gid,
+                invocation_id=self.invocation, metadata=self.metadata)
+            self.assertEqual(name, self.invocation + ".json")
+            result = evidence.verify_evidence_from_root_fd(
+                fixture_root_fd=root_fd, service_gid=self.gid, invocation_id=self.invocation)
+            self.assertTrue(result["verified"])
+            self.assertEqual(result["record"]["evidence_status"], "prepared_before_exec")
+        finally:
+            os.close(root_fd)
+
+    def test_fd_api_remains_anchored_after_root_path_replacement(self):
+        root_fd = self._root_fd()
+        moved = self.root.with_name("fixture-original")
+        try:
+            self.root.rename(moved)
+            self.root.mkdir(mode=0o711)
+            marker = self.root / ".xray-manager-fixture"
+            marker.write_text("fixture-only\n", encoding="utf-8")
+            marker.chmod(0o600)
+            self.root.chmod(0o711)
+            directories.prepare_fixture_layout(self.root, self.gid)
+            evidence.create_evidence_from_root_fd(
+                fixture_root_fd=root_fd, service_gid=self.gid,
+                invocation_id=self.invocation, metadata=self.metadata)
+            self.assertTrue((moved / "var/lib/xray-manager/evidence" / (self.invocation + ".json")).is_file())
+            self.assertFalse((self.root / "var/lib/xray-manager/evidence" / (self.invocation + ".json")).exists())
+            self.assertTrue(evidence.verify_evidence_from_root_fd(
+                fixture_root_fd=root_fd, service_gid=self.gid, invocation_id=self.invocation)["verified"])
+        finally:
+            os.close(root_fd)
+
+    def test_fd_api_rejects_closed_descriptor(self):
+        root_fd = self._root_fd()
+        os.close(root_fd)
+        with self.assertRaises(evidence.EvidenceStoreError):
+            evidence.verify_evidence_from_root_fd(
+                fixture_root_fd=root_fd, service_gid=self.gid, invocation_id=self.invocation)
+
+    def test_fd_api_rejects_layout_mode_drift(self):
+        target = self.root / "var/lib/xray-manager/evidence"
+        target.chmod(0o710)
+        root_fd = self._root_fd()
+        try:
+            with self.assertRaises(evidence.EvidenceStoreError):
+                evidence.verify_evidence_from_root_fd(
+                    fixture_root_fd=root_fd, service_gid=self.gid, invocation_id=self.invocation)
+        finally:
+            os.close(root_fd)
+
+    def test_fd_api_rejects_duplicate_invocation(self):
+        root_fd = self._root_fd()
+        try:
+            evidence.create_evidence_from_root_fd(
+                fixture_root_fd=root_fd, service_gid=self.gid,
+                invocation_id=self.invocation, metadata=self.metadata)
+            with self.assertRaises(evidence.EvidenceStoreError):
+                evidence.create_evidence_from_root_fd(
+                    fixture_root_fd=root_fd, service_gid=self.gid,
+                    invocation_id=self.invocation, metadata=self.metadata)
+        finally:
+            os.close(root_fd)
+
+    def test_fd_api_rejects_symlinked_layout_component(self):
+        target = self.root / "var/lib/xray-manager/evidence"
+        target.rename(target.with_name("evidence.real"))
+        target.symlink_to(target.with_name("evidence.real"), target_is_directory=True)
+        root_fd = self._root_fd()
+        try:
+            with self.assertRaises(evidence.EvidenceStoreError):
+                evidence.verify_evidence_from_root_fd(
+                    fixture_root_fd=root_fd, service_gid=self.gid, invocation_id=self.invocation)
+        finally:
+            os.close(root_fd)
+
 
 if __name__ == "__main__":
     unittest.main()

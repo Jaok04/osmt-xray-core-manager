@@ -1,11 +1,21 @@
 
 
-# B4.3-B — diseño de integración fixture con el supervisor (2026-11-08)
+# B4.3-B — implementación fixture del adaptador de evidencia persistente (2026-11-08)
 
-Se completó el diseño `docs/DISENO_INTEGRACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`, basado en HEAD `1da1b77470179a2b082a0f196db56030d9f72afa`. Es un diseño técnico, todavía NO implementado ni auditado. Define un adaptador fixture que conectará el PID del hijo bloqueado por el pipe gate con el almacén persistente B4.3-A, usando un descriptor de raíz confiable y recorrido interno por dirfd + `O_NOFOLLOW` + `fstat`. El backend nuevo será opt-in y sin fallback silencioso al almacén plano B4.1. Si falla la creación/verificación de evidencia, el hijo no debe recibir el token del gate y no debe ejecutar Xray.
+Se implementó el adaptador `scripts/xray_runtime_supervisor_evidence.py`, las APIs FD del almacén B4.3-A y el selector opt-in `persistent_b43` en el supervisor fixture. La evidencia se crea/verifica antes de liberar el pipe gate; fallo de creación/verificación mantiene el gate cerrado y recolecta el hijo; no existe fallback silencioso a B4.1. El descriptor de raíz no se hereda al proceso ejecutado.
 
-La evidencia conserva `prepared_before_exec`: no demuestra `exec` exitoso, proceso activo, `MainPID` ni estado systemd. H6/R-05 y cualquier integración live permanecen fuera del alcance. Siguiente paso: implementar adaptador y camino `persistent_b43` sólo en fixtures; añadir pruebas de anclaje FD, fallo del gate, symlink/TOCTOU, replay y segregación; ejecutar regresión completa y revisión adversarial. No tocar `modules/xray_service.sh`, unidades, cuentas, systemd real, runtime, VPS Pruebas, `main` ni `Xray-Normativa/`.
-# Punto de control actual — 2026-11-08 (B4.3-A)
+- Focal B4.3-A/B: 43/43 PASS.
+- Python global: 469/469 PASS.
+- Bash: 62/62 PASS.
+- `compileall`, `py_compile`, `bash -n`, ShellCheck global `-S error`, `install.sh --check` y `git diff --check`: PASS.
+- Informe: `docs/IMPLEMENTACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`.
+- Segunda pasada adversarial (misma sesión, no independiente): `docs/AUDITORIA_B4_3B_ADAPTADOR_EVIDENCIA_FIXTURE_2026-11-08.md`.
+
+Límites: el selector nuevo se probó con ejecutable fixture; la validación Xray 26.10.31 existente corresponde al camino B4.1. `prepared_before_exec` no acredita exec, configuración cargada, proceso activo ni systemd. No se modificó R-05, menú, `modules/xray_service.sh`, unidad, backend live, runtime ni VPS Pruebas. Siguiente paso: revisión independiente de B4.3-B.
+
+---
+
+# Punto de control histórico — 2026-11-08 (B4.3-A)
 
 ## Prioridad
 Primer servidor real VLESS + WebSocket + TLS en pruebas.tvrc.me:443, administrado íntegramente por Xray-Core Manager y validado mediante conexión externa bidireccional.
@@ -22,17 +32,17 @@ B4.3-A añade un almacén fixture-only de evidencia persistente en scripts/xray_
 Helper separado, NO integrado con B4.1/B4.2, lanzador, R-05 ni Manager. Los componentes desde la raíz fixture se abren por dirfd con O_NOFOLLOW; producción requiere raíz previamente anclada por Manager. Sin systemd real, unidad, cuentas, runtime, daemon ni VPS pruebas. Publicado en design/user-identity-association-v1, commit 0fbd7ff30854c3b84e0453545833787ec78a7248; HEAD local/remoto alineado y árbol limpio.
 
 ## Siguiente paso
-Segunda pasada adversarial de carrera de ruta, crash durante publicación e integridad de registro. No habilitar operaciones live ni integrar el controlador sin autorización específica.
+Revisión independiente de B4.3-B y, después, diseño del mínimo puente necesario para el primer lanzamiento. No habilitar operaciones live ni integrar el controlador sin autorización específica.
 
 ---
 
-# Punto de control actual — 2026-11-08 (B4.3)
+# Punto de control histórico — 2026-11-08 (B4.3)
 
 ## Prioridad
 
 Primer servidor real VLESS + WebSocket + TLS en `pruebas.tvrc.me:443` operado íntegramente por Xray-Core Manager y validado mediante conexión externa bidireccional.
 
-## Avance vigente
+## Avance histórico
 
 B4.3 define y prueba en fixtures el layout propuesto para separar directorios escribibles por Xray de evidencia root-only. Ver `docs/DISENO_B4_3_LAYOUT_DIRECTORIOS_SANDBOX_FIXTURE_2026-11-08.md`.
 
@@ -40,19 +50,19 @@ B4.3 define y prueba en fixtures el layout propuesto para separar directorios es
 - Runtime `/run/xray`: `root:xray 0770` (RuntimeDirectory).
 - Padre y carpeta de evidencia `/var/lib/xray-manager[/evidence]`: `root:root 0700`; archivos `0600`.
 - Unidad propuesta: supervisor `User=root`, `Group=xray`; `ProtectSystem=strict`; `ReadWritePaths` limitado a estado, runtime y evidencia.
-- Código fixture: `scripts/xray_runtime_directory_contract.py`; pruebas focales: `tests/test_xray_runtime_directory_contract.py` (9/9 PASS). Regresión Python global: 445/445 PASS; Bash syntax 91/91; ShellCheck global, compileall, `install.sh --check` y diff-check PASS.
+- Código fixture: `scripts/xray_runtime_directory_contract.py`; pruebas focales: `tests/test_xray_runtime_directory_contract.py` (9/9 PASS).
 
-## Límites y discrepancia documental
+## Límites históricos
 
 No se creó `xray:xray`, no se ejecutó systemd ni se validó el sandbox real. No se modificaron unidad, `modules/xray_service.sh`, R-05, backend live, VPS de pruebas o runtime. `Xray-Normativa/README.md` no existe en la copia de respaldo; los otros 14 archivos comparados coinciden por SHA-256. La normativa permanece intacta.
 
-## Siguiente paso permitido
+## Siguiente paso histórico
 
-Revisión adversarial focal del contrato y pruebas de persistencia/segregación de evidencia en fixtures. Publicado en `design/user-identity-association-v1`, commit `787525b22573e5d577ef106f105daf7cb555840a`. La integración y cualquier operación live requieren autorización específica.
+Revisión adversarial focal del contrato y pruebas de persistencia/segregación de evidencia en fixtures. Publicado en `design/user-identity-association-v1`, commit `787525b22573e5d577ef106f105daf7cb555840a`.
 
 ---
 
-# Punto de control actual — 2026-11-08
+# Punto de control histórico — 2026-11-08 (B4.2)
 
 ## Prioridad del producto
 
@@ -1922,3 +1932,8 @@ Prueba Xray 26.10.31 como `nobody` satisfactoria (`Configuration OK`, exit 0) us
 ## Regla permanente del propietario — no configuración manual (2026-11-07)
 
 Toda configuración del sistema y Xray debe realizarse desde Xray-Core Manager. No preparar manualmente usuarios/grupos, directorios/permisos, unidad systemd, configuración runtime, certificados, firewall, puertos, DNS, red o dependencias. Si falta una capacidad, implementarla primero en el Administrador y ejecutar después la operación desde su menú/módulo con preflight, confirmación, locks, verificación y auditoría. Solo se permiten inspecciones read-only y pruebas automatizadas aisladas fuera del flujo del Administrador. Operaciones live requieren autorización específica. Controlador systemd único: `modules/xray_service.sh`. No modificar `Xray-Normativa/`.
+
+
+## Límites vigentes B4.3-B
+
+El backend `persistent_b43` fue validado con un ejecutable fixture, no con Xray real. La validación Xray 26.10.31 de la regresión corresponde al camino B4.1. `prepared_before_exec` no demuestra exec exitoso, configuración cargada, proceso activo ni estado systemd. No se modificó `modules/xray_service.sh`, R-05, menú, unidad, backend live, runtime ni VPS Pruebas. La revisión adversarial realizada es de segunda pasada de la misma sesión, no independiente.

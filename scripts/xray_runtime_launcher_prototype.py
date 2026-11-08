@@ -19,6 +19,7 @@ import time
 from typing import Any
 
 import xray_runtime_config_attestation as attestation
+import xray_runtime_supervisor_evidence as supervisor_evidence
 
 
 class LauncherPrototypeError(Exception):
@@ -200,7 +201,7 @@ def _terminate_child(child: int) -> None:
 def run_fixture_xray_validation(
     plan: dict[str, Any], *, xray_binary: pathlib.Path,
     setpriv_binary: pathlib.Path = pathlib.Path("/usr/bin/setpriv"),
-    timeout_seconds: float = 30.0,
+    timeout_seconds: float = 30.0, evidence_backend: str = "legacy_b41",
 ) -> subprocess.CompletedProcess[str]:
     """Ejecuta Xray -test con evidencia previa a exec y timeout estricto."""
     if not isinstance(plan, dict) or plan.get("environment") != "fixture":
@@ -208,6 +209,8 @@ def run_fixture_xray_validation(
     if (isinstance(timeout_seconds, bool) or not isinstance(timeout_seconds, (int, float))
             or not 0.1 <= timeout_seconds <= 300):
         raise LauncherPrototypeError("Timeout fuera del intervalo permitido (0.1–300 s).")
+    if evidence_backend not in {"legacy_b41", "persistent_b43"}:
+        raise LauncherPrototypeError("Backend de evidencia desconocido; no se permite fallback.")
     _validate_service_identity(plan)
     binary = _validate_executable(xray_binary, "Xray")
     setpriv = _validate_executable(setpriv_binary, "setpriv")
@@ -234,6 +237,25 @@ def run_fixture_xray_validation(
         "--", str(binary), "run", "-test", "-config", str(link),
     ]
     gate_read, gate_write = os.pipe()
+    root_fd = -1
+    if evidence_backend == "persistent_b43":
+        try:
+            root_fd = os.open(root, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0))
+            os.set_inheritable(root_fd, False)
+            root_info = os.fstat(root_fd)
+            if not stat.S_ISDIR(root_info.st_mode) or root_info.st_uid != 0:
+                raise LauncherPrototypeError("No se pudo establecer el descriptor ancla fixture.")
+        except Exception as exc:
+            if root_fd >= 0:
+                try:
+                    os.close(root_fd)
+                except OSError:
+                    pass
+            os.close(gate_read)
+            os.close(gate_write)
+            if isinstance(exc, LauncherPrototypeError):
+                raise
+            raise LauncherPrototypeError("No se pudo abrir la raíz fixture como ancla.") from exc
     child = None
     with tempfile.TemporaryFile() as output:
         try:
@@ -241,6 +263,8 @@ def run_fixture_xray_validation(
             if child == 0:
                 try:
                     os.close(gate_write)
+                    if root_fd >= 0:
+                        os.close(root_fd)
                     os.setpgid(0, 0)
                     os.dup2(output.fileno(), 1)
                     os.dup2(output.fileno(), 2)
@@ -259,13 +283,20 @@ def run_fixture_xray_validation(
             except OSError:
                 pass
             plan["target_pid"] = child
-            evidence = attestation.write_invocation_evidence(
-                fixture_root=pathlib.Path(plan["workspace"]).parent,
-                evidence_dir=pathlib.Path(plan["workspace"]).parent / "evidence",
-                fd_metadata=plan["fd_metadata"], pid=child,
-                invocation_id=plan["invocation_id"],
-            )
-            plan["evidence_path"] = evidence
+            if evidence_backend == "persistent_b43":
+                result = supervisor_evidence.prepare_persistent_evidence(
+                    plan=plan, target_pid=child, fixture_root_fd=root_fd)
+                plan["evidence_backend"] = "persistent_b43"
+                plan["evidence_reference"] = result["reference"]
+                plan["evidence_path"] = (root / "var/lib/xray-manager/evidence" / result["reference"])
+            else:
+                evidence = attestation.write_invocation_evidence(
+                    fixture_root=pathlib.Path(plan["workspace"]).parent,
+                    evidence_dir=pathlib.Path(plan["workspace"]).parent / "evidence",
+                    fd_metadata=plan["fd_metadata"], pid=child,
+                    invocation_id=plan["invocation_id"],
+                )
+                plan["evidence_path"] = evidence
             if os.write(gate_write, b"1") != 1:
                 raise LauncherPrototypeError("No se pudo liberar el hijo después de escribir evidencia.")
             os.close(gate_write)
@@ -300,6 +331,8 @@ def run_fixture_xray_validation(
                 os.close(gate_read)
             if gate_write >= 0:
                 os.close(gate_write)
+            if root_fd >= 0:
+                os.close(root_fd)
     if os.WIFEXITED(status):
         return subprocess.CompletedProcess(argv, os.WEXITSTATUS(status), captured, "")
     if os.WIFSIGNALED(status):

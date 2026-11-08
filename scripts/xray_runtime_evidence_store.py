@@ -185,11 +185,177 @@ def verify_evidence(*, fixture_root: pathlib.Path, service_gid: int,
             record = json.loads(raw.decode("utf-8"))
         except (UnicodeError, json.JSONDecodeError) as exc:
             raise EvidenceStoreError("El registro de evidencia no es JSON válido.") from exc
-        if (not isinstance(record, dict) or record.get("schema_version") != 1
+        if (not isinstance(record, dict) or type(record.get("schema_version")) is not int
+                or record.get("schema_version") != 1
                 or record.get("invocation_id") != invocation_id
                 or record.get("evidence_status") != "prepared_before_exec"):
             _fail("El registro no corresponde a la InvocationID solicitada.")
         _validate_metadata(record)
+        return {"verified": True, "persistent": True, "record": record}
+    finally:
+        os.close(dir_fd)
+
+
+def _open_evidence_dir_from_root_fd(fixture_root_fd: int, service_gid: int) -> int:
+    """Abre evidencia desde un ancla caller-owned sin resolver rutas absolutas."""
+    if type(fixture_root_fd) is not int or fixture_root_fd < 0:
+        _fail("Descriptor de raíz fixture inválido.")
+    if type(service_gid) is not int or service_gid <= 0:
+        _fail("GID de servicio inválido.")
+    opened: list[int] = []
+    result_fd = -1
+    try:
+        root_fd = os.dup(fixture_root_fd)
+        opened.append(root_fd)
+        os.set_inheritable(root_fd, False)
+        root_info = os.fstat(root_fd)
+        if (not stat.S_ISDIR(root_info.st_mode) or root_info.st_uid != 0
+                or root_info.st_gid != 0 or stat.S_IMODE(root_info.st_mode) != 0o711):
+            _fail("El descriptor ancla no apunta a una raíz fixture root:root 0711.")
+        marker_fd = os.open(".xray-manager-fixture", os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                            dir_fd=root_fd)
+        opened.append(marker_fd)
+        marker_info = os.fstat(marker_fd)
+        marker = os.read(marker_fd, 64)
+        if (not stat.S_ISREG(marker_info.st_mode) or marker_info.st_uid != 0
+                or marker_info.st_gid != 0 or marker_info.st_nlink != 1
+                or stat.S_IMODE(marker_info.st_mode) != 0o600
+                or marker != b"fixture-only\n"):
+            _fail("El marcador anclado de raíz fixture no es válido.")
+        os.close(marker_fd)
+        opened.remove(marker_fd)
+
+        # Validar el layout completo por descriptores; no se usa pathlib ni
+        # se vuelve a resolver fixture_root después de recibir el ancla.
+        def descend(parent: int, name: str, uid: int, gid: int, mode: int) -> int:
+            child = os.open(name, DIR_FLAGS, dir_fd=parent)
+            opened.append(child)
+            info = os.fstat(child)
+            if (not stat.S_ISDIR(info.st_mode) or info.st_uid != uid
+                    or info.st_gid != gid or stat.S_IMODE(info.st_mode) != mode):
+                _fail("El layout anclado no conserva owner/group/mode.")
+            return child
+
+        var_fd = descend(root_fd, "var", 0, 0, 0o755)
+        lib_fd = descend(var_fd, "lib", 0, 0, 0o755)
+        descend(lib_fd, "xray", 0, service_gid, 0o770)
+        manager_fd = descend(lib_fd, "xray-manager", 0, 0, 0o700)
+        result_fd = descend(manager_fd, "evidence", 0, 0, 0o700)
+        run_fd = descend(root_fd, "run", 0, 0, 0o755)
+        descend(run_fd, "xray", 0, service_gid, 0o770)
+        opened.remove(result_fd)
+        return result_fd
+    except EvidenceStoreError:
+        raise
+    except OSError as exc:
+        raise EvidenceStoreError("No se pudo recorrer el layout desde el descriptor ancla.") from exc
+    finally:
+        for descriptor in opened:
+            try:
+                os.close(descriptor)
+            except OSError:
+                pass
+
+
+def create_evidence_from_root_fd(*, fixture_root_fd: int, service_gid: int,
+                                 invocation_id: str, metadata: dict[str, Any]) -> str:
+    """Crea evidencia usando exclusivamente un descriptor de raíz confiable."""
+    if not isinstance(invocation_id, str) or not INVOCATION_RE.fullmatch(invocation_id):
+        _fail("InvocationID debe ser hexadecimal lowercase de 32 caracteres.")
+    clean = _validate_metadata(metadata)
+    dir_fd = _open_evidence_dir_from_root_fd(fixture_root_fd, service_gid)
+    name = invocation_id + ".json"
+    temp = ".pending-" + secrets.token_hex(16) + ".tmp"
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0)
+    data = (json.dumps({"schema_version": 1, "invocation_id": invocation_id,
+                        "evidence_status": "prepared_before_exec", **clean},
+                       sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    fd = -1
+    try:
+        fd = os.open(temp, flags, 0o600, dir_fd=dir_fd)
+        os.fchown(fd, 0, 0)
+        os.fchmod(fd, 0o600)
+        view = memoryview(data)
+        while view:
+            count = os.write(fd, view)
+            if count <= 0:
+                _fail("Escritura incompleta de evidencia.")
+            view = view[count:]
+        os.fsync(fd)
+        info = os.fstat(fd)
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_gid != 0
+                or info.st_nlink != 1 or stat.S_IMODE(info.st_mode) != 0o600):
+            _fail("El archivo temporal no conserva root:root 0600.")
+        os.close(fd)
+        fd = -1
+        try:
+            os.link(temp, name, src_dir_fd=dir_fd, dst_dir_fd=dir_fd, follow_symlinks=False)
+        except FileExistsError as exc:
+            raise EvidenceStoreError("La InvocationID ya tiene evidencia; replay rechazado.") from exc
+        os.unlink(temp, dir_fd=dir_fd)
+        os.fsync(dir_fd)
+    except EvidenceStoreError:
+        try:
+            os.unlink(temp, dir_fd=dir_fd)
+        except OSError:
+            pass
+        raise
+    except OSError as exc:
+        try:
+            os.unlink(temp, dir_fd=dir_fd)
+        except OSError:
+            pass
+        raise EvidenceStoreError("No se pudo publicar evidencia anclada atómicamente.") from exc
+    finally:
+        if fd >= 0:
+            os.close(fd)
+        os.close(dir_fd)
+    verify_evidence_from_root_fd(fixture_root_fd=fixture_root_fd, service_gid=service_gid,
+                                 invocation_id=invocation_id)
+    return name
+
+
+def verify_evidence_from_root_fd(*, fixture_root_fd: int, service_gid: int,
+                                 invocation_id: str) -> dict[str, Any]:
+    """Verifica el registro desde el mismo inode de raíz, sin resolver rutas."""
+    if not isinstance(invocation_id, str) or not INVOCATION_RE.fullmatch(invocation_id):
+        _fail("InvocationID inválida.")
+    dir_fd = _open_evidence_dir_from_root_fd(fixture_root_fd, service_gid)
+    try:
+        try:
+            fd = os.open(invocation_id + ".json", os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+                         dir_fd=dir_fd)
+        except OSError as exc:
+            raise EvidenceStoreError("No existe evidencia regular para la InvocationID.") from exc
+        try:
+            info = os.fstat(fd)
+            if (not stat.S_ISREG(info.st_mode) or info.st_uid != 0 or info.st_gid != 0
+                    or info.st_nlink != 1 or stat.S_IMODE(info.st_mode) != 0o600
+                    or not 2 <= info.st_size <= MAX_RECORD_BYTES):
+                _fail("El inode de evidencia tiene tipo, enlaces, owner, modo o tamaño inválido.")
+            chunks, remaining = [], info.st_size
+            while remaining:
+                chunk = os.read(fd, remaining)
+                if not chunk:
+                    _fail("Lectura incompleta del registro de evidencia.")
+                chunks.append(chunk)
+                remaining -= len(chunk)
+            raw = b"".join(chunks)
+        finally:
+            os.close(fd)
+        try:
+            record = json.loads(raw.decode("utf-8"))
+        except (UnicodeError, json.JSONDecodeError) as exc:
+            raise EvidenceStoreError("El registro de evidencia no es JSON válido.") from exc
+        if (not isinstance(record, dict) or type(record.get("schema_version")) is not int
+                or record.get("schema_version") != 1
+                or record.get("invocation_id") != invocation_id
+                or record.get("evidence_status") != "prepared_before_exec"):
+            _fail("El registro no corresponde a la InvocationID solicitada.")
+        _validate_metadata(record)
+        if set(record) != {"schema_version", "invocation_id", "evidence_status",
+                           "pid", "config_sha256", "config_size_bytes"}:
+            _fail("El registro contiene campos adicionales no admitidos.")
         return {"verified": True, "persistent": True, "record": record}
     finally:
         os.close(dir_fd)

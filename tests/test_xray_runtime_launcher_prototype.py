@@ -13,6 +13,8 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 import xray_runtime_launcher_prototype as launcher
 import xray_runtime_config_attestation as attestation
+import xray_runtime_supervisor_evidence as supervisor_evidence
+import xray_runtime_evidence_store as evidence_store
 
 
 class LauncherPrivilegePrototypeTests(unittest.TestCase):
@@ -322,6 +324,120 @@ class LauncherPrivilegePrototypeTests(unittest.TestCase):
             self.assertLess(elapsed, 2.0)
             with self.assertRaises(ChildProcessError):
                 os.waitpid(plan["target_pid"], os.WNOHANG)
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_persistent_b43_backend_records_blocked_child_before_exec(self):
+        if os.geteuid() != 0:
+            self.skipTest("requiere root para fixture persistente")
+        import json
+        import stat
+        import xray_runtime_directory_contract as directories
+        plan = self.plan()
+        try:
+            directories.prepare_fixture_layout(self.root, plan["service_gid"])
+            fake = self._fake_executable("fake-xray-persistent", "exit 0")
+            result = launcher.run_fixture_xray_validation(
+                plan, xray_binary=fake, evidence_backend="persistent_b43")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(plan["evidence_backend"], "persistent_b43")
+            path = self.root / "var/lib/xray-manager/evidence" / (self.invocation + ".json")
+            record = json.loads(path.read_text(encoding="utf-8"))
+            self.assertEqual(record["pid"], plan["target_pid"])
+            self.assertEqual(record["evidence_status"], "prepared_before_exec")
+            info = path.stat()
+            self.assertEqual((info.st_uid, info.st_gid, stat.S_IMODE(info.st_mode)), (0, 0, 0o600))
+            denied = subprocess.run(
+                ["/usr/bin/setpriv", f"--reuid={plan['service_uid']}",
+                 f"--regid={plan['service_gid']}", "--clear-groups",
+                 "--", "/usr/bin/test", "-r", str(path)], check=False)
+            self.assertNotEqual(denied.returncode, 0, "la identidad de servicio pudo leer evidencia persistente")
+            root_fd = os.open(self.root, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                self.assertTrue(evidence_store.verify_evidence_from_root_fd(
+                    fixture_root_fd=root_fd, service_gid=plan["service_gid"],
+                    invocation_id=self.invocation)["verified"])
+            finally:
+                os.close(root_fd)
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_persistent_b43_failure_keeps_gate_closed_and_reaps_child(self):
+        if os.geteuid() != 0:
+            self.skipTest("requiere root para comprobar el gate")
+        plan = self.plan()
+        marker = pathlib.Path(self.temp.name) / "should-not-exec"
+        fake = self._fake_executable("fake-xray-must-not-run", f"touch {marker}; exit 0")
+        import xray_runtime_directory_contract as directories
+        directories.prepare_fixture_layout(self.root, plan["service_gid"])
+        try:
+            with unittest.mock.patch.object(
+                    supervisor_evidence, "prepare_persistent_evidence",
+                    side_effect=supervisor_evidence.SupervisorEvidenceError("injected failure")):
+                with self.assertRaises(supervisor_evidence.SupervisorEvidenceError):
+                    launcher.run_fixture_xray_validation(
+                        plan, xray_binary=fake, evidence_backend="persistent_b43")
+            self.assertFalse(marker.exists(), "el hijo ejecutó el binario pese al fallo de evidencia")
+            with self.assertRaises(ChildProcessError):
+                os.waitpid(plan["target_pid"], os.WNOHANG)
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_persistent_b43_verification_failure_keeps_gate_closed(self):
+        if os.geteuid() != 0:
+            self.skipTest("requiere root para comprobar el gate")
+        import xray_runtime_directory_contract as directories
+        plan = self.plan()
+        directories.prepare_fixture_layout(self.root, plan["service_gid"])
+        marker = pathlib.Path(self.temp.name) / "verify-failure-exec"
+        fake = self._fake_executable("fake-xray-verify-failure", f"touch {marker}; exit 0")
+        try:
+            with unittest.mock.patch.object(
+                    evidence_store, "verify_evidence_from_root_fd",
+                    side_effect=evidence_store.EvidenceStoreError("injected verify failure")):
+                with self.assertRaises(supervisor_evidence.SupervisorEvidenceError):
+                    launcher.run_fixture_xray_validation(
+                        plan, xray_binary=fake, evidence_backend="persistent_b43")
+            self.assertFalse(marker.exists())
+            with self.assertRaises(ChildProcessError):
+                os.waitpid(plan["target_pid"], os.WNOHANG)
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_root_anchor_fd_is_not_inherited_by_execed_child(self):
+        if os.geteuid() != 0:
+            self.skipTest("requiere root para comprobar herencia de descriptores")
+        import xray_runtime_directory_contract as directories
+        plan = self.plan()
+        directories.prepare_fixture_layout(self.root, plan["service_gid"])
+        capture = pathlib.Path(__import__("tempfile").mktemp(prefix="b43-fds-", dir="/tmp"))
+        fake = self._fake_executable(
+            "fake-xray-fd-audit", f"for f in /proc/self/fd/*; do readlink \"$f\"; done > {capture}; exit 0")
+        try:
+            result = launcher.run_fixture_xray_validation(
+                plan, xray_binary=fake, evidence_backend="persistent_b43")
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            links = capture.read_text(encoding="utf-8")
+            self.assertNotIn(str(self.root), links)
+        finally:
+            capture.unlink(missing_ok=True)
+            launcher.close_fixture_plan(plan)
+
+    def test_persistent_b43_does_not_fallback_to_legacy_backend(self):
+        if os.geteuid() != 0:
+            self.skipTest("requiere root para comprobar fallo cerrado")
+        plan = self.plan()
+        import xray_runtime_directory_contract as directories
+        directories.prepare_fixture_layout(self.root, plan["service_gid"])
+        try:
+            with unittest.mock.patch.object(
+                    supervisor_evidence, "prepare_persistent_evidence",
+                    side_effect=supervisor_evidence.SupervisorEvidenceError("injected failure")):
+                with self.assertRaises(supervisor_evidence.SupervisorEvidenceError):
+                    launcher.run_fixture_xray_validation(
+                        plan, xray_binary=pathlib.Path("/usr/local/bin/xray"),
+                        evidence_backend="persistent_b43")
+            self.assertFalse((self.root / "evidence" / (self.invocation + ".json")).exists())
         finally:
             launcher.close_fixture_plan(plan)
 
