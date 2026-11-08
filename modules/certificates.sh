@@ -58,19 +58,52 @@ certificates_menu() {
     done
 }
 
-certificates_ensure_certbot() {
-    local lifecycle_fd="" apt_get="${MANAGER_APT_GET:-apt-get}"
-
-    if command -v certbot >/dev/null 2>&1; then
-        if certbot --version; then
+certificates_certbot_timer_active() {
+    local timer
+    for timer in certbot.timer snap.certbot.renew.timer; do
+        if systemctl is-enabled --quiet "$timer" 2>/dev/null ||
+            systemctl is-active --quiet "$timer" 2>/dev/null; then
             return 0
         fi
-        printf '\nCertbot está presente, pero no pudo ejecutarse. No se continuará con ACME.\n' >&2
+    done
+    return 1
+}
+
+certificates_ensure_certbot() {
+    local lifecycle_fd="" lifecycle_lock="/run/lock/xray-manager-lifecycle.lock" apt_get
+    apt_get="$(command -v apt-get 2>/dev/null || true)"
+    if declare -p XRAY_MANAGER_LIFECYCLE_LOCK >/dev/null 2>&1 && [[ -n "$XRAY_MANAGER_LIFECYCLE_LOCK" ]]; then
+        lifecycle_lock="$XRAY_MANAGER_LIFECYCLE_LOCK"
+    fi
+    if declare -p MANAGER_APT_GET >/dev/null 2>&1 && [[ -n "$MANAGER_APT_GET" ]]; then
+        apt_get="$MANAGER_APT_GET"
+    fi
+
+    if ! command -v systemctl >/dev/null 2>&1 || ! systemctl show --property=Version >/dev/null 2>&1; then
+        printf 'systemctl no está disponible o no puede consultar systemd; no se puede verificar el scheduler de renovación Certbot.\n' >&2
         return 1
     fi
 
+    if command -v certbot >/dev/null 2>&1; then
+        if ! certbot --version; then
+            printf '\nCertbot está presente, pero no pudo ejecutarse. No se continuará con ACME.\n' >&2
+            return 1
+        fi
+        if certificates_certbot_timer_active; then
+            printf 'Se detectó un timer de renovación Certbot habilitado/activo. No se modificará; la renovación aún no está integrada con el Manager.\n' >&2
+            return 1
+        fi
+        return 0
+    fi
+
     printf '\nCertbot no está instalado. Es necesario para solicitar certificados ACME.\n'
-    if ! ui_confirm "¿Deseas instalar Certbot desde los repositorios oficiales de Ubuntu?"; then
+    printf 'La renovación automática todavía no está integrada con el almacén central y el runtime Xray.\n'
+    printf 'La instalación mantendrá certbot.timer deshabilitado hasta completar ese bloque.\n'
+    if certificates_certbot_timer_active; then
+        printf 'Ya existe un timer de renovación Certbot habilitado o activo. No se modificará ni se instalará Certbot encima.\n' >&2
+        return 1
+    fi
+    if ! ui_confirm "¿Instalar Certbot desde APT y mantener certbot.timer deshabilitado?"; then
         printf '\nInstalación cancelada. No se inició ninguna solicitud ACME.\n'
         return 1
     fi
@@ -78,7 +111,7 @@ certificates_ensure_certbot() {
         printf 'La instalación de Certbot requiere root. No se intentó autoelevar.\n' >&2
         return 1
     fi
-    if ! command -v "$apt_get" >/dev/null 2>&1; then
+    if [[ -z "$apt_get" ]] || ! command -v "$apt_get" >/dev/null 2>&1; then
         printf 'No se encontró apt-get; no se puede instalar Certbot en este sistema.\n' >&2
         return 1
     fi
@@ -87,7 +120,7 @@ certificates_ensure_certbot() {
         printf 'La instalación automática de Certbot está habilitada únicamente para Ubuntu.\n' >&2
         return 1
     fi
-    if ! manager_lock_acquire "${XRAY_MANAGER_LIFECYCLE_LOCK:-/run/lock/xray-manager-lifecycle.lock}" lifecycle_fd; then
+    if ! manager_lock_acquire "$lifecycle_lock" lifecycle_fd; then
         printf 'Hay otra operación de ciclo de vida del Manager en curso.\n' >&2
         return 1
     fi
@@ -103,6 +136,22 @@ certificates_ensure_certbot() {
         printf 'Falló la instalación de Certbot. No se continuará con ACME.\n' >&2
         return 1
     fi
+    # El paquete Ubuntu puede instalar/habilitar certbot.timer. Hasta que exista
+    # el deploy hook transaccional del Manager, no debe renovar lineages fuera
+    # del almacén central ni dejar Xray sirviendo una revisión vencida.
+    if systemctl is-enabled --quiet certbot.timer 2>/dev/null ||
+        systemctl is-active --quiet certbot.timer 2>/dev/null; then
+        if ! systemctl disable --now certbot.timer; then
+            manager_lock_release "$lifecycle_fd"
+            printf 'Certbot se instaló, pero no se pudo desactivar certbot.timer. ACME queda bloqueado; revisa el timer manualmente.\n' >&2
+            return 1
+        fi
+    fi
+    if certificates_certbot_timer_active; then
+        manager_lock_release "$lifecycle_fd"
+        printf 'Certbot se instaló, pero un timer de renovación continúa habilitado/activo. ACME queda bloqueado.\n' >&2
+        return 1
+    fi
     manager_lock_release "$lifecycle_fd"
     hash -r
 
@@ -113,8 +162,38 @@ certificates_ensure_certbot() {
     printf 'Certbot quedó instalado y verificado correctamente.\n'
 }
 
+certificates_import_issued_request() {
+    local method="$1" email="$2" cert_name="$3" request_id="$4"
+    shift 4
+    local output domain
+    local -a args=(import-certbot --method "$method" --email "$email"
+        --cert-name "$cert_name" --request-id "$request_id")
+    for domain in "$@"; do args+=(--domain "$domain"); done
+
+    certificates_store_audit_clean || {
+        printf 'La auditoría del almacén TLS no está limpia; se bloqueó la importación.\n' >&2
+        return 1
+    }
+    printf '\nSolicitud emitida: %s\n' "$request_id"
+    printf 'Lineage Certbot: %s\n' "$cert_name"
+    printf 'Se validarán SAN, vigencia y pareja criptográfica antes de almacenar el certificado.\n'
+    printf 'La importación creará un certificate_id nuevo; no modifica conexiones ni runtime.\n'
+    if ! ui_confirm "¿Importar ahora el certificado emitido al almacén central?"; then
+        printf 'Certificado emitido pero todavía no importado. Puedes importarlo luego desde el menú TLS.\n'
+        return 2
+    fi
+    if output="$(python3 "$APP_ROOT/scripts/certificate_acme.py" "${args[@]}" 2>&1)"; then
+        printf '%s\n' "$output"
+        printf 'Certificado importado correctamente.\n'
+        return 0
+    fi
+    printf 'La importación falló; el almacén vigente permanece sin cambios.\n%s\n' "$output" >&2
+    return 1
+}
+
 certificates_obtain_menu() {
-    local method_choice method email expected_address
+    local workflow="${1:-general}"
+    local method_choice method email expected_address issue_result request_id issued_cert_name
     local -a args=() plan_args=()
     ui_clear
     ui_title "OBTENER CERTIFICADO ACME"
@@ -134,7 +213,12 @@ certificates_obtain_menu() {
         0) return 0 ;;
         *) printf '\nMétodo no válido.\n'; ui_pause; return 1 ;;
     esac
-    certificates_read_domains || { ui_pause; return 1; }
+    if [[ "$workflow" == "vless-ws-tls" ]]; then
+        CERTIFICATES_DOMAINS=("${XRAY_MANAGER_VLESS_TLS_DOMAIN:-pruebas.tvrc.me}")
+        printf 'Dominio objetivo para VLESS-WS-TLS: %s\n' "${CERTIFICATES_DOMAINS[0]}"
+    else
+        certificates_read_domains || { ui_pause; return 1; }
+    fi
     printf 'Correo de contacto ACME: '
     IFS= read -r email || return 1
     [[ -n "$email" ]] || { printf 'Correo obligatorio.\n'; ui_pause; return 1; }
@@ -161,12 +245,21 @@ certificates_obtain_menu() {
         ui_pause
         return 0
     fi
-    if python3 "$APP_ROOT/scripts/certificate_acme.py" issue "${args[@]}" --confirm-acme; then
-        printf '\nLa solicitud ACME terminó. Revisa el estado y luego importa el lineage emitido.\n'
+    if issue_result="$(python3 "$APP_ROOT/scripts/certificate_acme.py" issue "${args[@]}" --confirm-acme 2>&1)"; then
+        printf '\n%s\n' "$issue_result"
+        if ! jq -e '.status == "issued" and (.certificate_request_id | type == "string") and (.cert_name | type == "string")' <<<"$issue_result" >/dev/null; then
+            printf 'La solicitud terminó sin un registro emitido reconocible; no se intentará importar.\n' >&2
+        else
+            request_id="$(jq -r '.certificate_request_id' <<<"$issue_result")"
+            issued_cert_name="$(jq -r '.cert_name' <<<"$issue_result")"
+            certificates_import_issued_request "$method" "$email" "$issued_cert_name" "$request_id" "${CERTIFICATES_DOMAINS[@]}" || true
+        fi
     else
-        printf '\nLa solicitud ACME falló o quedó bloqueada. No se modificó el almacén central.\n'
+        printf '\nLa solicitud ACME falló o quedó bloqueada. No se modificó el almacén central.\n%s\n' "$issue_result"
     fi
-    ui_pause
+    if [[ "$workflow" != "vless-ws-tls" ]]; then
+        ui_pause
+    fi
 }
 
 certificates_list_menu() {

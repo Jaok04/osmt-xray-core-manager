@@ -58,8 +58,28 @@ connections_vless_assistant_select_certificate() {
 	count="$(jq '.certificates | length' <<<"$list_json")"
 	if ((count == 0)); then
 		printf '\nNo hay certificados en el almacén central.\n' >&2
-		printf 'Obtén uno desde Certificados SSL/TLS y dominios, impórtalo y vuelve a este asistente.\n' >&2
-		return 1
+		if ! declare -F certificates_obtain_menu >/dev/null 2>&1; then
+			printf 'El módulo ACME no está cargado; no se puede iniciar el flujo guiado.\n' >&2
+			return 1
+		fi
+		if ! ui_confirm "¿Deseas obtener e importar ahora un certificado TLS para el dominio del primer servicio?" >&2; then
+			printf 'Obtención TLS cancelada.\n' >&2
+			return 1
+		fi
+		certificates_obtain_menu vless-ws-tls >&2 || return 1
+		list_json="$(python3 "$APP_ROOT/scripts/certificate_store.py" \
+			--base "$XRAY_MANAGER_CERTIFICATES_DIR" \
+			--catalog "$XRAY_MANAGER_CERTIFICATES_CATALOG_FILE" \
+			--managed-dir "$XRAY_MANAGER_CERTIFICATES_MANAGED_DIR" \
+			--secrets-dir "$XRAY_MANAGER_CERTIFICATES_SECRETS_DIR" \
+			--master-key "$XRAY_MANAGER_MASTER_KEY_FILE" \
+			--lock "$lock_file" list)" || return 1
+		jq -e '.status == "ok" and (.certificates | type == "array")' <<<"$list_json" >/dev/null || return 1
+		count="$(jq '.certificates | length' <<<"$list_json")"
+		if ((count == 0)); then
+			printf 'No se encontró un certificado importado. El asistente no continuará sin TLS central.\n' >&2
+			return 1
+		fi
 	fi
 	printf '\nCertificados TLS disponibles:\n' >&2
 	for ((index=0; index<count; index++)); do

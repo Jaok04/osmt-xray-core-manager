@@ -1771,3 +1771,12 @@ Toda configuración necesaria del sistema operativo/Xray para instalación, prep
 ## Diseño vigente del puente live (2026-11-08)
 
 `docs/DISENO_PUENTE_MINIMO_MANAGER_RUNTIME_LIVE_VLESS_WS_TLS_2026-11-08.md` define L1 almacén live de operación/evidencia, L2 staging live separado del fixture, L3 publicador/rollback live, L4 orquestador live separado de R-05 y L5 menú live. Se recomienda conservar el servicio actual `User=xray`/`Group=xray` con ExecStart directo; no insertar el supervisor root B4.3 en el daemon. El backend live actual exige evidencia `environment=live`, mientras el lector existente devuelve `fixture`; restore live no está implementado. No hay operaciones live autorizadas.
+
+
+## Actualización de continuidad — flujo ACME integrado (2026-11-08)
+
+En la rama de desarrollo se integró el flujo de obtención/importación ACME dentro del asistente VLESS-WS-TLS. Si el catálogo está vacío, el asistente pide confirmación, fija el dominio pruebas.tvrc.me, conserva HTTP-01/DNS-01 manual, ejecuta el plan y solicita confirmación de emisión. Después reutiliza certificate_request_id y cert_name para ofrecer una segunda confirmación de importación al almacén central; al finalizar vuelve a seleccionar el certificado. Si la emisión/importación no concluye o el usuario cancela, no se continúa sin certificado TLS central.
+
+Se protegió la instalación/uso de Certbot: systemctl debe consultar systemd; si certbot.timer o snap.certbot.renew.timer está habilitado/activo, no se altera y se bloquea la operación. Después de instalar APT se deshabilita certbot.timer si quedó activado y se comprueba que ninguno de los dos timers permanezca activo. La renovación sigue pendiente del deploy hook transaccional del Manager.
+
+Validación interna: Python 570/570; Bash 63/63; bash -n global; ShellCheck global -S error; install.sh --check; git diff --check. No se ejecutaron APT, Certbot real, ACME, DNS, firewall, puertos, systemd ni runtime en VPS Pruebas. H6-G3 independiente sigue pendiente. Detalle: docs/IMPLEMENTACION_FLUJO_GUIADO_ACME_VLESS_WS_TLS_2026-11-08.md.

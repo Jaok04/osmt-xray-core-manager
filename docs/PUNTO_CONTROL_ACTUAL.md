@@ -1937,3 +1937,12 @@ Toda configuración del sistema y Xray debe realizarse desde Xray-Core Manager. 
 ## Límites vigentes B4.3-B
 
 El backend `persistent_b43` fue validado con un ejecutable fixture, no con Xray real. La validación Xray 26.10.31 de la regresión corresponde al camino B4.1. `prepared_before_exec` no demuestra exec exitoso, configuración cargada, proceso activo ni estado systemd. No se modificó `modules/xray_service.sh`, R-05, menú, unidad, backend live, runtime ni VPS Pruebas. La revisión adversarial realizada es de segunda pasada de la misma sesión, no independiente.
+
+
+## Actualización de continuidad — flujo ACME integrado (2026-11-08)
+
+En la rama de desarrollo se integró el flujo de obtención/importación ACME dentro del asistente VLESS-WS-TLS. Si el catálogo está vacío, el asistente pide confirmación, fija el dominio pruebas.tvrc.me, conserva HTTP-01/DNS-01 manual, ejecuta el plan y solicita confirmación de emisión. Después reutiliza certificate_request_id y cert_name para ofrecer una segunda confirmación de importación al almacén central; al finalizar vuelve a seleccionar el certificado. Si la emisión/importación no concluye o el usuario cancela, no se continúa sin certificado TLS central.
+
+Se protegió la instalación/uso de Certbot: systemctl debe consultar systemd; si certbot.timer o snap.certbot.renew.timer está habilitado/activo, no se altera y se bloquea la operación. Después de instalar APT se deshabilita certbot.timer si quedó activado y se comprueba que ninguno de los dos timers permanezca activo. La renovación sigue pendiente del deploy hook transaccional del Manager.
+
+Validación interna: Python 570/570; Bash 63/63; bash -n global; ShellCheck global -S error; install.sh --check; git diff --check. No se ejecutaron APT, Certbot real, ACME, DNS, firewall, puertos, systemd ni runtime en VPS Pruebas. H6-G3 independiente sigue pendiente. Detalle: docs/IMPLEMENTACION_FLUJO_GUIADO_ACME_VLESS_WS_TLS_2026-11-08.md.
