@@ -1991,3 +1991,13 @@ Se añadieron dos pruebas para la independencia del fixture. Pruebas focales R-0
 No se creó `stage_live`, no se llamó `xray_runtime_systemd_adapter.status()` contra el host, no se resolvieron leases ni se crearon rutas productivas. No se consultó ni modificó VPS Pruebas, `/etc/xray`, `/var/lib/xray-manager`, systemd, certificados, DNS, firewall o puertos.
 
 Siguiente paso: implementar una envoltura live aislada que consuma `preflight_profile` y el adaptador systemd de solo lectura directamente; debe rechazar unidad/identidad/estado incompatibles, mantener staging y leases temporales bajo rutas productivas fijas y privadas, usar lock exclusivo y limpieza compensatoria, y no publicar ni arrancar servicio. Mantenerla fuera del menú y no invocarla hasta H6-G3 y autorización específica.
+
+## L2 — envoltura mínima de staging live implementada (2026-11-08)
+
+Se añadió `scripts/xray_runtime_live_staging.py` y su suite `tests/test_xray_runtime_live_staging.py`. La nueva envoltura permanece separada de R-02 fixture y usa rutas productivas fijas. Consume `preflight_profile()`, observa `xray.service` directamente mediante el adaptador read-only, comprueba identidad real `xray:xray`, lee el mapping I-01/I-02 exacto de perfil/revisión, prepara leases TLS centrales, reutiliza el núcleo puro de staging y valida el resultado con `xray run -test` bajo UID/GID del servicio.
+
+Se añadieron controles de lock root-only, rechazo de symlinks y permisos incorrectos, validación estricta de unidad/identidad/estado, segunda lectura de perfil/informe/mapping/systemd para detectar TOCTOU y limpieza compensatoria de leases y staging. El manifiesto no incluye material privado. La salida conserva `runtime_published=false` y `service_started=false`.
+
+Validación: live staging 7/7; regresión focal combinada 50/50; Python global **506/506 PASS**; `compileall`, sintaxis Bash, 62/62 suites Bash, ShellCheck global `-S error`, `install.sh --check` y `git diff --check` PASS. Informe: `docs/IMPLEMENTACION_STAGING_LIVE_MINIMO_L2_2026-11-08.md`.
+
+**Límites:** no se ejecutó `stage_live` contra datos productivos; no se publicó `/etc/xray/config.json`; no se inició ni modificó systemd/Xray; no se creó material TLS productivo; no se tocó VPS Pruebas. No hay integración al menú ni a R-05. La implementación sigue bloqueada para uso live hasta revisión independiente H6-G3, resolución de hallazgos pendientes y autorización específica. Próximo paso: revisar y diseñar el publicador/transacción mínima compatible con el journal live y el contrato de servicio directo `xray:xray`, sin ejecutarlo ni conectarlo al menú todavía.
