@@ -1959,3 +1959,14 @@ La matriz identifica el puente faltante: almacén live de operación/evidencia; 
 Se documentó además que el exportador conserva el endpoint default histórico `hellen.tvrc.me`; para el objetivo aprobado `pruebas.tvrc.me:443` debe especificarse el endpoint correcto antes de exportar el cliente. El mapping por perfil/revisión ya se genera mediante I-01/I-02; no debe duplicarse.
 
 Puertas previas: revisión externa independiente H6-G3 mediante `docs/PAQUETE_REVISION_INDEPENDIENTE_H6G3_2026-11-06.md`, resolución F-02/F-04/F-05 live, L1-L5 y autorización específica antes de cualquier acción real. No se modificó `modules/xray_service.sh`, backend live, R-05, journal, runtime, VPS Pruebas, `main` ni `Xray-Normativa/`.
+
+
+## MVP mínimo — journal live inicial en fixtures (2026-11-08)
+
+Se inició la implementación reducida del puente Manager → runtime live, priorizando el primer VLESS+WS+TLS y descartando integrar el supervisor root B4.3 al daemon. Se añadió `scripts/xray_runtime_live_journal.py` con almacén productivo fijo `/var/lib/xray-manager/runtime-operations`, snapshot exacto root-only, journal JSON atómico, schema estricto y transiciones monotónicas. `tests/test_xray_runtime_live_journal.py` contiene 16 pruebas aisladas.
+
+Validación después del cambio: **486/486 Python y 62/62 Bash PASS**; `compileall`, `py_compile`, `bash -n`, ShellCheck global `-S error`, `install.sh --check` y `git diff --check` PASS. Informe: `docs/IMPLEMENTACION_JOURNAL_LIVE_MINIMO_FIXTURE_2026-11-08.md`.
+
+Esto es sólo la base de persistencia de H6-H1-B, no una integración live ni H6-H1 completo. No hay CLI, locks/coordinación, crash recovery, reconciliación, publicador, orquestador ni menú conectados. La finalización exige atestación explícita de configuración; sin configuración previa no se permite rollback destructivo. No se creó el almacén productivo en ningún host ni se ejecutó systemctl/Xray/ACME.
+
+Siguiente paso: construir únicamente el staging mínimo para el MVP, reutilizando mapping I-01/I-02, resolver TLS central y validación Xray bajo `xray:xray`, manteniendo R-02 fixture sin cambios. Luego diseñar el publicador live más pequeño compatible con snapshot/journal y con la unidad directa `xray:xray`. La auditoría independiente H6-G3 y la autorización específica siguen siendo puertas previas a operaciones reales. No tocar VPS Pruebas, `/etc/xray`, systemd real, DNS, firewall, certificados ni runtime.
