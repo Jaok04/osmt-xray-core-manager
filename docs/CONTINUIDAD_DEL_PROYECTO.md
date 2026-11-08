@@ -1,3 +1,21 @@
+# Punto de reanudación vigente — B4.2 publicado (2026-11-08)
+
+**Prioridad del proyecto:** lograr el primer servidor real VLESS + WebSocket + TLS en `pruebas.tvrc.me:443`, administrado íntegramente por Xray-Core Manager, y demostrar conectividad externa bidireccional. No ampliar el alcance innecesariamente.
+
+**Estado de código:** B4.2 está IMPLEMENTADO y VERIFICADO exclusivamente en fixtures. El memfd se transfiere a la identidad de servicio con modo `0400`, conserva seals y se revalida por UID/GID/modo/tamaño/SHA-256. El supervisor fixture usa únicamente `CAP_CHOWN`, `CAP_SETUID`, `CAP_SETGID` y `CAP_NET_BIND_SERVICE`, con `NoNewPrivileges=1`; Xray 26.10.31 `run -test` pasa después del descenso a `nobody:nogroup`. Informe: `docs/IMPLEMENTACION_B4_2_SUPERVISOR_CAPACIDADES_FIXTURE_2026-11-08.md`.
+
+**Verificación registrada:** B4.1/B4.2 focal 20/20; Python 437/437; Bash syntax 91/91; ShellCheck global `-S error`; `compileall`; `install.sh --check`; `git diff --check` PASS. Estas son pruebas de desarrollo/fixtures, no validación de servicio real.
+
+**Límites y bloqueos:** no se creó `xray:xray`; no se probó unidad/sandbox systemd real, `InvocationID`/`MainPID` reales ni daemon. Falta diseñar el ownership de `StateDirectory=xray` y `RuntimeDirectory=xray` cuando systemd inicia el supervisor como root, además de `ReadWritePaths`, la ruta de evidencia root-only compatible con `ProtectSystem=strict` y el ciclo de vida de esos directorios. El siguiente trabajo permitido es diseño y fixtures de ese contrato. No modificar todavía `modules/xray_service.sh`, unidad real, R-05, menú/backend live ni VPS de pruebas.
+
+**Infraestructura protegida:** no hubo operaciones live; no se modificaron systemd, runtime, cuentas, DNS, firewall, puertos o red. `main` y `Xray-Normativa/` permanecen intactas. La publicación autorizada se realiza exclusivamente en `design/user-identity-association-v1`. No confundir IMPLEMENTADO/VERIFICADO con ACEPTADO ni con conectividad end-to-end.
+
+**Estado Git previo a la publicación de este expediente:** rama `design/user-identity-association-v1`, HEAD base `9cc6987cc1c2eab0861329ea7d455f4d35720ef6`; los cambios B4.2 estaban locales. El SHA final de publicación se registrará aquí y en `HISTORY.md` tras verificar GitHub.
+
+Para reanudar, seguir el mensaje de inicio y el procedimiento de auditoría de recuperación que aparecen más abajo; comprobar primero el HEAD remoto real, el árbol de trabajo y la integridad de `Xray-Normativa/`. Siguiente tarea: diseñar fixture del layout de directorios/sandbox, sin operaciones live.
+
+---
+
 # Punto de reanudación vigente — auditoría B4.1 fixture (2026-11-07)
 
 B4.1 fue auditado y endurecido en desarrollo. El lanzador revalida identidad NSS/UID/GID y bytes reales del memfd (seals, tamaño y SHA-256), aplica timeout con terminación/recolección del grupo hijo y exige ejecutables regulares root-owned no modificables por grupo/otros. A01–A03 resueltos; A04 mitigado, con TOCTOU residual documentado.
@@ -1865,3 +1883,10 @@ La compatibilidad memfd se repitió como `nobody` (UID/GID 65534): Xray 26.10.31
 ## Regla permanente — configuración exclusivamente desde Xray-Core Manager (2026-11-07)
 
 El propietario establece que ninguna configuración necesaria del sistema operativo o Xray debe hacerse manualmente fuera del Administrador. Esto incluye usuario/grupo `xray`, directorios y permisos, unidad/restricciones systemd, configuración runtime, certificados, firewall, puertos, DNS, red y dependencias. Si una prueba necesita esos componentes, primero debe existir la función correspondiente en el Administrador; el entorno se prepara mediante sus menús/módulos, no con comandos manuales ni instrucciones al propietario. Se permiten inspecciones read-only y pruebas automatizadas aisladas. Toda operación live conserva la puerta de autorización específica por host y alcance. `modules/xray_service.sh` sigue siendo el único controlador de systemd para Xray. Esta regla no autoriza cambios en `Xray-Normativa/`.
+
+
+## Actualización de continuidad — B4.2 (2026-11-08)
+
+La prioridad vigente sigue siendo arrancar mediante Xray-Core Manager el servidor real VLESS + WS + TLS en `pruebas.tvrc.me:443` y demostrar conectividad externa bidireccional. El último avance autorizado es B4.2 en fixtures: supervisor root con capacidades reducidas, `NoNewPrivileges=1`, memfd propiedad de la identidad de servicio y modo 0400, contenido sellado, evidencia root-only y Xray 26.10.31 `run -test` después del descenso. Informe: `docs/IMPLEMENTACION_B4_2_SUPERVISOR_CAPACIDADES_FIXTURE_2026-11-08.md`.
+
+La identidad usada fue `nobody:nogroup`; no se creó la cuenta xray. No se probó unidad/sandbox systemd real, InvocationID/MainPID real ni daemon. Antes de integrar hay que resolver el ownership que systemd asigna a `StateDirectory=xray`/`RuntimeDirectory=xray` al ejecutar el supervisor como root, y definir una ruta de evidencia root-only permitida por `ProtectSystem=strict`. Próximo paso: diseño/fixtures de layout de directorios y contrato de sandbox; no modificar todavía `modules/xray_service.sh`, unidad real, R-05 ni VPS de pruebas. Cambios locales sin commit/push.

@@ -51,6 +51,70 @@ class LauncherPrivilegePrototypeTests(unittest.TestCase):
         finally:
             launcher.close_fixture_plan(plan)
 
+    def test_memfd_is_service_owned_and_read_only(self):
+        import pwd
+        import grp
+        import stat
+        plan = self.plan()
+        try:
+            info = os.fstat(plan["fd"])
+            account = pwd.getpwnam("nobody")
+            group = grp.getgrnam("nogroup")
+            self.assertEqual((info.st_uid, info.st_gid), (account.pw_uid, group.gr_gid))
+            self.assertEqual(stat.S_IMODE(info.st_mode), 0o400)
+            self.assertEqual(plan["fd_metadata"]["mode"], 0o400)
+            self.assertEqual(plan["fd_metadata"]["owner_uid"], account.pw_uid)
+            self.assertEqual(plan["fd_metadata"]["owner_gid"], group.gr_gid)
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_rejects_memfd_mode_tampering(self):
+        plan = self.plan()
+        try:
+            os.fchmod(plan["fd"], 0o444)
+            with self.assertRaises(launcher.LauncherPrototypeError):
+                launcher.run_fixture_xray_validation(
+                    plan, xray_binary=pathlib.Path("/usr/local/bin/xray"))
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_rejects_memfd_owner_tampering(self):
+        if os.geteuid() != 0:
+            self.skipTest("requiere root para cambiar el propietario del memfd")
+        plan = self.plan()
+        try:
+            os.fchown(plan["fd"], 0, 0)
+            with self.assertRaises(launcher.LauncherPrototypeError):
+                launcher.run_fixture_xray_validation(
+                    plan, xray_binary=pathlib.Path("/usr/local/bin/xray"))
+        finally:
+            launcher.close_fixture_plan(plan)
+
+    def test_limited_supervisor_capabilities_prepare_private_memfd(self):
+        if os.geteuid() != 0:
+            self.skipTest("requiere root para simular las capacidades del supervisor")
+        code = (
+            "import os,pwd,grp,stat; "
+            "p=pwd.getpwnam('nobody'); g=grp.getgrnam('nogroup'); "
+            "fd=os.memfd_create('b42-limited-supervisor',os.MFD_ALLOW_SEALING); "
+            "os.write(fd,b'fixture'); os.fchmod(fd,0o400); "
+            "os.fchown(fd,p.pw_uid,g.gr_gid); "
+            "import fcntl; fcntl.fcntl(fd,fcntl.F_ADD_SEALS,15); s=os.fstat(fd); "
+            "d=dict(x.split(':',1) for x in open('/proc/self/status') if ':' in x); "
+            "assert (s.st_uid,s.st_gid,stat.S_IMODE(s.st_mode))==(p.pw_uid,g.gr_gid,0o400); "
+            "assert d['CapEff'].strip()=='00000000000004c1'; "
+            "assert d['NoNewPrivs'].strip()=='1'; print('B4.2 restricted supervisor PASS')"
+        )
+        result = subprocess.run([
+            "/usr/bin/setpriv", "--no-new-privs",
+            "--bounding-set=-all,+chown,+setuid,+setgid,+net_bind_service",
+            "--inh-caps=+chown,+setuid,+setgid,+net_bind_service",
+            "--ambient-caps=+chown,+setuid,+setgid,+net_bind_service",
+            "--", "/usr/bin/python3", "-c", code,
+        ], capture_output=True, text=True, check=False)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("B4.2 restricted supervisor PASS", result.stdout)
+
     def test_evidence_is_not_writable_by_service_identity(self):
         if os.geteuid() != 0:
             self.skipTest("requiere root para comprobar separación de propietario")

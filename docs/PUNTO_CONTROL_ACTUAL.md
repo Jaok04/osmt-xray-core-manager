@@ -1,3 +1,36 @@
+# Punto de control actual — 2026-11-08
+
+## Prioridad del producto
+
+Conseguir el primer servidor real VLESS + WebSocket + TLS en `pruebas.tvrc.me:443`, administrado íntegramente por Xray-Core Manager, y demostrar una conexión externa bidireccional. No ampliar el alcance con tareas secundarias.
+
+## Punto técnico actual
+
+B4.2 implementado/verificado exclusivamente en fixtures en la VPS de desarrollo. El prototipo prueba supervisor root con capacidades reducidas (`CAP_CHOWN`, `CAP_SETUID`, `CAP_SETGID`, `CAP_NET_BIND_SERVICE`), `NoNewPrivileges=1`, memfd transferido a `nobody:nogroup` con modo 0400 y contenido sellado, evidencia root-only y validación Xray 26.10.31 `run -test` después del descenso.
+
+Informe: `docs/IMPLEMENTACION_B4_2_SUPERVISOR_CAPACIDADES_FIXTURE_2026-11-08.md`.
+
+## Bloqueo que debe resolverse antes de integración
+
+El cambio de `User=xray` a supervisor root afecta la semántica de `StateDirectory=xray` y `RuntimeDirectory=xray`: systemd prepararía esos directorios para root mientras Xray final corre como xray. `ProtectSystem=strict` también exige definir explícitamente la ruta root-only donde el supervisor escribe evidencia. Diseñar el layout de directorios, permisos, rutas permitidas y ciclo de vida desde Manager, con fixtures; no tocar todavía `modules/xray_service.sh` ni una unidad real.
+
+## Estado y límites
+
+- B4.1/B4.2 focal: 20/20 PASS.
+- Xray 26.10.31 `run -test` tras descenso: PASS.
+- Identidad usada: `nobody:nogroup`; no se creó `xray:xray`.
+- No se probó systemd sandbox real, InvocationID/MainPID real ni daemon.
+- No se integró R-05, menú o backend live.
+- No se modificó `modules/xray_service.sh`, systemd, runtime, VPS de pruebas, DNS, firewall, puertos o red.
+- `main` y `Xray-Normativa/` intactas.
+- Publicación autorizada por el propietario en la rama `design/user-identity-association-v1`; SHA definitivo pendiente de registrar tras el push.
+
+## Siguiente paso permitido
+
+Diseño y pruebas fixture del layout de directorios y del contrato systemd sandbox: `StateDirectory`, `RuntimeDirectory`, `ReadWritePaths`, evidencia root-only y permisos del proceso xray. No realizar operaciones live sin autorización específica.
+
+---
+
 # Punto de control vigente — auditoría B4.1 fixture (2026-11-07)
 
 **Estado:** A01–A03 corregidos; A04 mitigado con TOCTOU residual documentado. IMPLEMENTADO Y VERIFICADO EN DESARROLLO; NO PUBLICADO. HEAD base 899f29f4253f56f80d0d803207feceb743879a0a, rama design/user-identity-association-v1.

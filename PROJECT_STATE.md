@@ -1,8 +1,8 @@
 # Xray Core Manager — Estado del proyecto
 
-> Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente — corte 2026-11-07» al inicio de este documento está SUPERADO y se conserva sólo por trazabilidad.
+> Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente — corte 2026-11-08» al inicio de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado vigente:** 2026-11-07 — B4.1 fixture auditado y endurecido en desarrollo; cambios actuales NO PUBLICADOS. HEAD base `899f29f4253f56f80d0d803207feceb743879a0a`. B4.1 16/16; Python 433/433; Bash 62/62 PASS. Xray 26.10.31 validó configuración sintética mediante `run -test` tras descenso a `nobody:nogroup`. No probado con `xray:xray`, InvocationID real ni sandbox systemd; no ejecuta daemon. H6-G3-A/B/C/D permanecen implementadas en fixtures con auditoría independiente pendiente; H6-G2 F-04/F-05 pendientes y backend live no conectado. VPS Pruebas sin servicio Xray/systemd configurado; no se realizaron operaciones live en este cierre. Rama design/user-identity-association-v1.
+**Corte de estado vigente:** 2026-11-08 — B4.2 supervisor de capacidades limitadas y memfd privado implementado/verificado en fixtures; cambios locales NO PUBLICADOS. HEAD base `9cc6987cc1c2eab0861329ea7d455f4d35720ef6`. Suite B4.1/B4.2 20/20 PASS; Python global 437/437 PASS; `bash -n` 91/91 archivos y ShellCheck global PASS. El supervisor fixture opera con `CAP_CHOWN`, `CAP_SETUID`, `CAP_SETGID`, `CAP_NET_BIND_SERVICE` y `NoNewPrivileges=1`; memfd propiedad de `nobody:nogroup`, modo 0400 y sellado; Xray 26.10.31 `run -test` PASS tras descenso. No probado con cuenta `xray:xray`, unidad/sandbox systemd, InvocationID/MainPID reales ni daemon. Sigue pendiente definir layout de StateDirectory/RuntimeDirectory y evidencia root-only compatible con ProtectSystem=strict. H6-G3-A/B/C/D permanecen implementadas en fixtures con auditoría independiente pendiente; H6-G2 F-04/F-05 pendientes y backend live no conectado. VPS Pruebas sin servicio Xray/systemd configurado; no se realizaron operaciones live en este cierre. Rama design/user-identity-association-v1.
 **Estado global:** Etapa 1 aceptada; Etapas 2–6 abiertas/parciales. H6-G2 NO CERRADO; H6-G3 no tiene auditoría independiente. H6-F NO LISTO END-TO-END. Backend runtime live no integrado; no ejecutar acciones live sin autorización específica.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -17,7 +17,11 @@
 
 
 
-## Actualización vigente — auditoría focal y endurecimiento B4.1 (2026-11-07)
+## Actualización vigente — B4.2 supervisor con capacidades limitadas y memfd privado (2026-11-08)
+
+B4.2 añade propiedad de servicio y modo 0400 al memfd, revalida esos metadatos antes de exec y prueba un supervisor root limitado a CAP_CHOWN/CAP_SETUID/CAP_SETGID/CAP_NET_BIND_SERVICE con NoNewPrivileges=1. Suite focal B4.1/B4.2: 20/20 PASS; Xray 26.10.31 run -test PASS después del descenso. Se usa nobody:nogroup existente, no se creó xray:xray. No hay unidad ni sandbox systemd real. Bloqueo de integración: definir mediante Manager ownership de StateDirectory/RuntimeDirectory y ruta de evidencia root-only compatible con ProtectSystem=strict. Informe: docs/IMPLEMENTACION_B4_2_SUPERVISOR_CAPACIDADES_FIXTURE_2026-11-08.md. Cambios locales sin commit/push.
+
+## Actualización anterior — auditoría focal y endurecimiento B4.1 (2026-11-07)
 
 Se corrigieron en fixtures la revalidación NSS/UID/GID, la verificación real de bytes/hash/tamaño/seals del descriptor, el timeout con terminación/recolección del hijo y la política de ejecutables root-owned no modificables por grupo/otros. B4.1 16/16, Python 433/433, Bash 62/62; compileall, bash -n, ShellCheck, install.sh --check y diff-check PASS. A04 conserva límite TOCTOU residual documentado. Cambios locales sin commit/push. No hay prueba xray:xray ni sandbox systemd real; no hubo operaciones live. Informe: docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md.
 

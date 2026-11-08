@@ -82,8 +82,12 @@ def _validate_descriptor(plan: dict[str, Any]) -> int:
         if not os.get_inheritable(fd):
             raise LauncherPrototypeError("El descriptor no es heredable.")
         seals = attestation.fcntl.fcntl(fd, attestation.fcntl.F_GET_SEALS)
-        size = os.fstat(fd).st_size
+        descriptor_stat = os.fstat(fd)
+        size = descriptor_stat.st_size
         expected_size = plan.get("expected_size")
+        expected_uid = plan.get("service_uid")
+        expected_gid = plan.get("service_gid")
+        expected_mode = plan.get("fd_metadata", {}).get("mode") if isinstance(plan.get("fd_metadata"), dict) else None
         expected_hash = plan.get("expected_sha256")
         metadata = plan.get("fd_metadata")
         if (seals & attestation.REQUIRED_SEALS != attestation.REQUIRED_SEALS
@@ -94,8 +98,15 @@ def _validate_descriptor(plan: dict[str, Any]) -> int:
                 or metadata.get("size_bytes") != expected_size
                 or type(metadata.get("seals")) is not int
                 or metadata["seals"] & attestation.REQUIRED_SEALS != attestation.REQUIRED_SEALS
-                or metadata.get("inheritable") is not True):
-            raise LauncherPrototypeError("El descriptor o sus metadatos no conservan las garantías.")
+                or metadata.get("inheritable") is not True
+                or descriptor_stat.st_uid != expected_uid
+                or descriptor_stat.st_gid != expected_gid
+                or stat.S_IMODE(descriptor_stat.st_mode) != 0o400
+                or metadata.get("owner_uid") != expected_uid
+                or metadata.get("owner_gid") != expected_gid
+                or metadata.get("mode") != 0o400
+                or expected_mode != 0o400):
+            raise LauncherPrototypeError("El descriptor o sus metadatos no conservan las garantías de contenido y acceso.")
         digest = hashlib.sha256()
         offset = 0
         while offset < size:
@@ -130,7 +141,15 @@ def prepare_fixture_launch(
     if digest != expected_sha256:
         raise LauncherPrototypeError("El hash esperado no coincide con los bytes de configuración.")
 
-    fd, metadata = attestation.create_sealed_memfd(config, expected_sha256)
+    try:
+        # B4.2: metadatos de acceso se fijan antes de aplicar F_SEAL_SEAL.
+        # fchmod precede fchown para no requerir CAP_FOWNER.
+        fd, metadata = attestation.create_sealed_memfd(
+            config, expected_sha256, owner_uid=account.pw_uid,
+            owner_gid=group.gr_gid, mode=0o400,
+        )
+    except (OSError, attestation.ConfigAttestationError) as exc:
+        raise LauncherPrototypeError("No se pudo crear el memfd privado y sellado.") from exc
     workspace = root / ("launch-" + invocation_id.lower())
     try:
         workspace.mkdir(mode=0o711)

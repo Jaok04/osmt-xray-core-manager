@@ -1633,3 +1633,13 @@ Se corrigió el FQDN de pruebas a `pruebas.tvrc.me` (no `prueba.tvrc.me`). La in
 El propietario establece que toda configuración necesaria del sistema operativo y de Xray para instalar, preparar, desplegar, probar, operar o recuperar el proyecto debe realizarse mediante Xray-Core Manager. No se debe pedir ni realizar configuración manual externa como sustituto de una función administrativa. Incluye usuarios/grupos, directorios/permisos, systemd/unidad/restricciones, archivos Xray, certificados, firewall, puertos, DNS, red y dependencias. El Administrador debe detectar, previsualizar, confirmar, ejecutar con locks/preflight, verificar postcondiciones y auditar/recuperar. Se permite inspección read-only y pruebas automatizadas; no preparar manualmente el host para facilitar pruebas. Las operaciones live siguen requiriendo autorización explícita por host/alcance. `modules/xray_service.sh` permanece como controlador systemd único. `Xray-Normativa/` no se modifica.
 
 Verificación de documentación de la regla: B4 memfd 10/10 Python; regresión de proceso/backend/adaptador 56/56 Python; pruebas Bash `xray_service.sh` y `xray_admin_prepare_service.sh` PASS; `py_compile`, `bash -n`, ShellCheck focal y `git diff --check` PASS. Commit `077ef5bdf9129936c4da1cf15f141e1517548398` (`docs(governance): require all system setup through manager`) en `design/user-identity-association-v1`; pendiente verificación del push. No se ejecutaron operaciones live ni se modificaron `main` o `Xray-Normativa/`.
+
+
+## 2026-11-08 — B4.2 supervisor de capacidades limitadas y memfd privado (fixtures)
+
+- Autorización del propietario: formalizar e implementar B4.2 exclusivamente en desarrollo/fixtures, sin operaciones live.
+- El prototipo asigna al memfd propietario/grupo de servicio y modo 0400; el descriptor conserva seals y se revalida por propietario, grupo, modo, tamaño y SHA-256 antes de ejecutar. `fchmod` ocurre antes de `fchown`, por lo que el supervisor no necesita CAP_FOWNER.
+- Prueba de supervisor root limitado a CAP_CHOWN/CAP_SETUID/CAP_SETGID/CAP_NET_BIND_SERVICE con NoNewPrivileges=1; máscara efectiva 0x4c1. Xray 26.10.31 `run -test` validó la configuración después del descenso a nobody:nogroup.
+- Suite B4.1/B4.2 focal: 20/20 PASS.
+- Límite: no se creó xray:xray, no se probó systemd sandbox real/InvocationID/MainPID/daemon, no se integró R-05 y no se modificó unidad/controlador/VPS de pruebas. Debe diseñarse el ownership de StateDirectory/RuntimeDirectory y la ruta de evidencia root-only compatible con ProtectSystem=strict antes de integración.
+- Informe: `docs/IMPLEMENTACION_B4_2_SUPERVISOR_CAPACIDADES_FIXTURE_2026-11-08.md`. Sin commit/push.

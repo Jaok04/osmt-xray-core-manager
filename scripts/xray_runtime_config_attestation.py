@@ -61,8 +61,15 @@ def _check_fixture_root(root: Path) -> None:
         _fail("El marcador fixture no es seguro.")
 
 
-def create_sealed_memfd(config: bytes, expected_sha256: str) -> tuple[int, dict[str, Any]]:
-    """Crea un descriptor heredable, inmutable y verificado."""
+def create_sealed_memfd(
+    config: bytes, expected_sha256: str, *, owner_uid: int | None = None,
+    owner_gid: int | None = None, mode: int | None = None,
+) -> tuple[int, dict[str, Any]]:
+    """Crea un descriptor heredable, inmutable y verificado.
+
+    La asignación opcional de propietario/modo ocurre antes de sellar el inode,
+    de modo que un supervisor con CAP_CHOWN puede transferirlo sin CAP_FOWNER.
+    """
     if not isinstance(config, bytes) or not config or len(config) > MAX_CONFIG_BYTES:
         _fail("Los bytes de configuración están vacíos o exceden el límite.")
     digest = hashlib.sha256(config).hexdigest()
@@ -70,6 +77,11 @@ def create_sealed_memfd(config: bytes, expected_sha256: str) -> tuple[int, dict[
         _fail("El SHA-256 de entrada no coincide con el esperado.")
     if not hasattr(os, "memfd_create") or not hasattr(fcntl, "F_ADD_SEALS"):
         _fail("El kernel/Python no ofrece memfd y seals requeridos.")
+    if ((owner_uid is None) != (owner_gid is None)
+            or (owner_uid is not None and (type(owner_uid) is not int or owner_uid < 0))
+            or (owner_gid is not None and (type(owner_gid) is not int or owner_gid < 0))
+            or (mode is not None and (type(mode) is not int or mode < 0 or mode > 0o777))):
+        _fail("Propietario o modo de memfd inválido.")
     try:
         fd = os.memfd_create("xray-manager-config", os.MFD_ALLOW_SEALING)
         os.set_inheritable(fd, True)
@@ -80,6 +92,10 @@ def create_sealed_memfd(config: bytes, expected_sha256: str) -> tuple[int, dict[
                 _fail("Escritura incompleta del memfd.")
             view = view[written:]
         os.fsync(fd)
+        if mode is not None:
+            os.fchmod(fd, mode)
+        if owner_uid is not None and owner_gid is not None:
+            os.fchown(fd, owner_uid, owner_gid)
         fcntl.fcntl(fd, fcntl.F_ADD_SEALS, REQUIRED_SEALS)
         seals = fcntl.fcntl(fd, fcntl.F_GET_SEALS)
         if seals & REQUIRED_SEALS != REQUIRED_SEALS:
@@ -100,6 +116,8 @@ def create_sealed_memfd(config: bytes, expected_sha256: str) -> tuple[int, dict[
             "seals": seals,
             "required_seals": REQUIRED_SEALS,
             "inheritable": os.get_inheritable(fd),
+            **({"owner_uid": os.fstat(fd).st_uid, "owner_gid": os.fstat(fd).st_gid,
+                "mode": stat.S_IMODE(os.fstat(fd).st_mode)} if mode is not None else {}),
         }
     except Exception:
         try:
