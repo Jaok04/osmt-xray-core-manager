@@ -2070,3 +2070,12 @@ La unidad se detuvo y fue descargada por --collect (LoadState=not-found); el fix
 Informe completo: docs/VALIDACION_SANDBOX_SYSTEMD_MEMFD_FIXTURE_2026-11-08.md.
 
 **Dictamen:** GO sólo para compatibilidad del prototipo memfd en el sandbox fixture probado; NO-GO para integración live. La prueba no acredita xray:xray, apertura del puerto 443, configuración final de xray.service, tráfico externo ni bytes parseados internamente por Xray. No conectar aún a modules/xray_service.sh, backend live, R-05 o menú. Siguiente paso: incorporar la evidencia a la matriz de brechas y al paquete de revisión independiente H6-G3; después resolver hallazgos y solicitar autorización live específica antes de cualquier despliegue.
+
+
+## H6-G3 — paquete actualizado y prevalidación interna (2026-11-08)
+
+Se verificó el árbol publicado `8a5e5a1de5a3c96ec6922dad949a18376b4c4789` en `design/user-identity-association-v1` y se ejecutó una prevalidación técnica adicional, sin modificar código funcional ni ejecutar operaciones live: Python global **542/542 PASS**; suites Bash **62/62 PASS**; regresión focal publicador/orquestador/backend live/lector de evidencia/service control **127/127 PASS**; `bash -n` global, `compileall`, ShellCheck focal sobre `modules/xray_service.sh` y `tests/xray_service_control.sh`, `install.sh --check` y `git diff --check` PASS. La comprobación `install.sh --check` no modificó el sistema.
+
+Se actualizó `docs/PAQUETE_REVISION_INDEPENDIENTE_H6G3_2026-11-06.md` con un anexo de estado/HEAD, el informe B4-MIN de sandbox como contexto, resultados reproducibles y una advertencia explícita: esta prevalidación fue realizada por la misma sesión y **no es una auditoría independiente ni emite dictamen H6-G3**.
+
+**Bloqueo actual:** falta que un revisor humano u otra IA independiente, no participante en el desarrollo/prevalidación, entregue el informe adversarial requerido. El paquete está preparado para entregarse. Hasta recibirlo y resolver sus hallazgos, no conectar backend live, R-05 ni menú y no ejecutar operaciones live. `main`, `Xray-Normativa/`, VPS Pruebas y runtime productivo permanecen sin cambios por esta prevalidación.

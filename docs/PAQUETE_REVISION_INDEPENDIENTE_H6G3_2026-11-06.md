@@ -90,3 +90,33 @@ No aceptar un PASS basado únicamente en que las pruebas existentes pasan. Busca
 ## Prompt listo para el revisor
 
 Actúa como auditor sénior independiente de Bash/Python, Linux, concurrencia, persistencia transaccional y systemd. No participaste en la implementación. Revisa el árbol de trabajo actual en `/opt/xray-manager` siguiendo este paquete y el contrato G3. Tu tarea no es continuar desarrollando ni confiar en el informe previo: intenta refutarlo. Inspecciona el código real, reconstruye los flujos y reproduce adversarialmente los escenarios indicados, exclusivamente con fixtures y en modo read-only respecto al sistema real. No ejecutes operaciones live ni modifiques archivos. Entrega un informe técnico con severidad, archivo/línea, evidencia reproducible, pruebas y dictamen. Si no puedes acceder al árbol local no inventes hallazgos ni resultados: solicita el diff/archivos exactos que falten.
+
+## Anexo de preparación — estado posterior al avance B4-MIN (2026-11-08)
+
+Este anexo actualiza el contexto de entrega; no modifica el contrato ni amplía el alcance de H6-G3.
+
+- HEAD comprobado en desarrollo y upstream: `8a5e5a1de5a3c96ec6922dad949a18376b4c4789`.
+- Rama: `design/user-identity-association-v1`.
+- Árbol limpio al iniciar esta comprobación; no se cambiaron fuentes durante la pre-revisión.
+- Informe nuevo de contexto técnico: `docs/VALIDACION_SANDBOX_SYSTEMD_MEMFD_FIXTURE_2026-11-08.md`. Registra que el launcher memfd funciona bajo un servicio systemd transitorio con sandbox fixture. No es parte de G3-A/B/C/D y no debe interpretarse como habilitación live.
+- Los avances posteriores B4-MIN (journal, staging, publicador, start coordinator y launcher memfd) siguen desconectados de R-05/menú según el diseño y estado documentados. El revisor debe comprobar el árbol real y no aceptar esa afirmación sin verificar imports, entrypoints y rutas de ejecución.
+- La unidad transitoria usada en la prueba B4-MIN fue retirada y el fixture eliminado. No se debe repetir esa prueba para esta auditoría: la revisión H6-G3 es read-only respecto al sistema real.
+
+### Prevalidación técnica interna (no independiente)
+
+En una comprobación preliminar posterior al HEAD indicado se ejecutaron:
+
+- Python global: `python3 -B -m unittest discover -s tests -p 'test_*.py'` — **542/542 PASS**.
+- Pruebas focales G3/backend/evidencia/control: publicador 18, orquestador 68, backend live 20, lector de evidencia 9 y service control 12 — **127/127 PASS**.
+- Suites Bash: `tests/*.sh` — **62/62 PASS**.
+- `bash -n` global sobre scripts/módulos/instalador — PASS.
+- `python3 -B -m compileall -q scripts tests` — PASS.
+- ShellCheck focal `-S error` sobre `modules/xray_service.sh` y `tests/xray_service_control.sh` — PASS; no equivale a ShellCheck global.
+- `bash install.sh --check` — PASS, sin modificar el sistema.
+- `git diff --check` — PASS.
+
+Esta prevalidación fue ejecutada por la misma sesión que participó en el desarrollo. **No es auditoría independiente, no emite dictamen H6-G3 y no sustituye la revisión solicitada.** El revisor externo debe reproducir lo necesario, reconstruir los flujos y buscar fallos nuevos, no limitarse a aceptar estos resultados.
+
+## Condición de cierre
+
+H6-G3 permanece pendiente hasta que una persona u otra IA independiente, que no haya participado en implementación ni prevalidación, entregue un informe firmado/identificable con el dictamen y evidencias solicitadas. No integrar backend live ni habilitar operaciones reales basándose en esta prevalidación.
