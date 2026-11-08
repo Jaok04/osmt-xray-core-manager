@@ -19,6 +19,10 @@ export XRAY_MANAGER_CONNECTIONS_DIR="$TMP/connections"
 export XRAY_MANAGER_SECRETS_DIR="$TMP/secrets"
 export XRAY_MANAGER_MASTER_KEY_FILE="$TMP/keys/master.key"
 export XRAY_MANAGER_CERTIFICATES_CATALOG_FILE="$TMP/certificates/catalog.json"
+export XRAY_MANAGER_CERTIFICATES_DIR="$TMP/certificates"
+export XRAY_MANAGER_CERTIFICATES_MANAGED_DIR="$TMP/certificates/managed"
+export XRAY_MANAGER_CERTIFICATES_SECRETS_DIR="$TMP/certificates/secrets"
+export XRAY_MANAGER_CERTIFICATES_LOCK="$TMP/run/certificate.lock"
 export XRAY_MANAGER_CERTIFICATES_RUNTIME_DIR="$TMP/cert-runtime"
 export XRAY_MANAGER_INTEGRITY_LOCK="$TMP/run/integrity.lock"
 export XRAY_MANAGER_CONNECTIONS_FILE="$TMP/connections/connections.json"
@@ -83,7 +87,7 @@ mv "$TMP/catalog.next" "$CONNECTION_DATA_FILE"
 chmod 600 "$CONNECTION_DATA_FILE"
 ID_TLS="$(users_identity_create)"
 users_association_create "$ID_TLS" tls-test 'Cliente TLS' uuid 33333333-3333-4333-8333-333333333333 active unlimited 0 none 0 0 auto >/dev/null
-if printf '127.0.0.1\ncert-test\ns\n' | connections_vless_assistant tls-test vless_tcp_tls; then
+if printf '127.0.0.1\n1\ns\n' | connections_vless_assistant tls-test vless_tcp_tls; then
 	printf 'INFO: el resolutor pudo validar TLS en este entorno.\n'
 else
 	printf 'INFO: el asistente falló cerrado al no disponer de identidad real del servicio Xray.\n'

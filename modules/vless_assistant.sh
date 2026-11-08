@@ -31,6 +31,52 @@ connections_vless_assistant_read_secret() {
 	printf -v "$var_name" '%s' "$value"
 }
 
+connections_vless_assistant_read_optional() {
+	local prompt="$1" var_name="$2" value
+	printf '%s' "$prompt"
+	IFS= read -r value || return 1
+	printf -v "$var_name" '%s' "$value"
+}
+
+connections_vless_assistant_select_certificate() {
+	local list_json count answer index certificate_id sans expiry lock_file
+	lock_file="$XRAY_MANAGER_INTEGRITY_LOCK"
+	if declare -p XRAY_MANAGER_CERTIFICATES_LOCK >/dev/null 2>&1 && [[ -n "$XRAY_MANAGER_CERTIFICATES_LOCK" ]]; then
+		lock_file="$XRAY_MANAGER_CERTIFICATES_LOCK"
+	fi
+	list_json="$(python3 "$APP_ROOT/scripts/certificate_store.py" \
+		--base "$XRAY_MANAGER_CERTIFICATES_DIR" \
+		--catalog "$XRAY_MANAGER_CERTIFICATES_CATALOG_FILE" \
+		--managed-dir "$XRAY_MANAGER_CERTIFICATES_MANAGED_DIR" \
+		--secrets-dir "$XRAY_MANAGER_CERTIFICATES_SECRETS_DIR" \
+		--master-key "$XRAY_MANAGER_MASTER_KEY_FILE" \
+		--lock "$lock_file" list)" || {
+		printf 'No se pudo consultar el almacén central de certificados.\n' >&2
+		return 1
+	}
+	jq -e '.status == "ok" and (.certificates | type == "array")' <<<"$list_json" >/dev/null || return 1
+	count="$(jq '.certificates | length' <<<"$list_json")"
+	if ((count == 0)); then
+		printf '\nNo hay certificados en el almacén central.\n' >&2
+		printf 'Obtén uno desde Certificados SSL/TLS y dominios, impórtalo y vuelve a este asistente.\n' >&2
+		return 1
+	fi
+	printf '\nCertificados TLS disponibles:\n' >&2
+	for ((index=0; index<count; index++)); do
+		certificate_id="$(jq -r --argjson i "$index" '.certificates[$i].certificate_id' <<<"$list_json")"
+		sans="$(jq -r --argjson i "$index" '(.certificates[$i].sans // [] | join(", "))' <<<"$list_json")"
+		expiry="$(jq -r --argjson i "$index" '.certificates[$i].not_after // "vigencia no disponible"' <<<"$list_json")"
+		[[ -n "$sans" ]] || sans="(sin SAN DNS)"
+		printf '  [%d] %s | SAN: %s | vence: %s\n' "$((index + 1))" "$certificate_id" "$sans" "$expiry" >&2
+	done
+	printf 'Selecciona un certificado (0 = cancelar): ' >&2
+	IFS= read -r answer || return 1
+	[[ "$answer" =~ ^[0-9]+$ ]] || return 1
+	answer=$((10#$answer))
+	((answer >= 1 && answer <= count)) || return 1
+	jq -r --argjson i "$((answer - 1))" '.certificates[$i].certificate_id' <<<"$list_json"
+}
+
 connections_vless_assistant() (
 	[[ "$#" -eq 2 ]] || return 2
 	local connection_id="$1" mode_id="$2" listen_address listen_port options_file model_file config_file tmp
@@ -84,12 +130,12 @@ connections_vless_assistant() (
 			connections_vless_assistant_read 'Modo XHTTP (auto, packet-up, stream-up, stream-one): ' xhttp_mode || return 1
 		elif [[ "$mode_id" == vless_ws_tls ]]; then
 			connections_vless_assistant_read 'Ruta WebSocket: ' path || return 1
-			connections_vless_assistant_read 'Host HTTP de WebSocket (opcional, vacío = omitir): ' ws_host || return 1
-			connections_vless_assistant_read 'SNI/serverName del cliente (opcional, vacío = omitir): ' client_server_name || return 1
+			connections_vless_assistant_read_optional 'Host HTTP de WebSocket (opcional, vacío = omitir): ' ws_host || return 1
+			connections_vless_assistant_read_optional 'SNI/serverName del cliente (opcional, vacío = omitir): ' client_server_name || return 1
 		elif [[ "$mode_id" == vless_grpc_tls ]]; then
 			connections_vless_assistant_read 'Nombre del servicio gRPC: ' service_name || return 1
 		fi
-		connections_vless_assistant_read 'ID del certificado TLS central (cert-...): ' certificate_id || return 1
+		certificate_id="$(connections_vless_assistant_select_certificate)" || { printf '\nNo se seleccionó un certificado TLS válido.\n'; return 1; }
 		case "$mode_id" in
 		vless_xhttp_tls) jq -n --arg path "$path" --arg mode "$xhttp_mode" --arg certificate_id "$certificate_id" '{path:$path,mode:$mode,certificate_id:$certificate_id}' >"$options_file" ;;
 		vless_ws_tls) jq -n --arg path "$path" --arg host "$ws_host" --arg client_server_name "$client_server_name" --arg certificate_id "$certificate_id" '{path:$path,certificate_id:$certificate_id} + (if $host != "" then {host:$host} else {} end) + (if $client_server_name != "" then {client_server_name:$client_server_name} else {} end)' >"$options_file" ;;
