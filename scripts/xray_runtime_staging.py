@@ -23,6 +23,7 @@ from typing import Any
 import certificate_resolver
 import xray_profiles
 import xray_runtime_preflight
+import xray_runtime_staging_core as staging_core
 
 PROFILE_RE = re.compile(r"profile-[0-9a-f]{32}\Z")
 REVISION_RE = re.compile(r"r[0-9]{6}\Z")
@@ -322,29 +323,11 @@ def stage(args: argparse.Namespace) -> dict[str, Any]:
     if digest != validation["content_sha256"]:
         fail("La revisión cambió después del preflight.")
     document = _strict_json(content, "La revisión de perfil")
-    if not isinstance(document, dict) or not isinstance(document.get("inbounds"), list):
-        fail("El perfil debe contener un arreglo inbounds.")
     bindings, mapping_bytes = _read_mapping(Path(args.bindings_file))
-    inbound_by_tag = {}
-    tls_inbound_tags = set()
-    for inbound in document["inbounds"]:
-        if not isinstance(inbound, dict):
-            fail("El perfil contiene un inbound que no es objeto.")
-        tag = inbound.get("tag")
-        stream = inbound.get("streamSettings")
-        is_tls = isinstance(stream, dict) and stream.get("security") == "tls"
-        if is_tls and (not isinstance(tag, str) or not TAG_RE.fullmatch(tag)):
-            fail("Todo inbound TLS debe tener un tag válido para asociar su conexión central.")
-        if isinstance(tag, str):
-            if tag in inbound_by_tag:
-                fail("El perfil contiene inbound tags duplicados.")
-            inbound_by_tag[tag] = inbound
-            if is_tls:
-                tls_inbound_tags.add(tag)
-
-    binding_tags = {item["inbound_tag"] for item in bindings}
-    if binding_tags != tls_inbound_tags:
-        fail("El mapa debe asociar exactamente todos los inbounds TLS del perfil, sin omisiones ni extras.")
+    try:
+        inbound_by_tag = staging_core.validate_profile_bindings(document, bindings)
+    except staging_core.StagingCoreError as exc:
+        fail(str(exc))
 
     leases = []
     staging_dir = None
@@ -378,18 +361,8 @@ def stage(args: argparse.Namespace) -> dict[str, Any]:
 
         for binding in bindings:
             tag, connection_id = binding["inbound_tag"], binding["connection_id"]
-            inbound = inbound_by_tag.get(tag)
-            if inbound is None:
+            if tag not in inbound_by_tag:
                 fail("Una asociación apunta a un inbound tag que no existe.")
-            stream = inbound.get("streamSettings")
-            if not isinstance(stream, dict) or stream.get("security") != "tls":
-                fail("El inbound asociado debe declarar streamSettings.security=tls.")
-            tls = stream.get("tlsSettings")
-            if not isinstance(tls, dict):
-                fail("El inbound TLS asociado debe contener tlsSettings.")
-            certificates = tls.get("certificates", [])
-            if not isinstance(certificates, list) or certificates:
-                fail("El perfil debe dejar tlsSettings.certificates vacío; las rutas se inyectan desde leases.")
             certificate_id, protocol = _connection_certificate_id(args, connection_id)
             lease = certificate_resolver.prepare(
                 connection_id=connection_id, certificate_id=certificate_id,
@@ -405,10 +378,12 @@ def stage(args: argparse.Namespace) -> dict[str, Any]:
                 service_uid=args.service_uid, service_gid=args.service_gid,
             )
             leases.append(lease)
-            tls["certificates"] = [{
-                "certificateFile": lease["certificate_file"],
-                "keyFile": lease["key_file"],
-            }]
+            try:
+                staging_core.inject_tls_lease(
+                    document, tag, connection_id, certificate_id, protocol, lease
+                )
+            except staging_core.StagingCoreError as exc:
+                fail(str(exc))
 
         # Segunda comprobación TOCTOU: perfil, informe, binario e identidad
         # deben seguir correspondiendo a la misma revisión después de resolver leases.

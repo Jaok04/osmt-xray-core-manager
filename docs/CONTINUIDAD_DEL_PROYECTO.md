@@ -1970,3 +1970,14 @@ Validación después del cambio: **486/486 Python y 62/62 Bash PASS**; `compilea
 Esto es sólo la base de persistencia de H6-H1-B, no una integración live ni H6-H1 completo. No hay CLI, locks/coordinación, crash recovery, reconciliación, publicador, orquestador ni menú conectados. La finalización exige atestación explícita de configuración; sin configuración previa no se permite rollback destructivo. No se creó el almacén productivo en ningún host ni se ejecutó systemctl/Xray/ACME.
 
 Siguiente paso: construir únicamente el staging mínimo para el MVP, reutilizando mapping I-01/I-02, resolver TLS central y validación Xray bajo `xray:xray`, manteniendo R-02 fixture sin cambios. Luego diseñar el publicador live más pequeño compatible con snapshot/journal y con la unidad directa `xray:xray`. La auditoría independiente H6-G3 y la autorización específica siguen siendo puertas previas a operaciones reales. No tocar VPS Pruebas, `/etc/xray`, systemd real, DNS, firewall, certificados ni runtime.
+
+
+## L2 — extracción del núcleo puro de staging TLS (2026-11-08)
+
+Se inició L2 sin crear todavía una envoltura live. Se añadió `scripts/xray_runtime_staging_core.py`, núcleo puro sin acceso a filesystem, certificados ni procesos. Valida cobertura exacta de inbounds TLS, tags/conexiones únicas y ausencia de rutas de certificado embebidas; inyecta exclusivamente un lease preparado que debe coincidir en `connection_id`, `certificate_id` y protocolo. `scripts/xray_runtime_staging.py` (R-02) reutiliza este núcleo, conservando intactos el marcador fixture, confinamiento de rutas, locks, preflight R-01, leases centrales, validación Xray y limpieza compensatoria. No se relajó R-02 ni se habilitó `stage_live`.
+
+Pruebas: núcleo 11/11 y staging R-02 11/11 PASS. Regresión canónica posterior: 497/497 Python y 62/62 Bash PASS; `compileall`, `py_compile`, `bash -n`, ShellCheck global `-S error`, `install.sh --check` y `git diff --check` PASS. Informe: `docs/IMPLEMENTACION_NUCLEO_STAGING_TLS_L2_FIXTURE_2026-11-08.md`.
+
+Alcance exclusivamente fixture/desarrollo. No se creó lease productivo ni se leyó clave maestra real; no se ejecutó Xray live/ACME/systemd; no se tocaron `/etc/xray`, `/var/lib/xray-manager`, VPS Pruebas, DNS, firewall, puertos, `main` o `Xray-Normativa/`.
+
+Siguiente paso: diseñar y probar una envoltura `stage_live` separada que reutilice el núcleo, R-01, mapping I-01/I-02 y resolutor TLS central. Debe tener rutas y locks explícitos, no permitir cambio fixture/live por variable de entorno y permanecer fuera del menú hasta auditoría independiente H6-G3 y autorización específica. No duplicar el núcleo ni convertir el staging fixture existente en live.
