@@ -2022,3 +2022,14 @@ Se añadió `scripts/xray_runtime_live_start_attestation.py` y siete pruebas. La
 Límite importante: esta evidencia sólo demuestra `launch_correlated_file_unchanged`; no demuestra criptográficamente los bytes parseados/cargados en memoria por Xray. La salida conserva `configuration_loaded=false` y no permite transición a `configuration_attested`/`completed`. Para afirmar configuración cargada se necesita una fuente adicional de evidencia específica del proceso, no inferirla del hash del archivo ni de logs genéricos. Informe: `docs/IMPLEMENTACION_ATTESTACION_ARRANQUE_LIVE_CORRELATIVA_2026-11-08.md`.
 
 Pruebas focales: 7/7 PASS; compileall y diff check PASS. No se ejecutó `start`, no se modificó systemd/Xray/configuración productiva ni se tocó VPS Pruebas. Próximo paso recomendado: diseñar la fuente mínima de evidencia de configuración efectivamente cargada y, en paralelo, integrar en fixtures el registro durable de solicitud/aceptación/observación del controlador. No conectar al menú ni habilitar acciones live hasta revisión independiente H6-G3, evidencia suficiente y autorización específica.
+
+
+## Coordinador durable de start live — etapa fixture (2026-11-08)
+
+Se añadió `scripts/xray_runtime_live_start_coordinator.py` y siete pruebas aisladas. `start_published_operation(...)` exige operación publicada, generación explícita, confirmación y hash runtime coincidente; persiste `service_action_requested` antes de llamar al backend; persiste `service_action_accepted` tras la aceptación del controlador; después observa systemd/proceso y vuelve a leer el hash. Si el controlador tiene timeout/resultado ambiguo, falla la persistencia de aceptación o no puede verificarse el proceso activo, deja `recovery_required` y no reintenta automáticamente. Si todo coincide, deja el journal en `service_observed_active` con `launch_correlated_file_unchanged`.
+
+El estado `service_observed_active` no significa `configuration_attested` ni `completed`. Se mantiene `configuration_loaded=false`: Xray no ofrece actualmente una prueba nativa del hash exacto de configuración cargado en memoria. Se documentó como alternativa a estudiar un launcher con generación inmutable/descriptor sellado (p. ej. memfd), pero implicaría cambiar `ExecStart`, argv, unidad y observador; no se implementó ni se cambió la arquitectura directa `xray:xray`. Informe: `docs/IMPLEMENTACION_COORDINADOR_START_LIVE_FIXTURE_2026-11-08.md`.
+
+Validación tras esta etapa: coordinador focal 7/7 PASS; Python global **529/529 PASS**; suites Bash **62/62 PASS**; `compileall`, `bash -n` global, ShellCheck global `-S error`, `install.sh --check` y `git diff --check` PASS.
+
+**Límites:** el coordinador sólo se probó con backend/observadores dobles; no se conectó al backend live real, R-05, CLI ni menú. No se ejecutó `start`/`restart`/`stop`, no se tocó systemd/Xray/configuración productiva ni VPS Pruebas. Revisión independiente H6-G3 y autorización live específica siguen pendientes.
