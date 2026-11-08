@@ -1780,3 +1780,14 @@ En la rama de desarrollo se integró el flujo de obtención/importación ACME de
 Se protegió la instalación/uso de Certbot: systemctl debe consultar systemd; si certbot.timer o snap.certbot.renew.timer está habilitado/activo, no se altera y se bloquea la operación. Después de instalar APT se deshabilita certbot.timer si quedó activado y se comprueba que ninguno de los dos timers permanezca activo. La renovación sigue pendiente del deploy hook transaccional del Manager.
 
 Validación interna: Python 570/570; Bash 63/63; bash -n global; ShellCheck global -S error; install.sh --check; git diff --check. No se ejecutaron APT, Certbot real, ACME, DNS, firewall, puertos, systemd ni runtime en VPS Pruebas. H6-G3 independiente sigue pendiente. Detalle: docs/IMPLEMENTACION_FLUJO_GUIADO_ACME_VLESS_WS_TLS_2026-11-08.md.
+
+
+## Revisión interna H6-G3 — corrección de snapshot corrupto (2026-11-08)
+
+Se aplicó la política del propietario NO PEDIR REVISOR EXTERNO. La revisión H6-G3 se realiza internamente y se documenta como tal, sin afirmar independencia.
+
+En la revisión adversarial de R-05 se reprodujo un defecto HIGH: un snapshot corrupto durante _restore_after_failure() propagaba RuntimeJournalError y dejaba el journal en rollback_started. Se corrigió scripts/xray_runtime_orchestrator.py: ahora captura errores de journal/filesystem del rollback de configuración, registra config_status=failed, service_status=not_started y persiste RECOVERY_REQUIRED sin mutar el servicio. Se añadió test_corrupt_snapshot_during_orchestrator_rollback_persists_recovery_required, que verifica conservación del runtime y recuperación posterior NO_OP.
+
+Validación en Implementación-Xray: Python **571/571 PASS**; suites Bash **63/63 PASS**; bash -n global PASS; ShellCheck global -S error PASS; bash install.sh --check PASS sin modificar el sistema; git diff --check PASS.
+
+Dictamen interno: **PASS CON LIMITACIONES — G3-A/B/C/D en fixtures**. No equivale a autorización live. R-05 permanece fixture-only. El menú tiene una ruta live separada (opción 12 → xray_runtime_live_apply_bridge.py), por lo que el paquete H6-G3 se actualizó para distinguir esa ruta del backend fixture; la auditoría adversarial completa del puente live es el siguiente trabajo interno antes de cualquier despliegue. No se usó VPS Pruebas ni se realizaron operaciones systemd/Xray/DNS/firewall/puertos.

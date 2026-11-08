@@ -1,8 +1,8 @@
-# Paquete para revisión independiente — H6-G3
+# Paquete de revisión adversarial — H6-G3
 
 ## Objetivo
 
-Solicitar a un revisor humano o a otra IA, que no haya participado en la implementación, una revisión técnica adversarial e independiente de H6-G3-A/B/C/D y del informe de segunda pasada G3-E. La revisión debe ejecutarse contra el HEAD actualizado indicado abajo; los hashes antiguos dentro de los informes históricos son contexto, no el árbol a revisar.
+Servir como checklist para una revisión técnica adversarial interna de H6-G3-A/B/C/D y del informe de segunda pasada G3-E. La revisión se ejecuta contra el HEAD actualizado indicado abajo; los hashes antiguos dentro de los informes históricos son contexto, no el árbol a revisar. Por política expresa del propietario, no se solicita revisor externo ni se etiqueta el resultado como independiente.
 
 ## Estado exacto del árbol a revisar
 
@@ -87,7 +87,7 @@ Emitir un informe separado con:
 
 No aceptar un PASS basado únicamente en que las pruebas existentes pasan. Buscar defectos de concurrencia, TOCTOU, pérdida de locks, errores de recuperación, journal no durable y bypass de backend.
 
-## Prompt listo para el revisor
+## Prompt histórico (retirado por política 2026-11-08; no solicitar revisor externo)
 
 Actúa como auditor sénior independiente de Bash/Python, Linux, concurrencia, persistencia transaccional y systemd. No participaste en la implementación. Revisa el árbol de trabajo actual en `/opt/xray-manager` siguiendo este paquete y el contrato G3. Tu tarea no es continuar desarrollando ni confiar en el informe previo: intenta refutarlo. Inspecciona el código real, reconstruye los flujos y reproduce adversarialmente los escenarios indicados, exclusivamente con fixtures y en modo read-only respecto al sistema real. No ejecutes operaciones live ni modifiques archivos. Entrega un informe técnico con severidad, archivo/línea, evidencia reproducible, pruebas y dictamen. Si no puedes acceder al árbol local no inventes hallazgos ni resultados: solicita el diff/archivos exactos que falten.
 
@@ -117,6 +117,17 @@ En una comprobación preliminar posterior al HEAD indicado se ejecutaron:
 
 Esta prevalidación fue ejecutada por la misma sesión que participó en el desarrollo. **No es auditoría independiente, no emite dictamen H6-G3 y no sustituye la revisión solicitada.** El revisor externo debe reproducir lo necesario, reconstruir los flujos y buscar fallos nuevos, no limitarse a aceptar estos resultados.
 
-## Condición de cierre
+## Condición de cierre histórica (sustituida por addendum 2026-11-08)
 
 H6-G3 permanece pendiente hasta que una persona u otra IA independiente, que no haya participado en implementación ni prevalidación, entregue un informe firmado/identificable con el dictamen y evidencias solicitadas. No integrar backend live ni habilitar operaciones reales basándose en esta prevalidación.
+
+
+## Addendum 2026-11-08 — política de revisión interna y ajuste de alcance
+
+Por instrucción expresa del propietario del proyecto: **NO PEDIR REVISOR EXTERNO**. Todo el desarrollo, revisión adversarial, corrección y validación se realizará en esta misma colaboración. Los informes deben identificar honestamente la revisión como interna y no usar la etiqueta “independiente”.
+
+La antigua condición de cierre que exigía una persona u otra IA externa queda sustituida. H6-G3 se cierra por alcance mediante revisión interna adversarial, reproducción de escenarios, corrección de hallazgos y regresión verificable.
+
+También se actualiza la comprobación de aislamiento: R-05 debe permanecer fixture-only y no importar/instanciar LiveRuntimeBackend. El menú dispone ahora de una ruta live explícita y separada (opción 12 → xray_runtime_live_apply_bridge.py), distinta de la ruta fixture (opción 11). Por ello, la antigua frase que exigía que el menú completo no tuviera ninguna ruta live queda supersedida por este contrato: la ruta live sólo puede pasar por el puente dedicado, journal/evidencia live, confirmación doble y controles fail-closed. Esta actualización no equivale a aprobar el puente live; su revisión adversarial interna debe completarse antes de operar en producción.
+
+Informe interno de esta pasada: docs/AUDITORIA_INTERNA_H6G3_2026-11-08.md.

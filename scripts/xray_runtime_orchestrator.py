@@ -281,9 +281,22 @@ def _restore_after_failure(
             _save(operation_dir, record)
 
         if record["state"] != "rollback_config_restored":
-            result = publisher._rollback_locked(
-                operation_dir, record, timeout=20, crash_at=None
-            )
+            try:
+                result = publisher._rollback_locked(
+                    operation_dir, record, timeout=20, crash_at=None
+                )
+            except (journal.RuntimeJournalError, OSError) as exc:
+                # Un snapshot ausente/corrupto o un fallo de filesystem no
+                # puede dejar el journal reintentable en rollback_started.
+                # Se conserva el runtime y se exige reconciliación manual.
+                record = journal.read_journal(operation_dir)
+                record["orchestration"]["rollback"]["config_status"] = "failed"
+                record["orchestration"]["rollback"]["service_status"] = "not_started"
+                record["orchestration"]["rollback"]["last_error"] = str(exc)[:240]
+                return _mark_recovery_required(
+                    operation_dir, record,
+                    f"Rollback de configuración no verificable; no se continúa con el servicio: {exc}",
+                )
             record = journal.read_journal(operation_dir)
             if result.get("status") not in {"ROLLBACK_CONFIG_RESTORED", "ALREADY_RESTORED"}:
                 record["orchestration"]["rollback"]["config_status"] = "failed"

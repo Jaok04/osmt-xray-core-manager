@@ -409,6 +409,37 @@ class RuntimeOrchestratorTests(unittest.TestCase):
         self.assertEqual(record["orchestration"]["rollback"]["config_status"], "failed")
         self.assertNotEqual(self.fx.previous_config.read_bytes(), self.fx.previous_bytes)
 
+    def test_corrupt_snapshot_during_orchestrator_rollback_persists_recovery_required(self):
+        with self.assertRaises(journal.SimulatedCrash):
+            self.apply(crash_at="after_published")
+        operation_dirs = list((self.fx.operation_store / "operations").iterdir())
+        self.assertEqual(len(operation_dirs), 1)
+        operation_dir = operation_dirs[0]
+        operation_dir.joinpath("snapshot.json").write_bytes(b"{corrupt")
+
+        result = orchestrator._restore_after_failure(
+            self.fx.operation_store, operation_dir.name,
+            self.fx.lifecycle_lock, self.fx.application_lock,
+            self.adapter_root, "success",
+        )
+
+        self.assertEqual(result["status"], "RECOVERY_REQUIRED")
+        record = journal.read_journal(operation_dir)
+        self.assertEqual(record["state"], "recovery_required")
+        self.assertEqual(record["orchestration"]["rollback"]["config_status"], "failed")
+        self.assertEqual(record["orchestration"]["rollback"]["service_status"], "not_started")
+        runtime_config = self.fx.service_root / "etc" / "xray" / "config.json"
+        self.assertEqual(
+            hashlib.sha256(runtime_config.read_bytes()).hexdigest(),
+            record["publication"]["config_sha256"],
+        )
+        self.assertEqual(adapter.status(self.adapter_root)["active_state"], "active")
+        self.assertFalse(any(event["action"] == "restore"
+                             for event in adapter.audit_events(self.adapter_root)))
+        recovered = self.recover()
+        self.assertEqual(recovered["operations"][0]["status"], "NO_OP")
+        self.assertEqual(journal.read_journal(operation_dir)["state"], "recovery_required")
+
     def test_lifecycle_lock_remains_owned_across_publish_restart_and_rollback(self):
         self.configure("active")
         self.patch_pipeline()
