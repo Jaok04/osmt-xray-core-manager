@@ -145,6 +145,24 @@ class RuntimePreflightTests(unittest.TestCase):
         self.assertEqual(recovered["result"], "PASS")
         self.assertFalse(self.reports.wal.exists())
 
+    def test_profile_preflight_is_independent_from_service_state_fixture(self):
+        result = preflight.preflight_profile(
+            str(self.profile_root), str(self.key), str(self.validation_root),
+            self.profile_id, self.revision, str(self.binary),
+        )
+        self.assertEqual(result["status"], "PROFILE_PREFLIGHT_PASS")
+        self.assertEqual(result["profile_content"], CONFIG)
+        self.assertEqual(result["content_sha256"], hashlib.sha256(CONFIG).hexdigest())
+        self.assertNotIn("service_fixture", result)
+
+    def test_profile_preflight_does_not_require_or_read_service_fixture(self):
+        self.service_state.unlink()
+        result = preflight.preflight_profile(
+            str(self.profile_root), str(self.key), str(self.validation_root),
+            self.profile_id, self.revision, str(self.binary),
+        )
+        self.assertEqual(result["status"], "PROFILE_PREFLIGHT_PASS")
+
     def test_valid_profile_revision_passes_without_runtime_side_effects(self):
         result = self.run_preflight()
         self.assertEqual(result["status"], "PREFLIGHT_PASS")

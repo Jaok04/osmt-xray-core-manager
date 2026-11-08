@@ -1981,3 +1981,13 @@ Pruebas: núcleo 11/11 y staging R-02 11/11 PASS. Regresión canónica posterior
 Alcance exclusivamente fixture/desarrollo. No se creó lease productivo ni se leyó clave maestra real; no se ejecutó Xray live/ACME/systemd; no se tocaron `/etc/xray`, `/var/lib/xray-manager`, VPS Pruebas, DNS, firewall, puertos, `main` o `Xray-Normativa/`.
 
 Siguiente paso: diseñar y probar una envoltura `stage_live` separada que reutilice el núcleo, R-01, mapping I-01/I-02 y resolutor TLS central. Debe tener rutas y locks explícitos, no permitir cambio fixture/live por variable de entorno y permanecer fuera del menú hasta auditoría independiente H6-G3 y autorización específica. No duplicar el núcleo ni convertir el staging fixture existente en live.
+
+## L2 — preflight de perfil independiente del estado de servicio (2026-11-08)
+
+Al diseñar `stage_live` se detectó que R-01 mezcla la validación de perfil/revisión con un fixture JSON de estado de servicio. No es aceptable sintetizar ese fixture a partir de systemd real. Se extrajo `preflight_profile(...)` en `scripts/xray_runtime_preflight.py`: valida perfil/revisión, manifiesto, informe persistido, checks obligatorios y hash del binario, y devuelve el contenido exacto en memoria; no consulta systemd ni exige fixture. La función existente `preflight(..., service_state)` conserva el contrato R-01 y su fixture obligatorio, ahora reutilizando la nueva función. La salida pública R-01 mantiene sus campos y no expone el contenido binario.
+
+Se añadieron dos pruebas para la independencia del fixture. Pruebas focales R-01: 21/21 PASS. La validación completa posterior y las regresiones se registran en el informe `docs/IMPLEMENTACION_PREFLIGHT_PERFIL_INDEPENDIENTE_2026-11-08.md`.
+
+No se creó `stage_live`, no se llamó `xray_runtime_systemd_adapter.status()` contra el host, no se resolvieron leases ni se crearon rutas productivas. No se consultó ni modificó VPS Pruebas, `/etc/xray`, `/var/lib/xray-manager`, systemd, certificados, DNS, firewall o puertos.
+
+Siguiente paso: implementar una envoltura live aislada que consuma `preflight_profile` y el adaptador systemd de solo lectura directamente; debe rechazar unidad/identidad/estado incompatibles, mantener staging y leases temporales bajo rutas productivas fijas y privadas, usar lock exclusivo y limpieza compensatoria, y no publicar ni arrancar servicio. Mantenerla fuera del menú y no invocarla hasta H6-G3 y autorización específica.

@@ -155,13 +155,16 @@ def _validate_service_fixture(path: Path, binary_path: str) -> dict[str, Any]:
     return value
 
 
-def preflight(profile_store: str, master_key: str, validation_store: str,
-              profile_id: str, revision: str, xray_binary: str,
-              service_state: str) -> dict[str, Any]:
+def preflight_profile(profile_store: str, master_key: str, validation_store: str,
+                      profile_id: str, revision: str, xray_binary: str) -> dict[str, Any]:
+    """Valida perfil/revisión y binario sin asumir estado del servicio.
+
+    No consulta systemd ni consume fixtures de servicio. El llamador debe
+    obtener por separado la evidencia de servicio apropiada a su entorno.
+    """
     profiles = xray_profiles.ProfileStore(profile_store, master_key)
     reports = ProfileValidationReportStore(validation_store)
     binary = _inspect_binary(Path(xray_binary))
-    service = _validate_service_fixture(Path(service_state), xray_binary)
 
     lock_fd = _profile_read_lock(profiles)
     try:
@@ -196,13 +199,33 @@ def preflight(profile_store: str, master_key: str, validation_store: str,
     if report_binary != binary["sha256"]:
         _fail("El informe fue generado con un binario Xray distinto del seleccionado.")
     return {
-        "status": "PREFLIGHT_PASS",
+        "status": "PROFILE_PREFLIGHT_PASS",
         "profile_id": profile_id,
         "revision": revision,
         "validation_id": report["validation_id"],
         "content_sha256": digest,
         "content_size_bytes": len(content),
+        "profile_content": content,
         "xray": binary,
+    }
+
+
+def preflight(profile_store: str, master_key: str, validation_store: str,
+              profile_id: str, revision: str, xray_binary: str,
+              service_state: str) -> dict[str, Any]:
+    """Preflight R-01: perfil validado más fixture de estado del servicio."""
+    service = _validate_service_fixture(Path(service_state), xray_binary)
+    result = preflight_profile(
+        profile_store, master_key, validation_store, profile_id, revision, xray_binary
+    )
+    return {
+        "status": "PREFLIGHT_PASS",
+        "profile_id": result["profile_id"],
+        "revision": result["revision"],
+        "validation_id": result["validation_id"],
+        "content_sha256": result["content_sha256"],
+        "content_size_bytes": result["content_size_bytes"],
+        "xray": result["xray"],
         "service_fixture": service,
         "runtime_published": False,
         "service_action_performed": False,
