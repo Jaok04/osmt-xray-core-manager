@@ -1,3 +1,24 @@
+# Punto de control actual — 2026-11-08 (B4.3-A)
+
+## Prioridad
+Primer servidor real VLESS + WebSocket + TLS en pruebas.tvrc.me:443, administrado íntegramente por Xray-Core Manager y validado mediante conexión externa bidireccional.
+
+## Avance más reciente
+B4.3-A añade un almacén fixture-only de evidencia persistente en scripts/xray_runtime_evidence_store.py, con pruebas en tests/test_xray_runtime_evidence_store.py. Informe: docs/REVISION_B4_3A_EVIDENCIA_PERSISTENTE_FIXTURE_2026-11-08.md.
+
+- Evidencia root:root 0600 bajo /var/lib/xray-manager/evidence fixture; escritura temporal exclusiva, fsync y publicación sin sobrescritura.
+- Rechaza symlink, hardlink, InvocationID no canónica, replay y campos de configuración/secretos.
+- La identidad de servicio no puede atravesar /var/lib/xray-manager ni leer el registro.
+- Focal nueva 12/12; B4.3 directorios+evidencia 21/21; B4 combinado 51/51; Python global 458/458; bash -n 91/91; ShellCheck, compileall, install.sh --check y diff-check PASS.
+
+## Límites
+Helper separado, NO integrado con B4.1/B4.2, lanzador, R-05 ni Manager. Los componentes desde la raíz fixture se abren por dirfd con O_NOFOLLOW; producción requiere raíz previamente anclada por Manager. Sin systemd real, unidad, cuentas, runtime, daemon ni VPS pruebas. Cambios locales sin commit/push; rama remota no modificada.
+
+## Siguiente paso
+Segunda pasada adversarial de carrera de ruta, crash durante publicación e integridad de registro. No habilitar operaciones live ni integrar el controlador sin autorización específica.
+
+---
+
 # Punto de control actual — 2026-11-08 (B4.3)
 
 ## Prioridad

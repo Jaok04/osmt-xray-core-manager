@@ -1654,3 +1654,22 @@ Verificación de documentación de la regla: B4 memfd 10/10 Python; regresión d
 - No se creó `xray:xray`, no se modificó `modules/xray_service.sh`, unidad systemd, R-05, menú, backend live, runtime o VPS de pruebas. No se ejecutó systemd ni daemon.
 - Contraste normativo Etapa 6: los 14 archivos presentes tanto en `Xray-Normativa/` como en el respaldo coinciden por SHA-256; el README versionado no está en el respaldo. No se modificó normativa.
 - Estado: contrato técnico fixture IMPLEMENTADO Y VERIFICADO; validación systemd real PENDIENTE; PUBLICADO en `design/user-identity-association-v1`, commit `787525b22573e5d577ef106f105daf7cb555840a`; `git ls-remote` confirmó el mismo SHA.
+
+
+## 2026-11-08 — B4.3-A revisión adversarial y evidencia persistente (fixtures)
+
+- Se identificó que write_invocation_evidence() de B4.1 exige evidencia como hijo directo de la raíz fixture y no representa el layout anidado B4.3. Se mantuvo intacto y se creó un almacén separado, sin integración.
+- Nuevo scripts/xray_runtime_evidence_store.py: valida layout, InvocationID canónica, metadatos mínimos, root:root 0600, escritura temporal exclusiva, fsync y publicación sin sobrescritura mediante hard-link dentro del directorio abierto; verificación O_NOFOLLOW y st_nlink=1.
+- Nueva suite tests/test_xray_runtime_evidence_store.py: 12/12 PASS. Casos de persistencia tras reapertura, segregación de acceso, replay, symlink, hardlink, metadatos sensibles e InvocationID inválida.
+- B4.3 directorios+evidencia 21/21; conjunto focal B4 51/51; Python global 458/458; bash -n 91/91; ShellCheck global, compileall, install.sh --check y diff-check PASS.
+- Riesgo residual documentado: TOCTOU potencial en resolución de componentes padres; integración de producción debe recorrer ruta con dirfd/openat2 de extremo a extremo.
+- Sin systemd/daemon, cuentas, unidad, controlador, R-05, menú, backend live, runtime o VPS pruebas. Cambios locales sin commit/push; main y Xray-Normativa/ intactas.
+- Informe: docs/REVISION_B4_3A_EVIDENCIA_PERSISTENTE_FIXTURE_2026-11-08.md.
+
+
+## 2026-11-08 — B4.3-A segunda pasada adversarial
+
+- Se endureció la apertura del almacén: los componentes var/lib/xray-manager/evidence se abren uno a uno con dir_fd del padre, O_DIRECTORY y O_NOFOLLOW; cada inode se valida por fstat (tipo, owner, group y modo). La raíz fixture sigue siendo un ancla de confianza; en producción el Manager debe proporcionar un descriptor confiable o resolver con openat2.
+- Se añadieron pruebas de symlink en padre, fallo inyectado de publicación con limpieza del temporal y JSON corrupto persistido. Suite de evidencia 12/12; directorios+evidencia 21/21; B4 focal 51/51.
+- Regresión Python global 458/458; compileall, bash -n 91/91, ShellCheck global, install.sh --check y diff-check PASS.
+- No se conectó el almacén a B4.1/B4.2 ni al Manager; no hubo operaciones live. Cambios locales sin commit/push.

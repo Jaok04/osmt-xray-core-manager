@@ -1,3 +1,15 @@
+# Punto de reanudación vigente — B4.3-A evidencia persistente fixture (2026-11-08)
+
+**Último avance local:** revisión adversarial B4.3-A implementada en fixtures. Nuevo almacén separado scripts/xray_runtime_evidence_store.py y suite tests/test_xray_runtime_evidence_store.py; informe docs/REVISION_B4_3A_EVIDENCIA_PERSISTENTE_FIXTURE_2026-11-08.md.
+
+**Resultado:** almacén valida layout B4.3, crea evidencia root:root 0600 de forma atómica y sin reemplazo, rechaza symlinks/hardlinks, InvocationID no canónica y campos de configuración/secretos; comprueba persistencia tras reapertura y que la identidad de servicio no atraviese el padre root-only. Suite nueva 12/12; B4.3 directorios+evidencia 21/21; conjunto focal B4 51/51; Python global 458/458; compileall, bash -n 91/91, ShellCheck global, install.sh --check y diff-check PASS.
+
+**Hallazgo:** el helper anterior B4.1 exige evidencia como hijo directo de la raíz fixture y no representa el path anidado B4.3; por eso se creó un módulo separado, sin integración. Los componentes desde la raíz fixture se abren por dirfd con O_NOFOLLOW; producción debe recibir una raíz previamente anclada por Manager.
+
+**Límites:** cambios locales no publicados; no commit/push. No systemd, daemon, unidad, xray:xray, R-05, controlador, menú, backend live, runtime, VPS pruebas ni red. __pycache__ generados por pruebas deben limpiarse antes de preparar commit. Próximo paso: segunda pasada adversarial sobre carreras de ruta, crash/atomicidad e integridad JSON; después diseñar integración fixture del supervisor. Live requiere autorización específica.
+
+---
+
 # Punto de reanudación vigente — B4.3 layout y sandbox fixture (2026-11-08)
 
 **Prioridad:** primer servidor real VLESS + WebSocket + TLS en `pruebas.tvrc.me:443`, administrado íntegramente por Xray-Core Manager, con conectividad externa bidireccional demostrada.
