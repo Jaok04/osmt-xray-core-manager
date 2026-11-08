@@ -188,6 +188,19 @@ grep -q 'Perfil creado' "$TMP/menu-create.out"
 printf '2\n0\n' | menu_profiles >"$TMP/menu-list.out"
 grep -q 'CONSULTAR PERFILES' "$TMP/menu-list.out"
 grep -q 'Perfil desde menú' "$TMP/menu-list.out"
+# El menú también puede crear un perfil base listo para componer VLESS-WS-TLS sin JSON externo.
+printf '1\nPerfil base VLESS desde menú\n\n\n4\ns\n\n0\n' | menu_profiles >"$TMP/menu-base.out"
+grep -q 'Perfil creado' "$TMP/menu-base.out"
+PYTHONPATH="$ROOT/scripts" python3 - "$STORE" "$KEY" <<'PYBASE'
+import json,sys
+import xray_profiles
+store=xray_profiles.ProfileStore(sys.argv[1],sys.argv[2])
+item=next(x for x in store.list_profiles() if x["name"] == "Perfil base VLESS desde menú")
+assert item["config_present"] is True
+raw,_=store.read_revision_config(item["profile_id"],item["current_revision"])
+config=json.loads(raw)
+assert config == {"log":{"loglevel":"warning"},"inbounds":[],"outbounds":[{"tag":"direct","protocol":"freedom","settings":{}}]}
+PYBASE
 
 # Transacciones multiarchivo: fallo normal, caída abrupta y recuperación WAL.
 python3 - "$ROOT" "$TMP/transaction-tests" <<'PYTXN'

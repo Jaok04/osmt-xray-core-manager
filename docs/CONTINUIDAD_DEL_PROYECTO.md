@@ -2103,3 +2103,12 @@ Se mejoró `modules/vless_assistant.sh` para que el operador seleccione el certi
 Pruebas actualizadas: `tests/vless_assistant.sh` y `tests/vless_tls_lease_assistant.sh`; se añadió cobertura de Host/SNI vacíos. Validación: Python **570/570 PASS**; Bash **62/62 PASS**; `bash -n`, ShellCheck focal `-S error`, `install.sh --check` y `git diff --check` PASS.
 
 **Alcance limitado:** esto es una mejora de usabilidad del asistente, no el flujo integral de despliegue. ACME e importación de certificados siguen siendo pasos separados y explícitos. No se ejecutó Certbot ni se importó certificado real; no se modificaron DNS, firewall, puertos, `/etc/xray/config.json` ni systemd; Xray permanece detenido en VPS Pruebas. El próximo incremento es integrar el proceso guiado de obtención/importación TLS al flujo VLESS-WS-TLS, manteniendo confirmaciones ACME y sin automatizar cambios externos. Después se completará el camino de usuarios → perfil → validación → primer start. H6-G3 independiente continúa pendiente y sigue siendo un gate para live.
+
+
+## Continuidad — creación de perfil base desde el menú (2026-11-08)
+
+Se añadió a `profiles_create_menu` el origen `[4] Crear perfil base para VLESS-WS-TLS`. El Manager genera de forma privada un JSON mínimo con `log.warning`, `inbounds: []` y un outbound `freedom` etiquetado `direct`, lo almacena mediante `xray_profiles.py` y elimina el temporal. Esto elimina la necesidad de preparar un JSON externo para comenzar a componer la primera conexión VLESS-WS-TLS. El perfil queda en borrador y no activa runtime.
+
+La prueba `tests/xray_profiles.sh` ahora crea el perfil desde el menú, recupera su revisión y verifica la estructura exacta. Validación focal: `bash -n`, ShellCheck `-S error` y `tests/xray_profiles.sh` PASS. No se modificaron Xray/systemd, runtime, certificados, DNS, firewall o puertos.
+
+Siguiente tarea: integrar en un recorrido guiado la obtención/importación TLS, manteniendo la confirmación ACME; después conectar creación de conexión/usuarios, composición, validación y primer start. La revisión independiente H6-G3 continúa pendiente y no se declara habilitado el despliegue live.

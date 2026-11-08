@@ -33,7 +33,7 @@ profiles_select_id() {
     printf '%s' "${ids[answer - 1]}"
 }
 profiles_create_menu() {
-    local name description notes source path profile_id json
+    local name description notes source path profile_id json base_config
     ui_clear
     ui_title "CREAR PERFIL"
     ui_read_option "Nombre del perfil: " name || return 0
@@ -44,7 +44,7 @@ profiles_create_menu() {
     }
     ui_read_option "Descripción (opcional): " description || return 0
     ui_read_option "Notas (opcional): " notes || return 0
-    printf '\nOrigen:\n  [1] Crear desde cero (sin JSON)\n  [2] Copiar desde archivo JSON\n  [3] Copiar desde otro perfil\n  [0] Cancelar\n'
+    printf '\nOrigen:\n  [1] Crear desde cero (sin JSON)\n  [2] Copiar desde archivo JSON\n  [3] Copiar desde otro perfil\n  [4] Crear perfil base para VLESS-WS-TLS\n  [0] Cancelar\n'
     ui_read_option "Selecciona el origen: " source || return 0
     case "$source" in
         1)
@@ -83,6 +83,30 @@ profiles_create_menu() {
                 ui_pause
                 return 1
             }
+            ;;
+        4)
+            printf '\nSe creará una base mínima de Xray para componer después un inbound VLESS-WS-TLS.\n'
+            printf 'Incluye log warning, inbounds vacío y outbound freedom etiquetado direct.\n'
+            printf 'No contiene usuarios, certificados ni configuración de runtime.\n'
+            ui_confirm "¿Crear el perfil base VLESS-WS-TLS?" || return 0
+            base_config="$(mktemp "${TMPDIR:-/run}/xray-manager-profile-base.XXXXXX")" || {
+                printf 'No se pudo crear el archivo temporal de perfil.\n'
+                ui_pause
+                return 1
+            }
+            chmod 600 "$base_config"
+            if ! jq -n '{log:{loglevel:"warning"},inbounds:[],outbounds:[{tag:"direct",protocol:"freedom",settings:{}}]}' >"$base_config"; then
+                rm -f -- "$base_config"
+                return 1
+            fi
+            if json="$(profiles_cli create --name "$name" --description "$description" --notes "$notes" --config-file "$base_config")"; then
+                rm -f -- "$base_config"
+            else
+                rm -f -- "$base_config"
+                printf 'No se pudo crear el perfil base.\n'
+                ui_pause
+                return 1
+            fi
             ;;
         0) return 0 ;;
         *)
