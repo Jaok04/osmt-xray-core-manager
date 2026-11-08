@@ -1,7 +1,7 @@
 # B4.3 — contrato fixture de directorios y sandbox systemd
 
 **Fecha:** 2026-11-08
-**Estado:** CONTRATO TÉCNICO PROPUESTO E IMPLEMENTADO EN FIXTURES; unidad/sandbox real NO VALIDADA; publicación autorizada en la rama de desarrollo; SHA pendiente de registrar tras el push.
+**Estado:** CONTRATO TÉCNICO PROPUESTO E IMPLEMENTADO EN FIXTURES; unidad/sandbox real NO VALIDADA; publicado en `design/user-identity-association-v1`, commit `787525b22573e5d577ef106f105daf7cb555840a`.
 **Alcance autorizado:** diseño y pruebas aisladas en VPS de desarrollo. No autoriza cambios de unidad, cuentas, systemd, runtime, R-05 ni VPS de pruebas.
 
 ## 1. Objetivo

@@ -20,7 +20,7 @@ No se creó `xray:xray`, no se ejecutó systemd ni se validó el sandbox real. N
 
 ## Siguiente paso permitido
 
-Revisión adversarial focal del contrato y pruebas de persistencia/segregación de evidencia en fixtures. Publicación autorizada exclusivamente en `design/user-identity-association-v1`; SHA pendiente de registrar. La integración y cualquier operación live requieren autorización específica.
+Revisión adversarial focal del contrato y pruebas de persistencia/segregación de evidencia en fixtures. Publicado en `design/user-identity-association-v1`, commit `787525b22573e5d577ef106f105daf7cb555840a`. La integración y cualquier operación live requieren autorización específica.
 
 ---
 

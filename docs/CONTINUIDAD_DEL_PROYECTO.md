@@ -10,7 +10,7 @@
 
 **Límites:** no se creó `xray:xray`; fixture usa GID numérico sustituto. No se ejecutó systemd, `systemd-analyze verify`, daemon, ni se probó el sandbox real. No se modificaron `modules/xray_service.sh`, unidad, R-05, menú/backend live, cuentas, runtime ni VPS de pruebas. `main` y `Xray-Normativa/` no se modificaron. En contraste normativo, los 14 archivos comunes coinciden por SHA-256; `Xray-Normativa/README.md` no existe en el respaldo `/root/Xray_Manager_Documentacion_Final_2026-10-31`. No corregir sin decisión del propietario.
 
-**Estado Git:** publicación autorizada exclusivamente en `design/user-identity-association-v1`; SHA de B4.3 pendiente de registrar tras verificar GitHub.
+**Estado Git:** publicación autorizada exclusivamente en `design/user-identity-association-v1`; Commit B4.3 publicado y verificado: `787525b22573e5d577ef106f105daf7cb555840a`. GitHub devolvió el mismo SHA para la rama autorizada.
 
 **Siguiente paso:** revisión adversarial focal del contrato B4.3 y ampliación de fixtures para evidencia persistente/acceso supervisor-Xray. La integración en módulo/controlador, cambio de unidad, creación de cuenta, prueba systemd real o conexión R-05 requieren autorización específica.
 

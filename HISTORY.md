@@ -1653,4 +1653,4 @@ Verificación de documentación de la regla: B4 memfd 10/10 Python; regresión d
 - Diseño: `docs/DISENO_B4_3_LAYOUT_DIRECTORIOS_SANDBOX_FIXTURE_2026-11-08.md`.
 - No se creó `xray:xray`, no se modificó `modules/xray_service.sh`, unidad systemd, R-05, menú, backend live, runtime o VPS de pruebas. No se ejecutó systemd ni daemon.
 - Contraste normativo Etapa 6: los 14 archivos presentes tanto en `Xray-Normativa/` como en el respaldo coinciden por SHA-256; el README versionado no está en el respaldo. No se modificó normativa.
-- Estado: contrato técnico fixture IMPLEMENTADO Y VERIFICADO; validación systemd real PENDIENTE; publicación autorizada en la rama de desarrollo.
+- Estado: contrato técnico fixture IMPLEMENTADO Y VERIFICADO; validación systemd real PENDIENTE; PUBLICADO en `design/user-identity-association-v1`, commit `787525b22573e5d577ef106f105daf7cb555840a`; `git ls-remote` confirmó el mismo SHA.
