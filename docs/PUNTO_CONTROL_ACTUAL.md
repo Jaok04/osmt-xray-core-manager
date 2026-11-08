@@ -4,14 +4,14 @@
 
 Se implementó el adaptador `scripts/xray_runtime_supervisor_evidence.py`, las APIs FD del almacén B4.3-A y el selector opt-in `persistent_b43` en el supervisor fixture. La evidencia se crea/verifica antes de liberar el pipe gate; fallo de creación/verificación mantiene el gate cerrado y recolecta el hijo; no existe fallback silencioso a B4.1. El descriptor de raíz no se hereda al proceso ejecutado.
 
-- Focal B4.3-A/B: 43/43 PASS.
-- Python global: 469/469 PASS.
+- Focal B4.3-A/B: 44/44 PASS.
+- Python global: 470/470 PASS.
 - Bash: 62/62 PASS.
 - `compileall`, `py_compile`, `bash -n`, ShellCheck global `-S error`, `install.sh --check` y `git diff --check`: PASS.
 - Informe: `docs/IMPLEMENTACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`.
-- Segunda pasada adversarial (misma sesión, no independiente): `docs/AUDITORIA_B4_3B_ADAPTADOR_EVIDENCIA_FIXTURE_2026-11-08.md`.
+- Segunda pasada adversarial (misma sesión, no independiente): `docs/AUDITORIA_B4_3B_ADAPTADOR_EVIDENCIA_FIXTURE_2026-11-08.md`. Revisión técnica posterior: `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md` (H-01 corregido).
 
-Límites: el selector nuevo se probó con ejecutable fixture; la validación Xray 26.10.31 existente corresponde al camino B4.1. `prepared_before_exec` no acredita exec, configuración cargada, proceso activo ni systemd. No se modificó R-05, menú, `modules/xray_service.sh`, unidad, backend live, runtime ni VPS Pruebas. Siguiente paso: revisión independiente de B4.3-B.
+Límites: el selector nuevo se probó con ejecutable fixture; la validación Xray 26.10.31 existente corresponde al camino B4.1. `prepared_before_exec` no acredita exec, configuración cargada, proceso activo ni systemd. No se modificó R-05, menú, `modules/xray_service.sh`, unidad, backend live, runtime ni VPS Pruebas. Revisión técnica posterior: `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md`, PASS CON LIMITACIONES; H-01 corregido. No es auditoría externa independiente. Siguiente paso: diseñar el puente mínimo del Manager para validar el flujo end-to-end en fixtures, sin activar operaciones live.
 
 ---
 

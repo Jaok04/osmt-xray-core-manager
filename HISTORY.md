@@ -1699,3 +1699,11 @@ La evidencia conserva `prepared_before_exec`: no demuestra `exec` exitoso, proce
 - El selector nuevo se probó con ejecutable fixture; Xray 26.10.31 fue probado en el camino B4.1 existente, no en el selector B4.3-B. `prepared_before_exec` no prueba exec, configuración cargada, proceso activo ni systemd.
 - Informe: `docs/IMPLEMENTACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`. Segunda pasada de la misma sesión (no auditoría independiente): `docs/AUDITORIA_B4_3B_ADAPTADOR_EVIDENCIA_FIXTURE_2026-11-08.md`.
 - Sin integración R-05/menú/systemd/live; no se modificaron controlador, unidad, runtime, cuentas, VPS Pruebas, `main` ni `Xray-Normativa/`. Siguiente paso: revisión independiente.
+
+
+## 2026-11-08 — segunda revisión técnica B4.3-B y corrección H-01
+
+- Segunda pasada técnica del almacén FD/adaptador/supervisor. Se detectó que claves de metadatos no textuales producían `AttributeError`; se añadió validación de tipo y prueba negativa. El adaptador normaliza además OSError al inspeccionar el descriptor raíz.
+- Regresión posterior: B4.3-A/B 44/44 focal; Python global 470/470; Bash 62/62; compileall, py_compile, bash -n, ShellCheck global -S error, install.sh --check y git diff --check PASS.
+- Informe `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md`. Dictamen PASS CON LIMITACIONES, fixture-only; no es auditoría externa independiente.
+- No se modificó live, systemd, R-05, `/etc/xray`, VPS Pruebas, `main` ni `Xray-Normativa/`.

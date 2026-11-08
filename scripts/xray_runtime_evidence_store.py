@@ -74,6 +74,8 @@ def _open_evidence_dir(root: pathlib.Path, service_gid: int) -> int:
 def _validate_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(metadata, dict):
         _fail("Los metadatos de invocación deben ser un objeto.")
+    if any(not isinstance(key, str) for key in metadata):
+        _fail("Las claves de metadatos deben ser cadenas.")
     digest = metadata.get("config_sha256")
     size = metadata.get("config_size_bytes")
     pid = metadata.get("pid")

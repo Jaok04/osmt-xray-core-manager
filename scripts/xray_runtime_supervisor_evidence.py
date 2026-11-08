@@ -57,3 +57,5 @@ def prepare_persistent_evidence(*, plan: dict[str, Any], target_pid: int,
                 "evidence_status": "prepared_before_exec"}
     except store.EvidenceStoreError as exc:
         raise SupervisorEvidenceError("No se pudo crear y verificar evidencia B4.3-A.") from exc
+    except OSError as exc:
+        raise SupervisorEvidenceError("No se pudo inspeccionar el descriptor raíz de evidencia.") from exc

@@ -1938,3 +1938,13 @@ Validación final: B4.3-A/B focal 43/43; Python global 469/469; Bash 62/62; `com
 Informe: `docs/IMPLEMENTACION_B4_3B_SUPERVISOR_EVIDENCIA_FIXTURE_2026-11-08.md`. Revisión adversarial de segunda pasada (misma sesión, NO independiente): `docs/AUDITORIA_B4_3B_ADAPTADOR_EVIDENCIA_FIXTURE_2026-11-08.md`. Dictamen PASS CON LIMITACIONES para fixtures; queda apto para revisión independiente, no para live. La evidencia `prepared_before_exec` no prueba exec, configuración cargada, proceso activo ni systemd.
 
 Siguiente paso: revisión independiente del código y cobertura, corregir hallazgos si aparecen y volver a ejecutar regresión. Después, diseñar explícitamente la integración mínima necesaria hacia el objetivo VLESS+WS+TLS en `pruebas.tvrc.me:443`. No tocar `modules/xray_service.sh`, R-05, menú, backend live, systemd real, cuentas, runtime, VPS Pruebas, `main` ni `Xray-Normativa/` sin autorización específica.
+
+
+## Revisión técnica posterior B4.3-B (2026-11-08)
+
+Segunda pasada de revisión (misma sesión/agente, no auditoría externa independiente). Se detectó H-01: claves de metadatos no textuales provocaban `AttributeError`; se corrigió con rechazo controlado y prueba negativa. Se normalizaron también errores OSError del descriptor raíz en el adaptador. Regresión posterior: B4.3-A/B focal 44/44, Python global 470/470, Bash 62/62, compileall, py_compile, bash -n, ShellCheck global `-S error`, `install.sh --check` y `git diff --check` PASS. Informe: `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md`. Dictamen PASS CON LIMITACIONES, sólo fixture.
+
+
+## Próxima tarea recomendada tras B4.3-B (2026-11-08)
+
+La segunda revisión técnica corrigió H-01 y deja B4.3-B PASS CON LIMITACIONES en fixtures. No equivale a auditoría externa independiente. El siguiente paso técnico es diseñar, antes de implementar, el puente mínimo entre el Manager y el supervisor fixture para comprobar el recorrido de una conexión VLESS-WS-TLS seleccionada hasta el plan de ejecución y la evidencia persistente. Debe especificar entradas/salidas, identidad del servicio, directorios/FD, contrato del certificado TLS central, validación `xray run -test`, estados y rollback. La propuesta debe señalar expresamente qué puntos existentes ya resuelven cada parte y evitar reimplementar módulos. Sin habilitar R-05 live, unidad real, `/etc/xray`, certificados ACME, puertos, daemon o VPS Pruebas. Una auditoría externa independiente sigue siendo deseable antes de integrar live.

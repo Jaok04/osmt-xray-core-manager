@@ -97,3 +97,8 @@ La prueba de anclaje demuestra que el backend FD no sigue el reemplazo de la rut
 ## 6. Estado y siguiente puerta
 
 B4.3-B está implementado y probado sólo en fixtures. El resultado no cierra H6-G2/H6-G3, no integra B4.1/B4.2 con systemd real, no habilita R-05 ni satisface el objetivo del primer servidor. Antes de cualquier integración se requiere revisión independiente, evaluación integral de contrato/ownership/sandbox y autorización específica. No modificar `main`, `Xray-Normativa/`, VPS Pruebas, unidad, controlador ni runtime en esta fase.
+
+
+## Addendum de revisión técnica posterior (2026-11-08)
+
+Una segunda pasada detectó y corrigió la validación de claves no textuales en metadatos (H-01), y normalizó errores OSError del descriptor raíz en el adaptador. La prueba focal quedó en 44/44 y la regresión Python global en 470/470; Bash 62/62 y controles estáticos/instalador continuaron PASS. Ver `docs/AUDITORIA_TECNICA_B4_3B_SEGUNDA_PASADA_2026-11-08.md`.

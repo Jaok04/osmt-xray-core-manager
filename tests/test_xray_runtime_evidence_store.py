@@ -141,6 +141,18 @@ class RuntimeEvidenceStoreTests(unittest.TestCase):
                 invocation_id=self.invocation,
             )
 
+    def test_rejects_non_string_metadata_keys_with_controlled_error(self):
+        payload = dict(self.metadata)
+        payload[7] = "unexpected"
+        root_fd = self._root_fd()
+        try:
+            with self.assertRaises(evidence.EvidenceStoreError):
+                evidence.create_evidence_from_root_fd(
+                    fixture_root_fd=root_fd, service_gid=self.gid,
+                    invocation_id=self.invocation, metadata=payload)
+        finally:
+            os.close(root_fd)
+
     def test_rejects_secret_or_config_fields(self):
         for key in ("config", "config_bytes", "uuid", "password", "private_key", "pem", "secret"):
             payload = dict(self.metadata)
