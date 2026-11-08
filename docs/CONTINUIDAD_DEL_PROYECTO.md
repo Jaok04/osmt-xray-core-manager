@@ -2013,3 +2013,12 @@ La recuperación restaura el snapshot sólo si el destino coincide con el candid
 Validación: publicador 9/9; regresión focal combinada 75/75; Python global **515/515 PASS**; Bash **62/62 PASS**; `compileall`, `bash -n` global, ShellCheck global `-S error`, `install.sh --check` y `git diff --check` PASS. Informe: `docs/IMPLEMENTACION_PUBLICADOR_LIVE_ATOMICO_L2_2026-11-08.md`.
 
 **Límites:** no se invocó el publicador ni se tocó runtime productivo o VPS Pruebas. No se publicó `/etc/xray/config.json`, no se ejecutó systemd/Xray/ACME, no se inició el servicio y no se integró el menú/R-05. Publicar el archivo no acredita que Xray lo haya cargado. Próximo paso: diseñar la integración transaccional de este publicador con el controlador único `modules/xray_service.sh`, la observación post-start y la atestación de configuración correlacionada; mantenerlo desconectado del menú y sujeto a H6-G3 y autorización live específica.
+
+
+## Evidencia correlativa post-start — etapa aislada (2026-11-08)
+
+Se añadió `scripts/xray_runtime_live_start_attestation.py` y siete pruebas. La función correlaciona publicación confirmada, timestamp de publicación, `ExecMainStartTimestamp`, `ActiveEnterTimestamp`, estado `active/running`, `MainPID`, `InvocationID`, identidad del proceso, ejecutable Xray y hash del archivo runtime estable antes/después. No invoca systemd ni el controlador; no está conectada al backend, journal, R-05 o menú.
+
+Límite importante: esta evidencia sólo demuestra `launch_correlated_file_unchanged`; no demuestra criptográficamente los bytes parseados/cargados en memoria por Xray. La salida conserva `configuration_loaded=false` y no permite transición a `configuration_attested`/`completed`. Para afirmar configuración cargada se necesita una fuente adicional de evidencia específica del proceso, no inferirla del hash del archivo ni de logs genéricos. Informe: `docs/IMPLEMENTACION_ATTESTACION_ARRANQUE_LIVE_CORRELATIVA_2026-11-08.md`.
+
+Pruebas focales: 7/7 PASS; compileall y diff check PASS. No se ejecutó `start`, no se modificó systemd/Xray/configuración productiva ni se tocó VPS Pruebas. Próximo paso recomendado: diseñar la fuente mínima de evidencia de configuración efectivamente cargada y, en paralelo, integrar en fixtures el registro durable de solicitud/aceptación/observación del controlador. No conectar al menú ni habilitar acciones live hasta revisión independiente H6-G3, evidencia suficiente y autorización específica.
