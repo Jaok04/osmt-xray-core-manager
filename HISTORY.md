@@ -1673,3 +1673,10 @@ Verificación de documentación de la regla: B4 memfd 10/10 Python; regresión d
 - Se añadieron pruebas de symlink en padre, fallo inyectado de publicación con limpieza del temporal y JSON corrupto persistido. Suite de evidencia 12/12; directorios+evidencia 21/21; B4 focal 51/51.
 - Regresión Python global 458/458; compileall, bash -n 91/91, ShellCheck global, install.sh --check y diff-check PASS.
 - No se conectó el almacén a B4.1/B4.2 ni al Manager; no hubo operaciones live. Cambios locales sin commit/push.
+
+
+## 2026-11-08 — Publicación B4.3-A
+
+- Implementación fixture, 12 pruebas de evidencia, informe técnico y documentos de continuidad/estado publicados en design/user-identity-association-v1.
+- Commit: 0fbd7ff30854c3b84e0453545833787ec78a7248. Push completado y SHA remoto verificado; árbol de trabajo limpio.
+- No se modificó main ni Xray-Normativa/; no hubo integración con el Manager ni operaciones live.

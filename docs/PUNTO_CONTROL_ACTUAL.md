@@ -12,7 +12,7 @@ B4.3-A añade un almacén fixture-only de evidencia persistente en scripts/xray_
 - Focal nueva 12/12; B4.3 directorios+evidencia 21/21; B4 combinado 51/51; Python global 458/458; bash -n 91/91; ShellCheck, compileall, install.sh --check y diff-check PASS.
 
 ## Límites
-Helper separado, NO integrado con B4.1/B4.2, lanzador, R-05 ni Manager. Los componentes desde la raíz fixture se abren por dirfd con O_NOFOLLOW; producción requiere raíz previamente anclada por Manager. Sin systemd real, unidad, cuentas, runtime, daemon ni VPS pruebas. Cambios locales sin commit/push; rama remota no modificada.
+Helper separado, NO integrado con B4.1/B4.2, lanzador, R-05 ni Manager. Los componentes desde la raíz fixture se abren por dirfd con O_NOFOLLOW; producción requiere raíz previamente anclada por Manager. Sin systemd real, unidad, cuentas, runtime, daemon ni VPS pruebas. Publicado en design/user-identity-association-v1, commit 0fbd7ff30854c3b84e0453545833787ec78a7248; HEAD local/remoto alineado y árbol limpio.
 
 ## Siguiente paso
 Segunda pasada adversarial de carrera de ruta, crash durante publicación e integridad de registro. No habilitar operaciones live ni integrar el controlador sin autorización específica.
