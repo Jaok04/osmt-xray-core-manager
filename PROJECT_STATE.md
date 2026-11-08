@@ -1,8 +1,8 @@
 # Xray Core Manager — Estado del proyecto
 
-> Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente — corte 2026-11-08» al inicio de este documento está SUPERADO y se conserva sólo por trazabilidad.
+> Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente — corte 2026-11-08 B4.3» al inicio de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado vigente:** 2026-11-08 — B4.2 supervisor de capacidades limitadas y memfd privado implementado/verificado en fixtures; publicado en `design/user-identity-association-v1`, commit `848324977a2d42a25ecb7db0ab45f38832eaa4ee`; actualización de continuidad posterior en commit documental. HEAD base previo `9cc6987cc1c2eab0861329ea7d455f4d35720ef6`. Suite B4.1/B4.2 20/20 PASS; Python global 437/437 PASS; `bash -n` 91/91 archivos y ShellCheck global PASS. El supervisor fixture opera con `CAP_CHOWN`, `CAP_SETUID`, `CAP_SETGID`, `CAP_NET_BIND_SERVICE` y `NoNewPrivileges=1`; memfd propiedad de `nobody:nogroup`, modo 0400 y sellado; Xray 26.10.31 `run -test` PASS tras descenso. No probado con cuenta `xray:xray`, unidad/sandbox systemd, InvocationID/MainPID reales ni daemon. Sigue pendiente definir layout de StateDirectory/RuntimeDirectory y evidencia root-only compatible con ProtectSystem=strict. H6-G3-A/B/C/D permanecen implementadas en fixtures con auditoría independiente pendiente; H6-G2 F-04/F-05 pendientes y backend live no conectado. VPS Pruebas sin servicio Xray/systemd configurado; no se realizaron operaciones live en este cierre. Rama design/user-identity-association-v1.
+**Corte de estado vigente:** 2026-11-08 — B4.2 publicado; B4.3 contrato de layout de directorios/sandbox implementado y verificado en fixtures, aún no integrado ni validado con systemd real. B4.3 define estado/runtime `root:xray 0770` y evidencia persistente `root:root 0700` con archivos `0600`, `ProtectSystem=strict` y `ReadWritePaths` limitado. Diseño/informe: `docs/DISENO_B4_3_LAYOUT_DIRECTORIOS_SANDBOX_FIXTURE_2026-11-08.md`. Código `scripts/xray_runtime_directory_contract.py`; pruebas `tests/test_xray_runtime_directory_contract.py`. Publicación B4.3 autorizada en `design/user-identity-association-v1`; SHA pendiente de registrar tras el push. B4.1/B4.2 focal 20/20 PASS; B4.3 focal 9/9 PASS; Python global 446/446 PASS; `bash -n` 91/91 archivos y ShellCheck global PASS. El supervisor fixture opera con `CAP_CHOWN`, `CAP_SETUID`, `CAP_SETGID`, `CAP_NET_BIND_SERVICE` y `NoNewPrivileges=1`; memfd propiedad de `nobody:nogroup`, modo 0400 y sellado; Xray 26.10.31 `run -test` PASS tras descenso. No probado con cuenta `xray:xray`, unidad/sandbox systemd, InvocationID/MainPID reales ni daemon. La validación bajo el sandbox systemd real y la adaptación del Manager/controlador siguen pendientes y requieren autorización específica. H6-G3-A/B/C/D permanecen implementadas en fixtures con auditoría independiente pendiente; H6-G2 F-04/F-05 pendientes y backend live no conectado. VPS Pruebas sin servicio Xray/systemd configurado; no se realizaron operaciones live en este cierre. Rama design/user-identity-association-v1.
 **Estado global:** Etapa 1 aceptada; Etapas 2–6 abiertas/parciales. H6-G2 NO CERRADO; H6-G3 no tiene auditoría independiente. H6-F NO LISTO END-TO-END. Backend runtime live no integrado; no ejecutar acciones live sin autorización específica.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -17,7 +17,16 @@
 
 
 
-## Actualización vigente — B4.2 supervisor con capacidades limitadas y memfd privado (2026-11-08)
+
+## Actualización vigente — B4.3 layout de directorios y sandbox fixture (2026-11-08)
+
+B4.3 define un contrato propuesto para supervisor root con proceso Xray `xray:xray`: `/var/lib/xray` y `/run/xray` `root:xray 0770`; evidencia persistente bajo `/var/lib/xray-manager/evidence` `root:root 0700`, archivos `0600`; `ProtectSystem=strict` y `ReadWritePaths` acotado. Se implementó el modelo fixture y validación de ownership/modo/tipo, rechazo de symlinks y drift sin reparación automática. No es una unidad aprobada ni prueba systemd real.
+
+Contraste Etapa 6: el diseño mantiene la gestión y diagnóstico del servicio en el Administrador, verifica permisos y evita cambios recursivos injustificados. Discrepancia de respaldo: el `README.md` de `Xray-Normativa/` no está en la copia de respaldo; los otros 14 archivos comunes coinciden por SHA-256. La carpeta normativa no se modificó.
+
+No se creó `xray:xray`, no se cambió `modules/xray_service.sh`, unidad, R-05, menú, backend live, runtime ni VPS de pruebas. No se ejecutó systemd ni daemon. Próximo paso: revisión adversarial focal y ampliación de fixtures de evidencia/segregación.
+
+## Actualización anterior — B4.2 supervisor con capacidades limitadas y memfd privado (2026-11-08)
 
 B4.2 añade propiedad de servicio y modo 0400 al memfd, revalida esos metadatos antes de exec y prueba un supervisor root limitado a CAP_CHOWN/CAP_SETUID/CAP_SETGID/CAP_NET_BIND_SERVICE con NoNewPrivileges=1. Suite focal B4.1/B4.2: 20/20 PASS; Xray 26.10.31 run -test PASS después del descenso. Se usa nobody:nogroup existente, no se creó xray:xray. No hay unidad ni sandbox systemd real. Bloqueo de integración: definir mediante Manager ownership de StateDirectory/RuntimeDirectory y ruta de evidencia root-only compatible con ProtectSystem=strict. Informe: docs/IMPLEMENTACION_B4_2_SUPERVISOR_CAPACIDADES_FIXTURE_2026-11-08.md. Publicado: `848324977a2d42a25ecb7db0ab45f38832eaa4ee`.
 

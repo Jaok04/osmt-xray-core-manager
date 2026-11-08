@@ -1643,3 +1643,14 @@ Verificación de documentación de la regla: B4 memfd 10/10 Python; regresión d
 - Suite B4.1/B4.2 focal: 20/20 PASS.
 - Límite: no se creó xray:xray, no se probó systemd sandbox real/InvocationID/MainPID/daemon, no se integró R-05 y no se modificó unidad/controlador/VPS de pruebas. Debe diseñarse el ownership de StateDirectory/RuntimeDirectory y la ruta de evidencia root-only compatible con ProtectSystem=strict antes de integración.
 - Informe: `docs/IMPLEMENTACION_B4_2_SUPERVISOR_CAPACIDADES_FIXTURE_2026-11-08.md`. Publicado en `design/user-identity-association-v1`, commit `848324977a2d42a25ecb7db0ab45f38832eaa4ee`; `git ls-remote` confirmó el mismo SHA. La actualización de continuidad/documentación se publica en un commit documental posterior.
+
+
+## 2026-11-08 — B4.3 contrato fixture de directorios y sandbox
+
+- Autorización del propietario: continuar con diseño y pruebas fixture del layout de directorios y contrato de sandbox, sin operaciones live.
+- Contrato propuesto: `/var/lib/xray` y `/run/xray` `root:xray 0770` para acceso de escritura por grupo; `/var/lib/xray-manager` y `/var/lib/xray-manager/evidence` `root:root 0700`; archivos de evidencia `0600`. Supervisor `User=root`, `Group=xray`, `ProtectSystem=strict`, `ReadWritePaths` limitado a las rutas necesarias.
+- Nuevo `scripts/xray_runtime_directory_contract.py` modela contrato y valida fixtures; `tests/test_xray_runtime_directory_contract.py` cubre layout, acceso efectivo por identidad de servicio, idempotencia, drift, padres escribibles no confiables, symlinks, raíz no marcada y GID inválido. Focal 9/9; Python global 446/446; Bash syntax 91/91; ShellCheck, compileall, install.sh --check y diff-check PASS.
+- Diseño: `docs/DISENO_B4_3_LAYOUT_DIRECTORIOS_SANDBOX_FIXTURE_2026-11-08.md`.
+- No se creó `xray:xray`, no se modificó `modules/xray_service.sh`, unidad systemd, R-05, menú, backend live, runtime o VPS de pruebas. No se ejecutó systemd ni daemon.
+- Contraste normativo Etapa 6: los 14 archivos presentes tanto en `Xray-Normativa/` como en el respaldo coinciden por SHA-256; el README versionado no está en el respaldo. No se modificó normativa.
+- Estado: contrato técnico fixture IMPLEMENTADO Y VERIFICADO; validación systemd real PENDIENTE; publicación autorizada en la rama de desarrollo.

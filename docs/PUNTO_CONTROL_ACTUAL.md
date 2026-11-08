@@ -1,3 +1,29 @@
+# Punto de control actual — 2026-11-08 (B4.3)
+
+## Prioridad
+
+Primer servidor real VLESS + WebSocket + TLS en `pruebas.tvrc.me:443` operado íntegramente por Xray-Core Manager y validado mediante conexión externa bidireccional.
+
+## Avance vigente
+
+B4.3 define y prueba en fixtures el layout propuesto para separar directorios escribibles por Xray de evidencia root-only. Ver `docs/DISENO_B4_3_LAYOUT_DIRECTORIOS_SANDBOX_FIXTURE_2026-11-08.md`.
+
+- Estado persistente `/var/lib/xray`: `root:xray 0770` (StateDirectory).
+- Runtime `/run/xray`: `root:xray 0770` (RuntimeDirectory).
+- Padre y carpeta de evidencia `/var/lib/xray-manager[/evidence]`: `root:root 0700`; archivos `0600`.
+- Unidad propuesta: supervisor `User=root`, `Group=xray`; `ProtectSystem=strict`; `ReadWritePaths` limitado a estado, runtime y evidencia.
+- Código fixture: `scripts/xray_runtime_directory_contract.py`; pruebas focales: `tests/test_xray_runtime_directory_contract.py` (9/9 PASS). Regresión Python global: 445/445 PASS; Bash syntax 91/91; ShellCheck global, compileall, `install.sh --check` y diff-check PASS.
+
+## Límites y discrepancia documental
+
+No se creó `xray:xray`, no se ejecutó systemd ni se validó el sandbox real. No se modificaron unidad, `modules/xray_service.sh`, R-05, backend live, VPS de pruebas o runtime. `Xray-Normativa/README.md` no existe en la copia de respaldo; los otros 14 archivos comparados coinciden por SHA-256. La normativa permanece intacta.
+
+## Siguiente paso permitido
+
+Revisión adversarial focal del contrato y pruebas de persistencia/segregación de evidencia en fixtures. Publicación autorizada exclusivamente en `design/user-identity-association-v1`; SHA pendiente de registrar. La integración y cualquier operación live requieren autorización específica.
+
+---
+
 # Punto de control actual — 2026-11-08
 
 ## Prioridad del producto

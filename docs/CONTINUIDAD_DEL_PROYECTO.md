@@ -1,3 +1,21 @@
+# Punto de reanudación vigente — B4.3 layout y sandbox fixture (2026-11-08)
+
+**Prioridad:** primer servidor real VLESS + WebSocket + TLS en `pruebas.tvrc.me:443`, administrado íntegramente por Xray-Core Manager, con conectividad externa bidireccional demostrada.
+
+**Último avance:** B4.2 está publicado y B4.3 define/implementa en fixtures el contrato de directorios para supervisor root y Xray `xray:xray`. Diseño: `docs/DISENO_B4_3_LAYOUT_DIRECTORIOS_SANDBOX_FIXTURE_2026-11-08.md`. Código: `scripts/xray_runtime_directory_contract.py`; pruebas: `tests/test_xray_runtime_directory_contract.py`.
+
+**Layout propuesto:** `/var/lib/xray` y `/run/xray` como `root:xray 0770` para escritura del proceso mediante grupo; `/var/lib/xray-manager` y `/var/lib/xray-manager/evidence` como `root:root 0700`; archivos de evidencia `root:root 0600`. La unidad a evaluar usaría `User=root`, `Group=xray`, `StateDirectory=xray`, `RuntimeDirectory=xray`, modos `0770`, `ProtectSystem=strict` y `ReadWritePaths` limitado a esas tres rutas de escritura. Es un contrato técnico fixture, no una unidad aprobada ni validada por systemd.
+
+**Verificación:** B4.3 focal 9/9; Python global 446/446; Bash syntax 91/91; ShellCheck global `-S error`; `compileall`; `install.sh --check`; `git diff --check` PASS.
+
+**Límites:** no se creó `xray:xray`; fixture usa GID numérico sustituto. No se ejecutó systemd, `systemd-analyze verify`, daemon, ni se probó el sandbox real. No se modificaron `modules/xray_service.sh`, unidad, R-05, menú/backend live, cuentas, runtime ni VPS de pruebas. `main` y `Xray-Normativa/` no se modificaron. En contraste normativo, los 14 archivos comunes coinciden por SHA-256; `Xray-Normativa/README.md` no existe en el respaldo `/root/Xray_Manager_Documentacion_Final_2026-10-31`. No corregir sin decisión del propietario.
+
+**Estado Git:** publicación autorizada exclusivamente en `design/user-identity-association-v1`; SHA de B4.3 pendiente de registrar tras verificar GitHub.
+
+**Siguiente paso:** revisión adversarial focal del contrato B4.3 y ampliación de fixtures para evidencia persistente/acceso supervisor-Xray. La integración en módulo/controlador, cambio de unidad, creación de cuenta, prueba systemd real o conexión R-05 requieren autorización específica.
+
+---
+
 # Punto de reanudación vigente — B4.2 publicado (2026-11-08)
 
 **Prioridad del proyecto:** lograr el primer servidor real VLESS + WebSocket + TLS en `pruebas.tvrc.me:443`, administrado íntegramente por Xray-Core Manager, y demostrar conectividad externa bidireccional. No ampliar el alcance innecesariamente.
