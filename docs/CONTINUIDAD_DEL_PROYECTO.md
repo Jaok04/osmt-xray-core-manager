@@ -1,3 +1,15 @@
+# Punto de reanudación vigente — B4.1 prototipo fixture de privilegios (2026-11-07)
+
+El propietario autorizó B4.1 sólo en desarrollo/fixtures. El prototipo `scripts/xray_runtime_launcher_prototype.py` prepara memfd sellado y enlace JSON a `/proc/self/fd/N`; el padre registra evidencia 0600 para el PID hijo antes de liberarlo a `exec(setpriv → Xray)`. El PID se conserva. Xray 26.10.31 validó la configuración sintética con `run -test` bajo `nobody:nogroup`; `NoNewPrivs=1` y únicamente `CAP_NET_BIND_SERVICE` en los conjuntos Inh/Prm/Eff/Bnd/Amb. La identidad de servicio no puede escribir la evidencia.
+
+Pruebas B4.1 9/9; B4 memfd 10/10; Python global 426/426; Bash 62/62; compileall, py_compile, bash -n, ShellCheck `-S error` y diff-check PASS. Informe: `docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md`.
+
+**Limitaciones y prohibiciones:** el UID/GID es `nobody:nogroup`, InvocationID sintético y el comando es `xray run -test`, no daemon. No se probó `xray:xray` ni sandbox systemd real. No hay integración R-05/menú/backend live, ni cambios de unidad, servicio, `/etc/xray`, runtime o VPS Pruebas. La publicación se limita a `design/user-identity-association-v1`; el SHA definitivo se consigna en el punto de control tras verificar GitHub. La regla Manager-only sigue vigente; cualquier preparación live se hace exclusivamente mediante Xray-Core Manager y requiere autorización específica por host/alcance.
+
+**Siguiente acción:** auditar el prototipo fixture y definir los requisitos pendientes para la prueba de identidad `xray` y sandbox systemd. No conectar a R-05 ni cambiar `modules/xray_service.sh` hasta completar la auditoría y obtener autorización separada.
+
+---
+
 # Punto de reanudación vigente — instalador autónomo GitHub (2026-11-06)
 
 El propietario aprobó implementar la instalación desde un único `install.sh` para el repositorio privado. La implementación está en el árbol de trabajo de `/opt/xray-manager`, rama `design/user-identity-association-v1`, commit de implementación `8d76275b6bfb1eeda5eaa859b45f979804784094`; la actualización de continuidad se registra en el commit documental siguiente y se publicará junto con él.

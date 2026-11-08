@@ -1,3 +1,11 @@
+## 2026-11-07 — B4.1 prototipo fixture de privilegios del lanzador
+
+Por autorización expresa del propietario, se implementó B4.1 sólo en VPS desarrollo y fixtures. El nuevo `scripts/xray_runtime_launcher_prototype.py` prepara un memfd sellado y heredable, enlace temporal `.json` a `/proc/self/fd/N` y un hijo bloqueado antes de exec. El padre escribe evidencia privada 0600 para el PID hijo antes de liberarlo; el hijo ejecuta `setpriv` → Xray mediante exec, conservando PID. Se añadió `tests/test_xray_runtime_launcher_prototype.py` y el informe `docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md`.
+
+Xray 26.10.31 validó configuración sintética mediante `run -test` como `nobody:nogroup`. `/proc/self/status` confirmó `NoNewPrivs=1` y sólo `CAP_NET_BIND_SERVICE` en Inh/Prm/Eff/Bnd/Amb. La identidad de servicio no puede escribir la evidencia. B4.1: 9/9; B4 memfd: 10/10; Python global: 426/426; Bash: 62/62; compileall/py_compile, bash -n, ShellCheck `-S error` sobre Bash y `git diff --check`: PASS.
+
+Limitaciones: no se probó `xray:xray`, sandbox systemd real ni InvocationID real; sólo `xray run -test`, no daemon. Sin integración R-05/menú/backend live; no cambios de unidad, servicio, `/etc/xray`, runtime ni VPS Pruebas. `Xray-Normativa/`, `main` y `modules/xray_service.sh` intactos. Sin commit/push; pendiente autorización de publicación. Siguiente punto: auditoría focal del prototipo y diseño de prueba bajo identidad xray/sandbox systemd; cualquier operación live requiere autorización específica y ejecución desde Manager.
+
 ## 2026-11-07 — Corrección del manejo de errores del menú de instalación Xray-core
 
 Se corrigió `modules/xray_admin.sh`: `xray_admin_install_menu_action()` conserva el código de salida de `xray_admin_install_version()` aunque la pausa posterior falle o termine correctamente, y presenta un mensaje explícito de error con operación, versión y código. Se agregó una regresión a `tests/xray_admin.sh` que simula retorno 37 y verifica tanto el código propagado como el mensaje.

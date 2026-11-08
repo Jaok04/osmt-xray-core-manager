@@ -1,8 +1,8 @@
 # Xray Core Manager — Estado del proyecto
 
-> Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente — corte 2026-11-06» al inicio de este documento está SUPERADO y se conserva sólo por trazabilidad.
+> Los registros cronológicos posteriores describen el estado que existía en su fecha; cualquier estado anterior que contradiga el bloque «Estado vigente — corte 2026-11-07» al inicio de este documento está SUPERADO y se conserva sólo por trazabilidad.
 
-**Corte de estado vigente:** 2026-11-07 — H6-G3-A/B/C/D implementadas en fixtures; segunda pasada PASS CON LIMITACIONES (misma sesión, no independiente). H6-G2 F-01/F-02/F-03 corregidos/implementados; F-04/F-05 pendientes y backend live no conectado. Bootstrap privado GitHub validado en VPS Pruebas; Manager actualizado al commit `aa9659f8468b8fb360791738323e1f63b653d8aa`. Primera instalación real de Xray-core detectó SIGPIPE en la validación de salida del binario (`head -n 1` bajo `pipefail`); corrección implementada en desarrollo con fixture de salida extensa, pruebas globales y publicación pendientes al momento de esta fotografía. La VPS Pruebas permanece sin Xray instalado ni unidad systemd. Rama design/user-identity-association-v1.
+**Corte de estado vigente:** 2026-11-07 — B4.1 prototipo fixture de privilegios IMPLEMENTADO y VERIFICADO en desarrollo; commit de sincronización registrado en HISTORY.md y docs/PUNTO_CONTROL_ACTUAL.md. Xray 26.10.31 validó configuración sintética mediante `run -test` tras descenso a `nobody:nogroup`; B4.1 9/9 y regresión Python 426/426 PASS. No probado con `xray:xray`, InvocationID real ni sandbox systemd; no ejecuta daemon. H6-G3-A/B/C/D permanecen implementadas en fixtures con auditoría independiente pendiente; H6-G2 F-04/F-05 pendientes y backend live no conectado. VPS Pruebas sin servicio Xray/systemd configurado; no se realizaron operaciones live en este cierre. Rama design/user-identity-association-v1.
 **Estado global:** Etapa 1 aceptada; Etapas 2–6 abiertas/parciales. H6-G2 NO CERRADO; H6-G3 no tiene auditoría independiente. H6-F NO LISTO END-TO-END. Backend runtime live no integrado; no ejecutar acciones live sin autorización específica.
 **Repositorio:** https://github.com/Jaok04/xray-core-manager
 **Rama autorizada:** design/user-identity-association-v1
@@ -15,6 +15,17 @@
 > **Segunda regla obligatoria permanente:** ninguna etapa se declara TERMINADA/COMPLETADA sin auditoría integral y documentación técnica de todos sus puntos, subpuntos, módulos, submódulos y componentes internos, matriz de trazabilidad, pruebas y aceptación formal expresa. Cerrar un módulo no cierra su etapa. Ver `docs/REGLA_AUDITORIA_INTEGRAL_CIERRE_ETAPAS.md` y `AGENTS.md`.
 
 
+
+
+## Actualización vigente — B4.1 prototipo fixture de privilegios (2026-11-07)
+
+El propietario autorizó implementar B4.1 exclusivamente en desarrollo y fixtures. Se añadieron `scripts/xray_runtime_launcher_prototype.py`, `tests/test_xray_runtime_launcher_prototype.py` y `docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md`.
+
+El prototipo crea un memfd heredable y sellado, prepara un enlace `config.json` a `/proc/self/fd/N`, bloquea al hijo antes de exec, escribe evidencia privada 0600 para el PID hijo y luego ejecuta `setpriv` → Xray conservando PID. Xray 26.10.31 validó la configuración sintética tras el descenso de privilegios. La evidencia se verifica por PID, InvocationID sintético, hash y tamaño. La identidad de servicio no puede escribir el archivo de evidencia.
+
+`/proc/self/status` confirmó UID/GID no privilegiados, `NoNewPrivs=1` y únicamente `CAP_NET_BIND_SERVICE` en Inh/Prm/Eff/Bnd/Amb. Pruebas B4.1 9/9 PASS; B4 memfd 10/10 PASS; Python global 426/426 PASS; Bash 62/62 PASS; `py_compile`/`compileall`, `bash -n`, ShellCheck `-S error` sobre Bash y `git diff --check` PASS.
+
+Límites: usa `nobody:nogroup`, no `xray:xray`; InvocationID sintético, no systemd; ejecuta sólo `xray run -test`, no daemon. No se modificó unidad systemd, servicio, `/etc/xray`, runtime, menú, R-05, backend live ni VPS Pruebas. `modules/xray_service.sh` permanece intacto. El código y la documentación B4.1 se publican sólo en la rama autorizada; el SHA definitivo queda registrado en el punto de control. Siguiente paso: revisar/auditar el prototipo y diseñar la prueba bajo identidad xray y sandbox systemd, que requerirá autorización live específica para preparar el servicio mediante Manager.
 
 ## Actualización vigente — diseño de renovación Certbot y recarga Xray (2026-11-07)
 

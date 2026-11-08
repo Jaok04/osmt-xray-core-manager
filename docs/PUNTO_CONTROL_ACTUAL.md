@@ -1,16 +1,16 @@
-# Punto de control vigente — corrección del reporte de instalación Xray-core (2026-11-07)
+# Punto de control vigente — B4.1 prototipo fixture de privilegios (2026-11-07)
 
-**Estado:** corrección IMPLEMENTADA, VERIFICADA y PUBLICADA en GitHub; NO desplegada en VPS de pruebas.
-**Rama:** `design/user-identity-association-v1`; commit publicado `1c0604975f807ade714d837ab49d71e2e4db517f`; HEAD local/remoto verificado.
+**Estado:** IMPLEMENTADO Y VERIFICADO en VPS desarrollo; publicación limitada a la rama autorizada en este cierre. No integrado en runtime/live. Alcance exclusivo fixtures/pruebas aisladas.
+**Rama:** `design/user-identity-association-v1`; HEAD de partida `05dbf27089d1f62b14d5c4e4d4ceb7ccebcd89c6`. SHA final de publicación: se registra en el bloque de sincronización de este documento tras verificar GitHub.
 
-- Se corrigió `modules/xray_admin.sh`: el menú captura el código original de instalación, muestra error explícito y lo conserva después de `ui_pause`.
-- Regresión añadida en `tests/xray_admin.sh` para un fallo simulado código 37.
-- Verificación: Bash 62/62, Python 406/406, `bash -n` global, compileall, ShellCheck `-S error`, `install.sh --check` y `git diff --check` PASS.
-- Contraste normativo Etapas 1 y 6 realizado; `Xray-Normativa/` sin cambios.
-- La causa interna del primer fallo real sigue desconocida: no se capturó su código ni su salida completa.
-- No se repitió instalación en VPS Pruebas ni se modificó sistema/runtime. Commit/push sólo en la rama autorizada.
+- Archivos nuevos: `scripts/xray_runtime_launcher_prototype.py`, `tests/test_xray_runtime_launcher_prototype.py` y `docs/IMPLEMENTACION_B4_1_LANZADOR_PRIVILEGIOS_FIXTURE_2026-11-07.md`.
+- Prototipo: memfd sellado + symlink JSON `/proc/self/fd/N`; padre escribe evidencia privada para el PID hijo antes de liberarlo; cadena `setpriv` → Xray conserva PID.
+- Xray 26.10.31 ejecutó `run -test` como `nobody:nogroup` y respondió `Configuration OK`. Capacidades verificadas: sólo `CAP_NET_BIND_SERVICE`; `NoNewPrivs=1`. Evidencia 0600 no escribible por identidad de servicio.
+- Pruebas: B4.1 9/9; B4 memfd 10/10; Python global 426/426; Bash 62/62; compileall, py_compile, bash -n, ShellCheck `-S error` sobre Bash y git diff-check PASS.
+- Limitaciones: no prueba `xray:xray`, sandbox systemd ni InvocationID real; no ejecuta daemon. No se modificó unidad, servicio, `/etc/xray`, runtime, R-05, backend live, menú ni VPS Pruebas.
+- Cambios de código y documentación publicados únicamente en la rama autorizada; la verificación final de SHA remoto y árbol limpio se registra al cierre de esta sincronización.
 
-**Siguiente paso permitido:** revisar el diff/documentación de esta corrección. Para reintentar la instalación real en VPS Pruebas se requiere autorización específica; antes se debe capturar la salida completa y código de la operación para determinar la causa original. La publicación en GitHub está completada; cualquier despliegue o instalación real en VPS Pruebas requiere autorización específica.
+**Siguiente paso permitido:** revisión/auditoría focal del prototipo, robustecer negativos/recuperación si la auditoría lo exige y diseñar la prueba con identidad `xray` y sandbox systemd. Para crear identidad/unidad o probar sandbox real en un host, solicitar autorización live específica y hacerlo exclusivamente mediante Xray-Core Manager. No integrar B4.1 a R-05 ni cambiar `modules/xray_service.sh` todavía.
 
 ---
 
