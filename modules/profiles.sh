@@ -539,6 +539,58 @@ profiles_apply_fixture_menu() {
     ui_pause
 }
 
+
+profiles_apply_live_menu() {
+    local profile_id versions answer revision result index
+    local -a revisions=() validations=()
+
+    ui_clear
+    ui_title "APLICAR REVISIÓN Y ARRANCAR XRAY REAL"
+    printf '\nEsta acción publica la configuración en /etc/xray/config.json y solicita el primer start de xray.service.\n'
+    printf 'Sólo se permite si xray.service está instalado, validado e inactive. No ejecuta restart.\n'
+    printf 'Si el resultado del arranque es ambiguo, se conserva la operación para recuperación; no se reintenta automáticamente.\n'
+    profile_id="$(profiles_select_id)" || { ui_pause; return 1; }
+    versions="$(profiles_cli versions --profile-id "$profile_id")" || {
+        printf '\nNo se pudo consultar el historial del perfil.\n'; ui_pause; return 1;
+    }
+    mapfile -t revisions < <(jq -r '.[].revision' <<<"$versions")
+    mapfile -t validations < <(jq -r '.[].validation' <<<"$versions")
+    ((${#revisions[@]})) || { printf '\nEl perfil no tiene revisiones.\n'; ui_pause; return 0; }
+    printf '\nSelecciona la revisión exacta que se publicará:\n'
+    for index in "${!revisions[@]}"; do
+        printf '  [%d] %s | validación: %s\n' "$((index + 1))" "${revisions[index]}" "${validations[index]}"
+    done
+    ui_read_option "Revisión (0 = cancelar): " answer || return 0
+    [[ "$answer" =~ ^[0-9]+$ ]] || { printf 'Selección no válida.\n'; ui_pause; return 1; }
+    answer=$((10#$answer))
+    ((answer >= 1 && answer <= ${#revisions[@]})) || return 0
+    revision="${revisions[answer-1]}"
+    [[ "${validations[answer-1]}" == valid ]] || {
+        printf '\nLa revisión seleccionada no está validada. No se publicará ni iniciará Xray.\n'; ui_pause; return 1;
+    }
+    printf '\nPerfil: %s\nRevisión: %s\n' "$profile_id" "$revision"
+    printf 'Objetivo: VLESS + WS + TLS público en pruebas.tvrc.me:443.\n'
+    printf 'El puente rechazará perfiles loopback, puertos distintos o certificados sin SAN válido para el dominio/SNI.\n'
+    ui_confirm "¿Autorizar publicación REAL y primer start de xray.service?" || {
+        printf 'Operación cancelada; no se ejecutó staging.\n'; ui_pause; return 0;
+    }
+    ui_confirm "CONFIRMACIÓN FINAL: ¿publicar esta revisión e iniciar Xray en este VPS?" || {
+        printf 'Operación cancelada; no se ejecutó staging.\n'; ui_pause; return 0;
+    }
+    result="$(python3 "$APP_ROOT/scripts/xray_runtime_live_apply_bridge.py" \
+        --profile-id "$profile_id" --revision "$revision" --confirm-live)" || {
+        printf '\nLa operación live no quedó confirmada:\n%s\n' "$result"
+        printf 'Si se indica un operation_id, inspecciona su journal antes de reintentar.\n'
+        ui_pause
+        return 1
+    }
+    printf '\nResultado de aplicación live:\n'
+    jq '{status, operation_id, generation_id, profile_id, revision, runtime_published,
+         service_started, configuration_loaded, completed, journal_state, evidence}' <<<"$result"
+    printf '\nLa evidencia de arranque es correlativa; configuration_loaded permanece false.\n'
+    ui_pause
+}
+
 menu_profiles() {
     local option
     while true; do
@@ -547,7 +599,8 @@ menu_profiles() {
         printf '\n  [1] Crear perfil\n  [2] Consultar perfiles\n  [3] Modificar perfil\n  [4] Duplicar perfil\n  [5] Renombrar perfil\n'
         printf '  [6] Eliminar perfil (pendiente de protección de dependencias)\n  [7] Historial y restaurar versión\n'
         printf '  [8] Validar revisión del perfil (estática + Xray; no aplica runtime)\n'
-        printf '  [11] Cambiar perfil activo (solo fixture; live no autorizado)\n'
+        printf '  [11] Cambiar perfil activo (solo fixture)\n'
+        printf '  [12] Aplicar revisión e iniciar Xray REAL (requiere doble confirmación)\n'
         printf '  [9] Componer conexión VLESS-WS-TLS en una revisión nueva\n  [10] Exportar clientes VLESS-WS-TLS para NetMod\n  [0] Volver\n\n'
         ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in
@@ -565,6 +618,7 @@ menu_profiles() {
             9) profiles_compose_vless_ws_tls_menu || true ;;
             10) profiles_export_vless_clients_menu || true ;;
             11) profiles_apply_fixture_menu || true ;;
+            12) profiles_apply_live_menu || true ;;
             0) return 0 ;;
             *)
                 printf 'Opción no válida.\n'
@@ -579,7 +633,7 @@ menu_config_profiles_backups() {
         ui_clear
         ui_title "CONFIGURACIONES, PERFILES Y RESPALDOS"
         printf '\n  CONFIGURACIONES\n  [1] Gestionar configuraciones de Xray\n  [2] Validar archivos de configuración\n'
-        printf '  PERFILES\n  [3] Gestionar perfiles\n  [4] Cambiar perfil activo (integración fixture; live no autorizado)\n'
+        printf '  PERFILES\n  [3] Gestionar perfiles\n  [4] Cambiar perfil activo (fixture; no modifica el runtime real)\n'
         printf '  RESPALDOS\n  [5] Crear respaldo (pendiente)\n  [6] Gestionar respaldos (pendiente)\n  [7] Restaurar respaldo (pendiente)\n  [0] Volver\n\n'
         ui_read_option "Selecciona una opción: " option || return 0
         case "$option" in

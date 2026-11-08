@@ -255,8 +255,13 @@ def _certificate_record(
     if (
         metadata["fingerprint_sha256"] != item["fingerprint_sha256"]
         or metadata["public_key_fingerprint_sha256"] != item["public_key_fingerprint_sha256"]
+        or metadata["sans"] != item["sans"]
+        or metadata["subject"] != item["subject"]
+        or metadata["issuer"] != item["issuer"]
+        or metadata["not_before"] != item["not_before"]
+        or metadata["not_after"] != item["not_after"]
     ):
-        raise ResolverError("huellas del certificado no coinciden con el catálogo")
+        raise ResolverError("huellas/identidad SAN/validez del certificado no coinciden con el catálogo")
     return certificate_bytes, private_key_bytes, item
 
 

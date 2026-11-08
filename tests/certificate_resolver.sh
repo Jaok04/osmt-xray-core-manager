@@ -88,6 +88,30 @@ try:
  r.prepare(connection_id='vless-authorized',certificate_id='cert-resolver',**kw)
 except r.ResolverError: pass
 else: raise AssertionError('accepted unsupported protocol')
-print('PASS: VMess/VLESS authorization, ephemeral files, ownership/modes, cleanup and fail-closed cases')
+# Catalog SAN metadata must be checked against the actual PEM, not trusted alone.
+# Restore the source fixture after the unsupported-protocol negative case.
+conn_catalog=kw['connections_catalog']
+conn_data=json.loads(conn_catalog.read_text())
+conn_data[0]['protocol_id']='vless_ws_tls'
+conn_catalog.write_text(json.dumps(conn_data)+'\n'); conn_catalog.chmod(0o600)
+conn_config=kw['connections_base']/'configurations/vless-authorized.r000001.json'
+conn_obj=json.loads(conn_config.read_text())
+conn_obj['security_options']={'certificate_id':'cert-resolver'}
+conn_config.write_text(json.dumps(conn_obj)+'\n'); conn_config.chmod(0o600)
+cat=kw['certificate_catalog']
+catalog=json.loads(cat.read_text())
+record=next(x for x in catalog['certificates'] if x['certificate_id']=='cert-resolver')
+record['sans']=['forged.test.invalid']
+if 'revisions' in record:
+    active=next(x for x in record['revisions'] if x['revision']==record['active_revision'])
+    active['sans']=['forged.test.invalid']
+cat.write_text(json.dumps(catalog)+'\n'); cat.chmod(0o600)
+try:
+    r.prepare(connection_id='vless-authorized',certificate_id='cert-resolver',**kw)
+except r.ResolverError as exc:
+    assert 'SAN/validez' in str(exc)
+else:
+    raise AssertionError('trusted catalog SAN values without matching PEM metadata')
+print('PASS: VMess/VLESS authorization, ephemeral files, ownership/modes, cleanup, PEM SAN integrity and fail-closed cases')
 PY
 echo "OK: resolutor TLS aislado."
