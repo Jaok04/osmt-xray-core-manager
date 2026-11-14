@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose a focused improvement or beginner workflow
+title: "[Feature]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What task is difficult, repetitive or error-prone?
+    validations:
+      required: true
+  - type: textarea
+    id: audience
+    attributes:
+      label: Who benefits?
+      description: Explain the user workflow, especially for developers new to VPS administration.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Privileges, risks and recovery
+      description: Would this change files, services, firewall, SSH, networking or production data?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and additional context
+    validations:
+      required: false
