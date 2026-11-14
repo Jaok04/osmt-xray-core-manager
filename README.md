@@ -1,166 +1,99 @@
+![Open Server Management Tools](assets/brand/brand-banner.svg)
+
 # Open Server Management Tools
-### Open-source tools for Linux VPS administration, deployment, security and automation.
 
-**Starting with Xray Core Manager.**
+**Practical open-source tools that help developers learn, deploy, secure and operate Linux VPS environments.**
 
----
+Starting with **Xray Core Manager**.
 
-## Overview
+[Project vision](docs/PROJECT_VISION.md) · [Roadmap](docs/ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-Open Server Management Tools is an emerging open-source initiative focused on making Linux VPS administration more accessible, consistent and manageable.
+## Why this project exists
 
-The initiative aims to build a collection of modular tools that help server administrators deploy applications, manage services, strengthen security and automate recurring operational tasks.
+Developers beginning their careers often face a second discipline as soon as they deploy an application: server administration. Linux permissions, runtimes, reverse proxies, DNS, TLS, services, firewalls, backups and logs can create a steep learning curve.
 
-The project is starting with **Xray Core Manager**, a Bash-based administration tool for Xray-core. This first component establishes the engineering foundations and development principles for the broader initiative.
+**Open Server Management Tools (OSMT)** is an early-stage open-source initiative to make common Linux VPS tasks easier to understand, safer to perform and simpler to repeat—especially for students, junior developers, self-taught developers and independent builders.
 
-> Xray Core Manager is the starting point, not the final destination. The long-term goal is to develop practical, well-documented open-source tools that reduce the complexity of administering Linux VPS environments.
+The goal is not to hide how servers work. It is to make routine operations more approachable while keeping users informed and in control.
 
-## Mission
+## A toolkit that grows with the developer
 
-Provide practical, transparent and modular software that simplifies common VPS administration tasks while preserving administrator control over the system.
+OSMT is planned as a collection of focused, interoperable tools. Each should explain what it will change, validate inputs and provide recovery paths where practical.
 
-## Vision
+| Area | Planned tools and capabilities | Intended benefit |
+|---|---|---|
+| Server foundations | VPS first-run assistant, system inventory, dependency checker, SSH review | Understand and prepare a new server |
+| Application deployment | Guided app deployment, runtime installers, environment templates, container helper | Move from source code to a running service |
+| Service operations | systemd unit builder, service controls, log viewer, health checks | Understand and operate application services |
+| Networking and domains | DNS diagnostics, reverse-proxy assistant, TLS certificate helper | Configure application connectivity |
+| Security and hardening | SSH audit, firewall review, permission audit, exposed-port inventory | Recognize and reduce common risks |
+| Backups and recovery | Backup scheduler, restore assistant, configuration snapshots | Protect data and rehearse recovery |
+| Monitoring and maintenance | Resource dashboard, service monitoring, disk alerts, update reports | Understand server health |
+| Learning and diagnostics | Guided troubleshooting, command explanations, config validator | Learn while solving operational problems |
 
-Build an extensible ecosystem of open-source tools for Linux server operations, covering service management, application deployment, security, monitoring, maintenance and automation.
+These are **product directions, not released features**. See the [roadmap](docs/ROADMAP.md).
 
-The initiative is at an early stage. Xray Core Manager is the first project under active development; the other areas described below are directions for future development, not claims of currently available products.
+## First project: Xray Core Manager
 
-## The project ecosystem
+Xray Core Manager is the first component: a modular Bash-based administration tool for Xray-core on Linux.
 
-### 1. Xray Core Manager — First project
+### Current implementation
 
-A modular Bash-based administration tool for Xray-core on Linux.
-
-Its purpose is to provide a structured interface and a controlled foundation for managing Xray-core versions, connection definitions and VLESS user records.
-
-Current implementation includes:
-
-- Modular command-line menu and administration modules.
+- Modular command-line launcher and administration menu.
 - Catalog of 38 connection modes.
-- Local connection records maintained as drafts.
+- Local connection records stored as drafts.
 - VLESS user records associated with draft connections.
 - Neutral VLESS data model and a version-specific adapter for Xray-core 26.10.31.
 - Controlled Xray binary and geodata package administration.
-- Centralized paths and separated application data.
+- Centralized filesystem paths and separated application data.
 - Atomic JSON persistence and shared locking for related operations.
 - Backup and guarded uninstallation workflows.
-- Functional, integration, persistence and concurrency tests.
+- Functional, integration, persistence-fault and concurrency tests.
 
-**Important implementation boundary:** connection and user records are not automatically applied to a running Xray instance. The project does not currently create or manage systemd units, start or restart Xray, or modify firewall, SSH or network settings.
+### Important operational boundaries
 
-See the [Xray Core Manager implementation details](#xray-core-manager-status-and-scope) below and the `docs/` directory for stage-level documentation.
+This is an early development version, **not a production-ready control panel**.
 
-### 2. VPS Deployment Tools — Planned
-
-Future tools may help administrators:
-
-- Deploy web applications and backend services.
-- Configure application runtimes and dependencies.
-- Standardize repeatable deployment procedures.
-- Manage service configuration and lifecycle.
-- Automate routine installation and update tasks.
-
-### 3. VPS Security Tools — Planned
-
-Future work may focus on:
-
-- Linux server security checks and configuration audits.
-- System hardening recommendations and controlled application.
-- Firewall and access-control management.
-- Security-oriented service configuration.
-- Logging, diagnostics and security monitoring.
-
-Security changes must be explicit, documented and reversible wherever practical.
-
-### 4. Server Operations Tools — Planned
-
-Potential areas include:
-
-- Resource and service monitoring.
-- Backup and recovery workflows.
-- System health checks and diagnostics.
-- Maintenance automation.
-- Operational reporting and inventory.
-
-These areas represent the initiative's direction. They are not currently released products.
-
-## Engineering principles
-
-The initiative follows a set of principles intended to keep administration tools predictable and maintainable:
-
-1. **Administrator control:** privileged or disruptive operations must be explicit.
-2. **Validation before application:** validate inputs and generated configuration before changing a running service.
-3. **Separation of concerns:** keep application code, configuration, state, logs, cache and backups separate.
-4. **Safe persistence:** prefer validated, atomic updates for important state.
-5. **Transparent operation:** document what a tool does, what it does not do and what remains unverified.
-6. **Modular architecture:** separate functionality into components with clear responsibilities.
-7. **Testable behavior:** use isolated tests for validation, failure handling and concurrency.
-8. **No silent assumptions:** do not invent defaults for security-sensitive settings or present missing measurements as zero.
-
-## Technology direction
-
-The first project currently uses:
-
-- Bash 5.2+
-- Linux
-- Ubuntu 24.04 LTS (reference platform)
-- Xray-core 26.10.31 (version targeted by the current adapter)
-- JSON for local records
-- ShellCheck and shfmt for static checks
-- Shell-based functional and integration tests
-
-Future tools may use other technologies when they provide a clear technical benefit. No single implementation language is mandated for the entire initiative.
-
----
-
-## Xray Core Manager: status and scope
-
-### Current status
-
-**Development version:** `0.2.0-dev`  
-**Primary platform:** Ubuntu 24.04 LTS, amd64  
-**Shell requirement:** Bash 5.2 or newer  
-**Development branch:** `main`
-
-The repository contains a working modular implementation and a growing test suite. It is an early-stage project and is not presented as a production-ready, fully integrated server control panel.
-
-### Implemented foundations
-
-- Main launcher and modular menu.
-- Connection catalog and local draft records.
-- VLESS user record management.
-- Neutral VLESS model and Xray 26.10.31 adapter.
-- Controlled binary and geodata installation/reinstallation workflow.
-- Centralized filesystem path definitions.
-- Atomic JSON storage and shared integrity locking.
-- Backup and guarded uninstallation logic.
-- Functional, integration, fault-injection and concurrency tests.
-
-### Current limitations
-
-The following boundaries are important when evaluating the current implementation:
-
-- Creating or editing a draft does not generate and apply a live runtime configuration automatically.
-- Xray service lifecycle and systemd unit management are not implemented.
-- Firewall, SSH and network configuration are not modified.
+- Creating or editing a draft does not apply a configuration to a running Xray instance.
+- The project does not currently create or manage systemd units, or start/restart Xray.
+- It does not modify firewall, SSH or network settings.
 - Port checks are observations and logical reservations; they do not reserve a socket against external processes.
 - The VLESS adapter targets Xray-core 26.10.31.
-- The uninstallation workflow still requires broader end-to-end recovery testing in an isolated environment before it can be considered operationally validated for real installations.
+- The uninstallation workflow needs broader end-to-end recovery testing in an isolated environment.
 - Profiles, domains, certificates and history have centralized planned paths, but several storage consumers remain to be implemented.
-- Static and isolated tests do not establish production readiness or end-to-end connectivity.
 
-### Repository structure
+The docs directory contains implementation notes, decisions, contracts and limitations. Isolated test success is not proof of production readiness or end-to-end connectivity.
 
-| Directory | Responsibility |
+## Design principles
+
+1. **Beginner-friendly, not opaque:** explain operations and consequences.
+2. **Administrator control:** privileged or destructive changes require explicit intent.
+3. **Validate before applying:** check inputs and generated configuration.
+4. **Safe by default:** prefer least privilege, backups and rollback.
+5. **Transparent status:** distinguish implemented, experimental, planned and unsupported behavior.
+6. **Modular architecture:** keep tools focused and independently testable.
+7. **Reproducible operations:** document procedures that can be repeated and audited.
+8. **Evidence-based claims:** tests and security claims must be supported by evidence.
+
+## Technology
+
+The first component currently uses Bash 5.2+, Linux, Ubuntu 24.04 LTS as its reference platform, JSON for local records and Xray-core 26.10.31 for its version-specific adapter. ShellCheck, shfmt and shell-based tests are used in development.
+
+The wider initiative is not restricted to one language. Future tools may use the technology best suited to their purpose.
+
+## Repository layout
+
+| Path | Purpose |
 |---|---|
-| `bin/` | Application entry point |
-| `config/` | General configuration, paths, catalog and Xray version |
-| `lib/` | Shared utilities and persistence |
-| `modules/` | Connections, users, Xray administration and uninstallation |
-| `docs/` | Architecture, technical decisions and implementation stages |
-| `tests/` | Functional, integration, persistence and concurrency tests |
+| bin/ | Application entry point |
+| config/ | Configuration, paths, protocol catalog and Xray version |
+| lib/ | Shared utilities and persistence |
+| modules/ | Connections, users, Xray administration and uninstallation |
+| docs/ | Architecture, decisions, vision and roadmap |
+| tests/ | Functional, integration, persistence and concurrency tests |
+| assets/brand/ | Project identity assets |
 
-### Validation
+## Validation
 
 From the repository root:
 
@@ -174,64 +107,39 @@ for test in tests/*.sh; do
 done
 ```
 
-The `tests/xray_vless_integration.sh` test requires a validation Xray binary supplied through `XRAY_BIN` or available in the configured validation cache.
-
-The repository documentation describes the exact scope and prerequisites of each test. A successful test run should not be interpreted as proof of production deployment readiness.
+The Xray VLESS integration test requires a validation Xray binary supplied through XRAY_BIN or available in the configured validation cache. Read each test and its documentation for prerequisites and scope.
 
 ## Roadmap
 
-The roadmap is directional and subject to design review, implementation and testing.
+The first priority is to mature Xray Core Manager before expanding into additional tools.
 
-### Xray Core Manager
-
-- [x] Modular foundation and command-line menu.
-- [x] Connection catalog and draft records.
-- [x] VLESS user record management.
+- [x] Modular Xray Manager foundation.
+- [x] Draft connection and VLESS user record workflows.
 - [x] Version-specific VLESS adapter and isolated configuration validation.
 - [x] Initial controlled binary administration.
 - [x] Atomic persistence and concurrency safeguards.
-- [ ] Complete runtime configuration generation and validation workflow.
-- [ ] Transactional configuration application and rollback.
-- [ ] Controlled systemd service lifecycle management.
-- [ ] Certificate and domain workflows.
-- [ ] Profiles, history and operational reporting.
-- [ ] Full recovery and installation testing on disposable VPS environments.
+- [ ] Complete runtime configuration generation, validation, application and rollback.
+- [ ] Implement controlled systemd service lifecycle management.
+- [ ] Complete certificate, domain, profile and history workflows.
+- [ ] Expand isolated installation, recovery and upgrade testing.
+- [ ] Design and release the first beginner-focused VPS deployment utility.
+- [ ] Develop security, backup, monitoring and troubleshooting tools as separate projects.
 
-### Broader initiative
-
-- [ ] Define a reusable foundation for deployment tools.
-- [ ] Develop application deployment and service management utilities.
-- [ ] Design security audit and hardening tools.
-- [ ] Develop monitoring, backup and maintenance utilities.
-- [ ] Establish shared documentation, testing and release practices across tools.
-
-A roadmap item is not an implemented feature. Progress will be reflected in the repository as functionality is developed and validated.
+See [docs/ROADMAP.md](docs/ROADMAP.md). Roadmap items are plans, not implemented features.
 
 ## Open source and contributions
 
-The project is being developed as an open-source effort. As the implementation and documentation mature, contributions, issue reports, design feedback and reproducible test cases will help guide its evolution.
+OSMT is intended to be developed in the open, with contribution paths that welcome people who are learning. Bug reports, documentation improvements, reproducible tests and focused proposals are valuable contributions.
 
-Before contributing:
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Report security issues using [SECURITY.md](SECURITY.md).
 
-1. Review the implementation notes in `docs/`.
-2. Check the current code and tests before proposing a change.
-3. Describe the behavior being changed and its security implications.
-4. Include tests for new behavior and failure cases where practical.
-5. Avoid submitting secrets, private keys, server credentials or production configuration.
+## Project status
 
-Contribution guidelines and licensing details should be published explicitly as the project prepares for wider public collaboration.
-
-## Project status and transparency
-
-This is a new project with a long-term objective. It does not claim an established user base, adoption metrics or production deployment record.
-
-Its value proposition is the problem it seeks to address, the technical foundation already developed and a clear commitment to incremental, testable and documented implementation.
-
-The first milestone is to mature Xray Core Manager. The broader objective is to grow from that starting point into a set of useful tools for Linux VPS administrators.
-
----
-
-**Project:** Open Server Management Tools  
+**Stage:** Early-stage initiative / active development  
 **First component:** Xray Core Manager  
-**Repository:** `xray-core-manager`  
-**Development status:** Early stage / active development
+**Reference platform:** Ubuntu 24.04 LTS, amd64  
+**Development branch:** main
+
+This project does not claim an established user base, adoption metrics or production deployment record. Its current value is the problem it addresses, the implementation already present, documented engineering constraints and a commitment to incremental, testable development.
+
+**Make server operations more approachable, one useful open-source tool at a time.**
