@@ -1,0 +1,89 @@
+name: OSMT CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: osmt-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Static checks and functional tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install validation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends \
+            bash \
+            coreutils \
+            gzip \
+            iproute2 \
+            jq \
+            openssl \
+            python3 \
+            shfmt \
+            shellcheck \
+            tar \
+            util-linux
+
+      - name: Report tool versions
+        run: |
+          bash --version | head -n 1
+          jq --version
+          shellcheck --version
+          shfmt --version
+          python3 --version
+
+      - name: Check Bash syntax
+        run: |
+          bash -n \
+            bin/xray-manager \
+            config/paths.sh \
+            lib/*.sh \
+            modules/*.sh \
+            tests/*.sh
+
+      - name: Run ShellCheck
+        run: |
+          shellcheck -x \
+            bin/xray-manager \
+            config/paths.sh \
+            lib/*.sh \
+            modules/*.sh \
+            tests/*.sh
+
+      - name: Check shell formatting
+        run: |
+          shfmt -d \
+            bin/xray-manager \
+            config/paths.sh \
+            lib/*.sh \
+            modules/*.sh \
+            tests/*.sh
+
+      - name: Run functional and fault-injection tests
+        run: |
+          set -Eeuo pipefail
+          for test in tests/*.sh; do
+            if [[ "$test" == "tests/xray_vless_integration.sh" ]]; then
+              echo "SKIP: $test requires the separately provisioned Xray validation binary."
+              continue
+            fi
+            echo "::group::Running $test"
+            bash "$test"
+            echo "::endgroup::"
+          done
