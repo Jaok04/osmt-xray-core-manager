@@ -6,7 +6,7 @@
 
 Starting with **Xray Core Manager**.
 
-[Project vision](docs/PROJECT_VISION.md) · [Roadmap](docs/ROADMAP.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Project vision](docs/PROJECT_VISION.md) · [Tools catalog](docs/TOOLS_CATALOG.md) · [Ecosystem map](docs/ECOSYSTEM_MAP.md) · [Roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 ## Why this project exists
 
