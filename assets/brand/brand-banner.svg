@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="520" viewBox="0 0 1600 520" role="img" aria-labelledby="title desc">
+<title id="title">Open Server Management Tools</title>
+<desc id="desc">Open-source tools for developers to learn, deploy, secure and operate Linux VPS environments.</desc>
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#071426"/><stop offset=".55" stop-color="#102d49"/><stop offset="1" stop-color="#164b62"/></linearGradient>
+<linearGradient id="accent" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#67e8f9"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
+<pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse"><path d="M42 0H0V42" fill="none" stroke="#b8d7ee" stroke-opacity=".08"/></pattern>
+</defs>
+<rect width="1600" height="520" rx="30" fill="url(#bg)"/><rect width="1600" height="520" rx="30" fill="url(#grid)"/>
+<circle cx="1320" cy="110" r="180" fill="#38bdf8" opacity=".12"/>
+<g transform="translate(1080 92)">
+<rect x="40" y="0" width="360" height="92" rx="18" fill="#0a1b2d" stroke="#6bb9df" stroke-opacity=".65" stroke-width="2"/>
+<rect x="40" y="116" width="360" height="92" rx="18" fill="#0a1b2d" stroke="#6bb9df" stroke-opacity=".5" stroke-width="2"/>
+<rect x="40" y="232" width="360" height="92" rx="18" fill="#0a1b2d" stroke="#6bb9df" stroke-opacity=".4" stroke-width="2"/>
+<g fill="url(#accent)"><circle cx="72" cy="32" r="7"/><circle cx="72" cy="148" r="7"/><circle cx="72" cy="264" r="7"/></g>
+<g stroke="#9bdcf5" stroke-width="4" stroke-linecap="round" opacity=".85"><path d="M100 32h210M100 50h155M100 148h185M100 166h235M100 264h160M100 282h220"/></g>
+<path d="M0 162h28v116h12M420 46h42v232h-42" fill="none" stroke="url(#accent)" stroke-width="3" opacity=".7"/>
+</g>
+<g transform="translate(110 112)"><rect width="92" height="92" rx="24" fill="#0c263d" stroke="#67e8f9" stroke-width="2"/><path d="M26 30l-14 16 14 16M66 30l14 16-14 16M54 22L38 70" fill="none" stroke="url(#accent)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></g>
+<g fill="#f2f8ff" font-family="Inter,Segoe UI,Arial,sans-serif" font-weight="750"><text x="110" y="270" font-size="58">Open Server</text><text x="110" y="337" font-size="58">Management Tools</text></g>
+<text x="114" y="395" fill="#a8d9ed" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="24">OPEN SOURCE • LINUX VPS • DEVELOPER TOOLS</text>
+<text x="114" y="452" fill="#d7e8f4" font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21">Learn. Deploy. Secure. Operate.</text>
+</svg>
