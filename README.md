@@ -10,7 +10,7 @@ OSMT is an independent, early-stage open-source initiative. It aims to make ever
 
 **Our starting point is [Xray Core Manager](#first-project-xray-core-manager). Our long-term goal is a coherent toolkit for Linux server operations.**
 
-[Project vision](docs/PROJECT_VISION.md) · [Tools catalog](docs/TOOLS_CATALOG.md) · [Ecosystem map](docs/ECOSYSTEM_MAP.md) · [Roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Project overview](docs/PROJECT_OVERVIEW.md) · [Project vision](docs/PROJECT_VISION.md) · [Tools catalog](docs/TOOLS_CATALOG.md) · [Ecosystem map](docs/ECOSYSTEM_MAP.md) · [Roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 ---
 
