@@ -1,43 +1,93 @@
 ![Open Server Management Tools](assets/brand/brand-banner.svg)
 
-# Open Server Management Tools
+# Open Server Management Tools (OSMT)
 
-**Practical open-source tools that help developers learn, deploy, secure and operate Linux VPS environments.**
+**Learn. Deploy. Secure. Operate.**
 
-Starting with **Xray Core Manager**.
+Practical open-source tools for people who want to understand, manage, and maintain Linux VPS environments with greater confidence and control.
+
+OSMT is an independent, early-stage open-source initiative. It aims to make everyday server operations easier to understand, safer to perform, and simpler to repeat—without hiding the underlying system or taking important decisions away from the administrator.
+
+**Our starting point is [Xray Core Manager](#first-project-xray-core-manager). Our long-term goal is a coherent toolkit for Linux server operations.**
 
 [Project vision](docs/PROJECT_VISION.md) · [Tools catalog](docs/TOOLS_CATALOG.md) · [Ecosystem map](docs/ECOSYSTEM_MAP.md) · [Roadmap](docs/ROADMAP.md) · [Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
-## Why this project exists
+---
 
-Developers beginning their careers often face a second discipline as soon as they deploy an application: server administration. Linux permissions, runtimes, reverse proxies, DNS, TLS, services, firewalls, backups and logs can create a steep learning curve.
+## The problem we want to solve
 
-**Open Server Management Tools (OSMT)** is an early-stage open-source initiative to make common Linux VPS tasks easier to understand, safer to perform and simpler to repeat—especially for students, junior developers, self-taught developers and independent builders.
+Deploying an application often means taking on another responsibility: operating the server behind it.
 
-The goal is not to hide how servers work. It is to make routine operations more approachable while keeping users informed and in control.
+For students, junior developers, self-taught programmers, and independent builders, routine tasks can quickly become a steep learning curve: Linux permissions, dependencies, reverse proxies, DNS, TLS certificates, services, firewalls, backups, logs, and recovery.
 
-## A toolkit that grows with the developer
+Command-line tools are powerful and flexible, but a command copied without understanding can cause unexpected changes. At the other extreme, a full hosting control panel may be more than someone needs—and may hide details they are trying to learn.
 
-OSMT is planned as a collection of focused, interoperable tools. Each should explain what it will change, validate inputs and provide recovery paths where practical.
+OSMT is being built to bridge that gap.
 
-| Area | Planned tools and capabilities | Intended benefit |
+## Our mission
+
+Build a growing collection of focused, free and open-source tools that help people:
+
+- **Learn** how Linux server components work.
+- **Deploy** applications through understandable, repeatable procedures.
+- **Secure** systems by identifying risks and explaining possible mitigations.
+- **Operate** services with useful diagnostics, maintenance and recovery workflows.
+
+The goal is not to automate everything or replace experienced administrators. It is to make common operations more approachable while preserving transparency, user choice, and control.
+
+## How we approach automation
+
+### Guided Automation
+
+OSMT follows a simple principle: automation should make a safe procedure repeatable—not make a risky procedure easier to trigger accidentally.
+
+Where a tool performs system changes, its intended workflow is to:
+
+1. Explain the task, prerequisites, and possible impact.
+2. Inspect the current system before proposing changes.
+3. Present the planned actions and affected resources.
+4. Validate inputs and configuration.
+5. Request explicit approval before privileged, disruptive, or destructive actions.
+6. Create a backup or recovery point when appropriate.
+7. Apply changes in controlled stages.
+8. Verify the outcome and report what happened.
+9. Explain available recovery or undo steps.
+
+Not every tool will need every step. Read-only inspection should remain read-only, and unsupported recovery guarantees must never be implied.
+
+### Engineering principles
+
+- **Understandable by design:** explain operations instead of hiding them behind opaque automation.
+- **Administrator remains in control:** approval is required for consequential changes.
+- **Inspect before changing:** prefer read-only discovery and previews.
+- **Validate and recover:** use validation, backups, rollback, and failure handling where practical.
+- **Least privilege:** request only the permissions needed for a task.
+- **Honest status:** distinguish implemented, experimental, planned, and unsupported behavior.
+- **Evidence over claims:** document test scope, compatibility, and limitations.
+- **Technology-neutral:** choose the language and implementation suited to each tool rather than forcing the whole ecosystem into one stack.
+
+## The ecosystem
+
+OSMT is envisioned as a set of focused tools that can stand on their own and, where useful, work together.
+
+| Area | Direction | Intended outcome |
 |---|---|---|
-| Server foundations | VPS first-run assistant, system inventory, dependency checker, SSH review | Understand and prepare a new server |
-| Application deployment | Guided app deployment, runtime installers, environment templates, container helper | Move from source code to a running service |
-| Service operations | systemd unit builder, service controls, log viewer, health checks | Understand and operate application services |
-| Networking and domains | DNS diagnostics, reverse-proxy assistant, TLS certificate helper | Configure application connectivity |
-| Security and hardening | SSH audit, firewall review, permission audit, exposed-port inventory | Recognize and reduce common risks |
-| Backups and recovery | Backup scheduler, restore assistant, configuration snapshots | Protect data and rehearse recovery |
-| Monitoring and maintenance | Resource dashboard, service monitoring, disk alerts, update reports | Understand server health |
-| Learning and diagnostics | Guided troubleshooting, command explanations, config validator | Learn while solving operational problems |
+| Server foundations | VPS first-run assistant, system inventory, dependency checks | Understand a server before changing it |
+| Application deployment | Guided deployment, runtime setup, environment templates | Move from source code to a running service |
+| Service operations | systemd assistance, log inspection, health checks | Understand and operate application services |
+| Networking and domains | DNS diagnostics, reverse-proxy and TLS assistance | Configure and troubleshoot connectivity |
+| Security | SSH, firewall, permissions and exposed-service reviews | Identify common risks with evidence |
+| Backup and recovery | Backup, integrity checks and restore assistance | Know what is protected and how to recover |
+| Monitoring and maintenance | Resource overview, service checks and update reports | Understand server health and routine maintenance |
+| Learning and troubleshooting | Guided diagnostics, error explanations and validators | Learn while resolving operational problems |
 
-These are **product directions, not released features**. See the [roadmap](docs/ROADMAP.md).
+These are **product directions, not released features**. Each candidate must earn its place through a clear use case, bounded scope, testing, documentation, and a maintainable implementation. See the [tools catalog](docs/TOOLS_CATALOG.md) and [roadmap](docs/ROADMAP.md).
 
 ## First project: Xray Core Manager
 
-Xray Core Manager is the first component: a modular Bash-based administration tool for Xray-core on Linux.
+Xray Core Manager is the first implementation within OSMT. It is a modular, Bash-based administration tool for Xray-core on Linux.
 
-### Current implementation
+### What is implemented in the current development baseline
 
 - Modular command-line launcher and administration menu.
 - Catalog of 38 connection modes.
@@ -48,54 +98,66 @@ Xray Core Manager is the first component: a modular Bash-based administration to
 - Centralized filesystem paths and separated application data.
 - Atomic JSON persistence and shared locking for related operations.
 - Backup and guarded uninstallation workflows.
-- Functional, integration, persistence-fault and concurrency tests.
+- Functional, integration, persistence-fault, and concurrency test scripts.
 
-### Important operational boundaries
+### Current boundaries and known limitations
 
-This is an early development version, **not a production-ready control panel**.
+Xray Core Manager is an early development version, **not a production-ready control panel**.
 
 - Creating or editing a draft does not apply a configuration to a running Xray instance.
-- The project does not currently create or manage systemd units, or start/restart Xray.
-- It does not modify firewall, SSH or network settings.
+- It does not currently create or manage systemd units, or start/restart Xray.
+- It does not modify firewall, SSH, or network settings.
 - Port checks are observations and logical reservations; they do not reserve a socket against external processes.
 - The VLESS adapter targets Xray-core 26.10.31.
-- The uninstallation workflow needs broader end-to-end recovery testing in an isolated environment.
-- Profiles, domains, certificates and history have centralized planned paths, but several storage consumers remain to be implemented.
+- The uninstallation workflow still needs broader end-to-end recovery testing in an isolated environment.
+- Profiles, domains, certificates, and history have planned centralized paths, but several storage consumers remain to be implemented.
 
-The docs directory contains implementation notes, decisions, contracts and limitations. Isolated test success is not proof of production readiness or end-to-end connectivity.
+The presence of test scripts does not by itself establish that every workflow has passed validation or is production-ready. See the project documentation for implementation details, contracts, and limitations.
 
-## Design principles
+## What we are building toward
 
-1. **Beginner-friendly, not opaque:** explain operations and consequences.
-2. **Administrator control:** privileged or destructive changes require explicit intent.
-3. **Validate before applying:** check inputs and generated configuration.
-4. **Safe by default:** prefer least privilege, backups and rollback.
-5. **Transparent status:** distinguish implemented, experimental, planned and unsupported behavior.
-6. **Modular architecture:** keep tools focused and independently testable.
-7. **Reproducible operations:** document procedures that can be repeated and audited.
-8. **Evidence-based claims:** tests and security claims must be supported by evidence.
+Our first priority is to mature Xray Core Manager: complete its configuration lifecycle, improve service integration, and expand isolated installation, upgrade, failure, and recovery testing.
 
-## Technology
+The next proposed project is a **VPS First-Run Assistant**: a beginner-focused, read-only utility that inventories a server's operating system, architecture, CPU, memory, storage, network, package manager, and services, then explains what it finds in a local report.
 
-The first component currently uses Bash 5.2+, Linux, Ubuntu 24.04 LTS as its reference platform, JSON for local records and Xray-core 26.10.31 for its version-specific adapter. ShellCheck, shfmt and shell-based tests are used in development.
+Further tools will be prioritized based on real operational needs and what can be implemented and maintained responsibly.
 
-The wider initiative is not restricted to one language. Future tools may use the technology best suited to their purpose.
+The roadmap is intentionally incremental. It describes direction, not a promise that every proposed tool will be delivered.
 
-## Repository layout
+## Why this initiative matters
+
+A useful server tool should do more than execute a command. It should help the operator understand what is happening, why a change is proposed, what could go wrong, and how to verify the result.
+
+We believe this approach can make server administration more accessible to people learning to deploy software, while remaining useful to independent developers and experienced administrators who value focused, inspectable utilities.
+
+OSMT is not tied to a single cloud provider, hosting company, AI platform, or vendor ecosystem. Any AI-assisted capability considered in the future should serve a clearly defined task, remain transparent to the user, and preserve administrator approval and control. AI is not a prerequisite for the project's core mission.
+
+## Technology and development
+
+The first component currently uses:
+
+- Bash 5.2+
+- Linux, with Ubuntu 24.04 LTS amd64 as its reference platform
+- JSON for local records
+- Xray-core 26.10.31 for its version-specific adapter
+
+ShellCheck, shfmt, and shell-based tests are part of the development workflow. Future OSMT tools may use different languages and platforms where appropriate.
+
+### Repository structure
 
 | Path | Purpose |
 |---|---|
-| bin/ | Application entry point |
-| config/ | Configuration, paths, protocol catalog and Xray version |
-| lib/ | Shared utilities and persistence |
-| modules/ | Connections, users, Xray administration and uninstallation |
-| docs/ | Architecture, decisions, vision and roadmap |
-| tests/ | Functional, integration, persistence and concurrency tests |
-| assets/brand/ | Project identity assets |
+| `bin/` | Application entry point |
+| `config/` | Configuration, paths, protocol catalog, and Xray version |
+| `lib/` | Shared utilities and persistence |
+| `modules/` | Connections, users, Xray administration, and uninstallation |
+| `docs/` | Architecture, decisions, vision, and roadmap |
+| `tests/` | Functional, integration, persistence, and concurrency tests |
+| `assets/brand/` | Project identity assets |
 
-## Validation
+### Local validation commands
 
-From the repository root:
+Run these from the repository root:
 
 ```bash
 bash -n bin/xray-manager config/paths.sh lib/*.sh modules/*.sh tests/*.sh
@@ -107,39 +169,36 @@ for test in tests/*.sh; do
 done
 ```
 
-The Xray VLESS integration test requires a validation Xray binary supplied through XRAY_BIN or available in the configured validation cache. Read each test and its documentation for prerequisites and scope.
+The Xray VLESS integration test requires a validation Xray binary supplied through `XRAY_BIN` or available in the configured validation cache. Read each test and its documentation for prerequisites and scope. These commands describe the validation workflow; they are not a claim that all checks have been run successfully in every environment.
 
-## Roadmap
+## Contributing
 
-The first priority is to mature Xray Core Manager before expanding into additional tools.
+OSMT is intended to welcome contributions from people with different levels of experience. Useful contributions include:
 
-- [x] Modular Xray Manager foundation.
-- [x] Draft connection and VLESS user record workflows.
-- [x] Version-specific VLESS adapter and isolated configuration validation.
-- [x] Initial controlled binary administration.
-- [x] Atomic persistence and concurrency safeguards.
-- [ ] Complete runtime configuration generation, validation, application and rollback.
-- [ ] Implement controlled systemd service lifecycle management.
-- [ ] Complete certificate, domain, profile and history workflows.
-- [ ] Expand isolated installation, recovery and upgrade testing.
-- [ ] Design and release the first beginner-focused VPS deployment utility.
-- [ ] Develop security, backup, monitoring and troubleshooting tools as separate projects.
+- Reproducible bug reports.
+- Documentation and beginner-oriented explanations.
+- Focused feature proposals.
+- Tests for normal behavior and failure cases.
+- Improvements to accessibility, safety, and maintainability.
 
-See [docs/ROADMAP.md](docs/ROADMAP.md). Roadmap items are plans, not implemented features.
+Before contributing, read [CONTRIBUTING.md](CONTRIBUTING.md). Please follow the [Code of Conduct](CODE_OF_CONDUCT.md). For security concerns, see [SECURITY.md](SECURITY.md).
 
-## Open source and contributions
-
-OSMT is intended to be developed in the open, with contribution paths that welcome people who are learning. Bug reports, documentation improvements, reproducible tests and focused proposals are valuable contributions.
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security issues using [SECURITY.md](SECURITY.md). The repository is licensed under the [MIT License](LICENSE).
+The project is distributed under the [MIT License](LICENSE).
 
 ## Project status
 
-**Stage:** Early-stage initiative / active development  
-**First component:** Xray Core Manager  
-**Reference platform:** Ubuntu 24.04 LTS, amd64  
-**Development branch:** main
+| Item | Current status |
+|---|---|
+| Initiative | Early-stage |
+| Development | Active |
+| First component | Xray Core Manager |
+| Xray Core Manager version | 0.2.0-dev |
+| Reference platform | Ubuntu 24.04 LTS, amd64 |
+| License | MIT |
+| Release maturity | Not yet presented as production-ready |
 
-This project does not claim an established user base, adoption metrics or production deployment record. Its current value is the problem it addresses, the implementation already present, documented engineering constraints and a commitment to incremental, testable development.
+OSMT does not claim an established user base, adoption metrics, or a production deployment record. The work so far is a starting implementation, a documented direction, and a commitment to incremental development with explicit limitations.
+
+---
 
 **Make server operations more approachable, one useful open-source tool at a time.**
