@@ -131,7 +131,7 @@ See [docs/ROADMAP.md](docs/ROADMAP.md). Roadmap items are plans, not implemented
 
 OSMT is intended to be developed in the open, with contribution paths that welcome people who are learning. Bug reports, documentation improvements, reproducible tests and focused proposals are valuable contributions.
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Report security issues using [SECURITY.md](SECURITY.md).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security issues using [SECURITY.md](SECURITY.md). The repository is licensed under the [MIT License](LICENSE).
 
 ## Project status
 
